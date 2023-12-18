@@ -1,0 +1,9 @@
+bin/*
+.vscode/*
+coverage.out
+.DS_Store
+.env
+test_main.go
+*.sh
+__debug_bin
+target/*
