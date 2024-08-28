@@ -46,6 +46,13 @@ var (
 	)
 )
 
+type KeyType int
+
+const (
+	Jwk KeyType = iota
+	Keycloak
+)
+
 // Claims represents all claims as defined in the SAT standard
 type Claims struct {
 	ID               string           `json:"jti,omitempty"`
@@ -178,10 +185,19 @@ func (v *WebValidator) fetchToken(token *jwt.Token) (interface{}, error) {
 	}()
 
 	// retrieve from http
-	fetchURL, err := url.Parse(fmt.Sprintf("%s/%s",
-		v.KeysURL,
-		url.PathEscape(kid),
-	))
+	var fetchURL *url.URL
+	var err error
+
+	keyType := getKeyTypeFromConfig()
+	switch keyType {
+	case Keycloak:
+		fetchURL, err = url.Parse(v.KeysURL)
+	case Jwk:
+		fetchURL, err = url.Parse(fmt.Sprintf("%s/%s",
+			v.KeysURL,
+			url.PathEscape(kid),
+		))
+	}
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to build url for sat pub key: %w", err)
@@ -208,7 +224,7 @@ func (v *WebValidator) fetchToken(token *jwt.Token) (interface{}, error) {
 		return nil, fmt.Errorf("failed to read sat pub key body: %w", err)
 	}
 
-	publicKey, err := convertPublicKeyToPemFormat(data)
+	publicKey, err := convertPublicKeyToPemFormat(data, kid, keyType)
 	if err != nil {
 		return nil, fmt.Errorf("public key is not a valid rsa pub key: %w", err)
 	}
@@ -224,6 +240,18 @@ func (v *WebValidator) fetchToken(token *jwt.Token) (interface{}, error) {
 	status = "success"
 
 	return key, nil
+}
+
+func getKeyTypeFromConfig() KeyType {
+	keyType := webConfServer.XW_XconfServer.Config.GetString("xconfwebconfig.sat.key_type")
+	switch keyType {
+	case "jwk":
+		return Jwk
+	case "keycloak":
+		return Keycloak
+	default:
+		return Jwk
+	}
 }
 
 // Validate parses the token against the configured JWKS and returns the
@@ -248,13 +276,38 @@ type PublicKeyResponse struct {
 	N   string
 }
 
-func convertPublicKeyToPemFormat(data []byte) ([]byte, error) {
-	publicKeyResponse := PublicKeyResponse{}
+type PublicKeyResponseList struct {
+	Keys []PublicKeyResponse
+}
 
-	err := json.Unmarshal(data, &publicKeyResponse)
-	if err != nil {
-		return nil, err
+func convertPublicKeyToPemFormat(data []byte, kid string, keyType KeyType) ([]byte, error) {
+	var publicKeyResponse *PublicKeyResponse
+	switch keyType {
+	case Keycloak:
+		publicKeyResponseList := PublicKeyResponseList{}
+
+		err := json.Unmarshal(data, &publicKeyResponseList)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, currentPublicKey := range publicKeyResponseList.Keys {
+			if currentPublicKey.Kid == kid {
+				publicKeyResponse = &currentPublicKey
+				break
+			}
+		}
+
+		if publicKeyResponse == nil {
+			return nil, errors.New("public key not present for the provided kid")
+		}
+	case Jwk:
+		err := json.Unmarshal(data, publicKeyResponse)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	keyPart := [][]byte{[]byte("-----BEGIN RSA PUBLIC KEY-----"),
 		[]byte(publicKeyResponse.X5c[0]),
 		[]byte("-----END RSA PUBLIC KEY-----")}
