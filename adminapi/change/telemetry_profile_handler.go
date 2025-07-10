@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -103,36 +103,6 @@ func GetTelemetryProfilesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetTelemetryProfilePageHandler(w http.ResponseWriter, r *http.Request) {
-	queryParams := map[string]string{}
-	xutil.AddQueryParamsToContextMap(r, queryParams)
-	pageNumber, err := strconv.Atoi(queryParams[xcommon.PAGE_NUMBER])
-	if err != nil || pageNumber < 1 {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Invalid value for pageNumber")
-		return
-	}
-	pageSize, err := strconv.Atoi(queryParams[xcommon.PAGE_SIZE])
-	if err != nil || pageSize < 1 {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Invalid value for pageSize")
-		return
-	}
-
-	profiles := xwlogupload.GetPermanentTelemetryProfileList()
-	profilesPerPage := GeneratePageTelemetryProfiles(profiles, pageNumber, pageSize)
-	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	res, err := xhttp.ReturnJsonResponse(profilesPerPage, r)
-	if err != nil {
-		xhttp.AdminError(w, err)
-		return
-	}
-	sizeHeader := xhttp.CreateNumberOfItemsHttpHeaders(len(profiles))
-	xwhttp.WriteXconfResponseWithHeaders(w, sizeHeader, http.StatusOK, []byte(res))
-}
-
 func GeneratePageTelemetryProfiles(list []*xwlogupload.PermanentTelemetryProfile, page int, pageSize int) (result []*xwlogupload.PermanentTelemetryProfile) {
 	sort.Slice(list, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(list[i].Name), strings.ToLower(list[j].Name)) < 0
@@ -151,22 +121,11 @@ func GeneratePageTelemetryProfiles(list []*xwlogupload.PermanentTelemetryProfile
 }
 
 func CreateTelemetryProfileChangeHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	permTelemetryProfile := xlogupload.NewEmptyPermanentTelemetryProfile()
+	permTelemetryProfile.ApplicationType = ""
+	_, err := auth.ExtractBodyAndCheckPermissions(permTelemetryProfile, w, r, auth.TELEMETRY_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
-		return
-	}
-
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
-		return
-	}
-	body := xw.Body()
-	permTelemetryProfile := xlogupload.NewEmptyPermanentTelemetryProfile()
-	err = json.Unmarshal([]byte(body), &permTelemetryProfile)
-	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -185,22 +144,11 @@ func CreateTelemetryProfileChangeHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func CreateTelemetryProfileHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	permTelemetryProfile := xlogupload.NewEmptyPermanentTelemetryProfile()
+	permTelemetryProfile.ApplicationType = ""
+	_, err := auth.ExtractBodyAndCheckPermissions(permTelemetryProfile, w, r, auth.TELEMETRY_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
-		return
-	}
-
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
-		return
-	}
-	body := xw.Body()
-	permTelemetryProfile := xlogupload.NewEmptyPermanentTelemetryProfile()
-	err = json.Unmarshal([]byte(body), &permTelemetryProfile)
-	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -219,25 +167,13 @@ func CreateTelemetryProfileHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateTelemetryProfileChangeHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	permTelemetryProfile := xlogupload.NewEmptyPermanentTelemetryProfile()
+	permTelemetryProfile.ApplicationType = ""
+	_, err := auth.ExtractBodyAndCheckPermissions(permTelemetryProfile, w, r, auth.TELEMETRY_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
 	}
-
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
-		return
-	}
-	body := xw.Body()
-	permTelemetryProfile := xlogupload.NewEmptyPermanentTelemetryProfile()
-	err = json.Unmarshal([]byte(body), &permTelemetryProfile)
-	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
 	change, err := WriteUpdateChangeOrSave(r, permTelemetryProfile)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -253,23 +189,11 @@ func UpdateTelemetryProfileChangeHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func UpdateTelemetryProfileHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	permTelemetryProfile := xlogupload.NewEmptyPermanentTelemetryProfile()
+	permTelemetryProfile.ApplicationType = ""
+	_, err := auth.ExtractBodyAndCheckPermissions(permTelemetryProfile, w, r, auth.TELEMETRY_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
-		return
-	}
-
-	// r.Body is already drained in the middleware
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
-		return
-	}
-	body := xw.Body()
-	permTelemetryProfile := xlogupload.NewEmptyPermanentTelemetryProfile()
-	err = json.Unmarshal([]byte(body), &permTelemetryProfile)
-	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -349,6 +273,11 @@ func DeleteTelemetryProfileHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateTelemetryIdsHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	respEntity := CreateTelemetryIds()
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -372,7 +301,7 @@ func PostTelemetryProfileEntitiesHandler(w http.ResponseWriter, r *http.Request)
 
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -418,7 +347,7 @@ func PutTelemetryProfileEntitiesHandler(w http.ResponseWriter, r *http.Request) 
 
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -481,7 +410,7 @@ func PostTelemetryProfileFilteredHandler(w http.ResponseWriter, r *http.Request)
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -534,7 +463,7 @@ func AddTelemetryProfileEntryHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -546,7 +475,7 @@ func AddTelemetryProfileEntryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	profile := xwlogupload.GetOnePermanentTelemetryProfile(id)
 	if profile == nil {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
 		return
 	}
 	updatedTelemetryEntries := profile.TelemetryProfile
@@ -561,7 +490,7 @@ func AddTelemetryProfileEntryHandler(w http.ResponseWriter, r *http.Request) {
 	updatedProfile, err := UpdatePermanentTelemetryProfile(profile)
 	if err != nil {
 		xhttp.AdminError(w, err)
-
+		return
 	}
 
 	res, err := xhttp.ReturnJsonResponse(updatedProfile, r)
@@ -595,7 +524,7 @@ func AddTelemetryProfileEntryChangeHandler(w http.ResponseWriter, r *http.Reques
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -607,7 +536,7 @@ func AddTelemetryProfileEntryChangeHandler(w http.ResponseWriter, r *http.Reques
 	}
 	profile := xwlogupload.GetOnePermanentTelemetryProfile(id)
 	if profile == nil {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
 		return
 	}
 	profile, _ = profile.Clone()
@@ -656,7 +585,7 @@ func RemoveTelemetryProfileEntryHandler(w http.ResponseWriter, r *http.Request) 
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -669,7 +598,7 @@ func RemoveTelemetryProfileEntryHandler(w http.ResponseWriter, r *http.Request) 
 
 	profile := xwlogupload.GetOnePermanentTelemetryProfile(id)
 	if profile == nil {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
 		return
 	}
 	profile, _ = profile.Clone()
@@ -683,7 +612,7 @@ func RemoveTelemetryProfileEntryHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	profile.TelemetryProfile = updatedTelemetryEntries
 
-	change, err := WriteUpdateChangeOrSave(r, profile)
+	change, err := UpdatePermanentTelemetryProfile(profile)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -719,7 +648,7 @@ func RemoveTelemetryProfileEntryChangeHandler(w http.ResponseWriter, r *http.Req
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -732,7 +661,7 @@ func RemoveTelemetryProfileEntryChangeHandler(w http.ResponseWriter, r *http.Req
 
 	profile := xwlogupload.GetOnePermanentTelemetryProfile(id)
 	if profile == nil {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
 		return
 	}
 	profile, _ = profile.Clone()

@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,25 +43,14 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// POST /xconfAdminService/ux/api/firmwareconfig
+// Zero api-usage in green splunk for 4 weeks ending 21 Oct 2021
+// POST /xconfadminService/ux/api/firmwareconfig
 func PostFirmwareConfigHandler(w http.ResponseWriter, r *http.Request) {
-	applicationType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY)
+	firmwareConfig := estbfirmware.NewEmptyFirmwareConfig()
+	firmwareConfig.ApplicationType = ""
+	applicationType, err := auth.ExtractBodyAndCheckPermissions(firmwareConfig, w, r, auth.FIRMWARE_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
-		return
-	}
-
-	// r.Body is already drained in the middleware
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
-		return
-	}
-	body := xw.Body()
-	firmwareConfig := estbfirmware.NewEmptyFirmwareConfig()
-	err = json.Unmarshal([]byte(body), &firmwareConfig)
-	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -84,25 +73,14 @@ func PostFirmwareConfigHandler(w http.ResponseWriter, r *http.Request) {
 	xwhttp.WriteXconfResponse(w, status, res)
 }
 
-// PUT /xconfAdminService/ux/api/firmwareconfig  0
+// Zero usages in green splunk for 4 weeks ending 21 Oct 2021
+// PUT /xconfadminService/ux/api/firmwareconfig  0
 func PutFirmwareConfigHandler(w http.ResponseWriter, r *http.Request) {
-	appType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY)
+	firmwareConfig := estbfirmware.NewEmptyFirmwareConfig()
+	firmwareConfig.ApplicationType = ""
+	appType, err := auth.ExtractBodyAndCheckPermissions(firmwareConfig, w, r, auth.FIRMWARE_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
-		return
-	}
-
-	// r.Body is already drained in the middleware
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
-		return
-	}
-	body := xw.Body()
-	firmwareConfig := estbfirmware.NewEmptyFirmwareConfig()
-	err = json.Unmarshal([]byte(body), &firmwareConfig)
-	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -123,7 +101,8 @@ func PutFirmwareConfigHandler(w http.ResponseWriter, r *http.Request) {
 	xwhttp.WriteXconfResponse(w, status, res)
 }
 
-// DELETE /xconfAdminService/ux/api/firmwareconfig/{id}
+// Zero usages in green splunk for 4 weeks ending 21 Oct 2021
+// DELETE /xconfadminService/ux/api/firmwareconfig/{id}
 func DeleteFirmwareConfigByIdHandler(w http.ResponseWriter, r *http.Request) {
 	DeleteFirmwareConfigHandlerASFlavor(w, r)
 }
@@ -152,7 +131,8 @@ func findAndDeleteFc(list []*estbfirmware.FirmwareConfig, item *estbfirmware.Fir
 	return list[:index]
 }
 
-// POST /xconfAdminService/ux/api/firmwareconfig/entities
+// Zero usages in green splunk for 4 weeks ending 21 Oct 2021
+// POST /xconfadminService/ux/api/firmwareconfig/entities
 func PostFirmwareConfigEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 	PutPostFirmwareConfigEntitiesHandler(w, r, false)
 }
@@ -254,12 +234,14 @@ func PutPostFirmwareConfigEntitiesHandler(w http.ResponseWriter, r *http.Request
 	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
-// PUT /xconfAdminService/ux/api/firmwareconfig/entities
+// Zero usages in green splunk for 4 weeks ending 21 Oct 2021
+// PUT /xconfadminService/ux/api/firmwareconfig/entities
 func PutFirmwareConfigEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 	PutPostFirmwareConfigEntitiesHandler(w, r, true)
 }
 
-// GET /xconfAdminService/ux/api/firmwareconfig/page
+// Zero usages in green splunk for 4 weeks ending 21 Oct 2021
+// GET /xconfadminService/ux/api/firmwareconfig/page
 func ObsoleteGetFirmwareConfigPageHandler(w http.ResponseWriter, r *http.Request) {
 	dbrules, _ := estbfirmware.GetFirmwareConfigAsListDB()
 	sort.Slice(dbrules, func(i, j int) bool {
@@ -296,7 +278,8 @@ func hasCommonEntries(list1 []string, list2 []string) bool {
 	return false
 }
 
-// POST /xconfAdminService/ux/api/firmwareconfig/bySupportedModels
+// 7 api-usage in green splunk for 4 weeks ending 21 Oct 2021
+// POST /xconfadminService/ux/api/firmwareconfig/bySupportedModels
 func PostFirmwareConfigBySupportedModelsHandler(w http.ResponseWriter, r *http.Request) {
 	appType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
@@ -326,7 +309,9 @@ func PostFirmwareConfigBySupportedModelsHandler(w http.ResponseWriter, r *http.R
 	xwhttp.WriteXconfResponse(w, http.StatusOK, res)
 }
 
-// GET /xconfAdminService/ux/api/firmwareconfig/firmwareConfigMap
+//	1447 usages in green splunk for 4 weeks ending 21 Oct 2021
+//
+// GET /xconfadminService/ux/api/firmwareconfig/firmwareConfigMap
 func GetFirmwareConfigFirmwareConfigMapHandler(w http.ResponseWriter, r *http.Request) {
 	appType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
@@ -352,7 +337,8 @@ type FirmwareConfigData struct {
 	ModelSet []string `json:"models"`
 }
 
-// POST /xconfAdminService/ux/api/firmwareconfig/getSortedFirmwareVersionsIfExistOrNot
+// 413 usages in green splunk for 4 weeks ending 21 Oct 2021
+// POST /xconfadminService/ux/api/firmwareconfig/getSortedFirmwareVersionsIfExistOrNot
 func PostFirmwareConfigGetSortedFirmwareVersionsIfExistOrNotHandler(w http.ResponseWriter, r *http.Request) {
 	appType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
@@ -384,7 +370,9 @@ func PostFirmwareConfigGetSortedFirmwareVersionsIfExistOrNotHandler(w http.Respo
 	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
-// GET /xconfAdminService/ux/api/firmwareconfig/model/{modelId}
+//	112 usages in green splunk for 4 weeks ending 21 Oct 2021
+//
+// GET /xconfadminService/ux/api/firmwareconfig/model/{modelId}
 func GetFirmwareConfigModelByModelIdHandler(w http.ResponseWriter, r *http.Request) {
 	GetQueriesFirmwareConfigsByModelIdASFlavor(w, r)
 }
@@ -405,7 +393,8 @@ func searchList(stringList []string, k string, caseSensitive bool) bool {
 	return false
 }
 
-// POST /xconfAdminService/ux/api/firmwareconfig/filtered?pageSize=X&pageNumber=Y
+// 1802 usages in green splunk for 4 weeks ending 21 Oct 2021
+// POST /xconfadminService/ux/api/firmwareconfig/filtered?pageSize=X&pageNumber=Y
 func PostFirmwareConfigFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	appType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
@@ -433,7 +422,7 @@ func PostFirmwareConfigFilteredHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	filterContext[common.APPLICATION_TYPE] = appType
+	filterContext[xcommon.APPLICATION_TYPE] = appType
 
 	// Get all entries and sort them
 	entries, _ := estbfirmware.GetFirmwareConfigAsListDB()
@@ -466,7 +455,8 @@ func PostFirmwareConfigFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	xwhttp.WriteXconfResponseWithHeaders(w, headerMap, http.StatusOK, response)
 }
 
-// GET /xconfAdminService/ux/api/firmwareconfig/{id}
+// 663 usagess in green splunk for 4 weeks ending 21 Oct 2021
+// GET /xconfadminService/ux/api/firmwareconfig/{id}
 func GetFirmwareConfigByIdHandler(w http.ResponseWriter, r *http.Request) {
 	appType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
@@ -511,7 +501,8 @@ func GetFirmwareConfigByIdHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// GET /xconfAdminService/ux/api/firmwareconfig
+// 4687 usages in green splunk for 4 weeks ending 21 Oct 2021
+// GET /xconfadminService/ux/api/firmwareconfig
 func GetFirmwareConfigHandler(w http.ResponseWriter, r *http.Request) {
 	appType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
@@ -539,7 +530,8 @@ func GetFirmwareConfigHandler(w http.ResponseWriter, r *http.Request) {
 	getQueriesFirmwareConfigsASFlavor(w, r, appType)
 }
 
-// GET  /xconfAdminService/ux/api/firmwareconfig/supportedConfigsByEnvModelRuleName/{ruleName}
+// Zero usages in green splunk for 4 weeks ending 21 Oct 2021
+// GET  /xconfadminService/ux/api/firmwareconfig/supportedConfigsByEnvModelRuleName/{ruleName}
 func GetSupportedConfigsByEnvModelRuleName(w http.ResponseWriter, r *http.Request) {
 	appType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
@@ -568,7 +560,8 @@ func GetSupportedConfigsByEnvModelRuleName(w http.ResponseWriter, r *http.Reques
 	xwhttp.WriteXconfResponse(w, http.StatusOK, res)
 }
 
-// GET      /xconfAdminService/ux/api/firmwareconfig/byEnvModelRuleName/{ruleName}
+// Zero usages in green splunk for 4 weeks ending 21 Oct 2021
+// GET      /xconfadminService/ux/api/firmwareconfig/byEnvModelRuleName/{ruleName}
 func GetFirmwareConfigByEnvModelRuleNameByRuleNameHandler(w http.ResponseWriter, r *http.Request) {
 	appType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {

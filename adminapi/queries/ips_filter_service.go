@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,10 @@
 package queries
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
+	core "xconfadmin/shared"
 
-	xshared "xconfadmin/shared"
 	xwhttp "xconfwebconfig/http"
 	coreef "xconfwebconfig/shared/estbfirmware"
 	"xconfwebconfig/shared/firmware"
@@ -30,21 +30,22 @@ import (
 )
 
 func UpdateIpFilter(applicationType string, ipFilter *coreef.IpFilter) *xwhttp.ResponseEntity {
-	if err := firmware.ValidateRuleName(ipFilter.Id, ipFilter.Name); err != nil {
+	if err := firmware.ValidateRuleName(ipFilter.Id, ipFilter.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	if IsChangedIpAddressGroup(ipFilter.IpAddressGroup) {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("IP address group is not matched by existed IP address group"), nil)
+	if ipFilter.IpAddressGroup != nil && IsChangedIpAddressGroup(ipFilter.IpAddressGroup) {
+		return xwhttp.NewResponseEntity(http.StatusBadRequest,
+			fmt.Errorf("IP address group denoted by '%s' does not match any existing ipAddressGroup", ipFilter.IpAddressGroup.Name), nil)
 	}
 
 	firmwareRule := coreef.ConvertIpFilterToFirmwareRule(ipFilter)
-
+	firmwareRule.ApplicableAction = firmware.NewApplicableActionAndType(firmware.BlockingFilterActionClass, firmware.BLOCKING_FILTER, "")
 	if !util.IsBlank(applicationType) {
 		firmwareRule.ApplicationType = applicationType
 	}
 
-	if err := xshared.ValidateApplicationType(firmwareRule.ApplicationType); err != nil {
+	if err := core.ValidateApplicationType(firmwareRule.ApplicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 

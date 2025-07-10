@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -166,7 +166,7 @@ func CreateLogUploadSettings(lu *logupload.LogUploadSettings, app string) *xwhtt
 		return respEntity
 	}
 
-	lu.Updated = util.GetTimestamp(time.Now().UTC())
+	lu.Updated = util.GetTimestamp()
 	if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_LOG_UPLOAD_SETTINGS, lu.ID, lu); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -192,7 +192,7 @@ func UpdateLogUploadSettings(lu *logupload.LogUploadSettings, app string) *xwhtt
 		return respEntity
 	}
 
-	lu.Updated = util.GetTimestamp(time.Now().UTC())
+	lu.Updated = util.GetTimestamp()
 	if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_LOG_UPLOAD_SETTINGS, lu.ID, lu); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}

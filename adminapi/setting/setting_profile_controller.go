@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,6 +109,7 @@ func GetSettingProfileOneExport(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// TODO remove this function when we are sure that we don't need it anymore
 func GetAllSettingProfilesWithPage(w http.ResponseWriter, r *http.Request) {
 	var pageNumberStr, pageSizeStr string
 	pageNumber := 1
@@ -198,7 +199,7 @@ func GetSettingProfilesFilteredWithPage(w http.ResponseWriter, r *http.Request) 
 	}
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xwhttp.Error(w, http.StatusInternalServerError, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xwhttp.Error(w, http.StatusInternalServerError, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	contextMap := make(map[string]string)
@@ -210,7 +211,7 @@ func GetSettingProfilesFilteredWithPage(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
-	contextMap[xcommon.APPLICATION_TYPE] = applicationType
+	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
 
 	settingProfiles := FindByContext(contextMap)
 	sort.Slice(settingProfiles, func(i, j int) bool {
@@ -235,7 +236,7 @@ func CreateSettingProfileHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xwhttp.Error(w, http.StatusInternalServerError, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xwhttp.Error(w, http.StatusInternalServerError, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -315,7 +316,7 @@ func UpdateSettingProfilesHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xwhttp.Error(w, http.StatusInternalServerError, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xwhttp.Error(w, http.StatusInternalServerError, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()

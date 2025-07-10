@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
+	util "xconfadmin/util"
 	xutil "xconfadmin/util"
 	xwcommon "xconfwebconfig/common"
 	ds "xconfwebconfig/db"
@@ -41,13 +42,16 @@ import (
 )
 
 const (
-	amvModel       = "MODEL"
-	amvDescription = "DESCRIPTION"
-	amvPartnerId   = "PARTNER_ID"
-	amvFwVersion   = "FIRMWARE_VERSION"
-	amvRegex       = "REGULAR_EXPRESSION"
-	amvPageNumber  = "pageNumber"
-	amvPageSize    = "pageSize"
+	amvModel          = "MODEL"
+	amvDescription    = "DESCRIPTION"
+	amvPartnerId      = "PARTNER_ID"
+	amvPartnerIdAlias = "partnerId"
+	amvFwVersion      = "FIRMWARE_VERSION"
+	amvRegex          = "REGULAR_EXPRESSION"
+	amvPageNumber     = "pageNumber"
+	amvPageSize       = "pageSize"
+	amvFwVersionAlias = "firmwareVersion"
+	amvRegexAlias     = "regularExpression"
 )
 
 type ActivationVersionResponse struct {
@@ -95,7 +99,7 @@ func GetAmv(id string) *ActivationVersionResponse {
 
 func GetAllAmvList() []*firmware.ActivationVersion {
 	result := []*firmware.ActivationVersion{}
-	list, err := firmware.GetFirmwareRuleAllAsListDB()
+	list, err := firmware.GetFirmwareRuleAllAsListDBForAdmin()
 	if err != nil {
 		log.Warn("no amv found")
 		return result
@@ -346,7 +350,7 @@ func importOrUpdateAllAmvs(entities []firmware.ActivationVersion, app string) (m
 
 func UpdateAmv(amv *firmware.ActivationVersion, app string) *xwhttp.ResponseEntity {
 	if xwutil.IsBlank(amv.ID) {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New(" ID  is empty"), nil)
+		return xwhttp.NewResponseEntity(http.StatusNotFound, errors.New(" ID  is empty"), nil)
 	}
 	fwRule, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_FIRMWARE_RULE, amv.ID)
 	if err != nil {
@@ -421,6 +425,11 @@ func AmvFilterByContext(searchContext map[string]string) []*firmware.ActivationV
 				continue
 			}
 		}
+		if partnerid, ok := util.FindEntryInContext(searchContext, amvPartnerIdAlias, false); ok {
+			if !strings.Contains(strings.ToLower(amvRule.PartnerId), strings.ToLower(partnerid)) {
+				continue
+			}
+		}
 
 		if desc, ok := xutil.FindEntryInContext(searchContext, amvDescription, false); ok {
 			if !strings.Contains(strings.ToLower(amvRule.Description), strings.ToLower(desc)) {
@@ -443,7 +452,37 @@ func AmvFilterByContext(searchContext map[string]string) []*firmware.ActivationV
 			}
 		}
 		found = false
+		if ver, ok := xutil.FindEntryInContext(searchContext, amvFwVersionAlias, false); ok {
+			filtver := strings.ToLower(ver)
+			amvversions := amvRule.FirmwareVersions
+			for _, version := range amvversions {
+				version = strings.ToLower(version)
+				if strings.Contains(version, filtver) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+		found = false
 		if regex, ok := xutil.FindEntryInContext(searchContext, amvRegex, false); ok {
+			amvregexs := amvRule.RegularExpressions
+			filtregx := strings.ToLower(regex)
+			for _, regex := range amvregexs {
+				regex = strings.ToLower(regex)
+				if strings.Contains(regex, filtregx) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+		found = false
+		if regex, ok := xutil.FindEntryInContext(searchContext, amvRegexAlias, false); ok {
 			amvregexs := amvRule.RegularExpressions
 			filtregx := strings.ToLower(regex)
 			for _, regex := range amvregexs {

@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	ru "xconfwebconfig/rulesengine"
 
@@ -114,7 +113,7 @@ func telemetryRuleValidate(tmrule *xwlogupload.TelemetryRule) *xwhttp.ResponseEn
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
-	tmrules := xwlogupload.GetTelemetryRuleList()
+	tmrules := xwlogupload.GetTelemetryRuleListForAs()
 	for _, extmrule := range tmrules {
 		if extmrule.ApplicationType != tmrule.ApplicationType {
 			continue
@@ -157,7 +156,7 @@ func CreateTelemetryRule(tmrule *xwlogupload.TelemetryRule, app string) *xwhttp.
 		tmrule.ApplicationType = app
 	}
 
-	tmrule.Updated = xwutil.GetTimestamp(time.Now().UTC())
+	tmrule.Updated = xwutil.GetTimestamp()
 	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_TELEMETRY_RULES, tmrule.ID, tmrule); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -185,7 +184,7 @@ func UpdateTelemetryRule(tmrule *xwlogupload.TelemetryRule, app string) *xwhttp.
 		return respEntity
 	}
 
-	tmrule.Updated = xwutil.GetTimestamp(time.Now().UTC())
+	tmrule.Updated = xwutil.GetTimestamp()
 	if err = db.GetCachedSimpleDao().SetOne(db.TABLE_TELEMETRY_RULES, tmrule.ID, tmrule); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -229,7 +228,7 @@ func TelemetryRuleGeneratePageWithContext(tmrules []*xwlogupload.TelemetryRule, 
 }
 
 func TelemetryRuleFilterByContext(searchContext map[string]string) []*xwlogupload.TelemetryRule {
-	tmRules := xwlogupload.GetTelemetryRuleList()
+	tmRules := xwlogupload.GetTelemetryRuleListForAs()
 	tmRuleList := []*xwlogupload.TelemetryRule{}
 	for _, tmRule := range tmRules {
 		if tmRule == nil {
@@ -275,7 +274,7 @@ func TelemetryRuleFilterByContext(searchContext map[string]string) []*xwloguploa
 				}
 
 				if condition.GetOperation() != rulesengine.StandardOperationExists && condition.GetFixedArg() != nil && condition.GetFixedArg().IsStringValue() {
-					if strings.Contains(strings.ToLower(condition.FixedArg.Bean.Value.JLString), strings.ToLower(fixedArgValue)) {
+					if strings.Contains(strings.ToLower(*condition.FixedArg.Bean.Value.JLString), strings.ToLower(fixedArgValue)) {
 						valueMatch = true
 						break
 					}

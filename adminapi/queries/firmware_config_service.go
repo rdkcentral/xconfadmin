@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	xshared "xconfadmin/shared"
 	xutil "xconfadmin/util"
@@ -231,7 +230,7 @@ func generateFirmwareConfigPageByContext(dbrules []*coreef.FirmwareConfig, conte
 		pageSize, _ = strconv.Atoi(szStr)
 	}
 	if pageNum < 1 || pageSize < 1 {
-		return nil, xcommon.NewXconfError(http.StatusBadRequest, "pageNumber and pageSize should both be greater than zero")
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "pageNumber and pageSize should both be greater than zero")
 
 	}
 	return extractFirmwareConfigPage(dbrules, pageNum, pageSize), nil
@@ -239,7 +238,7 @@ func generateFirmwareConfigPageByContext(dbrules []*coreef.FirmwareConfig, conte
 
 func filterFirmwareConfigsByContext(entries []*coreef.FirmwareConfig, searchContext map[string]string) (result []*coreef.FirmwareConfig, err error) {
 	for _, config := range entries {
-		if applicationType, ok := xutil.FindEntryInContext(searchContext, xcommon.APPLICATION_TYPE, true); ok {
+		if applicationType, ok := xutil.FindEntryInContext(searchContext, xwcommon.APPLICATION_TYPE, true); ok {
 			if config.ApplicationType != applicationType && config.ApplicationType != shared.ALL {
 				continue
 			}
@@ -280,13 +279,13 @@ func beforeCreatingFirmwareConfig(entity *coreef.FirmwareConfig, writeApplicatio
 		if util.IsBlank(entity.ApplicationType) {
 			entity.ApplicationType = writeApplication
 		} else if entity.ApplicationType != writeApplication {
-			return xcommon.NewXconfError(http.StatusConflict, "ApplicationType conflict")
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "ApplicationType conflict")
 		}
-		entity.Updated = util.GetTimestamp(time.Now().UTC())
+		entity.Updated = util.GetTimestamp()
 		existingEntity, _ := coreef.GetFirmwareConfigOneDB(entity.ID)
 
 		if existingEntity != nil {
-			return xcommon.NewXconfError(http.StatusConflict, "Entity with id: "+entity.ID+" already exists in "+existingEntity.ApplicationType+" application")
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Entity with id: "+entity.ID+" already exists in "+existingEntity.ApplicationType+" application")
 		}
 	}
 	return nil
@@ -328,10 +327,10 @@ func CreateFirmwareConfig(config *coreef.FirmwareConfig, appType string) *xwhttp
 
 func beforeUpdatingFirmwareConfig(entity *coreef.FirmwareConfig, writeApplication string) error {
 	if util.IsBlank(entity.ID) {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Entity id is empty: ")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Entity id is empty: ")
 
 	}
-	entity.Updated = util.GetTimestamp(time.Now().UTC())
+	entity.Updated = util.GetTimestamp()
 	if util.IsBlank(entity.ApplicationType) {
 		if !util.IsBlank(writeApplication) {
 			entity.ApplicationType = writeApplication
@@ -340,7 +339,7 @@ func beforeUpdatingFirmwareConfig(entity *coreef.FirmwareConfig, writeApplicatio
 	existingEntity, _ := coreef.GetFirmwareConfigOneDB(entity.ID)
 
 	if existingEntity == nil || existingEntity.ApplicationType != entity.ApplicationType {
-		return xcommon.NewXconfError(http.StatusNotFound, "Entity with id: "+entity.ID+" does not exist in "+existingEntity.ApplicationType+" application")
+		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+entity.ID+" does not exist in "+existingEntity.ApplicationType+" application")
 	}
 	return nil
 }
@@ -354,6 +353,11 @@ func UpdateFirmwareConfigAS(config *coreef.FirmwareConfig, appType string, valid
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
+
+	if GetFirmwareConfigById(config.ID) == nil {
+		return xwhttp.NewResponseEntity(http.StatusNotFound, fmt.Errorf("\"FirmwareConfig with current id: %s does not exist\"", config.ID), nil)
+	}
+
 	if validateName {
 		err = config.ValidateName()
 		if err != nil {
@@ -361,9 +365,6 @@ func UpdateFirmwareConfigAS(config *coreef.FirmwareConfig, appType string, valid
 		}
 	}
 
-	if GetFirmwareConfigById(config.ID) == nil {
-		return xwhttp.NewResponseEntity(http.StatusNotFound, fmt.Errorf("\"FirmwareConfig with current id: %s does not exist\"", config.ID), nil)
-	}
 	if err = beforeUpdatingFirmwareConfig(config, appType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, err, nil)
 	}
@@ -408,7 +409,7 @@ func beforeDeletingFirmwareConfig(id string, appType string) *xwhttp.ResponseEnt
 	}
 
 	// Check for usage in FirmwareRule
-	rules, err := corefw.GetFirmwareRuleAllAsListDB()
+	rules, err := corefw.GetFirmwareRuleAllAsListDBForAdmin()
 	if err != nil && err.Error() != xcommon.NotFound.Error() {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, fmt.Errorf("Get FirmwareRules to check Referential Integrity while deleting %s failed", id), nil)
 	}
@@ -499,7 +500,7 @@ func GetSortedFirmwareVersionsIfDoesExistOrNot(firmwareConfigData FirmwareConfig
 func getSupportedConfigsByEnvModelRuleName(envModelName string, appType string) []coreef.FirmwareConfig {
 	versionSet := []coreef.FirmwareConfig{}
 	model := ""
-	firmwareRules, _ := corefw.GetFirmwareRuleAllAsListDB()
+	firmwareRules, _ := corefw.GetFirmwareRuleAllAsListDBForAdmin()
 	for _, rule := range firmwareRules {
 		if rule.Type == corefw.ENV_MODEL_RULE && rule.Name == envModelName && rule.ApplicationType == appType {
 			model = extractModel(*rule)
@@ -527,9 +528,9 @@ func getSupportedConfigsByEnvModelRuleName(envModelName string, appType string) 
 }
 
 func getFirmwareConfigByEnvModelRuleName(envModelRuleName string) *coreef.FirmwareConfig {
-	firmwareRules, _ := corefw.GetFirmwareRuleAllAsListDB()
+	firmwareRules, _ := corefw.GetFirmwareRuleAllAsListDBForAdmin()
 	for _, rule := range firmwareRules {
-		if rule.Type == corefw.ENV_MODEL_RULE && rule.Name == envModelRuleName && rule.ApplicableAction.Type == ".RuleAction" {
+		if rule.Type == corefw.ENV_MODEL_RULE && rule.Name == envModelRuleName && rule.ApplicableAction.Type == ".RuleAction" { // TODO Not sure what instanceof means in GO
 			fc, err := coreef.GetFirmwareConfigOneDB(rule.ConfigId())
 			if err == nil {
 				return fc

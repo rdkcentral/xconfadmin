@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,13 +40,14 @@ import (
 )
 
 const (
-	// DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
+	// Java lenient DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
 	dateLayout = "2006-01-02 15:04:05"
 )
 
 // str2Time just parses the given string with the layout "2006-01-02 15:04:05"
 // This is NOT the standard time format! e.g. time.RFC822Z or time.RFC3339
 // This format is simply "yyyy-mm-dd hh:mm:ss"
+// Java is supposed to be lenient in parsing, how to do that without trying multiple layouts?
 func str2Time(d string) (time.Time, error) {
 	return time.Parse(dateLayout, d)
 }
@@ -58,6 +59,10 @@ func str2Time(d string) (time.Time, error) {
 // i.e The given time is considered to be in MST, and normalized back to UTC
 func changeTZ(t time.Time, tz *time.Location) string {
 	newT := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), 0, tz)
+	// Can also use newT := = time.ParseInLocation(dateLayout, timeAsStr, tz)
+	// But this is more understandable
+
+	// xwutil.TZ has preloaded the UTC timezone, no need to load it again
 	return newT.In(xwutil.TZ).Format(dateLayout)
 }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,15 +28,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	"xconfwebconfig/shared/firmware"
-	"xconfwebconfig/util"
-
 	"xconfadmin/adminapi/auth"
 	xcommon "xconfadmin/common"
 	xhttp "xconfadmin/http"
+	xfirmware "xconfadmin/shared/firmware"
+	"xconfwebconfig/common"
+	"xconfwebconfig/db"
 	xwhttp "xconfwebconfig/http"
+	"xconfwebconfig/shared/firmware"
+	"xconfwebconfig/util"
 
 	xutil "xconfadmin/util"
 
@@ -60,6 +60,7 @@ func populateContext(w http.ResponseWriter, r *http.Request, isRead bool) (filte
 	return filterContext, nil
 }
 
+// Zero Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
 func GetFirmwareRuleFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	appType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
@@ -67,7 +68,7 @@ func GetFirmwareRuleFilteredHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbrules, err := firmware.GetFirmwareSortedRuleAllAsListDB()
+	dbrules, err := xfirmware.GetFirmwareSortedRuleAllAsListDB()
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -105,7 +106,8 @@ func GetFirmwareRuleFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
-// 10946 POST /xconfAdminService/ux/api/firmwarerule/filtered?pageNumber=X&pageSize=Y 10946
+// Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
+// 10946 POST /xconfadminService/ux/api/firmwarerule/filtered?pageNumber=X&pageSize=Y 10946
 func PostFirmwareRuleFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	applicationType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
@@ -138,7 +140,7 @@ func PostFirmwareRuleFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	filterContext[common.APPLICATION_TYPE] = applicationType
 
 	// Get all sorted rules
-	dbrules, err := firmware.GetFirmwareRuleAllAsListDB()
+	dbrules, err := firmware.GetFirmwareRuleAllAsListDBForAdmin()
 	if err != common.NotFound && err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -180,54 +182,64 @@ func PostFirmwareRuleFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	xwhttp.WriteXconfResponseWithHeaders(w, headers, http.StatusOK, response)
 }
 
+// Zero Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
 func PostFirmwareRuleImportAllHandler(w http.ResponseWriter, r *http.Request) {
-	appType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY)
-	if err != nil {
-		xhttp.AdminError(w, err)
-		return
-	}
-
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Unable to extract Body")
 		return
 	}
 
-	var firmwareRules []firmware.FirmwareRule
+	fields := xw.Audit()
+	const LargeValue = 1024
+	var firmwareRules = make([]*firmware.FirmwareRule, LargeValue)
+	for i := range firmwareRules {
+		firmwareRules[i] = firmware.NewEmptyFirmwareRule()
+		firmwareRules[i].ApplicationType = ""
+	}
 
 	if err := json.Unmarshal([]byte(xw.Body()), &firmwareRules); err != nil {
 		response := "Unable to extract firmwarerule from json file:" + err.Error()
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, response)
 		return
 	}
-
-	result := importOrUpdateAllFirmwareRules(firmwareRules, appType)
+	determinedAppType := ""
+	for i, _ := range firmwareRules {
+		appType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY, firmwareRules[i].ApplicationType)
+		if err != nil {
+			xhttp.AdminError(w, err)
+			return
+		}
+		if determinedAppType != "" && determinedAppType != appType {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, "ApplicationType mixing not allowed")
+			return
+		}
+		if firmwareRules[i].ApplicationType == "" {
+			firmwareRules[i].ApplicationType = appType
+		} else if firmwareRules[i].ApplicationType != appType {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, "ApplicationType Conflict")
+			return
+		}
+		determinedAppType = appType
+	}
+	result := importOrUpdateAllFirmwareRules(firmwareRules, determinedAppType, fields)
 	response, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
 	}
-	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
+	xhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
-// 151 POST /xconfAdminService/ux/api/firmwarerule/
+// Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
+//
+//	151 POST /xconfadminService/ux/api/firmwarerule/
 func PostFirmwareRuleHandler(w http.ResponseWriter, r *http.Request) {
-	appType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY)
+	firmwareRule := firmware.NewEmptyFirmwareRule()
+	firmwareRule.ApplicationType = ""
+	appType, err := auth.ExtractBodyAndCheckPermissions(firmwareRule, w, r, auth.FIRMWARE_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
-		return
-	}
-
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Unable to extract Body")
-		return
-	}
-
-	firmwareRule := firmware.NewEmptyFirmwareRule()
-	if err = json.Unmarshal([]byte(xw.Body()), firmwareRule); err != nil {
-		response := "Unable to extract firmwarerule from json file:" + err.Error()
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -255,30 +267,16 @@ func PostFirmwareRuleHandler(w http.ResponseWriter, r *http.Request) {
 	xwhttp.WriteXconfResponse(w, http.StatusCreated, response)
 }
 
-// 529 PUT /xconfAdminService/ux/api/firmwarerule/
+// Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
+//
+//	529 PUT /xconfadminService/ux/api/firmwarerule/
 func PutFirmwareRuleHandler(w http.ResponseWriter, r *http.Request) {
-	appType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY)
-	if err != nil {
-		xhttp.AdminError(w, err)
-		return
-	}
-
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Unable to extract Body")
-		return
-	}
-
-	var firmwareRule firmware.FirmwareRule
-
-	if err = json.Unmarshal([]byte(xw.Body()), &firmwareRule); err != nil {
-		response := "Unable to extract firmwarerule from json file:" + err.Error()
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, response)
-		return
-	}
+	firmwareRule := firmware.NewEmptyFirmwareRule()
+	firmwareRule.ApplicationType = ""
+	appType, err := auth.ExtractBodyAndCheckPermissions(firmwareRule, w, r, auth.FIRMWARE_ENTITY)
 	_, err = firmware.GetFirmwareRuleOneDB(firmwareRule.ID)
 	if err == nil {
-		err = updateFirmwareRule(firmwareRule, appType, true)
+		err = updateFirmwareRule(*firmwareRule, appType, true)
 		if err != nil {
 			xhttp.AdminError(w, err)
 			return
@@ -291,12 +289,13 @@ func PutFirmwareRuleHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		xwhttp.WriteXconfResponse(w, http.StatusOK, response)
 	} else {
-		response := "firmwareRule does not exist for " + firmwareRule.ID
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, response)
+		response := "firmwareRule does not exist for '" + firmwareRule.ID + "'"
+		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, response)
 	}
 }
 
-// 104 DELETE /xconfAdminService/ux/api/firmwarerule/9d531fc4-089d-4c05-8fea-d9f32786ef51
+// Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
+// 104 DELETE /xconfadminService/ux/api/firmwarerule/9d531fc4-089d-4c05-8fea-d9f32786ef51
 func DeleteFirmwareRuleByIdHandler(w http.ResponseWriter, r *http.Request) {
 	appType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
@@ -328,7 +327,8 @@ func DeleteFirmwareRuleByIdHandler(w http.ResponseWriter, r *http.Request) {
 	xwhttp.WriteXconfResponse(w, http.StatusNoContent, []byte(""))
 }
 
-// 3 GET /xconfAdminService/ux/api/firmwarerule/MAC_RULE/names
+// Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
+// 3 GET /xconfadminService/ux/api/firmwarerule/MAC_RULE/names
 func GetFirmwareRuleByTypeNamesHandler(w http.ResponseWriter, r *http.Request) {
 	appType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
@@ -342,7 +342,7 @@ func GetFirmwareRuleByTypeNamesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	nameMap := make(map[string]string)
-	dbrules, _ := firmware.GetFirmwareRuleAllAsListDB()
+	dbrules, _ := firmware.GetFirmwareRuleAllAsListDBForAdmin()
 	for _, v := range dbrules {
 		if v.Type == givenType && appType == v.ApplicationType {
 			nameMap[v.ID] = v.Name
@@ -357,10 +357,13 @@ func GetFirmwareRuleByTypeNamesHandler(w http.ResponseWriter, r *http.Request) {
 	xwhttp.WriteXconfResponse(w, http.StatusOK, res)
 }
 
+// Zero Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
 func GetFirmwareRuleByTemplateNamesHandler(w http.ResponseWriter, r *http.Request) {
+	// Zero usage - No urgency to migrate
 	xhttp.WriteAdminErrorResponse(w, http.StatusNotImplemented, "")
 }
 
+// Zero Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
 func GetFirmwareRuleByTemplateByTemplateIdNamesHandler(w http.ResponseWriter, r *http.Request) {
 	muxVarTemplateId := "templateId"
 	templateId, found := mux.Vars(r)[muxVarTemplateId]
@@ -370,7 +373,7 @@ func GetFirmwareRuleByTemplateByTemplateIdNamesHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	dbrules, err := firmware.GetFirmwareRuleAllAsListDB()
+	dbrules, err := firmware.GetFirmwareRuleAllAsListDBForAdmin()
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -397,6 +400,7 @@ func GetFirmwareRuleByTemplateByTemplateIdNamesHandler(w http.ResponseWriter, r 
 	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
+// Zero Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
 // /firmwarerule/export/byType?exportAll&type=applicableActionType
 func GetFirmwareRuleExportByTypeHandler(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
@@ -418,7 +422,7 @@ func GetFirmwareRuleExportByTypeHandler(w http.ResponseWriter, r *http.Request) 
 		}
 		appType := context[common.APPLICATION_TYPE]
 
-		frs, _ := firmware.GetFirmwareRuleAllAsListByApplicationType(appType)
+		frs, _ := firmware.GetFirmwareRuleAllAsListByApplicationTypeForAS(appType)
 		dbrules := []*firmware.FirmwareRule{}
 
 		for _, rules := range frs {
@@ -442,13 +446,14 @@ func GetFirmwareRuleExportByTypeHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+// Zero Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
 func GetFirmwareRuleExportAllTypesHandler(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	if queryParams[xcommon.EXPORTALL] == nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Missing exportAll param")
 		return
 	}
-	dbrules, err := firmware.GetFirmwareRuleAllAsListDB()
+	dbrules, err := firmware.GetFirmwareRuleAllAsListDBForAdmin()
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -548,10 +553,12 @@ func convertToMapKey(rule *firmware.FirmwareRule) (string, string) {
 	return result, ""
 }
 
+// Zero Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
 func PostFirmwareRuleEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 	PostPutFirmwareRuleEntitiesHandler(w, r, false)
 }
 
+// Zero Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
 func PutFirmwareRuleEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 	PostPutFirmwareRuleEntitiesHandler(w, r, true)
 }
@@ -568,7 +575,12 @@ func PostPutFirmwareRuleEntitiesHandler(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	body := xw.Body()
-	entities := []firmware.FirmwareRule{}
+	const LargeValue = 1024
+	var entities = make([]*firmware.FirmwareRule, LargeValue)
+	for i := range entities {
+		entities[i] = firmware.NewEmptyFirmwareRule()
+		entities[i].ApplicationType = appType
+	}
 	err = json.Unmarshal([]byte(body), &entities)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -578,7 +590,7 @@ func PostPutFirmwareRuleEntitiesHandler(w http.ResponseWriter, r *http.Request, 
 	ruleMap := make(map[string][]*firmware.FirmwareRule)
 	estbMap := make(map[string][]*firmware.FirmwareRule)
 
-	list, err := firmware.GetFirmwareRuleAllAsListDB()
+	list, err := firmware.GetFirmwareRuleAllAsListDBForAdmin()
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -621,7 +633,7 @@ func PostPutFirmwareRuleEntitiesHandler(w http.ResponseWriter, r *http.Request, 
 			}
 			continue
 		}
-		if err = duplicateFrFound(&entity, nameMap, ruleMap, estbMap); err != nil {
+		if err = duplicateFrFound(entity, nameMap, ruleMap, estbMap); err != nil {
 			if util.IsBlank(entity.ID) {
 				entity.ID = uuid.New().String() + entity.Name
 			}
@@ -633,13 +645,13 @@ func PostPutFirmwareRuleEntitiesHandler(w http.ResponseWriter, r *http.Request, 
 		}
 
 		if isPut {
-			err = updateFirmwareRule(entity, appType, false)
+			err = updateFirmwareRule(*entity, appType, false)
 		} else {
 			entity.Active = true
 			if entity.ApplicableAction != nil {
 				entity.ApplicableAction.Active = true
 			}
-			err = createFirmwareRule(entity, appType, false)
+			err = createFirmwareRule(*entity, appType, false)
 		}
 		if err != nil {
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
@@ -648,16 +660,16 @@ func PostPutFirmwareRuleEntitiesHandler(w http.ResponseWriter, r *http.Request, 
 			}
 			continue
 		} else {
-			nameMap[entity.Name] = findAndDeleteFR(nameMap[entity.Name], entity)
-			nameMap[entity.Name] = append(nameMap[entity.Name], &entities[i])
+			nameMap[entity.Name] = findAndDeleteFR(nameMap[entity.Name], *entity)
+			nameMap[entity.Name] = append(nameMap[entity.Name], entities[i])
 
-			mapKey, estb := convertToMapKey(&entity)
+			mapKey, estb := convertToMapKey(entity)
 			if estb != "" {
-				estbMap[estb] = findAndDeleteFR(estbMap[estb], entity)
-				estbMap[estb] = append(estbMap[estb], &entities[i])
+				estbMap[estb] = findAndDeleteFR(estbMap[estb], *entity)
+				estbMap[estb] = append(estbMap[estb], entities[i])
 			} else {
-				findAndDeleteFR(ruleMap[mapKey], entity)
-				ruleMap[mapKey] = append(ruleMap[mapKey], &entities[i])
+				findAndDeleteFR(ruleMap[mapKey], *entity)
+				ruleMap[mapKey] = append(ruleMap[mapKey], entities[i])
 			}
 
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
@@ -674,6 +686,7 @@ func PostPutFirmwareRuleEntitiesHandler(w http.ResponseWriter, r *http.Request, 
 	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
+// Zero Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
 func ObsoleteGetFirmwareRulePageHandler(w http.ResponseWriter, r *http.Request) {
 	// Get all sorted rules
 	dbrules, err := firmware.GetFirmwareSortedRuleAllAsListDB()
@@ -706,7 +719,8 @@ func ObsoleteGetFirmwareRulePageHandler(w http.ResponseWriter, r *http.Request) 
 	xwhttp.WriteXconfResponseWithHeaders(w, headers, http.StatusOK, response)
 }
 
-// 1  GET /xconfAdminService/ux/api/firmwarerule
+// Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
+// 1  GET /xconfadminService/ux/api/firmwarerule
 func GetFirmwareRuleHandler(w http.ResponseWriter, r *http.Request) {
 	appType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
@@ -714,7 +728,7 @@ func GetFirmwareRuleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	filtRules := []*firmware.FirmwareRule{}
-	dbrules, _ := firmware.GetFirmwareSortedRuleAllAsListDB()
+	dbrules, _ := xfirmware.GetFirmwareSortedRuleAllAsListDB()
 
 	for _, rule := range dbrules {
 		if appType == rule.ApplicationType {
@@ -741,8 +755,9 @@ func GetFirmwareRuleHandler(w http.ResponseWriter, r *http.Request) {
 	xwhttp.WriteXconfResponse(w, http.StatusOK, res)
 }
 
-// 1247 GET /xconfAdminService/ux/api/firmwarerule/{id}
-// 84 GET /xconfAdminService/ux/api/firmwarerule/{id}?export
+// Usage pattern from green splunk for 4 weeks ending 23rd Oct 2021
+// 1247 GET /xconfadminService/ux/api/firmwarerule/{id}
+// 84 GET /xconfadminService/ux/api/firmwarerule/{id}?export
 func GetFirmwareRuleByIdHandler(w http.ResponseWriter, r *http.Request) {
 	appType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {

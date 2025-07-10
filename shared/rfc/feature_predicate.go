@@ -1,5 +1,8 @@
-/**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+/*
+ * If not stated otherwise in this file or this component's Licenses.txt file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2018 RDK Management
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,37 +16,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * SPDX-License-Identifier: Apache-2.0
+ * Author: kloder
+ * Created: 11/03/2021
  */
 package rfc
 
 import (
 	"strings"
-	xcommon "xconfadmin/common"
 	xwrfc "xconfwebconfig/shared/rfc"
+)
+
+const (
+	APPLICATION_TYPE = "applicationType"
+	FEATURE_INSTANCE = "FEATURE_INSTANCE"
+	NAME             = "NAME"
+	FREE_ARG         = "FREE_ARG"
+	FIXED_ARG        = "FIXED_ARG"
 )
 
 func isFeatureValid(feature *xwrfc.Feature, predicates []string, searchContext map[string]string) bool {
 	for _, predicate := range predicates {
 		switch predicate {
-		case xcommon.APPLICATION_TYPE:
-			if !isApplicationTypeValid(searchContext[xcommon.APPLICATION_TYPE], feature) {
+		case APPLICATION_TYPE:
+			if !isApplicationTypeValid(searchContext[APPLICATION_TYPE], feature) {
 				return false
 			}
-		case xcommon.FEATURE_INSTANCE:
-			if !isFeatureInstanceValid(searchContext[xcommon.FEATURE_INSTANCE], feature) {
+		case FEATURE_INSTANCE:
+			if !isFeatureInstanceValid(searchContext[FEATURE_INSTANCE], feature) {
 				return false
 			}
-		case xcommon.NAME:
-			if !isNameValid(searchContext[xcommon.NAME], feature) {
+		case NAME:
+			if !isNameValid(searchContext[NAME], feature) {
 				return false
 			}
-		case xcommon.FREE_ARG:
-			if !isFreeArgValid(searchContext[xcommon.FREE_ARG], feature) {
+		case FREE_ARG:
+			if !isFreeArgValid(searchContext[FREE_ARG], feature) {
 				return false
 			}
-		case xcommon.FIXED_ARG:
-			if !isFixedArgValid(searchContext[xcommon.FIXED_ARG], feature) {
+		case FIXED_ARG:
+			if !isFixedArgValid(searchContext[FIXED_ARG], feature) {
 				return false
 			}
 		}
@@ -87,20 +98,20 @@ func isFixedArgValid(fixedArg string, feature *xwrfc.Feature) bool {
 
 func getFeaturePredicates(context map[string]string) []string {
 	var predicates []string
-	if context[xcommon.APPLICATION_TYPE] != "" {
-		predicates = append(predicates, xcommon.APPLICATION_TYPE)
+	if context[APPLICATION_TYPE] != "" {
+		predicates = append(predicates, APPLICATION_TYPE)
 	}
-	if context[xcommon.FEATURE_INSTANCE] != "" {
-		predicates = append(predicates, xcommon.FEATURE_INSTANCE)
+	if context[FEATURE_INSTANCE] != "" {
+		predicates = append(predicates, FEATURE_INSTANCE)
 	}
-	if context[xcommon.NAME] != "" {
-		predicates = append(predicates, xcommon.NAME)
+	if context[NAME] != "" {
+		predicates = append(predicates, NAME)
 	}
-	if context[xcommon.FREE_ARG] != "" {
-		predicates = append(predicates, xcommon.FREE_ARG)
+	if context[FREE_ARG] != "" {
+		predicates = append(predicates, FREE_ARG)
 	}
-	if context[xcommon.FIXED_ARG] != "" {
-		predicates = append(predicates, xcommon.FIXED_ARG)
+	if context[FIXED_ARG] != "" {
+		predicates = append(predicates, FIXED_ARG)
 	}
 	return predicates
 }

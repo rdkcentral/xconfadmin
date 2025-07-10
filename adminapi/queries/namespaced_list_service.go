@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,13 @@ var ruleTables = []string{
 	ds.TABLE_FEATURE_CONTROL_RULE,
 	ds.TABLE_SETTING_RULES,
 }
+
+const (
+	STRING      = "STRING"
+	MAC_LIST    = "MAC_LIST"
+	IP_LIST     = "IP_LIST"
+	RI_MAC_LIST = "RI_MAC_LIST"
+)
 
 func GetNamespacedListIdsByType(typeName string) []string {
 	var list []*shared.GenericNamespacedList
@@ -191,15 +198,51 @@ func GeneratePageNamespacedLists(list []*shared.GenericNamespacedList, page int,
 	return list[startIndex:lastIndex]
 }
 
+func IsValidType(stype string) bool {
+	return STRING == stype || MAC_LIST == stype || IP_LIST == stype || RI_MAC_LIST == stype
+}
+func ValidateListDataForAdmin(typeName string, listData []string) error {
+	if !IsValidType(typeName) {
+		return errors.New("Type is invalid")
+	}
+
+	if len(listData) == 0 {
+		return errors.New("List must not be empty")
+	}
+
+	var invalidAddresses []string
+	if typeName == IP_LIST {
+		for _, ipAddress := range listData {
+			if shared.NewIpAddress(ipAddress) == nil {
+				invalidAddresses = append(invalidAddresses, ipAddress)
+			}
+		}
+	} else if typeName == MAC_LIST {
+		for _, mac := range listData {
+			if !util.IsValidMacAddress(mac) {
+				invalidAddresses = append(invalidAddresses, mac)
+			}
+		}
+	}
+	if len(invalidAddresses) > 0 {
+		return fmt.Errorf("List contains invalid address(es): %v", invalidAddresses)
+	}
+
+	return nil
+}
+
 func AddNamespacedListData(listType string, listId string, stringListWrapper *shared.StringListWrapper) *xwhttp.ResponseEntity {
 	if listId == "" {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("Id is empty"), nil)
 	}
 
-	err := shared.ValidateListData(listType, stringListWrapper.List)
+	err := ValidateListDataForAdmin(listType, stringListWrapper.List)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
+
+	shared.LockGenericNamespacedList()
+	defer shared.UnlockGenericNamespacedList()
 
 	listToUpdate, err := shared.GetGenericNamedListOneByTypeNonCached(listId, listType)
 	if err != nil {
@@ -245,10 +288,13 @@ func RemoveNamespacedListData(listType string, listId string, stringListWrapper 
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("Id is empty"), nil)
 	}
 
-	err := shared.ValidateListData(listType, stringListWrapper.List)
+	err := ValidateListDataForAdmin(listType, stringListWrapper.List)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
+
+	shared.LockGenericNamespacedList()
+	defer shared.UnlockGenericNamespacedList()
 
 	listToUpdate, err := shared.GetGenericNamedListOneByTypeNonCached(listId, listType)
 	if err != nil {
@@ -299,7 +345,7 @@ func RemoveNamespacedListData(listType string, listId string, stringListWrapper 
 }
 
 func CreateNamespacedList(namespacedList *shared.GenericNamespacedList, updateIfExists bool) *xwhttp.ResponseEntity {
-	err := namespacedList.Validate()
+	err := namespacedList.ValidateForAdminService()
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
@@ -331,7 +377,7 @@ func CreateNamespacedList(namespacedList *shared.GenericNamespacedList, updateIf
 }
 
 func UpdateNamespacedList(namespacedList *shared.GenericNamespacedList, newId string) *xwhttp.ResponseEntity {
-	err := namespacedList.Validate()
+	err := namespacedList.ValidateForAdminService()
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
@@ -380,6 +426,7 @@ func UpdateNamespacedList(namespacedList *shared.GenericNamespacedList, newId st
 }
 
 func DeleteNamespacedList(typeName string, id string) *xwhttp.ResponseEntity {
+	ds.GetCacheManager().ForceSyncChanges()
 	var namespacedList *shared.GenericNamespacedList
 	if typeName == "" {
 		namespacedList = GetNamespacedListById(id)
@@ -466,7 +513,7 @@ func renameNamespacedListInUsedEntities(oldNamespacedListId string, newNamespace
 			}
 		}
 
-		for _, feature := range rfc.GetFeatureList() {
+		for _, feature := range rfc.GetFeatureListForAS() {
 			if feature != nil && feature.Whitelisted && feature.WhitelistProperty != nil && feature.WhitelistProperty.Value == oldNamespacedListId {
 				feature.WhitelistProperty.Value = newNamespacedListId
 				if _, err := xrfc.SetOneFeature(feature); err != nil {

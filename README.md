@@ -9,15 +9,17 @@ This project is written and tested with Go **1.15**.
 ## Build the binary
 ```shell
 cd .../xconfadmin
-make
+make build
 ```
 **bin/xconfadmin-linux-amd64** will be created. 
 
 ## Run the application
-A configuration file can be passed as an argument when the application starts. config/sample_xconfwebconfig.conf is an example. 
+The application includes an API to notify RDK devices to download updated configurations from this server. A JWT token is required to communicate with service. The credentials are passed to the application through environment variables. A configuration file can be passed as an argument when the application starts. config/sample_xconfadmin.conf is an example. 
 
 
 ```shell
+export SAT_CLIENT_ID='xxxxxx'
+export SAT_CLIENT_SECRET='yyyyyy'
 mkdir -p /app/logs/xconfadmin
 cd .../xconfadmin
 bin/xconfadmin-linux-amd64 -f config/sample_xconfadmin.conf

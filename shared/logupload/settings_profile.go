@@ -1,5 +1,8 @@
-/**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+/*
+ * If not stated otherwise in this file or this component's Licenses.txt file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2018 RDK Management
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,26 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * SPDX-License-Identifier: Apache-2.0
+ * Author: kloder201
+ * Created: 3/31/2021
  */
-package shared
-
-import (
-	"xconfwebconfig/db"
-	"xconfwebconfig/shared"
-)
-
-func GetGenericNamedListOneNonCached(id string) (*shared.GenericNamespacedList, error) {
-	instlst, err := db.GetCompressingDataDao().GetOne(db.TABLE_GENERIC_NS_LIST, id)
-	if err != nil {
-		return nil, err
-	}
-
-	if instlst == nil {
-		return nil, nil
-	}
-
-	lstptr := instlst.(*shared.GenericNamespacedList)
-
-	return lstptr, nil
-}
+package logupload

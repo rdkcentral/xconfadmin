@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	xutil "xconfadmin/util"
 	"xconfwebconfig/shared/logupload"
@@ -197,7 +196,7 @@ func CreateLogRepoSettings(lr *logupload.UploadRepository, app string) *xwhttp.R
 	if respEntity.Error != nil {
 		return respEntity
 	}
-	lr.Updated = util.GetTimestamp(time.Now().UTC())
+	lr.Updated = util.GetTimestamp()
 	if err = db.GetCachedSimpleDao().SetOne(db.TABLE_UPLOAD_REPOSITORY, lr.ID, lr); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -224,7 +223,7 @@ func UpdateLogRepoSettings(lr *logupload.UploadRepository, app string) *xwhttp.R
 		return respEntity
 	}
 
-	lr.Updated = util.GetTimestamp(time.Now().UTC())
+	lr.Updated = util.GetTimestamp()
 	if err = db.GetCachedSimpleDao().SetOne(db.TABLE_UPLOAD_REPOSITORY, lr.ID, lr); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}

@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,10 @@ import (
 	"net/url"
 	"time"
 
+	"xconfadmin/common"
 	xhttp "xconfadmin/http"
+	"xconfadmin/util"
 	xwhttp "xconfwebconfig/http"
-
-	"xconfwebconfig/util"
 
 	"github.com/golang-jwt/jwt/v4"
 	log "github.com/sirupsen/logrus"
@@ -42,23 +42,30 @@ func WebServerInjection(ws *xhttp.WebconfigServer) {
 	Ws = ws
 }
 
-const (
-	adminUrlCookieName = "admin-ui-location"
-	defaultAdminUIHost = "http://localhost:8081"
-)
+func AuthInfoHandler(w http.ResponseWriter, r *http.Request) {
+	// No permission check needed
+	authResponse := xhttp.NewAuthResponse(r)
+	if authResponse == nil {
+		xhttp.WriteXconfResponse(w, http.StatusUnauthorized, []byte(""))
+		return
+	}
+	response, _ := util.JSONMarshal(&authResponse)
+	headers := map[string]string{
+		"authProvider": getAuthProvider(),
+	}
+	xhttp.WriteXconfResponseWithHeaders(w, headers, http.StatusOK, response)
+}
 
-func GetAdminUIUrlFromCookies(r *http.Request) string {
-	cookie, err := r.Cookie(adminUrlCookieName)
-	if err != nil {
-		log.Errorf("%s: %s", adminUrlCookieName, err.Error())
-		return defaultAdminUIHost
+func AuthProvider(w http.ResponseWriter, r *http.Request) {
+	responseRaw := map[string]string{
+		"name": getAuthProvider(),
 	}
-	adminServiceUrl, err := url.QueryUnescape(cookie.Value)
-	if err != nil {
-		log.Errorf("error unescaping %s cookie value %s: %s", adminUrlCookieName, cookie.Value, err.Error())
-		return defaultAdminUIHost
-	}
-	return adminServiceUrl
+	response, _ := util.JSONMarshal(&responseRaw)
+	xhttp.WriteXconfResponse(w, http.StatusOK, response)
+}
+
+func getAuthProvider() string {
+	return common.AuthProvider
 }
 
 func BasicAuthHandler(w http.ResponseWriter, r *http.Request) {
@@ -106,8 +113,8 @@ func BasicAuthHandler(w http.ResponseWriter, r *http.Request) {
 					},
 					"exp": time.Now().Add(time.Hour * 24).Unix(),
 				}})
-
 		token, err := claims.SignedString([]byte("xconf"))
+
 		if err != nil {
 			log.Error("Authentication Error : ", err)
 			http.Error(w, "Authentication Error", http.StatusUnauthorized)
@@ -136,25 +143,4 @@ func getAdminUIUrlFromCookies(r *http.Request) string {
 		return defaultAdminUIHost
 	}
 	return adminServiceUrl
-}
-
-func AuthInfoHandler(w http.ResponseWriter, r *http.Request) {
-	authResponse := xhttp.NewAuthResponse(r)
-	if authResponse == nil {
-		xwhttp.WriteXconfResponse(w, http.StatusUnauthorized, []byte(""))
-		return
-	}
-	response, _ := util.JSONMarshal(&authResponse)
-	headers := map[string]string{
-		"authProvider": "acl",
-	}
-	xwhttp.WriteXconfResponseWithHeaders(w, headers, http.StatusOK, response)
-}
-
-func AuthProvider(w http.ResponseWriter, r *http.Request) {
-	responseRaw := map[string]string{
-		"name": "acl",
-	}
-	response, _ := util.JSONMarshal(&responseRaw)
-	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,7 +87,7 @@ func getMatchedRules(context map[string]string) []*xwlogupload.TimestampedRule {
 
 func GetAvailableDescriptors(applicationType string) []*xwlogupload.PermanentTelemetryRuleDescriptor {
 	descriptors := []*xwlogupload.PermanentTelemetryRuleDescriptor{}
-	telemetryRuleList := xwlogupload.GetTelemetryRuleList() //[]*TelemetryRule
+	telemetryRuleList := xwlogupload.GetTelemetryRuleListForAs() //[]*TelemetryRule
 	for _, telemetryRule := range telemetryRuleList {
 		if telemetryRule != nil && shared.ApplicationTypeEquals(telemetryRule.ApplicationType, applicationType) {
 			ruleDescriptor := xwlogupload.NewPermanentTelemetryRuleDescriptor()

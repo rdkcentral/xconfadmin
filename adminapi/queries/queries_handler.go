@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,16 +37,14 @@ import (
 
 	xcommon "xconfwebconfig/common"
 
+	"xconfadmin/adminapi/auth"
 	"xconfadmin/common"
+	xhttp "xconfadmin/http"
 	xcoreef "xconfadmin/shared/estbfirmware"
+	xwhttp "xconfwebconfig/http"
 	coreef "xconfwebconfig/shared/estbfirmware"
 	corefw "xconfwebconfig/shared/firmware"
 	"xconfwebconfig/util"
-
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
-	xcorefw "xconfadmin/shared/firmware"
-	xwhttp "xconfwebconfig/http"
 )
 
 func GetQueriesPercentageBean(w http.ResponseWriter, r *http.Request) {
@@ -79,6 +77,7 @@ func GetQueriesPercentageBean(w http.ResponseWriter, r *http.Request) {
 	}
 	_, ok := contextMap[common.EXPORT]
 	if ok {
+		//TODO: replace to struct instead of map
 		percentageBeansToExport := make(map[string]interface{})
 		percentageBeansToExport["percentageBeans"] = result
 		res, err := xhttp.ReturnJsonResponse(percentageBeansToExport, r)
@@ -134,10 +133,11 @@ func CreatePercentageBeanHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
+	fields := xw.Audit()
 	percentageBean := coreef.NewPercentageBean()
 	err = json.Unmarshal([]byte(body), &percentageBean)
 	if err != nil {
@@ -149,7 +149,7 @@ func CreatePercentageBeanHandler(w http.ResponseWriter, r *http.Request) {
 		percentageBean.ApplicationType = applicationType
 	}
 
-	respEntity := CreatePercentageBean(percentageBean, applicationType)
+	respEntity := CreatePercentageBean(percentageBean, applicationType, fields)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -173,10 +173,11 @@ func UpdatePercentageBeanHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
+	fields := xw.Audit()
 	percentageBean := coreef.NewPercentageBean()
 	err = json.Unmarshal([]byte(body), &percentageBean)
 	if err != nil {
@@ -184,7 +185,7 @@ func UpdatePercentageBeanHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respEntity := UpdatePercentageBean(percentageBean, applicationType)
+	respEntity := UpdatePercentageBean(percentageBean, applicationType, fields)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -300,7 +301,7 @@ func CreateEnvironmentHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -405,7 +406,7 @@ func CreateModelHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -439,7 +440,7 @@ func UpdateModelHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -489,7 +490,7 @@ func DeleteModelHandler(w http.ResponseWriter, r *http.Request) {
 func getQueriesFirmwareConfigsASFlavor(w http.ResponseWriter, r *http.Request, app string) {
 	result := GetFirmwareConfigsAS(app)
 	sort.Slice(result, func(i, j int) bool {
-		return strings.Compare(strings.ToLower(result[i].Description), strings.ToLower(result[j].Description)) < 0
+		return strings.Compare(strings.ToUpper(result[i].Description), strings.ToUpper(result[j].Description)) < 0
 	})
 	res, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
@@ -653,7 +654,7 @@ func CreateFirmwareConfigHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -693,7 +694,7 @@ func UpdateFirmwareConfigHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -868,30 +869,13 @@ func GetQueriesFiltersDownloadLocation(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateDownloadLocationFilterHandler(w http.ResponseWriter, r *http.Request) {
-	applicationType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY)
+	locationRoundRobinFilter := coreef.NewEmptyDownloadLocationRoundRobinFilterValue()
+	locationRoundRobinFilter.ApplicationType = ""
+	applicationType, err := auth.ExtractBodyAndCheckPermissions(locationRoundRobinFilter, w, r, auth.FIRMWARE_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
 	}
-
-	// r.Body is already drained in the middleware
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
-		return
-	}
-	body := xw.Body()
-	locationRoundRobinFilter := coreef.NewEmptyDownloadLocationRoundRobinFilterValue()
-	err = json.Unmarshal([]byte(body), &locationRoundRobinFilter)
-	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if applicationType != locationRoundRobinFilter.ApplicationType {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusBadRequest, "ApplicationType Mismatch"))
-		return
-	}
-
 	respEntity := UpdateDownloadLocationRoundRobinFilter(applicationType, locationRoundRobinFilter)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -967,7 +951,7 @@ func UpdateIpsFilterHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -1069,7 +1053,7 @@ func UpdateTimeFilterHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -1184,7 +1168,7 @@ func UpdateLocationFilterHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -1279,7 +1263,7 @@ func UpdatePercentFilterHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -1360,7 +1344,7 @@ func UpdateRebootImmediatelyHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -1406,6 +1390,8 @@ func DeleteRebootImmediatelyHandler(w http.ResponseWriter, r *http.Request) {
 	xwhttp.WriteXconfResponse(w, respEntity.Status, nil)
 }
 
+// Identical to GetQueriesFiltersDownloadLocation except for applicationType is in the path
+// and export param, e.g. http://localhost:9000/xconfAdminService/api/roundrobinfilter/stb?export
 func GetRoundRobinFilterHandler(w http.ResponseWriter, r *http.Request) {
 	applicationType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
@@ -1537,7 +1523,7 @@ func UpdateIpRule(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -1553,7 +1539,7 @@ func UpdateIpRule(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Name is empty")
 		return
 	}
-	if err := corefw.ValidateRuleName(ipRuleBean.Id, ipRuleBean.Name); err != nil {
+	if err := corefw.ValidateRuleName(ipRuleBean.Id, ipRuleBean.Name, applicationType); err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -1596,7 +1582,8 @@ func UpdateIpRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if ipRuleBean.IpAddressGroup != nil && IsChangedIpAddressGroup(ipRuleBean.IpAddressGroup) {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "IP address group is not matched by existed IP address group")
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest,
+			fmt.Sprintf("IP address group denoted by '%s' does not match any existing ipAddressGroup", ipRuleBean.IpAddressGroup.Name))
 		return
 	}
 
@@ -1617,7 +1604,8 @@ func UpdateIpRule(w http.ResponseWriter, r *http.Request) {
 	if applicationType != "" {
 		firmwareRule.ApplicationType = applicationType
 	}
-	err = xcorefw.CreateFirmwareRuleOneDBAfterValidate(firmwareRule)
+
+	err = corefw.CreateFirmwareRuleOneDB(firmwareRule)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("DB error: %v", err))
 		return
@@ -1759,7 +1747,7 @@ func SaveMACRule(w http.ResponseWriter, r *http.Request) {
 
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -1777,7 +1765,7 @@ func SaveMACRule(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "MAC address list is empty or blank")
 		return
 	}
-	if err := corefw.ValidateRuleName(macRule.Id, macRule.Name); err != nil {
+	if err := corefw.ValidateRuleName(macRule.Id, macRule.Name, applicationType); err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -1869,7 +1857,7 @@ func SaveMACRule(w http.ResponseWriter, r *http.Request) {
 	if applicationType != "" {
 		firmwareRule.ApplicationType = applicationType
 	}
-	err = xcorefw.CreateFirmwareRuleOneDBAfterValidate(firmwareRule)
+	err = corefw.CreateFirmwareRuleOneDB(firmwareRule)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("DB error: %v", err))
 		return
@@ -1980,7 +1968,7 @@ func UpdateEnvModelRuleHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -1998,7 +1986,7 @@ func UpdateEnvModelRuleHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Environment id is empty")
 		return
 	}
-	if err := corefw.ValidateRuleName(envModelRuleBean.Id, envModelRuleBean.Name); err != nil {
+	if err := corefw.ValidateRuleName(envModelRuleBean.Id, envModelRuleBean.Name, applicationType); err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -2051,7 +2039,7 @@ func UpdateEnvModelRuleHandler(w http.ResponseWriter, r *http.Request) {
 		envModelRuleBean.Id = uuid.New().String()
 	}
 	firmwareRule := xcoreef.ConvertModelRuleBeanToFirmwareRule(&envModelRuleBean)
-	err = xcorefw.CreateFirmwareRuleOneDBAfterValidate(firmwareRule)
+	err = corefw.CreateFirmwareRuleOneDB(firmwareRule)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("DB error: %v", err))
 		return

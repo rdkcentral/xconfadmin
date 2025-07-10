@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,20 +69,13 @@ func GetTelemetryTwoProfilesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateTelemetryTwoProfileChangeHandler(w http.ResponseWriter, r *http.Request) {
-	// r.Body is already drained in the middleware
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
-		return
-	}
-	body := xw.Body()
 	telemetryTwoProfile := xlogupload.NewEmptyTelemetryTwoProfile()
-	err := json.Unmarshal([]byte(body), &telemetryTwoProfile)
+	telemetryTwoProfile.ApplicationType = ""
+	_, err := auth.ExtractBodyAndCheckPermissions(telemetryTwoProfile, w, r, auth.TELEMETRY_ENTITY)
 	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
+		xhttp.AdminError(w, err)
 		return
 	}
-
 	change, err := WriteCreateChangeTelemetryTwoProfile(r, telemetryTwoProfile)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -98,16 +91,11 @@ func CreateTelemetryTwoProfileChangeHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func CreateTelemetryTwoProfileHandler(w http.ResponseWriter, r *http.Request) {
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
-		return
-	}
-	body := xw.Body()
 	telemetryTwoProfile := xlogupload.NewEmptyTelemetryTwoProfile()
-	err := json.Unmarshal([]byte(body), &telemetryTwoProfile)
+	telemetryTwoProfile.ApplicationType = ""
+	_, err := auth.ExtractBodyAndCheckPermissions(telemetryTwoProfile, w, r, auth.TELEMETRY_ENTITY)
 	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
+		xhttp.AdminError(w, err)
 		return
 	}
 
@@ -126,17 +114,11 @@ func CreateTelemetryTwoProfileHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateTelemetryTwoProfileChangeHandler(w http.ResponseWriter, r *http.Request) {
-	// r.Body is already drained in the middleware
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
-		return
-	}
-	body := xw.Body()
 	telemetryTwoProfile := xlogupload.NewEmptyTelemetryTwoProfile()
-	err := json.Unmarshal([]byte(body), &telemetryTwoProfile)
+	telemetryTwoProfile.ApplicationType = ""
+	_, err := auth.ExtractBodyAndCheckPermissions(telemetryTwoProfile, w, r, auth.TELEMETRY_ENTITY)
 	if err != nil {
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
+		xhttp.AdminError(w, err)
 		return
 	}
 
@@ -155,17 +137,11 @@ func UpdateTelemetryTwoProfileChangeHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func UpdateTelemetryTwoProfileHandler(w http.ResponseWriter, r *http.Request) {
-	// r.Body is already drained in the middleware
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
-		return
-	}
-	body := xw.Body()
 	telemetryTwoProfile := xlogupload.NewEmptyTelemetryTwoProfile()
-	err := json.Unmarshal([]byte(body), &telemetryTwoProfile)
+	telemetryTwoProfile.ApplicationType = ""
+	_, err := auth.ExtractBodyAndCheckPermissions(telemetryTwoProfile, w, r, auth.TELEMETRY_ENTITY)
 	if err != nil {
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
+		xhttp.AdminError(w, err)
 		return
 	}
 
@@ -273,7 +249,13 @@ func GetTelemetryTwoProfileByIdHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// TODO remove this function when we are sure that we don't need it anymore
 func GetTelemetryTwoProfilePageHandler(w http.ResponseWriter, r *http.Request) {
+	applicationType, err := auth.CanRead(r, auth.TELEMETRY_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	queryParams := map[string]string{}
 	xutil.AddQueryParamsToContextMap(r, queryParams)
 	pageNumber, err := strconv.Atoi(queryParams[xcommon.PAGE_NUMBER])
@@ -287,7 +269,7 @@ func GetTelemetryTwoProfilePageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profiles := xlogupload.GetAllTelemetryTwoProfileList()
+	profiles := xlogupload.GetAllTelemetryTwoProfileList(applicationType)
 	profilesPerPage := GeneratePageTelemetryTwoProfiles(profiles, pageNumber, pageSize)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -304,21 +286,26 @@ func GetTelemetryTwoProfilePageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PostTelemetryTwoProfilesByIdListHandler(w http.ResponseWriter, r *http.Request) {
+	applicationType, err := auth.CanRead(r, auth.TELEMETRY_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
 	idList := []string{}
-	err := json.Unmarshal([]byte(body), &idList)
+	err = json.Unmarshal([]byte(body), &idList)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	profiles := GetTelemetryTwoProfilesByIdList(idList)
+	profiles := GetTelemetryTwoProfilesByIdList(applicationType, idList)
 
 	res, err := xhttp.ReturnJsonResponse(profiles, r)
 	if err != nil {
@@ -351,7 +338,7 @@ func PostTelemetryTwoProfileFilteredHandler(w http.ResponseWriter, r *http.Reque
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -390,7 +377,7 @@ func PostTelemetryTwoProfileEntitiesHandler(w http.ResponseWriter, r *http.Reque
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -428,7 +415,7 @@ func PutTelemetryTwoProfileEntitiesHandler(w http.ResponseWriter, r *http.Reques
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -490,7 +477,7 @@ func TelemetryTwoTestPageHandler(w http.ResponseWriter, r *http.Request) {
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
 
 	telemetryProfileService := telemetry.NewTelemetryProfileService()
-	telemetryTwoRules := telemetryProfileService.ProcessTelemetryTwoRules(contextMap)
+	telemetryTwoRules := telemetryProfileService.ProcessTelemetryTwoRulesForAS(contextMap)
 
 	result := make(map[string]interface{})
 	result["context"] = contextMap

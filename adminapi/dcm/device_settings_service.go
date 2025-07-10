@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"xconfwebconfig/shared/logupload"
 	"xconfwebconfig/util"
@@ -179,7 +178,7 @@ func CreateDeviceSettings(dset *logupload.DeviceSettings, app string) *xwhttp.Re
 		return respEntity
 	}
 
-	dset.Updated = util.GetTimestamp(time.Now().UTC())
+	dset.Updated = util.GetTimestamp()
 	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DEVICE_SETTINGS, dset.ID, dset); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -205,7 +204,7 @@ func UpdateDeviceSettings(dset *logupload.DeviceSettings, app string) *xwhttp.Re
 		return respEntity
 	}
 
-	dset.Updated = util.GetTimestamp(time.Now().UTC())
+	dset.Updated = util.GetTimestamp()
 	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DEVICE_SETTINGS, dset.ID, dset); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}

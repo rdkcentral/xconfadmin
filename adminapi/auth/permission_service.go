@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,59 +18,62 @@
 package auth
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
-	xcommon "xconfadmin/common"
+	log "github.com/sirupsen/logrus"
 
+	"xconfadmin/common"
+	owcommon "xconfadmin/common"
 	xhttp "xconfadmin/http"
-
-	xshared "xconfadmin/shared"
+	core "xconfadmin/shared"
 	xwcommon "xconfwebconfig/common"
-	xwshared "xconfwebconfig/shared"
-	"xconfwebconfig/util"
+	xwhttp "xconfwebconfig/http"
+
+	"xconfadmin/util"
 )
 
 const (
+	COMMON_MODULE    string = "common"
+	TOOL_MODULE      string = "tools"
+	CHANGE_MODULE    string = "changes"
+	DCM_MODULE       string = "dcm"
+	FIRMWARE_MODULE  string = "firmware"
+	RFC_MODULE       string = "rfc"
+	TELEMETRY_MODULE string = "telemetry"
+
 	READ_COMMON  string = "read-common"
 	WRITE_COMMON string = "write-common"
 
 	VIEW_TOOLS  string = "view-tools"
 	WRITE_TOOLS string = "write-tools"
 
-	READ_DCM_STB      string = "read-dcm-stb"
-	READ_DCM_RDLCLOUD string = "read-dcm-rdkcloud"
-	READ_DCM_ALL      string = "read-dcm-*"
+	READ_DCM     string = "read-dcm-"
+	READ_DCM_ALL string = "read-dcm-*"
 
-	WRITE_DCM_STB      string = "write-dcm-stb"
-	WRITE_DCM_RDKCLOUD string = "write-dcm-rdkcloud"
-
+	WRITE_DCM     string = "write-dcm-"
 	WRITE_DCM_ALL string = "write-dcm-*"
 
-	READ_FIRMWARE_STB      string = "read-firmware-stb"
-	READ_FIRMWARE_RDKCLOUD string = "read-firmware-rdkcloud"
-	READ_FIRMWARE_ALL      string = "read-firmware-*"
+	READ_FIRMWARE     string = "read-firmware-"
+	READ_FIRMWARE_ALL string = "read-firmware-*"
 
-	WRITE_FIRMWARE_STB      string = "write-firmware-stb"
-	WRITE_FIRMWARE_RDKCLOUD string = "write-firmware-rdkcloud"
-	WRITE_FIRMWARE_ALL      string = "write-firmware-*"
+	WRITE_FIRMWARE     string = "write-firmware-"
+	WRITE_FIRMWARE_ALL string = "write-firmware-*"
 
-	READ_TELEMETRY_STB      string = "read-telemetry-stb"
-	READ_TELEMETRY_RDKCLOUD string = "read-telemetry-rdkcloud"
-	READ_TELEMETRY_ALL      string = "read-telemetry-*"
+	READ_TELEMETRY     string = "read-telemetry-"
+	READ_TELEMETRY_ALL string = "read-telemetry-*"
 
-	WRITE_TELEMETRY_STB      string = "write-telemetry-stb"
-	WRITE_TELEMETRY_RDKCLOUD string = "write-telemetry-rdkcloud"
-	WRITE_TELEMETRY_ALL      string = "write-telemetry-*"
+	WRITE_TELEMETRY     string = "write-telemetry-"
+	WRITE_TELEMETRY_ALL string = "write-telemetry-*"
 
-	READ_CHANGES_STB      string = "read-changes-stb"
-	READ_CHANGES_RDKCLOUD string = "read-changes-rdkcloud"
-	READ_CHANGES_ALL      string = "read-changes-*"
+	READ_CHANGES     string = "read-changes-"
+	READ_CHANGES_ALL string = "read-changes-*"
 
-	WRITE_CHANGES_STB      string = "write-changes-stb"
-	WRITE_CHANGES_RDKCLOUD string = "write-changes-rdkcloud"
-	WRITE_CHANGES_ALL      string = "write-changes-*"
+	WRITE_CHANGES     string = "write-changes-"
+	WRITE_CHANGES_ALL string = "write-changes-*"
 
 	XCONF_ALL           string = "x1:appds:xconf:*"
 	XCONF_READ          string = "x1:coast:xconf:read"
@@ -78,11 +81,7 @@ const (
 	XCONF_WRITE         string = "x1:coast:xconf:write"
 	XCONF_WRITE_MACLIST string = "x1:coast:xconf:write:maclist"
 
-	IGNORE_GETENV_PROPERTY_NAME    string = "spring.getenv.ignore"
-	ACTIVE_PROFILES_PROPERTY_NAME  string = "spring.profiles.active"
-	DEFAULT_PROFILES_PROPERTY_NAME string = "spring.profiles.default"
-	RESERVED_DEFAULT_PROFILE_NAME  string = "default"
-	DEV_PROFILE                    string = "dev"
+	DEV_PROFILE string = "dev"
 
 	COMMON_ENTITY    string = "CommonEntity"
 	TOOL_ENTITY      string = "ToolEntity"
@@ -93,12 +92,10 @@ const (
 )
 
 type EntityPermission struct {
-	ReadAll       string `json:"readAll,omitempty"`
-	ReadStb       string `json:"readStb,omitempty"`
-	ReadRdkcloud  string `json:"readRdkcloud,omitempty"`
-	WriteAll      string `json:"writeAll,omitempty"`
-	WriteStb      string `json:"writeStb,omitempty"`
-	WriteRdkcloud string `json:"writeRdkcloud,omitempty"`
+	ReadAll  string `json:"readAll,omitempty"`
+	Read     string `json:"read,omitempty"`
+	WriteAll string `json:"writeAll,omitempty"`
+	Write    string `json:"write,omitempty"`
 }
 
 var CommonPermissions = EntityPermission{
@@ -112,39 +109,31 @@ var ToolPermissions = EntityPermission{
 }
 
 var FirmwarePermissions = EntityPermission{
-	ReadAll:       READ_FIRMWARE_ALL,
-	ReadStb:       READ_FIRMWARE_STB,
-	ReadRdkcloud:  READ_FIRMWARE_RDKCLOUD,
-	WriteAll:      WRITE_FIRMWARE_ALL,
-	WriteStb:      WRITE_FIRMWARE_STB,
-	WriteRdkcloud: WRITE_FIRMWARE_RDKCLOUD,
+	ReadAll:  READ_FIRMWARE_ALL,
+	Read:     READ_FIRMWARE,
+	WriteAll: WRITE_FIRMWARE_ALL,
+	Write:    WRITE_FIRMWARE,
 }
 
 var ChangePermissions = EntityPermission{
-	ReadAll:       READ_CHANGES_ALL,
-	ReadStb:       READ_CHANGES_STB,
-	ReadRdkcloud:  READ_CHANGES_RDKCLOUD,
-	WriteAll:      WRITE_CHANGES_ALL,
-	WriteStb:      WRITE_CHANGES_STB,
-	WriteRdkcloud: WRITE_CHANGES_RDKCLOUD,
+	ReadAll:  READ_CHANGES_ALL,
+	Read:     READ_CHANGES,
+	WriteAll: WRITE_CHANGES_ALL,
+	Write:    WRITE_CHANGES,
 }
 
 var DcmPermissions = EntityPermission{
-	ReadAll:       READ_DCM_ALL,
-	ReadStb:       READ_DCM_STB,
-	ReadRdkcloud:  READ_DCM_RDLCLOUD,
-	WriteAll:      WRITE_DCM_ALL,
-	WriteStb:      WRITE_DCM_STB,
-	WriteRdkcloud: WRITE_DCM_RDKCLOUD,
+	ReadAll:  READ_DCM_ALL,
+	Read:     READ_DCM,
+	WriteAll: WRITE_DCM_ALL,
+	Write:    WRITE_DCM,
 }
 
 var TelemetryPermissions = EntityPermission{
-	ReadAll:       READ_TELEMETRY_ALL,
-	ReadStb:       READ_TELEMETRY_STB,
-	ReadRdkcloud:  READ_TELEMETRY_RDKCLOUD,
-	WriteAll:      WRITE_TELEMETRY_ALL,
-	WriteStb:      WRITE_TELEMETRY_STB,
-	WriteRdkcloud: WRITE_TELEMETRY_RDKCLOUD,
+	ReadAll:  READ_TELEMETRY_ALL,
+	Read:     READ_TELEMETRY,
+	WriteAll: WRITE_TELEMETRY_ALL,
+	Write:    WRITE_TELEMETRY,
 }
 
 func getEntityPermission(entityType string) *EntityPermission {
@@ -169,8 +158,38 @@ func getEntityPermission(entityType string) *EntityPermission {
 	return nil
 }
 
+func getCurrentModule(r *http.Request, entityType string) string {
+	if entityType == COMMON_ENTITY {
+		return COMMON_MODULE
+	}
+	if entityType == TOOL_ENTITY {
+		return TOOL_MODULE
+	}
+	if entityType == CHANGE_ENTITY {
+		return CHANGE_MODULE
+	}
+	if entityType == DCM_ENTITY {
+		rfcpaths := []string{"/rfc", "/feature", "/featurerule"}
+		if util.StringArrayContains(rfcpaths, r.URL.Path) {
+			return RFC_MODULE
+		}
+		return DCM_MODULE
+	}
+	if entityType == FIRMWARE_ENTITY {
+		rfcpaths := []string{"/rfc", "/feature", "/featurerule"}
+		if util.StringArrayContains(rfcpaths, r.URL.Path) {
+			return RFC_MODULE
+		}
+		return FIRMWARE_MODULE
+	}
+	if entityType == TELEMETRY_ENTITY {
+		return TELEMETRY_MODULE
+	}
+	return ""
+}
+
 func HasReadPermissionForTool(r *http.Request) bool {
-	if !(xcommon.SatOn) {
+	if !(owcommon.SatOn) {
 		return true
 	}
 
@@ -190,7 +209,7 @@ func HasReadPermissionForTool(r *http.Request) bool {
 }
 
 func HasWritePermissionForTool(r *http.Request) bool {
-	if !(xcommon.SatOn) {
+	if !(owcommon.SatOn) {
 		return true
 	}
 
@@ -210,37 +229,50 @@ func HasWritePermissionForTool(r *http.Request) bool {
 }
 
 // CanWrite returns the applicationType the user has write permission for non-common entityType,
-// otherwise returns error if applicationType is not specified in query parameter, cookie, or vargs param
+// otherwise returns error if applicationType is not specified in query parameter or cookie
 func CanWrite(r *http.Request, entityType string, vargs ...string) (applicationType string, err error) {
-	if isReadonlyMode() {
-		return "", xcommon.NewXconfError(http.StatusForbidden, "Modification not allowed in read-only mode")
+	if isLockdownMode() {
+		lockdownModules := strings.Split(common.GetStringAppSetting(common.PROP_LOCKDOWN_MODULES), ",")
+		if len(lockdownModules) != 0 {
+			if util.CaseInsensitiveContains(lockdownModules, getCurrentModule(r, entityType)) || strings.ToUpper(lockdownModules[0]) == common.DefaultLockdownModules {
+				return "", xwcommon.NewRemoteErrorAS(http.StatusLocked, "Modification not allowed in Lockdown mode")
+			}
+		}
 	}
 
 	if entityType != COMMON_ENTITY && entityType != TOOL_ENTITY {
-		if values, ok := r.URL.Query()[xwcommon.APPLICATION_TYPE]; ok {
+		if values, ok := r.URL.Query()[core.APPLICATION_TYPE]; ok {
 			applicationType = values[0]
 		}
 		if util.IsBlank(applicationType) {
-			applicationType = xshared.GetApplicationFromCookies(r)
+			applicationType = core.GetApplicationFromCookies(r)
 		}
 		if util.IsBlank(applicationType) {
-			if len(vargs) > 0 {
+			if len(vargs) > 0 && vargs[0] != "" {
 				applicationType = vargs[0]
+			} else {
+				// work-around for backward compatibility
+				log.Infof("applicationType not specified: auth_subject=%s path=%s", r.Header.Get(xhttp.AUTH_SUBJECT), r.URL.Path)
+				applicationType = core.STB
 			}
 		}
-		if err := xshared.ValidateApplicationType(applicationType); err != nil {
+		if err := core.ValidateApplicationType(applicationType); err != nil {
 			return "", err
 		}
 	}
 
-	if !(xcommon.SatOn) {
+	//TODO
+	if !(owcommon.SatOn) {
 		return applicationType, nil
 	}
 
 	// checked capabilities from SAT token if available
 	if capabilities := xhttp.GetCapabilitiesFromContext(r); len(capabilities) > 0 {
+		if entityType == COMMON_ENTITY && util.Contains(capabilities, XCONF_WRITE_MACLIST) {
+			return applicationType, nil
+		}
 		if !(util.Contains(capabilities, XCONF_ALL) || util.Contains(capabilities, XCONF_WRITE)) {
-			return "", xcommon.NewXconfError(http.StatusForbidden, "No write capabilities")
+			return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No write capabilities")
 		}
 		return applicationType, nil
 	} else {
@@ -249,46 +281,53 @@ func CanWrite(r *http.Request, entityType string, vargs ...string) (applicationT
 		if util.Contains(permissions, getEntityPermission(entityType).WriteAll) {
 			return applicationType, nil
 		}
-		if xwshared.STB == applicationType && util.Contains(permissions, getEntityPermission(entityType).WriteStb) {
+		if util.Contains(common.ApplicationTypes, applicationType) && util.Contains(permissions, getEntityPermission(entityType).Write+applicationType) {
 			return applicationType, nil
 		}
 	}
 
 	if applicationType == "" {
-		return "", xcommon.NewXconfError(http.StatusForbidden, "No write permission")
+		return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No write permission")
 	} else {
-		return "", xcommon.NewXconfError(http.StatusForbidden, "No write permission for ApplicationType "+applicationType)
+		return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No write permission for ApplicationType "+applicationType)
 	}
 }
 
 // CanRead returns the applicationType the user has read permission for non-common entityType,
-// otherwise returns error if applicationType is not specified in query parameter, cookie, or vargs param.
+// otherwise returns error if applicationType is not specified in query parameter or cookie
 func CanRead(r *http.Request, entityType string, vargs ...string) (applicationType string, err error) {
 	if entityType != COMMON_ENTITY && entityType != TOOL_ENTITY {
-		if values, ok := r.URL.Query()[xwcommon.APPLICATION_TYPE]; ok {
+		if values, ok := r.URL.Query()[core.APPLICATION_TYPE]; ok {
 			applicationType = values[0]
 		}
 		if util.IsBlank(applicationType) {
-			applicationType = xshared.GetApplicationFromCookies(r)
+			applicationType = core.GetApplicationFromCookies(r)
 		}
 		if util.IsBlank(applicationType) {
-			if len(vargs) > 0 {
+			if len(vargs) > 0 && vargs[0] != "" {
 				applicationType = vargs[0]
+			} else {
+				// work-around for backward compatibility
+				log.Infof("applicationType not specified: auth_subject=%s path=%s", r.Header.Get(xhttp.AUTH_SUBJECT), r.URL.Path)
+				applicationType = core.STB
 			}
 		}
-		if err := xshared.ValidateApplicationType(applicationType); err != nil {
+		if err := core.ValidateApplicationType(applicationType); err != nil {
 			return "", err
 		}
 	}
 
-	if !(xcommon.SatOn) {
+	if !(owcommon.SatOn) {
 		return applicationType, nil
 	}
 
 	// checked capabilities from SAT token if available
 	if capabilities := xhttp.GetCapabilitiesFromContext(r); len(capabilities) > 0 {
+		if entityType == COMMON_ENTITY && util.Contains(capabilities, XCONF_READ_MACLIST) {
+			return applicationType, nil
+		}
 		if !(util.Contains(capabilities, XCONF_ALL) || util.Contains(capabilities, XCONF_READ)) {
-			return "", xcommon.NewXconfError(http.StatusForbidden, "No read capabilities")
+			return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No read capabilities")
 		}
 		return applicationType, nil
 	} else {
@@ -297,15 +336,16 @@ func CanRead(r *http.Request, entityType string, vargs ...string) (applicationTy
 		if util.Contains(permissions, getEntityPermission(entityType).ReadAll) {
 			return applicationType, nil
 		}
-		if xwshared.STB == applicationType && util.Contains(permissions, getEntityPermission(entityType).ReadStb) {
+
+		if util.Contains(common.ApplicationTypes, applicationType) && util.Contains(permissions, getEntityPermission(entityType).Read+applicationType) {
 			return applicationType, nil
 		}
 	}
 
 	if applicationType == "" {
-		return "", xcommon.NewXconfError(http.StatusForbidden, "No read permission")
+		return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No read permission")
 	} else {
-		return "", xcommon.NewXconfError(http.StatusForbidden, "No read permission for ApplicationType "+applicationType)
+		return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No read permission for ApplicationType "+applicationType)
 	}
 }
 
@@ -326,16 +366,16 @@ func getPermissions(r *http.Request) (permissions []string) {
 }
 
 func IsDevProfile() bool {
-	activeProfiles := strings.Split(strings.TrimSpace(xcommon.ActiveAuthProfiles), ",")
+	activeProfiles := strings.Split(strings.TrimSpace(owcommon.ActiveAuthProfiles), ",")
 	if len(activeProfiles) > 0 {
 		return DEV_PROFILE == activeProfiles[0]
 	}
-	defaultProfiles := strings.Split(strings.TrimSpace(xcommon.DefaultAuthProfiles), ",")
+	defaultProfiles := strings.Split(strings.TrimSpace(owcommon.DefaultAuthProfiles), ",")
 	return DEV_PROFILE == defaultProfiles[0]
 }
 
 func ValidateRead(r *http.Request, entityApplicationType string, entityType string) error {
-	if err := xshared.ValidateApplicationType(entityApplicationType); err != nil {
+	if err := core.ValidateApplicationType(entityApplicationType); err != nil {
 		return err
 	}
 	applicationType, err := CanRead(r, entityType)
@@ -343,29 +383,69 @@ func ValidateRead(r *http.Request, entityApplicationType string, entityType stri
 		return err
 	}
 	if applicationType != entityApplicationType {
-		return xcommon.NewXconfError(http.StatusForbidden,
+		return xwcommon.NewRemoteErrorAS(http.StatusForbidden,
 			fmt.Sprintf("Current ApplicationType %s doesn't match with entity's ApplicationType: %s", applicationType, entityApplicationType))
 	}
 	return nil
 }
 
 func ValidateWrite(r *http.Request, entityApplicationType string, entityType string) error {
-	if err := xshared.ValidateApplicationType(entityApplicationType); err != nil {
+	if err := core.ValidateApplicationType(entityApplicationType); err != nil {
 		return err
 	}
-	applicationType, err := CanWrite(r, entityType)
+	applicationType, err := CanWrite(r, entityType, entityApplicationType)
 	if err != nil {
 		return err
 	}
 	if applicationType != entityApplicationType {
-		return xcommon.NewXconfError(http.StatusForbidden,
+		return xwcommon.NewRemoteErrorAS(http.StatusForbidden,
 			fmt.Sprintf("Current ApplicationType %s doesn't match with entity's ApplicationType: %s", applicationType, entityApplicationType))
 	}
 	return nil
 }
 
-func isReadonlyMode() bool {
-	return xcommon.GetBooleanAppSetting(xcommon.READONLY_MODE, false)
+func isLockdownMode() bool {
+	if owcommon.GetBooleanAppSetting(owcommon.PROP_LOCKDOWN_ENABLED, false) {
+		startTime := owcommon.GetStringAppSetting(owcommon.PROP_LOCKDOWN_STARTTIME)
+		endTime := owcommon.GetStringAppSetting(owcommon.PROP_LOCKDOWN_ENDTIME)
+
+		timezone, err := time.LoadLocation(owcommon.DefaultLockdownTimezone)
+		if err != nil {
+			log.Errorf("Error loading timezone: %s", owcommon.DefaultLockdownTimezone)
+			return false
+		}
+
+		t := time.Now().In(timezone).Format(owcommon.DefaultTimeDateFormatLayout)
+		CurrentDate := time.Now().In(timezone).Format(owcommon.DefaultDateFormatLayout)
+
+		Currenttime, err := time.Parse(owcommon.DefaultTimeDateFormatLayout, t)
+
+		if err != nil {
+			log.Errorf("Unable to Parse currenttime: %s", Currenttime)
+			return false
+		}
+		LockdownStartTime, err := time.Parse(owcommon.DefaultTimeDateFormatLayout, CurrentDate+" "+startTime)
+		if err != nil {
+			log.Errorf("Unable to Parse LockdownStartTime: %s", LockdownStartTime)
+			return false
+		}
+		LockdownEndTime, err := time.Parse(owcommon.DefaultTimeDateFormatLayout, CurrentDate+" "+endTime)
+		if err != nil {
+			log.Errorf("Unable to Parse LockdownEndTime: %s", LockdownEndTime)
+			return false
+		}
+
+		if LockdownStartTime.After(LockdownEndTime) || LockdownStartTime.Equal(LockdownEndTime) {
+			LockdownStartTime = LockdownStartTime.AddDate(0, 0, -1)
+		}
+
+		if (Currenttime.Equal(LockdownStartTime) || Currenttime.After(LockdownStartTime)) && Currenttime.Before(LockdownEndTime) {
+			log.Infof("Lockdown Mode is Scheduled Now. Current time=%s, Lockdown StartTime=%s, Lockdown EndTime=%s", t, startTime, endTime)
+			return true
+		}
+		return false
+	}
+	return false
 }
 
 func GetUserNameOrUnknown(r *http.Request) string {
@@ -374,4 +454,32 @@ func GetUserNameOrUnknown(r *http.Request) string {
 	} else {
 		return userName
 	}
+}
+
+func ExtractBodyAndCheckPermissions(obj owcommon.ApplicationTypeAware, w http.ResponseWriter, r *http.Request, entityType string) (applicationType string, err error) {
+	xw, ok := w.(*xwhttp.XResponseWriter)
+	if !ok {
+		return "", xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "responsewriter cast error")
+	}
+	body := xw.Body()
+	err = json.Unmarshal([]byte(body), &obj)
+	if err != nil {
+		return "", xwcommon.NewRemoteErrorAS(http.StatusBadRequest, err.Error())
+	}
+
+	applicationType, err = CanWrite(r, entityType, obj.GetApplicationType())
+	if err != nil {
+		return "", err
+	}
+
+	if obj.GetApplicationType() == "" {
+		obj.SetApplicationType(applicationType)
+	} else if obj.GetApplicationType() != applicationType {
+		return "", xwcommon.NewRemoteErrorAS(http.StatusConflict, "ApplicationType Conflict")
+	}
+	return applicationType, nil
+}
+
+func isReadonlyMode() bool {
+	return owcommon.GetBooleanAppSetting(owcommon.READONLY_MODE, false)
 }

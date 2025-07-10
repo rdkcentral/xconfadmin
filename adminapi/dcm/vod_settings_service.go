@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	xcommon "xconfadmin/common"
 	xutil "xconfadmin/util"
@@ -178,7 +177,7 @@ func CreateVodSettings(vs *logupload.VodSettings, app string) *xwhttp.ResponseEn
 		return respEntity
 	}
 
-	vs.Updated = xwutil.GetTimestamp(time.Now().UTC())
+	vs.Updated = xutil.GetTimestamp()
 	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vs.ID, vs); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -201,7 +200,7 @@ func UpdateVodSettings(vs *logupload.VodSettings, app string) *xwhttp.ResponseEn
 		return respEntity
 	}
 
-	vs.Updated = xwutil.GetTimestamp(time.Now().UTC())
+	vs.Updated = xwutil.GetTimestamp()
 	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vs.ID, vs); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}

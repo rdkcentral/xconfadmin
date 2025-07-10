@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,17 +29,15 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 
-	xcommon "xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
-
-	xlogupload "xconfadmin/shared/logupload"
-	"xconfwebconfig/common"
-	xwlogupload "xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
-
 	"xconfadmin/adminapi/auth"
+	"xconfadmin/common"
 	xhttp "xconfadmin/http"
+	core "xconfadmin/shared"
+	"xconfadmin/shared/logupload"
+	"xconfadmin/util"
+	xwcommon "xconfwebconfig/common"
 	xwhttp "xconfwebconfig/http"
+	xwlogupload "xconfwebconfig/shared/logupload"
 )
 
 const (
@@ -70,9 +68,9 @@ func GetTelemetryTwoRulesAllExport(w http.ResponseWriter, r *http.Request) {
 	if ok {
 		fileName := "allTelemetryTwoRules_" + applicationType
 		headerMap := xhttp.CreateContentDispositionHeader(fileName)
-		xwhttp.WriteXconfResponseWithHeaders(w, headerMap, http.StatusOK, response)
+		xhttp.WriteXconfResponseWithHeaders(w, headerMap, http.StatusOK, response)
 	} else {
-		xwhttp.WriteXconfResponse(w, http.StatusOK, response)
+		xhttp.WriteXconfResponse(w, http.StatusOK, response)
 	}
 }
 
@@ -87,7 +85,7 @@ func GetTelemetryTwoRuleById(w http.ResponseWriter, r *http.Request) {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("Id is blank"))
 		return
 	}
-	telemetryTwoRule := xlogupload.GetOneTelemetryTwoRule(id)
+	telemetryTwoRule := logupload.GetOneTelemetryTwoRule(id)
 	if telemetryTwoRule == nil {
 		invalid := "Entity with id: " + id + " does not exist"
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, invalid)
@@ -103,46 +101,15 @@ func GetTelemetryTwoRuleById(w http.ResponseWriter, r *http.Request) {
 		}
 		fileName := "telemetryTwoRule_" + telemetryTwoRule.ID + "_" + applicationType
 		headerMap := xhttp.CreateContentDispositionHeader(fileName)
-		xwhttp.WriteXconfResponseWithHeaders(w, headerMap, http.StatusOK, res)
+		xhttp.WriteXconfResponseWithHeaders(w, headerMap, http.StatusOK, res)
 	} else {
 		res, err := xhttp.ReturnJsonResponse(telemetryTwoRule, r)
 		if err != nil {
 			xhttp.AdminError(w, err)
 			return
 		}
-		xwhttp.WriteXconfResponse(w, http.StatusOK, res)
+		xhttp.WriteXconfResponse(w, http.StatusOK, res)
 	}
-}
-
-func GetAllTelemetryTwoRulesWithPage(w http.ResponseWriter, r *http.Request) {
-	var pageNumberStr, pageSizeStr string
-	pageNumber := 1
-	pageSize := 50
-	var err error
-	if values, ok := r.URL.Query()[PageNumber]; ok {
-		pageNumberStr = values[0]
-		pageNumber, err = strconv.Atoi(pageNumberStr)
-		if err != nil {
-			xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("pageNumber must be a number"))
-			return
-		}
-	}
-	if values, ok := r.URL.Query()[PageSize]; ok {
-		pageSizeStr = values[0]
-		pageSize, err = strconv.Atoi(pageSizeStr)
-		if err != nil {
-			xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("pageSize must be a number"))
-			return
-		}
-	}
-	telemetryTwoRules := GetAll()
-	telemetryTwoRuleList := TelemetryTwoRulesGeneratePage(telemetryTwoRules, pageNumber, pageSize)
-	response, err := util.JSONMarshal(telemetryTwoRuleList)
-	if err != nil {
-		log.Error(fmt.Sprintf("json.Marshal featureRules error: %v", err))
-	}
-	headerMap := createNumberOfItemsHttpHeaders(telemetryTwoRules)
-	xwhttp.WriteXconfResponseWithHeaders(w, headerMap, http.StatusOK, response)
 }
 
 func createNumberOfItemsHttpHeaders(entities []*xwlogupload.TelemetryTwoRule) map[string]string {
@@ -156,17 +123,22 @@ func createNumberOfItemsHttpHeaders(entities []*xwlogupload.TelemetryTwoRule) ma
 }
 
 func DeleteOneTelemetryTwoRuleHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	id, found := mux.Vars(r)[common.ID]
 	if !found || util.IsBlank(id) {
-		xwhttp.WriteXconfResponse(w, http.StatusMethodNotAllowed, nil)
+		xhttp.WriteXconfResponse(w, http.StatusMethodNotAllowed, nil)
 		return
 	}
-	_, err := Delete(id)
+	_, err = Delete(id)
 	if err != nil {
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
 		return
 	}
-	xwhttp.WriteXconfResponse(w, http.StatusNoContent, nil)
+	xhttp.WriteXconfResponse(w, http.StatusNoContent, nil)
 }
 
 func GetTelemetryTwoRulesFilteredWithPage(w http.ResponseWriter, r *http.Request) {
@@ -197,7 +169,7 @@ func GetTelemetryTwoRulesFilteredWithPage(w http.ResponseWriter, r *http.Request
 	}
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xwhttp.Error(w, http.StatusInternalServerError, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	contextMap := make(map[string]string)
@@ -206,11 +178,11 @@ func GetTelemetryTwoRulesFilteredWithPage(w http.ResponseWriter, r *http.Request
 	if body != "" {
 		if err := json.Unmarshal([]byte(xw.Body()), &contextMap); err != nil {
 			response := "Unable to extract searchContext from json file:" + err.Error()
-			xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(response))
+			xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(response))
 			return
 		}
 	}
-	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
+	contextMap[core.APPLICATION_TYPE] = applicationType
 
 	telemetryTwoRules := findByContext(r, contextMap)
 	sort.SliceStable(telemetryTwoRules, func(i, j int) bool {
@@ -229,14 +201,14 @@ func CreateTelemetryTwoRuleHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xwhttp.Error(w, http.StatusInternalServerError, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
 	telemetry2Rule := xwlogupload.TelemetryTwoRule{}
 	err := json.Unmarshal([]byte(body), &telemetry2Rule)
 	if err != nil {
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
 		return
 	}
 
@@ -277,19 +249,19 @@ func CreateTelemetryTwoRulesPackageHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	entitiesMap := map[string]xhttp.EntityMessage{}
+	entitiesMap := map[string]common.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
 		err := Create(&entity, applicationType)
 		if err == nil {
-			entityMessage := xhttp.EntityMessage{
-				Status:  xcommon.ENTITY_STATUS_SUCCESS,
+			entityMessage := common.EntityMessage{
+				Status:  common.ENTITY_STATUS_SUCCESS,
 				Message: entity.ID,
 			}
 			entitiesMap[entity.ID] = entityMessage
 		} else {
-			entityMessage := xhttp.EntityMessage{
-				Status:  xcommon.ENTITY_STATUS_FAILURE,
+			entityMessage := common.EntityMessage{
+				Status:  common.ENTITY_STATUS_FAILURE,
 				Message: err.Error(),
 			}
 			entitiesMap[entity.ID] = entityMessage
@@ -309,7 +281,7 @@ func UpdateTelemetryTwoRuleHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xwhttp.Error(w, http.StatusInternalServerError, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -340,7 +312,7 @@ func UpdateTelemetryTwoRulesPackageHandler(w http.ResponseWriter, r *http.Reques
 
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("Unable to extract Body"))
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("Unable to extract Body"))
 		return
 	}
 	entities := []xwlogupload.TelemetryTwoRule{}
@@ -349,19 +321,19 @@ func UpdateTelemetryTwoRulesPackageHandler(w http.ResponseWriter, r *http.Reques
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(response))
 		return
 	}
-	entitiesMap := map[string]xhttp.EntityMessage{}
+	entitiesMap := map[string]common.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
 		err := Update(&entity, writeApplication)
 		if err == nil {
-			entityMessage := xhttp.EntityMessage{
-				Status:  xcommon.ENTITY_STATUS_SUCCESS,
+			entityMessage := common.EntityMessage{
+				Status:  common.ENTITY_STATUS_SUCCESS,
 				Message: entity.ID,
 			}
 			entitiesMap[entity.ID] = entityMessage
 		} else {
-			entityMessage := xhttp.EntityMessage{
-				Status:  xcommon.ENTITY_STATUS_FAILURE,
+			entityMessage := common.EntityMessage{
+				Status:  common.ENTITY_STATUS_FAILURE,
 				Message: err.Error(),
 			}
 			entitiesMap[entity.ID] = entityMessage

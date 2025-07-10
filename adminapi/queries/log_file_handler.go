@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,28 +24,31 @@ import (
 	"net/http"
 	"strings"
 
+	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
+	"xconfadmin/shared/logupload"
+	"xconfadmin/util"
+	xwcommon "xconfwebconfig/common"
 	xwhttp "xconfwebconfig/http"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-
-	"xconfadmin/common"
-	xlogupload "xconfadmin/shared/logupload"
-
-	"xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
 )
 
 func CreateLogFile(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.COMMON_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xwhttp.Error(w, http.StatusInternalServerError, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
 	logFile := logupload.LogFile{}
-	err := json.Unmarshal([]byte(body), &logFile)
+	err = json.Unmarshal([]byte(body), &logFile)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -60,13 +63,13 @@ func CreateLogFile(w http.ResponseWriter, r *http.Request) {
 	}
 	if logFile.ID == "" {
 		logFile.ID = uuid.New().String()
-		err := xlogupload.SetLogFile(logFile.ID, &logFile)
+		err := logupload.SetLogFile(logFile.ID, &logFile)
 		if err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 	} else {
-		err := xlogupload.SetLogFile(logFile.ID, &logFile)
+		err := logupload.SetLogFile(logFile.ID, &logFile)
 		if err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
@@ -81,7 +84,7 @@ func CreateLogFile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal featureRuleNew error: %v", err))
 	}
-	xwhttp.WriteXconfResponse(w, http.StatusCreated, response)
+	xhttp.WriteXconfResponse(w, http.StatusCreated, response)
 }
 
 func isValidName(logFile logupload.LogFile) bool {
@@ -106,7 +109,7 @@ func getLogFileByName(name string) *logupload.LogFile {
 }
 
 func updateLogUploadSettingsAndLogFileGroups(logFile *logupload.LogFile) error {
-	listLogUploadSettings, err := xlogupload.GetAllLogUploadSettings(math.MaxInt32 / 100)
+	listLogUploadSettings, err := logupload.GetAllLogUploadSettings(math.MaxInt32 / 100)
 	if err != nil {
 		return err
 	}
@@ -118,11 +121,11 @@ func updateLogUploadSettingsAndLogFileGroups(logFile *logupload.LogFile) error {
 		}
 		for _, logFileDB := range LogFileList.Data {
 			if logFileDB.ID == logFile.ID {
-				xlogupload.SetOneLogFile(logUploadSettings.ID, logFile)
+				logupload.SetOneLogFile(logUploadSettings.ID, logFile)
 			}
 		}
 	}
-	listLogFilesGroups, err := xlogupload.GetLogFileGroupsList(math.MaxInt32 / 100)
+	listLogFilesGroups, err := logupload.GetLogFileGroupsList(math.MaxInt32 / 100)
 	if err != nil {
 		return err
 	}
@@ -133,7 +136,7 @@ func updateLogUploadSettingsAndLogFileGroups(logFile *logupload.LogFile) error {
 		}
 		for _, logFileDB := range LogFileList.Data {
 			if logFileDB.ID == logFile.ID {
-				xlogupload.SetOneLogFile(logFilesGroup.ID, logFile)
+				logupload.SetOneLogFile(logFilesGroup.ID, logFile)
 			}
 		}
 	}

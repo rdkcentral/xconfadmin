@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,6 +53,11 @@ const (
 )
 
 func CreateTelemetryEntryFor(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	contextAttributeName, found := mux.Vars(r)[ContextAttributeName]
 	if !found || contextAttributeName == "" {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("missing contextAttributeName"))
@@ -69,12 +74,12 @@ func CreateTelemetryEntryFor(w http.ResponseWriter, r *http.Request) {
 	}
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xwhttp.Error(w, http.StatusInternalServerError, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xwhttp.Error(w, http.StatusInternalServerError, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
 	telemetryProfile := xwlogupload.TelemetryProfile{}
-	err := json.Unmarshal([]byte(body), &telemetryProfile)
+	err = json.Unmarshal([]byte(body), &telemetryProfile)
 	if err != nil {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
 		return
@@ -96,6 +101,11 @@ func CreateTelemetryEntryFor(w http.ResponseWriter, r *http.Request) {
 }
 
 func DropTelemetryEntryFor(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	contextAttributeName, found := mux.Vars(r)[ContextAttributeName]
 	if !found || contextAttributeName == "" {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("missing contextAttributeName"))
@@ -115,6 +125,11 @@ func DropTelemetryEntryFor(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetDescriptors(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanRead(r, auth.TELEMETRY_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	queryParams := r.URL.Query()
 	contextMap := make(map[string]string)
 	if len(queryParams) > 0 {
@@ -132,6 +147,11 @@ func GetDescriptors(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetTelemetryDescriptors(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanRead(r, auth.TELEMETRY_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	queryParams := r.URL.Query()
 	contextMap := make(map[string]string)
 	if len(queryParams) > 0 {
@@ -149,6 +169,11 @@ func GetTelemetryDescriptors(w http.ResponseWriter, r *http.Request) {
 }
 
 func TempAddToPermanentRule(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	contextAttributeName, found := mux.Vars(r)[ContextAttributeName]
 	if !found || contextAttributeName == "" {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("missing contextAttributeName"))
@@ -210,6 +235,11 @@ func ConvertPermanentTelemetryProfiletoTelemetryProfile(permanentTelemetryProfil
 }
 
 func BindToTelemetry(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	contextAttributeName, found := mux.Vars(r)[ContextAttributeName]
 	if !found || contextAttributeName == "" {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("missing contextAttributeName"))

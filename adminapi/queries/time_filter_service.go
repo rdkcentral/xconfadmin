@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package queries
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -44,7 +45,7 @@ func UpdateTimeFilter(applicationType string, timeFilter *xcoreef.TimeFilter) *x
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	if err := firmware.ValidateRuleName(timeFilter.Id, timeFilter.Name); err != nil {
+	if err := firmware.ValidateRuleName(timeFilter.Id, timeFilter.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
@@ -57,11 +58,14 @@ func UpdateTimeFilter(applicationType string, timeFilter *xcoreef.TimeFilter) *x
 	}
 
 	if IsChangedIpAddressGroup(timeFilter.IpWhiteList) {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("IP address group is not matched by existed IP address group"), nil)
+		return xwhttp.NewResponseEntity(http.StatusBadRequest,
+			fmt.Errorf("IP address group denoted by '%s' does not match any existing ipAddressGroup", timeFilter.IpWhiteList.Name), nil)
 	}
 
 	if !IsExistEnvModelRule(timeFilter.EnvModelRuleBean, applicationType) {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("Env/Model does not match with existed Env/Model"), nil)
+		return xwhttp.NewResponseEntity(http.StatusBadRequest,
+			fmt.Errorf("Firmware Rule of type ENV_MODEL_RULE with model = '%s' and env = '%s' does not exist in %s application",
+				timeFilter.EnvModelRuleBean.ModelId, timeFilter.EnvModelRuleBean.EnvironmentId, applicationType), nil)
 	}
 
 	timeFilter.EnvModelRuleBean.EnvironmentId = strings.ToUpper(timeFilter.EnvModelRuleBean.EnvironmentId)

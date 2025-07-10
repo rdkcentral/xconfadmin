@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,7 +98,8 @@ func UpdatePercentFilter(applicationType string, filter *coreef.PercentFilterWra
 	}
 
 	if filter.Whitelist != nil && IsChangedIpAddressGroup(filter.Whitelist) {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("IP address group is not matched by existed IP address group"), nil)
+		return xwhttp.NewResponseEntity(http.StatusBadRequest,
+			fmt.Errorf("IP address group denoted by '%s' does not match any existing ipAddressGroup", filter.Whitelist.Name), nil)
 	}
 
 	for idx, percentage := range filter.EnvModelPercentages {
@@ -150,7 +151,7 @@ func UpdatePercentFilter(applicationType string, filter *coreef.PercentFilterWra
 		}
 	}
 
-	firmwareRules, err := corefw.GetEnvModelFirmwareRules(applicationType)
+	firmwareRules, err := corefw.GetEnvModelFirmwareRulesForAS(applicationType)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}

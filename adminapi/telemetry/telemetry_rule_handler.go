@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ func GetTelemetryRulesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := []*xwlogupload.TelemetryRule{}
-	ruleList := xwlogupload.GetTelemetryRuleList()
+	ruleList := xwlogupload.GetTelemetryRuleListForAs()
 	for _, teleRule := range ruleList {
 		if teleRule.ApplicationType != applicationType {
 			continue
@@ -181,7 +181,7 @@ func UpdateTelemetryRuleHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "unable to cast XpcResponseWriter object")
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "unable to cast XResponseWriter object")
 		return
 	}
 	body := xw.Body()

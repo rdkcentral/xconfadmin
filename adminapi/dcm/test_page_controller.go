@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,15 +25,13 @@ import (
 	xwcommon "xconfwebconfig/common"
 	dcmlogupload "xconfwebconfig/dataapi/dcm/logupload"
 
-	xcommon "xconfadmin/common"
-
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
 	"xconfwebconfig/common"
-	"xconfwebconfig/dataapi"
 	logupload "xconfwebconfig/shared/logupload"
 	"xconfwebconfig/util"
 
+	"xconfwebconfig/dataapi"
 	xwhttp "xconfwebconfig/http"
 
 	log "github.com/sirupsen/logrus"
@@ -48,17 +46,18 @@ func DcmTestPageHandler(w http.ResponseWriter, r *http.Request) {
 
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xwhttp.Error(w, http.StatusInternalServerError, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	searchContext := make(map[string]string)
 	if err := json.Unmarshal([]byte(xw.Body()), &searchContext); err != nil {
 		response := "Unable to extract searchContext from json file:" + err.Error()
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(response))
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(response))
 		return
 	}
 
 	dataapi.NormalizeCommonContext(searchContext, common.ESTB_MAC_ADDRESS, common.ECM_MAC_ADDRESS)
+
 	searchContext[xwcommon.APPLICATION_TYPE] = applicationType
 
 	var fields log.Fields
@@ -72,7 +71,7 @@ func DcmTestPageHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Error(fmt.Sprintf("json.Marshal allSettings error: %v", err))
 		}
-		xwhttp.WriteXconfResponse(w, http.StatusOK, response)
+		xhttp.WriteXconfResponse(w, http.StatusOK, response)
 		return
 	}
 	evalResponse := logupload.CreateSettingsResponseObject(eval)

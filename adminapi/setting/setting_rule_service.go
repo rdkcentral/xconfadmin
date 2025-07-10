@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +26,6 @@ import (
 	xwcommon "xconfwebconfig/common"
 	"xconfwebconfig/dataapi/dcm/settings"
 
-	xcommon "xconfadmin/common"
-
 	"xconfadmin/adminapi/auth"
 	"xconfadmin/adminapi/queries"
 	"xconfadmin/shared"
@@ -52,7 +50,7 @@ func GetAllSettingRules() []*logupload.SettingRule {
 func GetOneSettingRule(id string) (*logupload.SettingRule, error) {
 	settingRule := GetSettingRule(id)
 	if settingRule == nil {
-		return nil, xcommon.NewXconfError(http.StatusNotFound, "Entity with id: "+id+" does not exist")
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
 	return settingRule, nil
 }
@@ -117,7 +115,7 @@ func FindByContextSettingRule(r *http.Request, searchContext map[string]string) 
 		if rule == nil {
 			continue
 		}
-		if applicationType, ok := util.FindEntryInContext(searchContext, xcommon.APPLICATION_TYPE, false); ok {
+		if applicationType, ok := util.FindEntryInContext(searchContext, xwcommon.APPLICATION_TYPE, false); ok {
 			if rule.ApplicationType != applicationType {
 				continue
 			}
@@ -148,14 +146,14 @@ func validateSettingRule(r *http.Request, entity *logupload.SettingRule) error {
 	auth.ValidateWrite(r, entity.ApplicationType, auth.DCM_ENTITY)
 	msg := validatePropertiesSettingRule(entity)
 	if msg != "" {
-		return xcommon.NewXconfError(http.StatusBadRequest, msg)
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, msg)
 	}
 	if entity == nil {
-		return xcommon.NewXconfError(http.StatusBadRequest, "SettingRule is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "SettingRule is empty")
 	}
 	emptyRule := re.NewEmptyRule()
 	if emptyRule.Equals(&entity.Rule) {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Rule is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Rule is empty")
 	}
 	if err := queries.ValidateRuleStructure(&entity.Rule); err != nil {
 		return err
@@ -186,10 +184,10 @@ func validateAllSettingRule(ruleToCheck *logupload.SettingRule) error {
 			continue
 		}
 		if ruleToCheck.GetName() == settingRule.GetName() {
-			return xcommon.NewXconfError(http.StatusConflict, "\"Name is already used\"")
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "\"Name is already used\"")
 		}
 		if ruleToCheck.GetRule().Equals(settingRule.GetRule()) {
-			return xcommon.NewXconfError(http.StatusConflict, "Rule has duplicate: "+settingRule.GetName())
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Rule has duplicate: "+settingRule.GetName())
 		}
 	}
 	return nil
@@ -199,7 +197,7 @@ func validateUsageSettingRule(id string) error {
 	all := GetSettingRulesList()
 	for _, rule := range all {
 		if rule.BoundSettingID == id {
-			return xcommon.NewXconfError(http.StatusConflict, "Can't delete profile as it's used in setting rule: "+rule.Name)
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Can't delete profile as it's used in setting rule: "+rule.Name)
 		}
 	}
 	return nil
@@ -220,19 +218,25 @@ func SettingRulesGeneratePage(list []*logupload.SettingRule, page int, pageSize 
 
 func beforeCreatingSettingRule(r *http.Request, entity *logupload.SettingRule) error {
 	id := entity.ID
-
+	//todo:
+	//String writeApplication = getPermissionService().getWriteApplication();
 	if id == "" {
 		entity.ID = uuid.New().String()
 	} else {
 		existingEntity := GetSettingRule(id)
+		//if (existingEntity != null && !ApplicationType.equals(existingEntity.getApplicationType(), entity.getApplicationType())) {
+		//    throw new EntityExistsException("Entity with id: " + id + " already exists in " + existingEntity.getApplicationType() + " application");
+		//} else if (existingEntity != null && ApplicationType.equals(existingEntity.getApplicationType(), writeApplication)) {
+		//    throw new EntityExistsException("Entity with id: " + id + " already exists");
+		//}
 		writeApplication, err := auth.CanWrite(r, auth.DCM_ENTITY)
 		if err != nil {
 			return err
 		}
 		if existingEntity != nil && !shared.ApplicationTypeEquals(existingEntity.ApplicationType, entity.ApplicationType) {
-			return xcommon.NewXconfError(http.StatusConflict, "Entity with id: "+id+" already exists in "+existingEntity.ApplicationType+" application")
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Entity with id: "+id+" already exists in "+existingEntity.ApplicationType+" application")
 		} else if existingEntity != nil && shared.ApplicationTypeEquals(existingEntity.ApplicationType, writeApplication) {
-			return xcommon.NewXconfError(http.StatusConflict, "Entity with id: "+id+" already exists")
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Entity with id: "+id+" already exists")
 		}
 	}
 	return nil
@@ -241,24 +245,30 @@ func beforeCreatingSettingRule(r *http.Request, entity *logupload.SettingRule) e
 func beforeUpdatingSettingRule(r *http.Request, entity *logupload.SettingRule) error {
 	id := entity.ID
 	if id == "" {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Entity id is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Entity id is empty")
 	}
 	existingEntity := GetSettingRule(id)
-
+	//todo:
+	//String writeApplication = getPermissionService().getWriteApplication();
+	//if (existingEntity == null || !ApplicationType.equals(existingEntity.getApplicationType(), writeApplication)) {
 	writeApplication, err := auth.CanWrite(r, auth.DCM_ENTITY)
 	if err != nil {
 		return err
 	}
 	if !shared.ApplicationTypeEquals(existingEntity.ApplicationType, writeApplication) {
-		return xcommon.NewXconfError(http.StatusNotFound, "Entity with id: "+id+" does not exist")
+		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
 	if existingEntity == nil {
-		return xcommon.NewXconfError(http.StatusNotFound, "Entity with id: "+id+" does not exist")
+		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
 	return nil
 }
 
 func beforeSavingSettingRule(r *http.Request, entity *logupload.SettingRule) error {
+	//todo:
+	//if (entity != null && StringUtils.isBlank(entity.getApplicationType())) {
+	//	entity.setApplicationType(getPermissionService().getWriteApplication());
+	//}
 	if entity != nil && entity.ApplicationType == "" {
 		application, err := auth.CanWrite(r, auth.DCM_ENTITY)
 		if err != nil {

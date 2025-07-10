@@ -1,20 +1,3 @@
-/**
- * Copyright 2023 Comcast Cable Communications Management, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 package estbfirmware
 
 import (
@@ -57,8 +40,8 @@ func ConvertToListOfIpAddressGroups(genericLists []*shared.GenericNamespacedList
 }
 
 func ConvertGlobalPercentageIntoRule(globalpercentage *coreef.GlobalPercentage, applicationType string) *corefw.FirmwareRule {
-	percentage := globalpercentage.Percentage
-	var hundredPercentage float32 = 100.0
+	percentage := float64(globalpercentage.Percentage)
+	var hundredPercentage float64 = 100.0
 	whitelistName := globalpercentage.Whitelist
 
 	globalPercentFirmwareRule := coreef.NewGlobalPercentFilter(ru.NewRuleFactory().NewGlobalPercentFilter(hundredPercentage-percentage, whitelistName))

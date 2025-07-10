@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,6 +72,7 @@ func GetPercentageBeanAllHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, ok := contextMap[xcommon.EXPORT]
 	if ok {
+		//TODO: replace to struct instead of map
 		percentageBeansToExport := make(map[string]interface{})
 		percentageBeansToExport["percentageBeans"] = result
 		res, err := xhttp.ReturnJsonResponse(percentageBeansToExport, r)
@@ -222,10 +223,11 @@ func PostPercentageBeanEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, response)
 		return
 	}
+	fields := xw.Audit()
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
-		respEntity := CreatePercentageBean(&entity, applicationType)
+		respEntity := CreatePercentageBean(&entity, applicationType, fields)
 		if respEntity.Status != http.StatusCreated {
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_FAILURE,
@@ -258,6 +260,7 @@ func PutPercentageBeanEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Unable to extract Body")
 		return
 	}
+	fields := xw.Audit()
 	entities := []coreef.PercentageBean{}
 	if err := json.Unmarshal([]byte(xw.Body()), &entities); err != nil {
 		response := "Unable to extract entity from json file:" + err.Error()
@@ -267,7 +270,7 @@ func PutPercentageBeanEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
-		respEntity := UpdatePercentageBean(&entity, applicationType)
+		respEntity := UpdatePercentageBean(&entity, applicationType, fields)
 		if respEntity.Status == http.StatusOK {
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_SUCCESS,
@@ -309,7 +312,7 @@ func PostPercentageBeanFilteredWithParamsHandler(w http.ResponseWriter, r *http.
 		}
 	}
 	util.AddQueryParamsToContextMap(r, contextMap)
-	contextMap[xcommon.APPLICATION_TYPE] = applicationType
+	contextMap[common.APPLICATION_TYPE] = applicationType
 
 	pbrules := PercentageBeanFilterByContext(contextMap, applicationType)
 	sizeHeader := xhttp.CreateNumberOfItemsHttpHeaders(len(pbrules))
