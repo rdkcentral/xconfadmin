@@ -68,7 +68,7 @@ func main() {
 		os.Setenv("SAT_CLIENT_SECRET", "dGVzdFhwY0tleQo=")
 	}
 
-	server := xhttp.NewWebconfigServer(sc, false, nil)
+	server := xhttp.NewWebconfigServer(sc, false, nil, nil)
 	defer server.XW_XconfServer.StopXpcTracer()
 
 	// setup logging
@@ -120,15 +120,15 @@ func main() {
 	// register the notfound handler
 	router.NotFoundHandler = http.HandlerFunc(server.XW_XconfServer.NotFoundHandler)
 
-	tsr := adminapi.TrailingSlashRemover(router)
-
 	if server.XW_XconfServer.MetricsEnabled() {
 		router.Handle("/metrics", promhttp.Handler())
 		appmetrics := xhttp.NewMetrics()
 		metrics := server.XW_XconfServer.SetWebMetrics(appmetrics)
 		handler := metrics.MetricsHandler(router)
-		server.XW_XconfServer.Handler = handler
+		tsr := adminapi.TrailingSlashRemover(handler)
+		server.XW_XconfServer.Handler = tsr
 	} else {
+		tsr := adminapi.TrailingSlashRemover(router)
 		server.XW_XconfServer.Handler = tsr
 	}
 

@@ -15,8 +15,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-GOARCH ?= amd64
-GOOS ?= linux
+GOARCH = $(shell go env GOARCH)
+GOOS = $(shell go env GOOS)
 
 BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
 Version ?= $(shell git log -1 --pretty=format:"%h")

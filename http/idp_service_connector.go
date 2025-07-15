@@ -66,69 +66,87 @@ type JsonWebKey struct {
 	N       string `json:"n"`
 }
 
-type IdpServiceConnector struct {
+type IdpServiceConnector interface {
+	IdpServiceHost() string
+	SetIdpServiceHost(host string)
+	GetFullLoginUrl(continueUrl string) string
+	GetJsonWebKeyResponse(url string) *JsonWebKeyResponse
+	GetFullLogoutUrl(continueUrl string) string
+	GetToken(code string) string
+	Logout(url string) error
+	GetIdpServiceConfig() *IdpServiceConfig
+}
+type DefaultIdpService struct {
 	host string
 	*HttpClient
 	*IdpServiceConfig
 }
 
-func NewIdpServiceConnector(conf *configuration.Config) *IdpServiceConnector {
-	idpServiceName = conf.GetString("xconfwebconfig.xconf.idp_service_name")
-	confKey := fmt.Sprintf("xconfwebconfig.%v.host", idpServiceName)
-	host := conf.GetString(confKey)
-	if util.IsBlank(host) {
-		panic(fmt.Errorf("%s is required", confKey))
-	}
-	clientId := os.Getenv("XERXES_CLIENT_ID")
-	if util.IsBlank(clientId) {
-		confKey := fmt.Sprintf("xconfwebconfig.%v.client_id", idpServiceName)
-		clientId = conf.GetString(confKey)
+func NewIdpServiceConnector(conf *configuration.Config, externalIdpService IdpServiceConnector) IdpServiceConnector {
+	if externalIdpService != nil {
+		return externalIdpService
+	} else {
+		idpServiceName = conf.GetString("xconfwebconfig.xconf.idp_service_name")
+		confKey := fmt.Sprintf("xconfwebconfig.%v.host", idpServiceName)
+		host := conf.GetString(confKey)
+		if util.IsBlank(host) {
+			panic(fmt.Errorf("%s is required", confKey))
+		}
+		clientId := os.Getenv("IDP_CLIENT_ID")
 		if util.IsBlank(clientId) {
-			panic("No env XERXES_CLIENT_ID")
+			confKey := fmt.Sprintf("xconfwebconfig.%v.client_id", idpServiceName)
+			clientId = conf.GetString(confKey)
+			if util.IsBlank(clientId) {
+				panic("No env IDP_CLIENT_ID")
+			}
 		}
-	}
-	clientSecret := os.Getenv("XERXES_CLIENT_SECRET")
-	if util.IsBlank(clientSecret) {
-		confKey := fmt.Sprintf("xconfwebconfig.%v.client_secret", idpServiceName)
-		clientSecret = conf.GetString(confKey)
+		clientSecret := os.Getenv("IDP_CLIENT_SECRET")
 		if util.IsBlank(clientSecret) {
-			panic("No env XERXES_CLIENT_SECRET")
+			confKey := fmt.Sprintf("xconfwebconfig.%v.client_secret", idpServiceName)
+			clientSecret = conf.GetString(confKey)
+			if util.IsBlank(clientSecret) {
+				panic("No env IDP_CLIENT_SECRET")
+			}
 		}
-	}
-	auth := fmt.Sprintf("%s:%s", clientId, clientSecret)
-	authHeader := fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(auth)))
+		auth := fmt.Sprintf("%s:%s", clientId, clientSecret)
+		authHeader := fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(auth)))
 
-	idpServiceConfig := &IdpServiceConfig{
-		ClientId:        clientId,
-		ClientSecret:    clientSecret,
-		KidMap:          sync.Map{},
-		AuthHeaderValue: authHeader,
-	}
+		idpServiceConfig := &IdpServiceConfig{
+			ClientId:        clientId,
+			ClientSecret:    clientSecret,
+			KidMap:          sync.Map{},
+			AuthHeaderValue: authHeader,
+		}
 
-	return &IdpServiceConnector{
-		host:             host,
-		HttpClient:       NewHttpClient(conf, odpServiceName, nil),
-		IdpServiceConfig: idpServiceConfig,
+		return &DefaultIdpService{
+			host:             host,
+			HttpClient:       NewHttpClient(conf, odpServiceName, nil),
+			IdpServiceConfig: idpServiceConfig,
+		}
 	}
 }
 
-func (xc *IdpServiceConnector) IdpServiceHost() string {
+func (xc *DefaultIdpService) IdpServiceHost() string {
 	return xc.host
 }
 
-func (xc *IdpServiceConnector) SetIdpServiceHost(host string) {
+func (xc *DefaultIdpService) GetIdpServiceConfig() *IdpServiceConfig {
+	return xc.IdpServiceConfig
+}
+
+func (xc *DefaultIdpService) SetIdpServiceHost(host string) {
 	xc.host = host
 }
 
-func (xc *IdpServiceConnector) GetFullLoginUrl(continueUrl string) string {
+func (xc *DefaultIdpService) GetFullLoginUrl(continueUrl string) string {
 	return fmt.Sprintf(fullLoginUrl, xc.host, continueUrl, xc.ClientId)
 }
 
-func (xc *IdpServiceConnector) GetFullLogoutUrl(continueUrl string) string {
+func (xc *DefaultIdpService) GetFullLogoutUrl(continueUrl string) string {
 	return fmt.Sprintf(fullLogoutUrl, xc.host, continueUrl, xc.ClientId)
 }
 
-func (xc *IdpServiceConnector) GetToken(code string) string {
+func (xc *DefaultIdpService) GetToken(code string) string {
 	url := fmt.Sprintf(getTokenUrl, xc.IdpServiceHost(), code)
 	header := map[string]string{
 		common.HeaderAuthorization: xc.AuthHeaderValue,
@@ -142,7 +160,7 @@ func (xc *IdpServiceConnector) GetToken(code string) string {
 	return string(rrbytes)
 }
 
-func (xc *IdpServiceConnector) GetJsonWebKeyResponse(url string) *JsonWebKeyResponse {
+func (xc *DefaultIdpService) GetJsonWebKeyResponse(url string) *JsonWebKeyResponse {
 	rrbytes, err := xc.DoWithRetries("GET", url, nil, nil, nil, idpServiceName)
 	if err != nil {
 		return nil
@@ -155,7 +173,7 @@ func (xc *IdpServiceConnector) GetJsonWebKeyResponse(url string) *JsonWebKeyResp
 	return &jsonWebKeyResponse
 }
 
-func (xc *IdpServiceConnector) Logout(url string) error {
+func (xc *DefaultIdpService) Logout(url string) error {
 	_, err := xc.DoWithRetries("GET", url, nil, nil, nil, idpServiceName)
 	return err
 }

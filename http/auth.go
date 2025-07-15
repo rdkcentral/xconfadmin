@@ -309,7 +309,7 @@ func getPermissionsFromLoginToken(LoginToken *LoginToken) []string {
 }
 
 func getWebValidator() *WebValidator {
-	keysUrl := fmt.Sprintf("%s%s", WebConfServer.XW_XconfServer.SatServiceConnector.ConsumerHost(), KeysURL) //TODO : update consumerHost
+	keysUrl := fmt.Sprintf("%s%s", WebConfServer.XW_XconfServer.SatServiceConnector.ConsumerHost(), KeysURL)
 	return &WebValidator{
 		Client:  http.DefaultClient,
 		KeysURL: keysUrl,
@@ -378,7 +378,7 @@ func getJsonWebKey(header map[string]interface{}) *JsonWebKey {
 		return nil
 	}
 
-	if val, ok := WebConfServer.IdpServiceConnector.IdpServiceConfig.KidMap.Load(kid); ok {
+	if val, ok := WebConfServer.IdpServiceConnector.GetIdpServiceConfig().KidMap.Load(kid); ok {
 		log.Debugf("kid=%s, fetched=cached", kid)
 		jsonWebKey := val.(JsonWebKey)
 		return &jsonWebKey
@@ -397,7 +397,7 @@ func getJsonWebKey(header map[string]interface{}) *JsonWebKey {
 		for _, jsonWebKey := range jsonWebKeyList {
 			if jsonWebKey.Kid == kid {
 				log.Debugf("kid=%s, fetched=url", kid)
-				WebConfServer.IdpServiceConnector.IdpServiceConfig.KidMap.Store(kid, jsonWebKey)
+				WebConfServer.IdpServiceConnector.GetIdpServiceConfig().KidMap.Store(kid, jsonWebKey)
 				return &jsonWebKey
 			}
 		}
