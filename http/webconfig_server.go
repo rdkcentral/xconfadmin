@@ -51,7 +51,7 @@ type WebconfigServer struct {
 	XW_XconfServer *xhttp.XconfServer
 	*CanaryMgrConnector
 	*XcrpConnector
-	*IdpServiceConnector
+	IdpServiceConnector
 	*XconfConnector
 	db.DatabaseClient
 	*common.ServerConfig
@@ -73,8 +73,16 @@ type WebconfigServer struct {
 	VerifyStageHost    bool
 }
 
+type ExternalConnectors struct {
+	xw_ect *xhttp.ExternalConnectors
+	IdpServiceConnector
+}
 type ProcessHook interface {
 	Process(*WebconfigServer, ...interface{})
+}
+
+func NewExternalConnectors() *ExternalConnectors {
+	return &ExternalConnectors{}
 }
 
 func NewTlsConfig(conf *configuration.Config) (*tls.Config, error) {
@@ -118,7 +126,10 @@ func NewTlsConfig(conf *configuration.Config) (*tls.Config, error) {
 }
 
 // testOnly=true ==> running unit test
-func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseClient) *WebconfigServer {
+func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseClient, ec *ExternalConnectors) *WebconfigServer {
+	if ec == nil {
+		ec = NewExternalConnectors()
+	}
 	conf := sc.Config
 	var err error
 
@@ -149,7 +160,12 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 	if err != nil && !testOnly {
 		panic(err)
 	}
-
+	var idpSvc IdpServiceConnector
+	if idpAuthProvider != "acl" {
+		idpSvc = NewIdpServiceConnector(conf, ec.IdpServiceConnector)
+	} else {
+		idpSvc = nil
+	}
 	xpcTracer := tracing.NewXpcTracer(sc.Config)
 
 	WebConfServer = &WebconfigServer{
@@ -160,12 +176,12 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 		AppName:                   appName,
 		CanaryMgrConnector:        NewCanaryMgrConnector(conf, tlsConfig),
 		XcrpConnector:             NewXcrpConnector(conf, tlsConfig),
-		IdpServiceConnector:       NewIdpServiceConnector(conf),
+		IdpServiceConnector:       idpSvc,
 		GroupServiceConnector:     NewGroupServiceConnector(conf, tlsConfig),
 		GroupServiceSyncConnector: NewGroupServiceSyncConnector(conf, tlsConfig),
 		TaggingApiConfig:          taggingapi_config.NewTaggingApiConfig(conf),
 		XconfConnector:            NewXconfConnector(conf, "xconf", tlsConfig),
-		XW_XconfServer:            xhttp.NewXconfServer(sc, testOnly, nil),
+		XW_XconfServer:            xhttp.NewXconfServer(sc, testOnly, ec.xw_ect),
 		IdpLoginPath:              idpLoginPath,
 		IdpLogoutPath:             idpLogoutPath,
 		IdpLogoutAfterPath:        idpLogoutAfterPath,
