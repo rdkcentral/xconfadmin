@@ -45,8 +45,12 @@ func NewGroupServiceSyncConnector(conf *configuration.Config, tlsConfig *tls.Con
 	}
 }
 
-func (c *GroupServiceSyncConnector) GetGroupServiceSyncUrl() string {
+func (c *GroupServiceSyncConnector) GetGroupServiceSyncHost() string {
 	return c.BaseURL
+}
+
+func (c *GroupServiceSyncConnector) SetGroupServiceSyncHost(host string) {
+	c.BaseURL = host
 }
 
 func (c *GroupServiceSyncConnector) DoRequest(method string, url string, headers map[string]string, body []byte) ([]byte, error) {
@@ -55,7 +59,7 @@ func (c *GroupServiceSyncConnector) DoRequest(method string, url string, headers
 }
 
 func (c *GroupServiceSyncConnector) AddMembersToTag(groupId string, members *proto2.XdasHashes) error {
-	url := fmt.Sprintf(AddGroupMember, c.GetGroupServiceSyncUrl(), groupId)
+	url := fmt.Sprintf(AddGroupMember, c.GetGroupServiceSyncHost(), groupId)
 	data, err := proto.Marshal(members)
 	if err != nil {
 		return err
@@ -70,7 +74,7 @@ func (c *GroupServiceSyncConnector) AddMembersToTag(groupId string, members *pro
 }
 
 func (c *GroupServiceSyncConnector) RemoveGroupMembers(groupId string, member string) error {
-	url := fmt.Sprintf(RemoveGroupMember, c.GetGroupServiceSyncUrl(), groupId, member)
+	url := fmt.Sprintf(RemoveGroupMember, c.GetGroupServiceSyncHost(), groupId, member)
 	_, err := c.DoRequest("DELETE", url, protobufHeaders(), nil)
 	if err != nil {
 		return err
