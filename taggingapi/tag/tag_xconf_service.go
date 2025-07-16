@@ -6,7 +6,7 @@ import (
 
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	log "github.com/sirupsen/logrus"
 )

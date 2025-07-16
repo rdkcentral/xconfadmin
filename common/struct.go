@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"xconfadmin/util"
+
+	"github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/rdkcentral/xconfwebconfig/db"
 	ds "github.com/rdkcentral/xconfwebconfig/db"

@@ -21,15 +21,15 @@ import (
 	"fmt"
 	"net/http"
 
-	xcommon "xconfadmin/common"
-	xshared "xconfadmin/shared"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
-	"xconfadmin/adminapi/auth"
-	xchange "xconfadmin/shared/change"
-	xlogupload "xconfadmin/shared/logupload"
-	xutil "xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xchange "github.com/rdkcentral/xconfadmin/shared/change"
+	xlogupload "github.com/rdkcentral/xconfadmin/shared/logupload"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	core_change "github.com/rdkcentral/xconfwebconfig/shared/change"

@@ -2,7 +2,8 @@ package tag
 
 import (
 	"encoding/json"
-	"xconfadmin/util"
+
+	"github.com/rdkcentral/xconfadmin/util"
 )
 
 type Tag struct {

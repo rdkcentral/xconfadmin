@@ -22,8 +22,8 @@ import (
 	"os"
 	"sync"
 
-	"xconfadmin/common"
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/go-akka/configuration"
 	log "github.com/sirupsen/logrus"

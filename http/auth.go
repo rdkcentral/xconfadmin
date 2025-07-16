@@ -24,7 +24,8 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
-	"xconfadmin/common"
+
+	"github.com/rdkcentral/xconfadmin/common"
 
 	"github.com/golang-jwt/jwt/v4"
 	log "github.com/sirupsen/logrus"

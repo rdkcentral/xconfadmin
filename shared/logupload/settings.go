@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/common"
 
-	core "xconfadmin/shared"
-	util "xconfadmin/util"
+	core "github.com/rdkcentral/xconfadmin/shared"
+	util "github.com/rdkcentral/xconfadmin/util"
 
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"

@@ -24,10 +24,10 @@ import (
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
-	"xconfadmin/adminapi/auth"
-	xcommon "xconfadmin/common"
-	xchange "xconfadmin/shared/change"
-	xutil "xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xchange "github.com/rdkcentral/xconfadmin/shared/change"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"

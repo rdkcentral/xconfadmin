@@ -4,8 +4,8 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	proto2 "xconfadmin/taggingapi/proto/generated"
-	"xconfadmin/util"
+	proto2 "github.com/rdkcentral/xconfadmin/taggingapi/proto/generated"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/go-akka/configuration"
 	log "github.com/sirupsen/logrus"

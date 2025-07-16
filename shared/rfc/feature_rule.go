@@ -1,8 +1,8 @@
 package rfc
 
 import (
-	core "xconfadmin/shared"
-	"xconfadmin/util"
+	core "github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	//re "github.com/rdkcentral/xconfwebconfig/rulesengine"

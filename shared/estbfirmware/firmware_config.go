@@ -23,10 +23,10 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfadmin/common"
-	xcommon "xconfadmin/common"
-	core "xconfadmin/shared"
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	core "github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	shared "github.com/rdkcentral/xconfwebconfig/shared"

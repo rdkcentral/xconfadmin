@@ -28,16 +28,16 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 
-	"xconfadmin/shared"
-	xshared "xconfadmin/shared"
+	"github.com/rdkcentral/xconfadmin/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
-	"xconfadmin/adminapi/auth"
-	xcommon "xconfadmin/common"
-	xhttp "xconfadmin/http"
-	xrfc "xconfadmin/shared/rfc"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"

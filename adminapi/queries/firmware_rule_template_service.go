@@ -33,10 +33,10 @@ import (
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
-	xcommon "xconfadmin/common"
-	core "xconfadmin/shared"
-	xcorefw "xconfadmin/shared/firmware"
-	"xconfadmin/util"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	core "github.com/rdkcentral/xconfadmin/shared"
+	xcorefw "github.com/rdkcentral/xconfadmin/shared/firmware"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"

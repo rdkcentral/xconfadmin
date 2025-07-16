@@ -32,14 +32,14 @@ import (
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
-	xcommon "xconfadmin/common"
-	"xconfadmin/shared"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/shared"
 
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )

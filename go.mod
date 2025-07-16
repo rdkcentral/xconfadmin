@@ -15,7 +15,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-module xconfadmin
+module github.com/rdkcentral/xconfadmin
 
 go 1.23.0
 

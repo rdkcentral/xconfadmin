@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"strings"
 
-	xcommon "xconfadmin/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"

@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"xconfadmin/common"
-	xhttp "xconfadmin/http"
-	"xconfadmin/taggingapi/percentage"
+
+	"github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/taggingapi/percentage"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 

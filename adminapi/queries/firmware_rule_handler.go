@@ -28,10 +28,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
-	"xconfadmin/adminapi/auth"
-	xcommon "xconfadmin/common"
-	xhttp "xconfadmin/http"
-	xfirmware "xconfadmin/shared/firmware"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xfirmware "github.com/rdkcentral/xconfadmin/shared/firmware"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -39,7 +39,7 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
-	xutil "xconfadmin/util"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 )

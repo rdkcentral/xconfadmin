@@ -25,8 +25,8 @@ import (
 	"strconv"
 	"strings"
 
-	xshared "xconfadmin/shared"
-	xutil "xconfadmin/util"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/rdkcentral/xconfwebconfig/shared"
 
@@ -38,10 +38,10 @@ import (
 
 	xcommon "github.com/rdkcentral/xconfwebconfig/common"
 
-	"xconfadmin/adminapi/auth"
-	"xconfadmin/common"
-	xhttp "xconfadmin/http"
-	xcoreef "xconfadmin/shared/estbfirmware"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	"github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xcoreef "github.com/rdkcentral/xconfadmin/shared/estbfirmware"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"

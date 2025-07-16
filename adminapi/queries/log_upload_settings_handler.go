@@ -27,11 +27,11 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 
-	"xconfadmin/adminapi/auth"
-	"xconfadmin/common"
-	xhttp "xconfadmin/http"
-	"xconfadmin/shared/logupload"
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	"github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/shared/logupload"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	ds "github.com/rdkcentral/xconfwebconfig/db"

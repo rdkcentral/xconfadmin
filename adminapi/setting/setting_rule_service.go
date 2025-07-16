@@ -26,10 +26,10 @@ import (
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi/dcm/settings"
 
-	"xconfadmin/adminapi/auth"
-	"xconfadmin/adminapi/queries"
-	"xconfadmin/shared"
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	"github.com/rdkcentral/xconfadmin/adminapi/queries"
+	"github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"

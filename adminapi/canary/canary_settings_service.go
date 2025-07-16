@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/common"
 
 	log "github.com/sirupsen/logrus"
 )

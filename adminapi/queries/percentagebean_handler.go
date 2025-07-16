@@ -22,19 +22,19 @@ import (
 	"fmt"
 	"net/http"
 
-	xcommon "xconfadmin/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
 	"github.com/gorilla/mux"
 
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
