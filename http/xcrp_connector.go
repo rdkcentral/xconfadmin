@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"xconfadmin/common"
+
+	"github.com/rdkcentral/xconfadmin/common"
 
 	"github.com/go-akka/configuration"
 	log "github.com/sirupsen/logrus"

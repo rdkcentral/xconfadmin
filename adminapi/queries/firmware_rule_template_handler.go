@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/common"
 
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
@@ -35,10 +35,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
-	"xconfadmin/adminapi/auth"
-	xcommon "xconfadmin/common"
-	xhttp "xconfadmin/http"
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/rdkcentral/xconfwebconfig/db"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"

@@ -20,7 +20,8 @@ package queries
 import (
 	"fmt"
 	"net/http"
-	core "xconfadmin/shared"
+
+	core "github.com/rdkcentral/xconfadmin/shared"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"

@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfadmin/common"
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 )

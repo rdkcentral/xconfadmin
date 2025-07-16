@@ -23,11 +23,11 @@ import (
 	"sort"
 	"strings"
 
-	xcommon "xconfadmin/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
-	"xconfadmin/shared"
-	xlogupload "xconfadmin/shared/logupload"
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/shared"
+	xlogupload "github.com/rdkcentral/xconfadmin/shared/logupload"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	ds "github.com/rdkcentral/xconfwebconfig/db"

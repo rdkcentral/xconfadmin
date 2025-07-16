@@ -24,21 +24,21 @@ import (
 	"strconv"
 	"time"
 
-	xutil "xconfadmin/util"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/rdkcentral/xconfwebconfig/dataapi/dcm/telemetry"
 
-	xcommon "xconfadmin/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
-	"xconfadmin/shared"
-	xlogupload "xconfadmin/shared/logupload"
+	"github.com/rdkcentral/xconfadmin/shared"
+	xlogupload "github.com/rdkcentral/xconfadmin/shared/logupload"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 

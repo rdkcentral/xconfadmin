@@ -1,8 +1,8 @@
 package taggingapi
 
 import (
-	xhttp "xconfadmin/http"
-	"xconfadmin/taggingapi/tag"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/taggingapi/tag"
 
 	"github.com/gorilla/mux"
 )

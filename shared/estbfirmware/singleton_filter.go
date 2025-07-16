@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	core "xconfadmin/shared"
-	"xconfadmin/util"
+	core "github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 )

@@ -3,7 +3,8 @@ package tag
 import (
 	"fmt"
 	"strings"
-	"xconfadmin/util"
+
+	"github.com/rdkcentral/xconfadmin/util"
 
 	log "github.com/sirupsen/logrus"
 )

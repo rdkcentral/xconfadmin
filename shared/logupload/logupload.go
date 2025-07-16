@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	core "xconfadmin/shared"
-	util "xconfadmin/util"
+	core "github.com/rdkcentral/xconfadmin/shared"
+	util "github.com/rdkcentral/xconfadmin/util"
 
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 

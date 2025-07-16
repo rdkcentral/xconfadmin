@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"xconfadmin/adminapi/auth"
-	ccommon "xconfadmin/common"
-	xhttp "xconfadmin/http"
-	util "xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	ccommon "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	util "github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/rdkcentral/xconfwebconfig/db"
 

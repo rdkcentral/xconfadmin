@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"xconfadmin/adminapi/auth"
-	"xconfadmin/adminapi/lockdown"
-	"xconfadmin/common"
-	xhttp "xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	"github.com/rdkcentral/xconfadmin/adminapi/lockdown"
+	"github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 
 	dao "github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"

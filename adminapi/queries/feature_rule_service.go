@@ -30,16 +30,16 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/dataapi/featurecontrol"
 	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
-	xcommon "xconfadmin/common"
-	core "xconfadmin/shared"
-	xshared "xconfadmin/shared"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	core "github.com/rdkcentral/xconfadmin/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 
+	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
+	"github.com/rdkcentral/xconfadmin/util"
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
-	xrfc "xconfadmin/shared/rfc"
-	"xconfadmin/util"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

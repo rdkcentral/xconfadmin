@@ -2,7 +2,8 @@ package rfc
 
 import (
 	"fmt"
-	xshared "xconfadmin/shared"
+
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"

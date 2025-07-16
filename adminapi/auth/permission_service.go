@@ -26,15 +26,15 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"xconfadmin/common"
-	owcommon "xconfadmin/common"
-	xhttp "xconfadmin/http"
-	core "xconfadmin/shared"
+	"github.com/rdkcentral/xconfadmin/common"
+	owcommon "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	core "github.com/rdkcentral/xconfadmin/shared"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/util"
 )
 
 const (

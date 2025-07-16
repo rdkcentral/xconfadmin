@@ -22,9 +22,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"xconfadmin/adminapi/auth"
-	ccommon "xconfadmin/common"
-	xhttp "xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	ccommon "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )

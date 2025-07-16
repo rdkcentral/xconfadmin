@@ -25,20 +25,20 @@ import (
 
 	"github.com/gorilla/mux"
 
-	xutil "xconfadmin/util"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	xwutil "github.com/rdkcentral/xconfwebconfig/util"
 
-	xhttp "xconfadmin/http"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
-	xcommon "xconfadmin/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
-	"xconfadmin/adminapi/auth"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 )
 
 const (

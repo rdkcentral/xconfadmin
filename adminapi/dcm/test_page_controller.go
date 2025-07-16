@@ -25,11 +25,11 @@ import (
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	dcmlogupload "github.com/rdkcentral/xconfwebconfig/dataapi/dcm/logupload"
 
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfwebconfig/common"
 	logupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/rdkcentral/xconfwebconfig/util"
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
 
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"

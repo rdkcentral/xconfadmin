@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfadmin/shared/estbfirmware"
+	"github.com/rdkcentral/xconfadmin/shared/estbfirmware"
 
 	"github.com/360EntSecGroup-Skylar/excelize"
 )

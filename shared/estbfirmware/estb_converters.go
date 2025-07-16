@@ -4,7 +4,8 @@ import (
 	"errors"
 	"regexp"
 	"strings"
-	xutil "xconfadmin/util"
+
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/rdkcentral/xconfwebconfig/db"
 	rf "github.com/rdkcentral/xconfwebconfig/rulesengine"

@@ -27,10 +27,10 @@ import (
 
 	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
-	queries "xconfadmin/adminapi/queries"
-	xcommon "xconfadmin/common"
-	xlogupload "xconfadmin/shared/logupload"
-	xutil "xconfadmin/util"
+	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xlogupload "github.com/rdkcentral/xconfadmin/shared/logupload"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
