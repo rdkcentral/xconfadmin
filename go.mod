@@ -32,15 +32,17 @@ require (
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.18.0
-	github.com/rdkcentral/xconfwebconfig v0.0.0-20250716094254-dc9e81d3b8e2
-	github.com/rs/cors v1.11.0
+	github.com/rdkcentral/xconfwebconfig v1.0.2
 	github.com/sirupsen/logrus v1.9.3
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.uber.org/automaxprocs v1.5.3
 	gotest.tools v2.2.0+incompatible
 )
 
-require google.golang.org/protobuf v1.34.1
+require (
+	github.com/rs/cors v1.11.1
+	google.golang.org/protobuf v1.34.1
+)
 
 require (
 	github.com/Comcast/goburrow-cache v1.0.2 // indirect
