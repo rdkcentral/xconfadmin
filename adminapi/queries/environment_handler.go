@@ -24,11 +24,12 @@ import (
 	xcommon "xconfadmin/common"
 	xutil "xconfadmin/util"
 
-	"xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 const (

@@ -17,7 +17,7 @@
 package estbfirmware
 
 import (
-	corefw "xconfwebconfig/shared/estbfirmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 )
 
 // type TimeFilter struct {

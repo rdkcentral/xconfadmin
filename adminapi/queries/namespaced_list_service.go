@@ -24,19 +24,20 @@ import (
 	"sort"
 	"strings"
 
-	xwhttp "xconfwebconfig/http"
-	ru "xconfwebconfig/rulesengine"
-	xutil "xconfwebconfig/util"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	xutil "github.com/rdkcentral/xconfwebconfig/util"
 
 	"xconfadmin/common"
 	xrfc "xconfadmin/shared/rfc"
 	"xconfadmin/util"
-	ds "xconfwebconfig/db"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	corefw "xconfwebconfig/shared/firmware"
-	firmware "xconfwebconfig/shared/firmware"
-	"xconfwebconfig/shared/rfc"
+
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	firmware "github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
 
 	log "github.com/sirupsen/logrus"
 )

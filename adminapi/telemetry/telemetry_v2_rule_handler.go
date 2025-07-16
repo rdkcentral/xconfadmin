@@ -35,9 +35,10 @@ import (
 	core "xconfadmin/shared"
 	"xconfadmin/shared/logupload"
 	"xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
-	xwhttp "xconfwebconfig/http"
-	xwlogupload "xconfwebconfig/shared/logupload"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
 const (

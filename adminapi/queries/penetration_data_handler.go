@@ -9,7 +9,8 @@ import (
 	ccommon "xconfadmin/common"
 	xhttp "xconfadmin/http"
 	util "xconfadmin/util"
-	"xconfwebconfig/db"
+
+	"github.com/rdkcentral/xconfwebconfig/db"
 
 	"github.com/gorilla/mux"
 )

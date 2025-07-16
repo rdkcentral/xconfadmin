@@ -25,17 +25,18 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
 
 	xcommon "xconfadmin/common"
 	xutil "xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared"
 
 	log "github.com/sirupsen/logrus"
 )

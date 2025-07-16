@@ -27,14 +27,16 @@ import (
 
 	xutil "xconfadmin/util"
 
-	xwutil "xconfwebconfig/util"
+	xwutil "github.com/rdkcentral/xconfwebconfig/util"
 
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	xcommon "xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/shared/logupload"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"xconfadmin/adminapi/auth"
 )

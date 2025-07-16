@@ -27,24 +27,26 @@ import (
 
 	xshared "xconfadmin/shared"
 	xutil "xconfadmin/util"
-	"xconfwebconfig/shared"
+
+	"github.com/rdkcentral/xconfwebconfig/shared"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 
-	daef "xconfwebconfig/dataapi/estbfirmware"
+	daef "github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
 
-	xcommon "xconfwebconfig/common"
+	xcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	"xconfadmin/adminapi/auth"
 	"xconfadmin/common"
 	xhttp "xconfadmin/http"
 	xcoreef "xconfadmin/shared/estbfirmware"
-	xwhttp "xconfwebconfig/http"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	corefw "xconfwebconfig/shared/firmware"
-	"xconfwebconfig/util"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 func GetQueriesPercentageBean(w http.ResponseWriter, r *http.Request) {

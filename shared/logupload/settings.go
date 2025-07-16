@@ -8,9 +8,10 @@ import (
 
 	core "xconfadmin/shared"
 	util "xconfadmin/util"
-	ds "xconfwebconfig/db"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared/logupload"
+
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	log "github.com/sirupsen/logrus"
 )

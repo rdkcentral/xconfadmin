@@ -24,9 +24,10 @@ import (
 	"strings"
 
 	"xconfadmin/util"
-	"xconfwebconfig/db"
-	sharedef "xconfwebconfig/shared/estbfirmware"
-	corefw "xconfwebconfig/shared/firmware"
+
+	"github.com/rdkcentral/xconfwebconfig/db"
+	sharedef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
 const (

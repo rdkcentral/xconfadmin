@@ -25,7 +25,8 @@ import (
 	"xconfadmin/adminapi/auth"
 	ccommon "xconfadmin/common"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 func PutCanarySettingsHandler(w http.ResponseWriter, r *http.Request) {

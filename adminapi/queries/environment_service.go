@@ -27,11 +27,11 @@ import (
 
 	"xconfadmin/util"
 
-	ds "xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
-	ru "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 )
 
 func GetEnvironment(id string) *shared.Environment {

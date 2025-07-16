@@ -30,16 +30,18 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 
-	xwcommon "xconfwebconfig/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	xcommon "xconfadmin/common"
 	"xconfadmin/shared"
-	"xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 func GetSettingRulesAllExport(w http.ResponseWriter, r *http.Request) {

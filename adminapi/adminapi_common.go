@@ -20,7 +20,8 @@ package adminapi
 import (
 	"strings"
 	"time"
-	"xconfwebconfig/dataapi"
+
+	"github.com/rdkcentral/xconfwebconfig/dataapi"
 
 	queries "xconfadmin/adminapi/queries"
 	common "xconfadmin/common"

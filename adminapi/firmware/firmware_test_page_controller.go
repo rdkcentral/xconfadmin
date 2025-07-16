@@ -22,18 +22,21 @@ import (
 	"net/http"
 
 	xutil "xconfadmin/util"
-	ef "xconfwebconfig/dataapi/estbfirmware"
+
+	ef "github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
 
 	xcommon "xconfadmin/common"
 	xshared "xconfadmin/shared"
-	xwshared "xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/util"
+
+	xwshared "github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwcommon "xconfwebconfig/common"
-	xwhttp "xconfwebconfig/http"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	log "github.com/sirupsen/logrus"
 )

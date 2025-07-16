@@ -28,12 +28,14 @@ import (
 
 	xcommon "xconfadmin/common"
 	xlogupload "xconfadmin/shared/logupload"
-	xwcommon "xconfwebconfig/common"
-	xwlogupload "xconfwebconfig/shared/logupload"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 func GetTelemetryRulesHandler(w http.ResponseWriter, r *http.Request) {

@@ -25,16 +25,18 @@ import (
 	"github.com/gorilla/mux"
 
 	"xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/shared/logupload"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	xutil "xconfadmin/util"
 
-	xwutil "xconfwebconfig/util"
+	xwutil "github.com/rdkcentral/xconfwebconfig/util"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 func GetVodSettingsHandler(w http.ResponseWriter, r *http.Request) {

@@ -32,9 +32,10 @@ import (
 	xhttp "xconfadmin/http"
 	core "xconfadmin/shared"
 	requtil "xconfadmin/util"
-	ds "xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared/logupload"
+
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
 func GetDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {

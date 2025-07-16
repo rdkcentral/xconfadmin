@@ -3,11 +3,12 @@ package rfc
 import (
 	"fmt"
 	xshared "xconfadmin/shared"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/db"
-	xwshared "xconfwebconfig/shared"
-	"xconfwebconfig/shared/rfc"
-	xwrfc "xconfwebconfig/shared/rfc"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xwshared "github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
+	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
 
 	log "github.com/sirupsen/logrus"
 )

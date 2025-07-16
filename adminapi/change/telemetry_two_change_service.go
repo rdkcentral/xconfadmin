@@ -22,16 +22,17 @@ import (
 	"net/http"
 	"sort"
 
-	xwcommon "xconfwebconfig/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	"xconfadmin/adminapi/auth"
 	xcommon "xconfadmin/common"
 	xchange "xconfadmin/shared/change"
 	xutil "xconfadmin/util"
-	xwhttp "xconfwebconfig/http"
-	xwchange "xconfwebconfig/shared/change"
-	"xconfwebconfig/shared/logupload"
-	xwutil "xconfwebconfig/util"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	xwutil "github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

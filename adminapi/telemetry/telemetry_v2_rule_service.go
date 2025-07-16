@@ -24,17 +24,19 @@ import (
 	"strings"
 
 	xcommon "xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	queries "xconfadmin/adminapi/queries"
 	xshared "xconfadmin/shared"
 	"xconfadmin/shared/logupload"
 	xlogupload "xconfadmin/shared/logupload"
 	xutil "xconfadmin/util"
-	"xconfwebconfig/rulesengine"
-	ru "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	xwlogupload "xconfwebconfig/shared/logupload"
+
+	"github.com/rdkcentral/xconfwebconfig/rulesengine"
+	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

@@ -29,11 +29,13 @@ import (
 	xutil "xconfadmin/util"
 
 	xcommon "xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"

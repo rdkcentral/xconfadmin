@@ -14,12 +14,13 @@ import (
 	taggingapi_config "xconfadmin/taggingapi/config"
 
 	xcommon "xconfadmin/common"
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	xhttp "xconfwebconfig/http"
-	"xconfwebconfig/util"
 
-	"xconfwebconfig/tracing"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/tracing"
 
 	"github.com/go-akka/configuration"
 	"github.com/google/uuid"

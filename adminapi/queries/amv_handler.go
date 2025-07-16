@@ -28,12 +28,13 @@ import (
 	xutil "xconfadmin/util"
 
 	xcommon "xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/shared/firmware"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
 	"xconfadmin/adminapi/auth"
 
-	xwhttp "xconfwebconfig/http"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
 )

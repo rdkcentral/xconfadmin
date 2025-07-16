@@ -25,16 +25,18 @@ import (
 	"strings"
 
 	xcommon "xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/shared"
 
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+
+	"github.com/rdkcentral/xconfwebconfig/shared"
+
+	xwshared "github.com/rdkcentral/xconfwebconfig/shared"
+	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"xconfadmin/adminapi/auth"
 	xshared "xconfadmin/shared"
 	xchange "xconfadmin/shared/change"
 	xutil "xconfadmin/util"
-	xwshared "xconfwebconfig/shared"
-	xwchange "xconfwebconfig/shared/change"
-	"xconfwebconfig/shared/logupload"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

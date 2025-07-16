@@ -7,11 +7,12 @@ import (
 	"strings"
 	"time"
 	"xconfadmin/util"
-	"xconfwebconfig/db"
-	ds "xconfwebconfig/db"
-	re "xconfwebconfig/rulesengine"
-	core "xconfwebconfig/shared"
-	shared "xconfwebconfig/shared"
+
+	"github.com/rdkcentral/xconfwebconfig/db"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	core "github.com/rdkcentral/xconfwebconfig/shared"
+	shared "github.com/rdkcentral/xconfwebconfig/shared"
 
 	log "github.com/sirupsen/logrus"
 )

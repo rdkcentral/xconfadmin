@@ -27,8 +27,9 @@ import (
 
 	xcommon "xconfadmin/common"
 	xrfc "xconfadmin/shared/rfc"
-	xwcommon "xconfwebconfig/common"
-	xwrfc "xconfwebconfig/shared/rfc"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
 
 	"github.com/google/uuid"
 )

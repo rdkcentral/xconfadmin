@@ -25,18 +25,19 @@ import (
 	"strconv"
 	"strings"
 
-	ru "xconfwebconfig/rulesengine"
+	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
 	xcommon "xconfadmin/common"
 	xshared "xconfadmin/shared"
 	xutil "xconfadmin/util"
-	"xconfwebconfig/common"
-	xwcommon "xconfwebconfig/common"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	corefw "xconfwebconfig/shared/firmware"
-	util "xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	util "github.com/rdkcentral/xconfwebconfig/util"
 
 	uuid "github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

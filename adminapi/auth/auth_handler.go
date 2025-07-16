@@ -26,7 +26,8 @@ import (
 	"xconfadmin/common"
 	xhttp "xconfadmin/http"
 	"xconfadmin/util"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/golang-jwt/jwt/v4"
 	log "github.com/sirupsen/logrus"

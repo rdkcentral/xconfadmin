@@ -29,15 +29,16 @@ import (
 
 	xcommon "xconfadmin/common"
 	xrfc "xconfadmin/shared/rfc"
-	xwcommon "xconfwebconfig/common"
-	xwrfc "xconfwebconfig/shared/rfc"
-	"xconfwebconfig/util"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"xconfadmin/adminapi/auth"
 
 	xhttp "xconfadmin/http"
 
-	xwhttp "xconfwebconfig/http"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
 )

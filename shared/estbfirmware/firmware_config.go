@@ -27,9 +27,10 @@ import (
 	xcommon "xconfadmin/common"
 	core "xconfadmin/shared"
 	"xconfadmin/util"
-	ds "xconfwebconfig/db"
-	shared "xconfwebconfig/shared"
-	sharedef "xconfwebconfig/shared/estbfirmware"
+
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	shared "github.com/rdkcentral/xconfwebconfig/shared"
+	sharedef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

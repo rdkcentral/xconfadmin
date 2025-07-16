@@ -24,16 +24,18 @@ import (
 	"strings"
 
 	xcoreef "xconfadmin/shared/estbfirmware"
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared/estbfirmware"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/util"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 
 	xshared "xconfadmin/shared"
-	"xconfwebconfig/shared/firmware"
-	corefw "xconfwebconfig/shared/firmware"
+
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
 func UpdateLocationFilter(applicationType string, locationFilter *coreef.DownloadLocationFilter) *xwhttp.ResponseEntity {

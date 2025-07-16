@@ -7,7 +7,8 @@ import (
 
 	core "xconfadmin/shared"
 	"xconfadmin/util"
-	coreef "xconfwebconfig/shared/estbfirmware"
+
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 )
 
 const (

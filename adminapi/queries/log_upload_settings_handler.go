@@ -32,9 +32,10 @@ import (
 	xhttp "xconfadmin/http"
 	"xconfadmin/shared/logupload"
 	"xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
-	ds "xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 // This function is not being referenced in router.go. Should we delete it?

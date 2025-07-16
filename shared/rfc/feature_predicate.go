@@ -17,7 +17,8 @@ package rfc
 
 import (
 	"strings"
-	xwrfc "xconfwebconfig/shared/rfc"
+
+	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
 )
 
 const (

@@ -26,8 +26,9 @@ import (
 
 	"xconfadmin/shared"
 	xlogupload "xconfadmin/shared/logupload"
-	"xconfwebconfig/rulesengine"
-	xwlogupload "xconfwebconfig/shared/logupload"
+
+	"github.com/rdkcentral/xconfwebconfig/rulesengine"
+	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
 func CreateTelemetryProfile(contextAttribute string, expectedValue string, telemetry *xwlogupload.TelemetryProfile) *xwlogupload.TimestampedRule {

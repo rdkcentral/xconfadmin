@@ -10,7 +10,8 @@ import (
 
 	"xconfadmin/common"
 	"xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 )
 
 const (

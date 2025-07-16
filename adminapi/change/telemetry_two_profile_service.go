@@ -32,12 +32,13 @@ import (
 	"xconfadmin/adminapi/auth"
 	xchange "xconfadmin/shared/change"
 	xlogupload "xconfadmin/shared/logupload"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/rulesengine"
-	xwshared "xconfwebconfig/shared"
-	xwchange "xconfwebconfig/shared/change"
-	xwlogupload "xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/rulesengine"
+	xwshared "github.com/rdkcentral/xconfwebconfig/shared"
+	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
+	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
 )

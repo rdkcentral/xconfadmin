@@ -24,8 +24,9 @@ import (
 
 	"xconfadmin/common"
 	"xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
-	re "xconfwebconfig/rulesengine"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 )
 
 const (

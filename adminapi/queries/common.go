@@ -22,16 +22,17 @@ import (
 	"strings"
 	"time"
 
-	//"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
-	util "xconfwebconfig/util"
+	//"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	util "github.com/rdkcentral/xconfwebconfig/util"
 
 	"xconfadmin/adminapi/auth"
 	xcommon "xconfadmin/common"
 	xhttp "xconfadmin/http"
 	xutil "xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	"github.com/gorilla/mux"
 )

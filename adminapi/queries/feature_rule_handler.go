@@ -30,18 +30,20 @@ import (
 
 	"xconfadmin/shared"
 	xshared "xconfadmin/shared"
-	"xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
+
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"xconfadmin/adminapi/auth"
 	xcommon "xconfadmin/common"
 	xhttp "xconfadmin/http"
 	xrfc "xconfadmin/shared/rfc"
-	"xconfwebconfig/common"
-	xwcommon "xconfwebconfig/common"
-	ds "xconfwebconfig/db"
-	"xconfwebconfig/shared/rfc"
-	"xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 const (

@@ -8,7 +8,8 @@ import (
 
 	core "xconfadmin/shared"
 	util "xconfadmin/util"
-	ds "xconfwebconfig/db"
+
+	ds "github.com/rdkcentral/xconfwebconfig/db"
 
 	log "github.com/sirupsen/logrus"
 )

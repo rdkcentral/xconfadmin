@@ -4,8 +4,8 @@ import (
 	core "xconfadmin/shared"
 	"xconfadmin/util"
 
-	re "xconfwebconfig/rulesengine"
-	//re "xconfwebconfig/rulesengine"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	//re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 )
 
 // FeatureRule FeatureControlRule2 table

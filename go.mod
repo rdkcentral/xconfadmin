@@ -21,8 +21,6 @@ go 1.23.0
 
 toolchain go1.24.0
 
-replace xconfwebconfig => github.com/rdkcentral/xconfwebconfig v1.0.0
-
 require (
 	github.com/360EntSecGroup-Skylar/excelize v1.4.1
 	github.com/dchest/siphash v1.2.3
@@ -34,12 +32,12 @@ require (
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.18.0
+	github.com/rdkcentral/xconfwebconfig v0.0.0-20250716094254-dc9e81d3b8e2
 	github.com/rs/cors v1.11.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.uber.org/automaxprocs v1.5.3
 	gotest.tools v2.2.0+incompatible
-	xconfwebconfig v0.0.0-00010101000000-000000000000
 )
 
 require google.golang.org/protobuf v1.34.1

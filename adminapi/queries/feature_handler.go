@@ -25,10 +25,11 @@ import (
 	xhttp "xconfadmin/http"
 	xrfc "xconfadmin/shared/rfc"
 	requtil "xconfadmin/util"
-	"xconfwebconfig/common"
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared/rfc"
-	"xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"xconfadmin/adminapi/auth"
 

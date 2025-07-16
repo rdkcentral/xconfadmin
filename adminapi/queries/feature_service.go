@@ -21,8 +21,9 @@ import (
 	"fmt"
 
 	xrfc "xconfadmin/shared/rfc"
-	xwrfc "xconfwebconfig/shared/rfc"
-	"xconfwebconfig/util"
+
+	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
 	errors "github.com/pkg/errors"

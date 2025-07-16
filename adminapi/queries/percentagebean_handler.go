@@ -23,18 +23,20 @@ import (
 	"net/http"
 
 	xcommon "xconfadmin/common"
-	"xconfwebconfig/common"
-	"xconfwebconfig/shared/firmware"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
 	"github.com/gorilla/mux"
 
 	"xconfadmin/util"
 
-	coreef "xconfwebconfig/shared/estbfirmware"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 const (

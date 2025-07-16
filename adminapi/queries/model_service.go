@@ -24,18 +24,19 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfwebconfig/common"
-	xwhttp "xconfwebconfig/http"
-	ru "xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwutil "github.com/rdkcentral/xconfwebconfig/util"
 	"xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
-	xwutil "xconfwebconfig/util"
 
 	xcommon "xconfadmin/common"
-	ds "xconfwebconfig/db"
-	"xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
+
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 )
 
 const (

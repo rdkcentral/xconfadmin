@@ -26,21 +26,25 @@ import (
 	"strings"
 
 	xutil "xconfadmin/util"
-	"xconfwebconfig/dataapi/dcm/telemetry"
+
+	"github.com/rdkcentral/xconfwebconfig/dataapi/dcm/telemetry"
 
 	xcommon "xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	xshared "xconfadmin/shared"
 	xlogupload "xconfadmin/shared/logupload"
-	"xconfwebconfig/common"
-	"xconfwebconfig/shared/logupload"
-	xwlogupload "xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
 )

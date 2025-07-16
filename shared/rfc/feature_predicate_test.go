@@ -17,7 +17,8 @@ package rfc
 
 import (
 	"testing"
-	"xconfwebconfig/shared/rfc"
+
+	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
 
 	"gotest.tools/assert"
 )

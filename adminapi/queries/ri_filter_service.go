@@ -25,12 +25,13 @@ import (
 
 	xshared "xconfadmin/shared"
 	xcoreef "xconfadmin/shared/estbfirmware"
-	xwhttp "xconfwebconfig/http"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/util"
 
-	"xconfwebconfig/shared/firmware"
-	corefw "xconfwebconfig/shared/firmware"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
 func UpdateRebootImmediatelyFilter(applicationType string, rebootFilter *coreef.RebootImmediatelyFilter) *xwhttp.ResponseEntity {

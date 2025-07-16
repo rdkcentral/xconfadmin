@@ -17,7 +17,8 @@ package estbfirmware
 
 import (
 	"unicode"
-	shared "xconfwebconfig/shared"
+
+	shared "github.com/rdkcentral/xconfwebconfig/shared"
 )
 
 type IpFilter struct {

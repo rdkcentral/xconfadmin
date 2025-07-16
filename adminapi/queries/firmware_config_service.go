@@ -26,16 +26,17 @@ import (
 	xshared "xconfadmin/shared"
 	xutil "xconfadmin/util"
 
-	xwcommon "xconfwebconfig/common"
-	ru "xconfwebconfig/rulesengine"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
 	xcommon "xconfadmin/common"
-	ds "xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	corefw "xconfwebconfig/shared/firmware"
-	"xconfwebconfig/util"
+
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

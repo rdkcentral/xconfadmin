@@ -3,7 +3,8 @@ package rfc
 import (
 	"encoding/json"
 	"testing"
-	rfc "xconfwebconfig/shared/rfc"
+
+	rfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
 
 	"gotest.tools/assert"
 )

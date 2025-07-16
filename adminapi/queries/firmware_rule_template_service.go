@@ -27,20 +27,21 @@ import (
 
 	"net/http"
 
-	"xconfwebconfig/common"
-	ruleutil "xconfwebconfig/rulesengine"
-	xutil "xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	ruleutil "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	xutil "github.com/rdkcentral/xconfwebconfig/util"
 
-	xwcommon "xconfwebconfig/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	xcommon "xconfadmin/common"
 	core "xconfadmin/shared"
 	xcorefw "xconfadmin/shared/firmware"
 	"xconfadmin/util"
-	ds "xconfwebconfig/db"
-	re "xconfwebconfig/rulesengine"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	corefw "xconfwebconfig/shared/firmware"
+
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
