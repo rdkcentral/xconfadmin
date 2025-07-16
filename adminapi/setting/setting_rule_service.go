@@ -23,17 +23,18 @@ import (
 	"sort"
 	"strings"
 
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/dataapi/dcm/settings"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/dataapi/dcm/settings"
 
 	"xconfadmin/adminapi/auth"
 	"xconfadmin/adminapi/queries"
 	"xconfadmin/shared"
 	"xconfadmin/util"
-	"xconfwebconfig/db"
-	re "xconfwebconfig/rulesengine"
-	corefw "xconfwebconfig/shared/firmware"
-	"xconfwebconfig/shared/logupload"
+
+	"github.com/rdkcentral/xconfwebconfig/db"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

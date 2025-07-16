@@ -13,7 +13,8 @@ import (
 	percentageutils "xconfadmin/taggingapi/percentage"
 	proto "xconfadmin/taggingapi/proto/generated"
 	"xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	log "github.com/sirupsen/logrus"
 )

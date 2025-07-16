@@ -22,17 +22,17 @@ import (
 	"fmt"
 	"net/http"
 
-	xwcommon "xconfwebconfig/common"
-	dcmlogupload "xconfwebconfig/dataapi/dcm/logupload"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	dcmlogupload "github.com/rdkcentral/xconfwebconfig/dataapi/dcm/logupload"
 
+	"github.com/rdkcentral/xconfwebconfig/common"
+	logupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	"xconfwebconfig/common"
-	logupload "xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
 
-	"xconfwebconfig/dataapi"
-	xwhttp "xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/dataapi"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	log "github.com/sirupsen/logrus"
 )

@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-	"xconfwebconfig/db"
-	"xconfwebconfig/shared"
-	xwchange "xconfwebconfig/shared/change"
-	"xconfwebconfig/util"
-	xwutil "xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
+	"github.com/rdkcentral/xconfwebconfig/util"
+	xwutil "github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

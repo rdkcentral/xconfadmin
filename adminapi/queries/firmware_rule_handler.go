@@ -32,15 +32,16 @@ import (
 	xcommon "xconfadmin/common"
 	xhttp "xconfadmin/http"
 	xfirmware "xconfadmin/shared/firmware"
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared/firmware"
-	"xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	xutil "xconfadmin/util"
 
-	re "xconfwebconfig/rulesengine"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 )
 
 func populateContext(w http.ResponseWriter, r *http.Request, isRead bool) (filterContext map[string]string, err error) {

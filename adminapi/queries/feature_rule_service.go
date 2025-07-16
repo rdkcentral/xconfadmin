@@ -26,20 +26,20 @@ import (
 	"strings"
 	"sync"
 
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/dataapi/featurecontrol"
-	ru "xconfwebconfig/rulesengine"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/dataapi/featurecontrol"
+	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
 	xcommon "xconfadmin/common"
 	core "xconfadmin/shared"
 	xshared "xconfadmin/shared"
 
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
 	xrfc "xconfadmin/shared/rfc"
 	"xconfadmin/util"
-	"xconfwebconfig/common"
-	"xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/shared/rfc"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

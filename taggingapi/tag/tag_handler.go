@@ -8,7 +8,8 @@ import (
 	"xconfadmin/common"
 	xhttp "xconfadmin/http"
 	"xconfadmin/taggingapi/percentage"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
 )

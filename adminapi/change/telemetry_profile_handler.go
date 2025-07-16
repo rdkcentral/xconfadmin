@@ -26,17 +26,20 @@ import (
 	"strings"
 
 	xutil "xconfadmin/util"
-	"xconfwebconfig/util"
 
-	xwcommon "xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/util"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	xcommon "xconfadmin/common"
 	xlogupload "xconfadmin/shared/logupload"
-	xwlogupload "xconfwebconfig/shared/logupload"
+
+	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
 )

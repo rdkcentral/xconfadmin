@@ -5,13 +5,14 @@ import (
 	"regexp"
 	"strings"
 	xutil "xconfadmin/util"
-	"xconfwebconfig/db"
-	rf "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	ru "xconfwebconfig/shared/estbfirmware"
-	corefw "xconfwebconfig/shared/firmware"
-	"xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/db"
+	rf "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	ru "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 func GetNormalizedMacAddresses(macAddresses string) ([]string, error) {

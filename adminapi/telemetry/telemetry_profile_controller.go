@@ -25,19 +25,22 @@ import (
 	"time"
 
 	xutil "xconfadmin/util"
-	"xconfwebconfig/dataapi/dcm/telemetry"
+
+	"github.com/rdkcentral/xconfwebconfig/dataapi/dcm/telemetry"
 
 	xcommon "xconfadmin/common"
 
 	"xconfadmin/shared"
 	xlogupload "xconfadmin/shared/logupload"
-	xwcommon "xconfwebconfig/common"
-	xwlogupload "xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"

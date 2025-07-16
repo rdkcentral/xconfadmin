@@ -10,8 +10,9 @@ import (
 	"xconfadmin/adminapi/lockdown"
 	"xconfadmin/common"
 	xhttp "xconfadmin/http"
-	dao "xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
+
+	dao "github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	log "github.com/sirupsen/logrus"
 )

@@ -28,12 +28,13 @@ import (
 
 	xcommon "xconfadmin/common"
 	xutil "xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/shared/logupload"
-	xwutil "xconfwebconfig/util"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	xwutil "github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )

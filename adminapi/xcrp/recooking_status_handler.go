@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"time"
 	owhttp "xconfadmin/http"
-	"xconfwebconfig/db"
-	"xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )

@@ -3,7 +3,8 @@ package tag
 import (
 	"fmt"
 	"math"
-	ds "xconfwebconfig/db"
+
+	ds "github.com/rdkcentral/xconfwebconfig/db"
 
 	"xconfadmin/util"
 

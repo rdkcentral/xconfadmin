@@ -26,20 +26,22 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared"
 
 	"github.com/gorilla/mux"
 
 	xcommon "xconfadmin/common"
 	covt "xconfadmin/shared/estbfirmware"
 	"xconfadmin/util"
-	xutil "xconfwebconfig/util"
 
-	xwcommon "xconfwebconfig/common"
+	xutil "github.com/rdkcentral/xconfwebconfig/util"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 func GetQueriesIpAddressGroups(w http.ResponseWriter, r *http.Request) {

@@ -22,11 +22,11 @@ import (
 	"net/http"
 	core "xconfadmin/shared"
 
-	xwhttp "xconfwebconfig/http"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/shared/firmware"
-	corefw "xconfwebconfig/shared/firmware"
-	"xconfwebconfig/util"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 func UpdateIpFilter(applicationType string, ipFilter *coreef.IpFilter) *xwhttp.ResponseEntity {

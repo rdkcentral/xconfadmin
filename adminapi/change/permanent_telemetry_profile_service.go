@@ -23,15 +23,17 @@ import (
 
 	xcommon "xconfadmin/common"
 	xshared "xconfadmin/shared"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"xconfadmin/adminapi/auth"
 	xchange "xconfadmin/shared/change"
 	xlogupload "xconfadmin/shared/logupload"
 	xutil "xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
-	core_change "xconfwebconfig/shared/change"
-	"xconfwebconfig/shared/logupload"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	core_change "github.com/rdkcentral/xconfwebconfig/shared/change"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

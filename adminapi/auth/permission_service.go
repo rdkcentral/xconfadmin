@@ -30,8 +30,9 @@ import (
 	owcommon "xconfadmin/common"
 	xhttp "xconfadmin/http"
 	core "xconfadmin/shared"
-	xwcommon "xconfwebconfig/common"
-	xwhttp "xconfwebconfig/http"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"xconfadmin/util"
 )

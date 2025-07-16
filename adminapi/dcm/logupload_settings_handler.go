@@ -26,12 +26,13 @@ import (
 
 	xutil "xconfadmin/util"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 func GetLogUploadSettingsHandler(w http.ResponseWriter, r *http.Request) {

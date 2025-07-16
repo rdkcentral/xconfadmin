@@ -25,7 +25,8 @@ import (
 	"strconv"
 
 	core "xconfadmin/shared"
-	xwcommon "xconfwebconfig/common"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	log "github.com/sirupsen/logrus"
 )

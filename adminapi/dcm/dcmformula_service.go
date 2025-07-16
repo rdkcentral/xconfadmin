@@ -26,7 +26,7 @@ import (
 	"strings"
 	"sync"
 
-	xwcommon "xconfwebconfig/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	queries "xconfadmin/adminapi/queries"
 	"xconfadmin/common"
@@ -36,11 +36,12 @@ import (
 
 	//	"xconfadmin/shared/logupload"
 	"xconfadmin/util"
-	ds "xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/rulesengine"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared/logupload"
+
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/rulesengine"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"github.com/google/uuid"
 )

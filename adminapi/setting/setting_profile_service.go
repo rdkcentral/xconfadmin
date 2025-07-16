@@ -28,9 +28,10 @@ import (
 	"xconfadmin/shared"
 	xlogupload "xconfadmin/shared/logupload"
 	"xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
-	ds "xconfwebconfig/db"
-	xwlogupload "xconfwebconfig/shared/logupload"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

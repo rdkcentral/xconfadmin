@@ -16,10 +16,10 @@
 package estbfirmware
 
 import (
-	re "xconfwebconfig/rulesengine"
-	shared "xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	corefw "xconfwebconfig/shared/firmware"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	shared "github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
 func NewPercentFilterWrapper(percentFilterValue *coreef.PercentFilterValue, toHumanReadableForm bool) *coreef.PercentFilterWrapper {

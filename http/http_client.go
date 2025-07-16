@@ -13,7 +13,8 @@ import (
 	"time"
 
 	"xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	"github.com/go-akka/configuration"
 	log "github.com/sirupsen/logrus"

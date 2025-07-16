@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"net/http"
 
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/util"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )

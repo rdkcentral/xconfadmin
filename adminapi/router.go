@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"strings"
 
-	"xconfwebconfig/dataapi"
+	"github.com/rdkcentral/xconfwebconfig/dataapi"
 
 	"xconfadmin/adminapi/auth"
 	change "xconfadmin/adminapi/change"
@@ -35,7 +35,8 @@ import (
 	xhttp "xconfadmin/http"
 	"xconfadmin/taggingapi"
 	"xconfadmin/taggingapi/tag"
-	db "xconfwebconfig/db"
+
+	db "github.com/rdkcentral/xconfwebconfig/db"
 
 	"xconfadmin/adminapi/canary"
 	"xconfadmin/adminapi/lockdown"

@@ -26,18 +26,20 @@ import (
 	"strconv"
 	"strings"
 
-	xcommon "xconfwebconfig/common"
-	"xconfwebconfig/util"
+	xcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"xconfadmin/common"
 	xutil "xconfadmin/util"
 
 	estb "xconfadmin/shared/estbfirmware"
-	"xconfwebconfig/shared/estbfirmware"
+
+	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"

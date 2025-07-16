@@ -25,12 +25,12 @@ import (
 
 	xcommon "xconfadmin/common"
 
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/rulesengine"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	logupload "xconfwebconfig/shared/logupload"
-	util "xconfwebconfig/util"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/rulesengine"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	logupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	util "github.com/rdkcentral/xconfwebconfig/util"
 )
 
 var allowedOperations = []string{

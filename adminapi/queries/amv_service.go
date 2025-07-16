@@ -31,14 +31,15 @@ import (
 
 	util "xconfadmin/util"
 	xutil "xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
-	ds "xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
-	ru "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/shared/firmware"
-	xwutil "xconfwebconfig/util"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	xwutil "github.com/rdkcentral/xconfwebconfig/util"
 )
 
 const (

@@ -3,9 +3,10 @@ package logupload
 import (
 	"encoding/json"
 	"fmt"
-	"xconfwebconfig/db"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/shared/logupload"
+
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	log "github.com/sirupsen/logrus"
 )

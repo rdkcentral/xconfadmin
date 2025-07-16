@@ -25,15 +25,17 @@ import (
 	"time"
 
 	coreef "xconfadmin/shared/estbfirmware"
-	xcoreef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/util"
 
-	daef "xconfwebconfig/dataapi/estbfirmware"
+	xcoreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
+
+	daef "github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
 
 	xshared "xconfadmin/shared"
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared/firmware"
-	corefw "xconfwebconfig/shared/firmware"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
 func UpdateTimeFilter(applicationType string, timeFilter *xcoreef.TimeFilter) *xwhttp.ResponseEntity {

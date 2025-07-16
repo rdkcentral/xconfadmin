@@ -25,19 +25,20 @@ import (
 	"strconv"
 	"strings"
 
-	ru "xconfwebconfig/rulesengine"
+	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
 	queries "xconfadmin/adminapi/queries"
 	xcommon "xconfadmin/common"
 	xlogupload "xconfadmin/shared/logupload"
 	xutil "xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	xwlogupload "xconfwebconfig/shared/logupload"
-	xwutil "xconfwebconfig/util"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	xwutil "github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
 )

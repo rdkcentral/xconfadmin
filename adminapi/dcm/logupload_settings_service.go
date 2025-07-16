@@ -27,17 +27,18 @@ import (
 	"time"
 
 	xcommon "xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	xutil "xconfadmin/util"
 
 	"github.com/google/uuid"
 
-	ds "xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared"
 
 	log "github.com/sirupsen/logrus"
 )

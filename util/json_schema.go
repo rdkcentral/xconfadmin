@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	xwcommon "xconfwebconfig/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/xeipuuv/gojsonschema"

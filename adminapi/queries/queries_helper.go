@@ -18,9 +18,9 @@
 package queries
 
 import (
-	"xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	logupload "xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	logupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
 func NullifyUnwantedFieldsPermanentTelemetryProfile(profile *logupload.PermanentTelemetryProfile) *logupload.PermanentTelemetryProfile {

@@ -29,12 +29,14 @@ import (
 	xutil "xconfadmin/util"
 
 	xcommon "xconfadmin/common"
-	"xconfwebconfig/common"
-	"xconfwebconfig/shared"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/shared"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 func PostModelEntitiesHandler(w http.ResponseWriter, r *http.Request) {

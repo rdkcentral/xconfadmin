@@ -26,10 +26,11 @@ import (
 	"strings"
 
 	"xconfadmin/common"
-	ds "xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared/firmware"
-	xutil "xconfwebconfig/util"
+
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	xutil "github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -38,8 +39,9 @@ import (
 	xcommon "xconfadmin/common"
 	xhttp "xconfadmin/http"
 	"xconfadmin/util"
-	"xconfwebconfig/db"
-	corefw "xconfwebconfig/shared/firmware"
+
+	"github.com/rdkcentral/xconfwebconfig/db"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
 func GetFirmwareRuleTemplateFilteredHandler(w http.ResponseWriter, r *http.Request) {

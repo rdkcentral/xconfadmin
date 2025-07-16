@@ -29,8 +29,9 @@ import (
 
 	"xconfadmin/adminapi"
 	xhttp "xconfadmin/http"
-	"xconfwebconfig/common"
-	xwhttp "xconfwebconfig/http"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"

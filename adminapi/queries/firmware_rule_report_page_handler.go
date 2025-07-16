@@ -22,15 +22,16 @@ import (
 
 	"net/http"
 
-	"xconfwebconfig/db"
-	"xconfwebconfig/shared"
-	corefw "xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
-	re "xconfwebconfig/rulesengine"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 func PostFirmwareRuleReportPageHandler(w http.ResponseWriter, r *http.Request) {

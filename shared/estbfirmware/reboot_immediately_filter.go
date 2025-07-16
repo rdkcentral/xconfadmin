@@ -16,7 +16,7 @@
 package estbfirmware
 
 import (
-	coreef "xconfwebconfig/shared/estbfirmware"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 )
 
 func NewEmptyRebootImmediatelyFilter() *coreef.RebootImmediatelyFilter {

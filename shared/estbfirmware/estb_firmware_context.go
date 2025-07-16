@@ -25,7 +25,8 @@ import (
 
 	core "xconfadmin/shared"
 	"xconfadmin/util"
-	shared "xconfwebconfig/shared"
+
+	shared "github.com/rdkcentral/xconfwebconfig/shared"
 
 	log "github.com/sirupsen/logrus"
 )

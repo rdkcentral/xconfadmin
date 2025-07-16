@@ -28,8 +28,9 @@ import (
 	xhttp "xconfadmin/http"
 	"xconfadmin/shared/logupload"
 	"xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
-	xwhttp "xconfwebconfig/http"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

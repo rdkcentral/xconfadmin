@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"xconfwebconfig/db"
 
-	ru "xconfwebconfig/rulesengine"
-	corefw "xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/db"
+
+	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
 	log "github.com/sirupsen/logrus"
 )
