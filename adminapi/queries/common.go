@@ -1,20 +1,18 @@
-/**
- * Copyright 2023 Comcast Cable Communications Management, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
+// Copyright 2025 Comcast Cable Communications Management, LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 package queries
 
 import (
@@ -23,15 +21,18 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	//"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	util "github.com/rdkcentral/xconfwebconfig/util"
+
 	"xconfadmin/adminapi/auth"
 	xcommon "xconfadmin/common"
 	xhttp "xconfadmin/http"
-	"xconfadmin/shared"
 	xutil "xconfadmin/util"
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
-	util "xconfwebconfig/util"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	"github.com/gorilla/mux"
 )
@@ -46,6 +47,23 @@ type Change struct {
 	Operation  db.OperationType `json:"operationType"`
 	CfName     string           `json:"cfName"`
 	UserName   string           `json:"userName"`
+}
+
+// CacheStats statistics for the cache.LoadingCache
+type CacheStats struct {
+	DaoRefreshTime int64         `json:"daoRefreshTime"`
+	CacheSize      int           `json:"cacheSize"`
+	NonAbsentCount int           `json:"nonAbsentCount"`
+	RequestCount   uint64        `json:"requestCount"`
+	EvictionCount  uint64        `json:"evictionCount"`
+	HitRate        float64       `json:"hitRate"`
+	MissRate       float64       `json:"missRate"`
+	TotalLoadTime  time.Duration `json:"totalLoadTime"`
+}
+
+// Statistics cache statistics
+type Statistics struct {
+	StatsMap map[string]CacheStats `json:"Statistics"`
 }
 
 func GetInfoTableNames(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +90,7 @@ func GetInfoTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tableName := mux.Vars(r)[common.TABLE_NAME]
+	tableName := mux.Vars(r)[xcommon.TABLE_NAME]
 	tableInfo, _ := db.GetTableInfo(tableName)
 	if tableInfo == nil {
 		xwhttp.WriteXconfResponse(w, http.StatusNotFound, []byte(fmt.Sprintf("Not found table definition: %s", tableName)))
@@ -135,7 +153,7 @@ func GetInfoTableRowKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tableName := mux.Vars(r)[common.TABLE_NAME]
+	tableName := mux.Vars(r)[xcommon.TABLE_NAME]
 	tableInfo, _ := db.GetTableInfo(tableName)
 	if tableInfo == nil {
 		xwhttp.WriteXconfResponse(w, http.StatusNotFound, []byte(fmt.Sprintf("Not found table definition: %s", tableName)))
@@ -217,14 +235,15 @@ func GetChangedKeysMapRaw() (map[string]interface{}, error) {
 	return data, nil
 }
 
-// This API can be used to update the raw JSON data in a table
+// This API can be used to update the raw JSON data in a table;
+// should only be used for fixing table incompatibilities issues between Java and Go
 func UpdateInfoTableRowKey(w http.ResponseWriter, r *http.Request) {
 	if _, err := auth.CanWrite(r, auth.TOOL_ENTITY); err != nil {
 		xhttp.AdminError(w, err)
 		return
 	}
 
-	tableName := mux.Vars(r)[common.TABLE_NAME]
+	tableName := mux.Vars(r)[xcommon.TABLE_NAME]
 	tableInfo, _ := db.GetTableInfo(tableName)
 	if tableInfo == nil {
 		xwhttp.WriteXconfResponse(w, http.StatusNotFound, []byte(fmt.Sprintf("Not found table definition: %s", tableName)))
@@ -344,6 +363,17 @@ func GetStats(w http.ResponseWriter, r *http.Request) {
 	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
+func GetInfoStatistics(w http.ResponseWriter, r *http.Request) {
+	if _, err := auth.CanRead(r, auth.TOOL_ENTITY); err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
+	stats := *db.GetCacheManager().GetStatistics()
+	response, _ := util.JSONMarshal(stats)
+	xhttp.WriteXconfResponse(w, http.StatusOK, response)
+}
+
 func GetAppSettings(w http.ResponseWriter, r *http.Request) {
 	// For retrieving app settings, tools permission is required
 	if !auth.HasReadPermissionForTool(r) {
@@ -351,7 +381,7 @@ func GetAppSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	settings, err := shared.GetAppSettings()
+	settings, err := xcommon.GetAppSettings()
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -369,7 +399,7 @@ func UpdateAppSettings(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -392,4 +422,40 @@ func UpdateAppSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	xwhttp.WriteXconfResponse(w, http.StatusNoContent, nil)
+}
+
+func GetInfoRefreshAllHandler(w http.ResponseWriter, r *http.Request) {
+	if _, err := auth.CanRead(r, auth.TOOL_ENTITY); err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
+	failedToRefreshTables := db.GetCacheManager().RefreshAll()
+	if len(failedToRefreshTables) == 0 {
+		stats := db.GetCacheManager().GetStatistics()
+		response, _ := util.JSONMarshal(stats.CacheMap)
+		xhttp.WriteXconfResponse(w, http.StatusOK, response)
+	} else {
+		xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(fmt.Sprintf("\"Couldn't refresh caches for tables: %s\"", strings.Join(failedToRefreshTables, ", "))))
+	}
+}
+
+func GetInfoRefreshHandler(w http.ResponseWriter, r *http.Request) {
+	if _, err := auth.CanRead(r, auth.TOOL_ENTITY); err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
+	tableName := mux.Vars(r)[xcommon.TABLE_NAME]
+	err := db.GetCacheManager().Refresh(tableName)
+	if err == nil {
+		if stats, err := db.GetCacheManager().GetCacheStats(tableName); err == nil {
+			response, _ := util.JSONMarshal(stats)
+			xhttp.WriteXconfResponse(w, http.StatusOK, response)
+		} else {
+			xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(err.Error()))
+		}
+	} else {
+		xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(err.Error()))
+	}
 }

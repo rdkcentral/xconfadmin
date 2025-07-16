@@ -1,28 +1,12 @@
-/**
- * Copyright 2023 Comcast Cable Communications Management, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 package logupload
 
 import (
 	"encoding/json"
 	"fmt"
-	"xconfwebconfig/db"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/shared/logupload"
+
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -71,7 +55,7 @@ func NewEmptyPermanentTelemetryProfile() *logupload.PermanentTelemetryProfile {
 
 func GetTelemetryTwoProfileListByApplicationType(applicationType string) []*logupload.TelemetryTwoProfile {
 	result := []*logupload.TelemetryTwoProfile{}
-	list := GetAllTelemetryTwoProfileList()
+	list := GetAllTelemetryTwoProfileList(applicationType)
 	for _, profile := range list {
 		if profile.ApplicationType == applicationType {
 			result = append(result, profile)
@@ -80,7 +64,7 @@ func GetTelemetryTwoProfileListByApplicationType(applicationType string) []*logu
 	return result
 }
 
-func GetAllTelemetryTwoProfileList() []*logupload.TelemetryTwoProfile {
+func GetAllTelemetryTwoProfileList(appType string) []*logupload.TelemetryTwoProfile {
 	result := []*logupload.TelemetryTwoProfile{}
 	list, err := logupload.GetCachedSimpleDaoFunc().GetAllAsList(db.TABLE_TELEMETRY_TWO_PROFILES, 0)
 	if err != nil {
@@ -89,6 +73,9 @@ func GetAllTelemetryTwoProfileList() []*logupload.TelemetryTwoProfile {
 	}
 	for _, inst := range list {
 		twoProfile := inst.(*logupload.TelemetryTwoProfile)
+		if twoProfile.ApplicationType != appType {
+			continue
+		}
 		result = append(result, twoProfile)
 	}
 	return result

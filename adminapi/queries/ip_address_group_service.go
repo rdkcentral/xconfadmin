@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"net/http"
 
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/util"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -75,7 +75,7 @@ func GetIpAddressGroupsByIp(ip string) []*shared.IpAddressGroup {
 
 func CreateIpAddressGroup(ipAddressGroup *shared.IpAddressGroup) *xwhttp.ResponseEntity {
 	ipList := shared.ConvertFromIpAddressGroup(ipAddressGroup)
-	err := ipList.Validate()
+	err := ipList.ValidateForAdminService()
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}

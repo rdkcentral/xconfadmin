@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,17 +23,19 @@ import (
 	"net/http"
 	"strings"
 
-	xshared "xconfadmin/shared"
 	xcoreef "xconfadmin/shared/estbfirmware"
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared/estbfirmware"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/util"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 
-	"xconfwebconfig/shared/firmware"
-	corefw "xconfwebconfig/shared/firmware"
+	xshared "xconfadmin/shared"
+
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
 func UpdateLocationFilter(applicationType string, locationFilter *coreef.DownloadLocationFilter) *xwhttp.ResponseEntity {
@@ -45,7 +47,7 @@ func UpdateLocationFilter(applicationType string, locationFilter *coreef.Downloa
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	if err := firmware.ValidateRuleName(locationFilter.Id, locationFilter.Name); err != nil {
+	if err := firmware.ValidateRuleName(locationFilter.Id, locationFilter.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
@@ -82,7 +84,8 @@ func UpdateLocationFilter(applicationType string, locationFilter *coreef.Downloa
 	locationFilter.Environments = envIds.ToSlice()
 
 	if locationFilter.IpAddressGroup != nil && IsChangedIpAddressGroup(locationFilter.IpAddressGroup) {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("IP address group is not matched by existed IP address group"), nil)
+		return xwhttp.NewResponseEntity(http.StatusBadRequest,
+			fmt.Errorf("IP address group denoted by '%s' does not match any existing ipAddressGroup", locationFilter.IpAddressGroup.Name), nil)
 	}
 
 	if !locationFilter.ForceHttp && locationFilter.Ipv6FirmwareLocation != nil && locationFilter.FirmwareLocation == nil {

@@ -1,20 +1,18 @@
-/**
- * Copyright 2023 Comcast Cable Communications Management, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
+// Copyright 2025 Comcast Cable Communications Management, LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
 package util
 
@@ -29,10 +27,10 @@ import (
 )
 
 /**
- * First we check 'X-Forwarded-For' header, then 'HA-Forwarded-For' if it exists and contains valid ip address.
- * Usually format of header is 'X-Forwarded-For: client, proxy1, proxy2' so we split string by "[,]" and take first part.
- * @param req http request info
- * @return valid ip address or empty ""
+* First we check 'X-Forwarded-For' header, then 'HA-Forwarded-For' if it exists and contains valid ip address.
+* Usually format of header is 'X-Forwarded-For: client, proxy1, proxy2' so we split string by "[,]" and take first part.
+* @param req http request info
+* @return valid ip address or empty ""
  */
 func grepIpAddressFromXFF(r *http.Request) string {
 	XffHeaders := make([]string, 0)
@@ -51,12 +49,12 @@ func grepIpAddressFromXFF(r *http.Request) string {
 }
 
 /**
- * Most important is IP from 'X-Forwarded-For' or 'HA-Forwarded-For' header. If it's valid we use it.
- * If not then check value from context. If valid - use it.
- * If not then read remote address from request info. If valid - use it.
- * At edge case when nothing above is a correct IP address then we fallback to '0.0.0.0'
- * @param contextIpAddress ip address from request context
- * @param req http request meta info
+* Most important is IP from 'X-Forwarded-For' or 'HA-Forwarded-For' header. If it's valid we use it.
+* If not then check value from context. If valid - use it.
+* If not then read remote address from request info. If valid - use it.
+* At edge case when nothing above is a correct IP address then we fallback to '0.0.0.0'
+* @param contextIpAddress ip address from request context
+* @param req http request meta info
  */
 func FindValidIpAddress(req *http.Request, contextIpAddress string) string {
 	if net.ParseIP(contextIpAddress) != nil {

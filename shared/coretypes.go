@@ -1,138 +1,337 @@
-/**
- * Copyright 2023 Comcast Cable Communications Management, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
+// Copyright 2025 Comcast Cable Communications Management, LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 package shared
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
-	"time"
-	xcommon "xconfadmin/common"
-	xutil "xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/db"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/util"
 
-	log "github.com/sirupsen/logrus"
+	"xconfadmin/common"
+	"xconfadmin/util"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 )
 
+const (
+	STB      = "stb"
+	RDKCLOUD = "rdkcloud"
+	XHOME    = "xhome"
+	ALL      = "all"
+)
+
+//	type Prioritizable interface {
+//		GetPriority() int
+//		SetPriority(priority int)
+//		GetID() string
+//	}
+
+func IsValidApplicationType(at string) bool {
+	if len(common.ApplicationTypes) == 0 {
+		InitializeApplicationTypes() // Ensuring ApplicationTypes is initialized with default
+	}
+	return util.Contains(common.ApplicationTypes, at)
+}
+func InitializeApplicationTypes() {
+	common.ApplicationTypes = []string{STB, RDKCLOUD}
+}
+
+// Validate whether the ApplicationType is valid if specified
+func ValidateApplicationType(applicationType string) error {
+	if applicationType == "" {
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "ApplicationType is empty")
+	}
+	if !IsValidApplicationType(applicationType) {
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, fmt.Sprintf("ApplicationType %s is not valid", applicationType))
+	}
+	return nil
+}
+
+func ApplicationTypeEquals(type1 string, type2 string) bool {
+	if type1 == "" {
+		type1 = STB
+	}
+	if type2 == "" {
+		type2 = STB
+	}
+	return type1 == type2
+}
+
 func GetApplicationFromCookies(r *http.Request) string {
-	cookie, err := r.Cookie(xwcommon.APPLICATION_TYPE)
+	cookie, err := r.Cookie(APPLICATION_TYPE)
 	if err != nil || util.IsBlank(cookie.Value) {
 		return ""
 	}
 	return cookie.Value
 }
 
-func GetAllModelList() []*shared.Model {
-	result := []*shared.Model{}
-	list, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_MODEL, 0)
-	if err != nil {
-		log.Warn("no model found")
-		return result
-	}
-	for _, inst := range list {
-		model := inst.(*shared.Model)
-		result = append(result, model)
-	}
-	return result
+const (
+	ESTB_MAC          = "eStbMac"
+	ENVIRONMENT       = "env"
+	MODEL             = "model"
+	FIRMWARE_VERSION  = "firmwareVersion"
+	ECM_MAC           = "eCMMac"
+	RECEIVER_ID       = "receiverId"
+	CONTROLLER_ID     = "controllerId"
+	CHANNEL_MAP       = "channelMapId"
+	VOD_ID            = "vodId"
+	TIME_ZONE         = "timeZone"
+	TIME_ZONE_OFFSET  = "timeZoneOffset"
+	TIME              = "time"
+	IP_ADDRESS        = "ipAddress"
+	DOWNLOAD_PROTOCOL = "firmware_download_protocol"
+	REBOOT_DECOUPLED  = "rebootDecoupled"
+	MATCHED_RULE_TYPE = "matchedRuleType"
+	BYPASS_FILTERS    = "bypassFilters"
+	FORCE_FILTERS     = "forceFilters"
+	CAPABILITIES      = "capabilities"
+	PARTNER_ID        = "partnerId"
+	ACCOUNT_HASH      = "accountHash"
+	ACCOUNT_ID        = "accountId"
+	XCONF_HTTP_HEADER = "HA-Haproxy-xconf-http"
+)
+
+const (
+	ID                         = "id"
+	UPDATED                    = "updated"
+	DESCRIPTION                = "description"
+	SUPPORTED_MODEL_IDS        = "supportedModelIds"
+	FIRMWARE_DOWNLOAD_PROTOCOL = "firmwareDownloadProtocol"
+	FIRMWARE_FILENAME          = "firmwareFilename"
+	FIRMWARE_LOCATION          = "firmwareLocation"
+	//FIRMWARE_VERSION = "firmwareVersion"
+	IPV6_FIRMWARE_LOCATION = "ipv6FirmwareLocation"
+	UPGRADE_DELAY          = "upgradeDelay"
+	REBOOT_IMMEDIATELY     = "rebootImmediately"
+	PROPERTIES             = "properties"
+	APPLICATION_TYPE       = "applicationType"
+	MANDATORY_UPDATE       = "mandatoryUpdate"
+
+	// from Java StbContext.FIRMWARE_VERSION
+	// also from Java DefinePropertiesAction class
+	FIRMWARE_VERSIONS   = "firmwareVersions"
+	REGULAR_EXPRESSIONS = "regularExpressions"
+)
+
+const (
+	TABLE_LOGS_KEY2_FIELD_NAME = "column1"
+	LAST_CONFIG_LOG_ID         = "0"
+)
+
+const (
+	StbContextTime      = "time"
+	StbContextModel     = "model"
+	MacList             = "MAC_LIST"
+	IpList              = "IP_LIST"
+	TableGenericNSList  = "GenericXconfNamedList"
+	TableFirmwareConfig = "FirmwareConfig"
+	TableFirmwareRule   = "FirmwareRule4"
+)
+
+const (
+	Tftp  = "tftp"
+	Http  = "http"
+	Https = "https"
+)
+
+// XRule is ...
+type XRule interface {
+	GetId() string
+	GetRule() *re.Rule
+	GetName() string
+	GetTemplateId() string
+	GetRuleType() string
 }
 
-func ApplicationTypeEquals(type1 string, type2 string) bool {
-	if type1 == "" {
-		type1 = shared.STB
+// XEnvModel is ...
+type XEnvModel interface {
+	GetId() string
+	GetDescription() string
+}
+
+// Environment table object
+type Environment struct {
+	ID          string `json:"id"`
+	Updated     int64  `json:"updated"`
+	Description string `json:"description"`
+}
+
+func (obj *Environment) Clone() (*Environment, error) {
+	cloneObj, err := util.Copy(obj)
+	if err != nil {
+		return nil, err
 	}
-	if type2 == "" {
-		type2 = shared.STB
+	return cloneObj.(*Environment), nil
+}
+
+func (obj *Environment) Validate() error {
+	if len(obj.ID) > 0 {
+		match, _ := regexp.MatchString("^[-a-zA-Z0-9_.' ]+$", obj.ID)
+		if match {
+			return nil
+		}
 	}
-	return type1 == type2
+
+	return errors.New("Id is invalid")
+}
+
+// NewEnvironmentInf constructor
+func NewEnvironmentInf() interface{} {
+	return &Environment{}
+}
+
+// NewEnvironment ...
+func NewEnvironment(id string, description string) *Environment {
+	if id != "" {
+		id = strings.ToUpper(strings.TrimSpace(id))
+	}
+
+	return &Environment{
+		ID:          id,
+		Description: description,
+	}
+}
+
+// Model table object
+type Model struct {
+	ID          string `json:"id"`
+	Updated     int64  `json:"updated"`
+	Description string `json:"description,omitempty"`
+}
+
+func (obj *Model) Clone() (*Model, error) {
+	cloneObj, err := util.Copy(obj)
+	if err != nil {
+		return nil, err
+	}
+	return cloneObj.(*Model), nil
+}
+
+func (obj *Model) Validate() error {
+	if len(obj.ID) > 0 {
+		match, _ := regexp.MatchString("^[-a-zA-Z0-9_.' ]+$", obj.ID)
+		if match {
+			return nil
+		}
+	}
+
+	return errors.New("Id is invalid. Valid Characters: alphanumeric _ . -")
+}
+
+// NewModelInf constructor
+func NewModelInf() interface{} {
+	return &Model{}
+}
+
+// NewModel ...
+func NewModel(id string, description string) *Model {
+	return &Model{
+		ID:          strings.ToUpper(id),
+		Description: description,
+	}
+}
+
+type ModelResponse struct {
+	ID          string `json:"id"`
+	Description string `json:"description,omitempty"`
+}
+
+func (m *Model) CreateModelResponse() *ModelResponse {
+	return &ModelResponse{
+		ID:          m.ID,
+		Description: m.Description,
+	}
+}
+
+// AppSettings table object
+type AppSetting struct {
+	ID      string      `json:"id"`
+	Updated int64       `json:"updated"`
+	Value   interface{} `json:"value"`
+}
+
+func (obj *AppSetting) Clone() (*AppSetting, error) {
+	cloneObj, err := util.Copy(obj)
+	if err != nil {
+		return nil, err
+	}
+	return cloneObj.(*AppSetting), nil
+}
+
+// NewAppSettingInf constructor
+func NewAppSettingInf() interface{} {
+	return &AppSetting{}
+}
+
+// ConditionInfo is ...
+type ConditionInfo struct {
+	FreeArg   re.FreeArg
+	Operation string
+}
+
+// NewConditionInfo create a new instance
+func NewConditionInfo(freeArg re.FreeArg, operation string) *ConditionInfo {
+	return &ConditionInfo{
+		FreeArg:   freeArg,
+		Operation: operation,
+	}
+}
+
+// Prioritizable is ...
+type Prioritizable interface {
+	GetPriority() int
+	SetPriority(priority int)
+	GetID() string
+}
+
+// StringListWrapper ...
+type StringListWrapper struct {
+	List []string `json:"list"`
+}
+
+func NewStringListWrapper(list []string) *StringListWrapper {
+	return &StringListWrapper{List: list}
 }
 
 func NormalizeCommonContext(contextMap map[string]string, estbMacKey string, ecmMacKey string) (e error) {
-	if model := contextMap[xwcommon.MODEL]; model != "" {
-		contextMap[xwcommon.MODEL] = strings.ToUpper(model)
+	if model := contextMap[MODEL]; model != "" {
+		contextMap[MODEL] = strings.ToUpper(model)
 	}
-	if env := contextMap[xwcommon.ENV]; env != "" {
-		contextMap[xwcommon.ENV] = strings.ToUpper(env)
+	if env := contextMap[ENVIRONMENT]; env != "" {
+		contextMap[ENVIRONMENT] = strings.ToUpper(env)
 	}
-	if partnerId := contextMap[xwcommon.PARTNER_ID]; partnerId != "" {
-		contextMap[xwcommon.PARTNER_ID] = strings.ToUpper(partnerId)
+	if partnerId := contextMap[PARTNER_ID]; partnerId != "" {
+		contextMap[PARTNER_ID] = strings.ToUpper(partnerId)
 	}
 	if mac := contextMap[estbMacKey]; mac != "" {
-		if normalizedMac, err := xutil.ValidateAndNormalizeMacAddress(mac); err != nil {
+		if normalizedMac, err := util.ValidateAndNormalizeMacAddress(mac); err != nil {
 			e = err
 		} else {
 			contextMap[estbMacKey] = normalizedMac
 		}
 	}
 	if mac := contextMap[ecmMacKey]; mac != "" {
-		if normalizedMac, err := xutil.ValidateAndNormalizeMacAddress(mac); err != nil {
+		if normalizedMac, err := util.ValidateAndNormalizeMacAddress(mac); err != nil {
 			e = err
 		} else {
 			contextMap[ecmMacKey] = normalizedMac
 		}
 	}
 	return e
-}
-
-func IsValidApplicationType(at string) bool {
-	if at == shared.STB || at == shared.RDKCLOUD {
-		return true
-	}
-	return false
-}
-
-// Validate whether the ApplicationType is valid if specified
-func ValidateApplicationType(applicationType string) error {
-	if applicationType == "" {
-		return xcommon.NewXconfError(http.StatusBadRequest, "ApplicationType is empty")
-	}
-	if !IsValidApplicationType(applicationType) {
-		return xcommon.NewXconfError(http.StatusBadRequest, fmt.Sprintf("ApplicationType %s is not valid", applicationType))
-	}
-	return nil
-}
-
-func GetAppSettings() (map[string]interface{}, error) {
-	settings := make(map[string]interface{})
-
-	list, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_APP_SETTINGS, 0)
-	if err != nil {
-		return settings, err
-	}
-	for _, v := range list {
-		p := *v.(*shared.AppSetting)
-		settings[p.ID] = p.Value
-	}
-	return settings, nil
-}
-
-func SetAppSetting(key string, value interface{}) (*shared.AppSetting, error) {
-	setting := shared.AppSetting{
-		ID:      key,
-		Updated: util.GetTimestamp(time.Now().UTC()),
-		Value:   value,
-	}
-
-	err := db.GetCachedSimpleDao().SetOne(db.TABLE_APP_SETTINGS, setting.ID, &setting)
-	if err != nil {
-		return nil, err
-	}
-	return &setting, nil
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,10 @@ import (
 	"net/http"
 	"strings"
 
-	"xconfwebconfig/dataapi"
+	"github.com/rdkcentral/xconfwebconfig/dataapi"
 
 	"xconfadmin/adminapi/auth"
-	"xconfadmin/adminapi/change"
+	change "xconfadmin/adminapi/change"
 	ipmacrule "xconfadmin/adminapi/configuration/ip-macrule"
 	dcm "xconfadmin/adminapi/dcm"
 	firmware "xconfadmin/adminapi/firmware"
@@ -33,7 +33,14 @@ import (
 	setting "xconfadmin/adminapi/setting"
 	telemetry "xconfadmin/adminapi/telemetry"
 	xhttp "xconfadmin/http"
-	"xconfwebconfig/db"
+	"xconfadmin/taggingapi"
+	"xconfadmin/taggingapi/tag"
+
+	db "github.com/rdkcentral/xconfwebconfig/db"
+
+	"xconfadmin/adminapi/canary"
+	"xconfadmin/adminapi/lockdown"
+	"xconfadmin/adminapi/xcrp"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
@@ -41,17 +48,35 @@ import (
 
 // Xconf setup
 func XconfSetup(server *xhttp.WebconfigServer, r *mux.Router) {
-	xc := dataapi.GetXconfConfigs(server.XW_XconfServer.Config)
+	xc := dataapi.GetXconfConfigs(server.XW_XconfServer.ServerConfig.Config)
 
 	WebServerInjection(server, xc)
-	db.ConfigInjection(server.XW_XconfServer.Config)
+	db.ConfigInjection(server.XW_XconfServer.ServerConfig.Config)
+	dataapi.WebServerInjection(server.XW_XconfServer, xc)
+	//dao.WebServerInjection(server)
 	auth.WebServerInjection(server)
-
 	dataapi.RegisterTables()
+
+	InitDatastoreContextForAdmin()
 	initDB()
 	db.GetCacheManager() // Initialize cache manager
 
-	routeXconfAdminserviceApis(server, r)
+	if server.XW_XconfServer.ServerConfig.GetBoolean("xconfwebconfig.xconf.dataservice_enabled") {
+		dataapi.XconfSetup(server.XW_XconfServer, r)
+	}
+
+	if server.XW_XconfServer.ServerConfig.GetBoolean("xconfwebconfig.xconf.adminservice_enabled") {
+		RouteXconfAdminserviceApis(server, r)
+	}
+
+	if server.XW_XconfServer.ServerConfig.GetBoolean("xconfwebconfig.xconf.enable_tagging_service_admin") {
+		taggingapi.XconfTaggingServiceSetup(server, r)
+	}
+}
+
+// Register Tables specific to Admin Service
+func InitDatastoreContextForAdmin() {
+	db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf)
 }
 
 func TrailingSlashRemover(next http.Handler) http.Handler {
@@ -62,8 +87,7 @@ func TrailingSlashRemover(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
-
-func routeXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
+func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	paths := []*mux.Router{}
 	authPaths := []*mux.Router{} // Do not required auth token validation middleware
 
@@ -79,6 +103,26 @@ func routeXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	basicAuthpath := r.PathPrefix("/xconfAdminService/auth/basic").Subrouter()
 	basicAuthpath.HandleFunc("", auth.BasicAuthHandler).Methods("POST").Name("Auth-Basic")
 	paths = append(paths, authInfoPath)
+
+	loginPath := r.Path("/xconfAdminService" + s.IdpLoginPath).Subrouter()
+	loginPath.HandleFunc("", auth.LoginUrlHandler).Methods("GET").Name("Auth-Xerxes")
+	authPaths = append(authPaths, loginPath)
+
+	logoutPath := r.Path("/xconfAdminService" + s.IdpLogoutPath).Subrouter()
+	logoutPath.HandleFunc("", auth.LogoutHandler).Methods("GET").Name("Auth-Xerxes")
+	authPaths = append(authPaths, logoutPath)
+
+	logoutAfterPath := r.Path("/xconfAdminService" + s.IdpLogoutAfterPath).Subrouter()
+	logoutAfterPath.HandleFunc("", auth.LogoutAfterHandler).Methods("GET").Name("Auth-Xerxes")
+	authPaths = append(authPaths, logoutAfterPath)
+
+	codePath := r.Path("/xconfAdminService" + s.IdpCodePath).Subrouter()
+	codePath.HandleFunc("", auth.CodeHandler).Methods("GET").Name("Auth-Xerxes")
+	authPaths = append(authPaths, codePath)
+
+	urlPath := r.Path("/xconfAdminService" + s.IdpUrlPath).Subrouter()
+	urlPath.HandleFunc("", auth.LoginUrlHandler).Methods("GET").Name("Auth-Xerxes")
+	authPaths = append(authPaths, urlPath)
 
 	// DataService bypass APIs
 	dsBypassPathPrefix := r.PathPrefix("/xconfAdminService/dataService").Subrouter()
@@ -99,9 +143,9 @@ func routeXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	paths = append(paths, getEstbChangelogsPath)
 
 	getInfoPathPrefix := r.PathPrefix("/xconfAdminService/info").Subrouter()
-	getInfoPathPrefix.HandleFunc("/refreshAll", dataapi.GetInfoRefreshAllHandler).Methods("GET").Name("General-Uncategorized")
-	getInfoPathPrefix.HandleFunc("/refresh/{tableName}", dataapi.GetInfoRefreshHandler).Methods("GET").Name("General-Uncategorized")
-	getInfoPathPrefix.HandleFunc("/statistics", dataapi.GetInfoStatistics).Methods("GET").Name("General-Uncategorized")
+	getInfoPathPrefix.HandleFunc("/refreshAll", queries.GetInfoRefreshAllHandler).Methods("GET").Name("General-Uncategorized")
+	getInfoPathPrefix.HandleFunc("/refresh/{tableName}", queries.GetInfoRefreshHandler).Methods("GET").Name("General-Uncategorized")
+	getInfoPathPrefix.HandleFunc("/statistics", queries.GetInfoStatistics).Methods("GET").Name("General-Uncategorized")
 	getInfoPathPrefix.HandleFunc("/tables", queries.GetInfoTableNames).Methods("GET").Name("General-Uncategorized")
 	getInfoPathPrefix.HandleFunc("/tables/{tableName}", queries.GetInfoTable).Methods("GET").Name("General-Uncategorized")
 	getInfoPathPrefix.HandleFunc("/tables/{tableName}/{rowKey}", queries.GetInfoTableRowKey).Methods("GET").Name("General-Uncategorized")
@@ -285,9 +329,8 @@ func routeXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	firmwareRuleTempPath.HandleFunc("/filtered", queries.GetFirmwareRuleTemplateFilteredHandler).Methods("GET").Name("Firmware-Templates")
 	firmwareRuleTempPath.HandleFunc("/importAll", queries.PostFirmwareRuleTemplateImportAllHandler).Methods("POST").Name("Firmware-Templates")
 	firmwareRuleTempPath.HandleFunc("/all/{type}", queries.GetFirmwareRuleTemplateAllByTypeHandler).Methods("GET").Name("Firmware-Templates")
-	firmwareRuleTempPath.HandleFunc("/import", queries.PostFirmwareRuleTemplateImportHandler).Methods("POST").Name("Firmware-Templates")
 	firmwareRuleTempPath.HandleFunc("/ids", queries.GetFirmwareRuleTemplateIdsHandler).Methods("GET").Name("Firmware-Templates")
-	firmwareRuleTempPath.HandleFunc("/{id}/priority/{newPriority}", queries.PostFirmwareRuleTemplateByIdPriorityByNewPriorityHandler).Methods("POST").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("/{id}/priority/{newPriority}", queries.PostChangePriorityHandler).Methods("POST").Name("Firmware-Templates")
 	firmwareRuleTempPath.HandleFunc("/export", queries.GetFirmwareRuleTemplateExportHandler).Methods("GET").Name("Firmware-Templates")
 	firmwareRuleTempPath.HandleFunc("/{type}/{isEditable}", queries.GetFirmwareRuleTemplateWithVarWithVarHandler).Methods("GET").Name("Firmware-Templates")
 	firmwareRuleTempPath.HandleFunc("", queries.GetFirmwareRuleTemplateHandler).Methods("GET").Name("Firmware-Templates")
@@ -342,7 +385,7 @@ func routeXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	percentageFilterPath.HandleFunc("", queries.GetPercentFilterGlobalHandler).Methods("GET").Name("Firmware-PercentFilter")
 	percentageFilterPath.HandleFunc("", queries.UpdatePercentFilterGlobalHandler).Methods("POST").Name("Firmware-PercentFilter")
 	percentageFilterPath.HandleFunc("/globalPercentage", queries.GetGlobalPercentFilterHandler).Methods("GET").Name("Firmware-PercentFilter")
-	percentageFilterPath.HandleFunc("/calculator", queries.GetCalculatedHashAndPercent).Methods("GET").Name("Firmware-PercentFilter")
+	percentageFilterPath.HandleFunc("/calculator", queries.GetCalculatedHashAndPercentHandler).Methods("GET").Name("Firmware-PercentFilter")
 	percentageFilterPath.HandleFunc("/globalPercentage/asRule", queries.GetGlobalPercentFilterAsRuleHandler).Methods("GET").Name("Firmware-PercentFilter")
 	paths = append(paths, percentageFilterPath)
 
@@ -364,7 +407,7 @@ func routeXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	amvPath.HandleFunc("/{id}", queries.GetAmvByIdHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	paths = append(paths, amvPath)
 
-	// activationMinimumVersion
+	// activationMinimumVersion - code is same as amv only export
 	actMinVerPath := r.PathPrefix("/xconfAdminService/activationMinimumVersion").Subrouter()
 	actMinVerPath.HandleFunc("", queries.GetAmvHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("", queries.CreateAmvHandler).Methods("POST").Name("Firmware-ActivationVersion")
@@ -629,7 +672,8 @@ func routeXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	teleV2TestpagePath.HandleFunc("", change.TelemetryTwoTestPageHandler).Methods("POST").Name("Telemetry2-Uncategorized")
 	paths = append(paths, teleV2TestpagePath)
 
-	// change
+	// change - these are the same as telemetry/change APIs which are needed
+	// to be compatible w/ Java AS; eventually these will be deprecated.
 	changePath := r.PathPrefix("/xconfAdminService/change").Subrouter()
 	changePath.HandleFunc("/all", change.GetProfileChangesHandler).Methods("GET").Name("Telemetry1-Changes")
 	changePath.HandleFunc("/approved", change.GetApprovedHandler).Methods("GET").Name("Telemetry1-Changes")
@@ -639,7 +683,7 @@ func routeXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	changePath.HandleFunc("/changes/grouped/byId", change.GetGroupedChangesHandler).Methods("GET").Name("Telemetry1-Changes")
 	changePath.HandleFunc("/approved/grouped/byId", change.GetGroupedApprovedChangesHandler).Methods("GET").Name("Telemetry1-Changes")
 	changePath.HandleFunc("/entityIds", change.GetChangedEntityIdsHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approveChanges", change.ApproveChangesHandler).Methods("POST").Name("Telemetry1-Changes")
+	changePath.HandleFunc("/approveChanges", change.ApproveChangesHandler).Methods("POST").Name("Telemetry1-Changes") //TODO verify usages
 	changePath.HandleFunc("/revertChanges", change.RevertChangesHandler).Methods("POST").Name("Telemetry1-Changes")
 	changePath.HandleFunc("/approved/filtered", change.GetApprovedFilteredHandler).Methods("POST").Name("Telemetry1-Changes")
 	changePath.HandleFunc("/changes/filtered", change.GetChangesFilteredHandler).Methods("POST").Name("Telemetry1-Changes")
@@ -695,8 +739,8 @@ func routeXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	// stats
 	statsPath := r.PathPrefix("/xconfAdminService/stats").Subrouter()
 	statsPath.HandleFunc("", queries.GetStats).Methods("GET").Name("Statistics")
-	statsPath.HandleFunc("/cache/reloadAll", dataapi.GetInfoRefreshAllHandler).Methods("GET").Name("Statistics")
-	statsPath.HandleFunc("/cache/{tableName}/reload", dataapi.GetInfoRefreshHandler).Methods("GET").Name("Statistics")
+	statsPath.HandleFunc("/cache/reloadAll", queries.GetInfoRefreshAllHandler).Methods("GET").Name("Statistics")
+	statsPath.HandleFunc("/cache/{tableName}/reload", queries.GetInfoRefreshHandler).Methods("GET").Name("Statistics")
 	paths = append(paths, statsPath)
 
 	// migration
@@ -710,9 +754,32 @@ func routeXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	appsettingsPath.HandleFunc("", queries.UpdateAppSettings).Methods("PUT").Name("AppSettings")
 	paths = append(paths, appsettingsPath)
 
+	// lockdownSettings
+	lockdownsettingsPath := r.PathPrefix("/xconfAdminService/lockdownsettings").Subrouter()
+	lockdownsettingsPath.HandleFunc("", lockdown.GetLockdownSettingsHandler).Methods("GET").Name("LockdownSettings")
+	lockdownsettingsPath.HandleFunc("", lockdown.PutLockdownSettingsHandler).Methods("PUT").Name("LockdownSettings")
+	paths = append(paths, lockdownsettingsPath)
+
+	//lockdown during recooking
+	xcrpRecookingPath := r.PathPrefix("/xconfAdminService/rfc/recooking").Subrouter()
+	xcrpRecookingPath.HandleFunc("", xcrp.PostRecookingLockdownSettingsHandler).Methods("POST").Name("Recooking")
+	paths = append(paths, xcrpRecookingPath)
+
+	//get recooking status. Disabled for now
+	//xcrpRecookingStatusPath := r.PathPrefix("/xconfAdminService/rfc/recooking/status").Subrouter()
+	//xcrpRecookingStatusPath.HandleFunc("", xcrp.GetRecookingStatusHandler).Methods("GET").Name("RecookingStatus")
+	//xcrpRecookingStatusPath.HandleFunc("/details", xcrp.GetRecookingStatusDetailsHandler).Methods("GET").Name("RecookingStatusDetails")
+	//paths = append(paths, xcrpRecookingStatusPath)
+
+	// canarysettings
+	canarysettingsPath := r.PathPrefix("/xconfAdminService/canarysettings").Subrouter()
+	canarysettingsPath.HandleFunc("", canary.GetCanarySettingsHandler).Methods("GET").Name("CanarySettings")
+	canarysettingsPath.HandleFunc("", canary.PutCanarySettingsHandler).Methods("PUT").Name("CanarySettings")
+	paths = append(paths, canarysettingsPath)
+
 	// penetration data report
 	penetrationPath := r.PathPrefix("/xconfAdminService/penetrationdata").Subrouter()
-	penetrationPath.HandleFunc("/{macAddress}", queries.GetPenetrationMetricsByEstbMac).Methods("GET").Name("PenetrationData")
+	penetrationPath.HandleFunc("/{macAddress}", queries.GetPenetrationDataByMacHandler).Methods("GET").Name("PenetrationData")
 	paths = append(paths, penetrationPath)
 
 	// rules configuration
@@ -730,12 +797,14 @@ func routeXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 
 	for _, p := range authPaths {
 		p.Use(c.Handler)
+		p.Use(s.XW_XconfServer.SpanMiddleware)
 		p.Use(s.XW_XconfServer.NoAuthMiddleware)
 	}
 
 	for _, p := range paths {
 		p.Use(c.Handler)
 		if !s.TestOnly() {
+			p.Use(s.XW_XconfServer.SpanMiddleware)
 			p.Use(s.AuthValidationMiddleware)
 		} else {
 			p.Use(s.XW_XconfServer.NoAuthMiddleware)

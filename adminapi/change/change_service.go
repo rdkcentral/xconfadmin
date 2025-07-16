@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,18 +24,19 @@ import (
 	"sort"
 	"strings"
 
-	basecommon "xconfadmin/common"
 	xcommon "xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/shared"
 
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+
+	"github.com/rdkcentral/xconfwebconfig/shared"
+
+	xwshared "github.com/rdkcentral/xconfwebconfig/shared"
+	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"xconfadmin/adminapi/auth"
 	xshared "xconfadmin/shared"
 	xchange "xconfadmin/shared/change"
 	xutil "xconfadmin/util"
-	xwshared "xconfwebconfig/shared"
-	xwchange "xconfwebconfig/shared/change"
-	"xconfwebconfig/shared/logupload"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -102,25 +103,25 @@ func beforeSavingApprovedChange(r *http.Request, change *xwchange.Change) error 
 
 func validateChange(pendingChange xwchange.PendingChange) error {
 	if pendingChange == nil {
-		return basecommon.NewXconfError(http.StatusBadRequest, "Change is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Change is empty")
 	}
 	if pendingChange.GetID() == "" {
-		return basecommon.NewXconfError(http.StatusBadRequest, "Id is blank")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Id is blank")
 	}
 	if pendingChange.GetAuthor() == "" {
-		return basecommon.NewXconfError(http.StatusBadRequest, "Author is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Author is empty")
 	}
 	if pendingChange.GetEntityID() == "" {
-		return basecommon.NewXconfError(http.StatusBadRequest, "Entity id is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Entity id is empty")
 	}
 	if pendingChange.GetOperation() == "" {
-		return basecommon.NewXconfError(http.StatusBadRequest, "Operation is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Operation is empty")
 	}
 	if (xwchange.Create == pendingChange.GetOperation() || xwchange.Update == pendingChange.GetOperation()) && pendingChange.GetNewEntity().IsEmpty() {
-		return basecommon.NewXconfError(http.StatusBadRequest, "New entity is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "New entity is empty")
 	}
 	if (xwchange.Delete == pendingChange.GetOperation() || xwchange.Update == pendingChange.GetOperation()) && pendingChange.GetOldEntity().IsEmpty() {
-		return basecommon.NewXconfError(http.StatusBadRequest, "Old entity is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Old entity is empty")
 	}
 
 	return nil
@@ -129,7 +130,7 @@ func validateChange(pendingChange xwchange.PendingChange) error {
 func validateApprovedChange(change xwchange.PendingChange) error {
 	validateChange(change)
 	if change.GetApprovedUser() == "" {
-		return basecommon.NewXconfError(http.StatusBadRequest, "Approved user is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Approved user is empty")
 	}
 	return nil
 }
@@ -138,7 +139,7 @@ func validateAllChanges(change *xwchange.Change) error {
 	changesById := GetChangesByEntityId(change.EntityID)
 	for _, existingChange := range changesById {
 		if existingChange.EqualChangeData(change) {
-			return basecommon.NewXconfError(http.StatusConflict, "The same change already exists")
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "The same change already exists")
 		}
 	}
 	return nil
@@ -146,11 +147,11 @@ func validateAllChanges(change *xwchange.Change) error {
 
 func beforeDelete(id string) error {
 	if id == "" {
-		return basecommon.NewXconfError(http.StatusBadRequest, "Id is blank")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Id is blank")
 	}
 	change := xchange.GetOneChange(id)
 	if change == nil {
-		return basecommon.NewXconfError(http.StatusNotFound, " Change with "+id+" id does not exist")
+		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, " Change with "+id+" id does not exist")
 	}
 	return nil
 }
@@ -167,9 +168,10 @@ func CreateApprovedChange(r *http.Request, change *xwchange.Change) (*xwchange.A
 	return &approvedChange, nil
 }
 
+// TODO remove it
 func updateDeleteEntity(r *http.Request, change *xwchange.Change) (*xwchange.ApprovedChange, error) {
 	entityToChange := logupload.GetOnePermanentTelemetryProfile(change.EntityID) //*PermanentTelemetryProfile
-	if entityToChange != nil {
+	if entityToChange != nil {                                                   // in Java, equalPendingEntities is hard-code to return true
 		change.ApprovedUser = auth.GetUserNameOrUnknown(r)
 		if xwchange.Delete == change.Operation {
 			_, err := Delete(change.OldEntity.ID)
@@ -178,7 +180,7 @@ func updateDeleteEntity(r *http.Request, change *xwchange.Change) (*xwchange.App
 			}
 		} else {
 			newEntity := change.NewEntity
-			_, err := UpdatePermanentTelemetryProfile(&newEntity)
+			_, err := UpdatePermanentTelemetryProfile(newEntity)
 			if err != nil {
 				return nil, err
 			}
@@ -194,17 +196,17 @@ func updateDeleteEntity(r *http.Request, change *xwchange.Change) (*xwchange.App
 		return approvedChange, nil
 	} else {
 		jsonBytes, _ := json.Marshal(entityToChange)
-		return nil, basecommon.NewXconfError(http.StatusConflict, "Change could not be approved, "+change.OldEntity.Name+" have been already changed: "+string(jsonBytes))
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusConflict, "Change could not be approved, "+change.OldEntity.Name+" have been already changed: "+string(jsonBytes))
 	}
 }
 
 func Revert(r *http.Request, approvedId string) error {
 	if approvedId == "" {
-		return basecommon.NewXconfError(http.StatusBadRequest, "Id is blank")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Id is blank")
 	}
 	approvedChange := xchange.GetOneApprovedChange(approvedId)
 	if approvedChange == nil {
-		return basecommon.NewXconfError(http.StatusNotFound, "ApprovedChange with "+approvedId+" id does not exist")
+		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "ApprovedChange with "+approvedId+" id does not exist")
 	}
 	if xwchange.Delete == approvedChange.Operation {
 		revertDelete(r, approvedId, approvedChange)
@@ -217,18 +219,19 @@ func Revert(r *http.Request, approvedId string) error {
 }
 
 func revertDelete(r *http.Request, id string, approvedChange *xwchange.ApprovedChange) *xwchange.ApprovedChange {
-	CreatePermanentTelemetryProfile(r, &approvedChange.OldEntity)
+	CreatePermanentTelemetryProfile(r, approvedChange.OldEntity)
 	xchange.DeleteOneApprovedChange(id)
 	return approvedChange
 }
 
 func revertCreateOrUpdateChange(r *http.Request, changeId string, entityId string, approvedChange *xwchange.ApprovedChange) *xwchange.ApprovedChange {
 	entityToRevert := logupload.GetOnePermanentTelemetryProfile(entityId)
-
+	// in Java, equalPendingEntities(PermanentTelemetryProfile oldEntity, PermanentTelemetryProfile newEntity) always returns true
+	//if (equalPendingEntities(approvedChange.getNewEntity(), entityToRevert)) { is being ignored
 	if xwchange.Create == approvedChange.Operation {
 		DeletePermanentTelemetryProfile(r, entityToRevert.ID)
 	} else {
-		UpdatePermanentTelemetryProfile(&approvedChange.OldEntity)
+		UpdatePermanentTelemetryProfile(approvedChange.OldEntity)
 	}
 	xchange.DeleteOneApprovedChange(changeId)
 	return approvedChange
@@ -291,11 +294,11 @@ func GetChangesByEntityIds(changeIds *[]string) ([]*xwchange.Change, error) {
 	changes := []*xwchange.Change{}
 	for _, id := range *changeIds {
 		if id == "" {
-			return nil, basecommon.NewXconfError(http.StatusBadRequest, "Id is blank")
+			return nil, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Id is blank")
 		}
 		change := xchange.GetOneChange(id)
 		if change == nil {
-			return nil, basecommon.NewXconfError(http.StatusNotFound, "Factory with "+id+" id does not exist")
+			return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Factory with "+id+" id does not exist")
 		}
 		changes = append(changes, change)
 	}
@@ -319,16 +322,16 @@ func GetChangesByEntityId(entityId string) []*xwchange.Change {
 func Approve(r *http.Request, id string) (*xwchange.ApprovedChange, error) {
 	change := xchange.GetOneChange(id)
 	if change == nil {
-		return nil, basecommon.NewXconfError(http.StatusNotFound, "Change with "+id+" id does not exist")
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Change with "+id+" id does not exist")
 	}
 
 	var err error
 	var approvedChange *xwchange.ApprovedChange
 	switch {
 	case xwchange.Create == change.Operation:
-		_, err = CreatePermanentTelemetryProfile(r, &change.NewEntity)
+		_, err = CreatePermanentTelemetryProfile(r, change.NewEntity)
 	case xwchange.Update == change.Operation:
-		_, err = UpdatePermanentTelemetryProfile(&change.NewEntity)
+		_, err = UpdatePermanentTelemetryProfile(change.NewEntity)
 	case xwchange.Delete == change.Operation:
 		_, err = DeletePermanentTelemetryProfile(r, change.OldEntity.ID)
 	}
@@ -370,7 +373,7 @@ func ApproveChanges(r *http.Request, changeIds *[]string) (map[string]string, er
 		var err error
 		switch {
 		case xwchange.Create == change.Operation:
-			_, err = CreatePermanentTelemetryProfile(r, &change.NewEntity)
+			_, err = CreatePermanentTelemetryProfile(r, change.NewEntity)
 		case xwchange.Update == change.Operation:
 			mergeResult := ApplyUpdateChange(mergedUpdateChangesByEntityId[change.EntityID], change)
 			mergedUpdateChangesByEntityId[mergeResult.ID] = mergeResult
@@ -437,7 +440,7 @@ func RevertChanges(r *http.Request, changeIds *[]string) (map[string]string, err
 	for _, changeId := range *changeIds {
 		approvedChange := xchange.GetOneApprovedChange(changeId)
 		if approvedChange == nil {
-			return nil, basecommon.NewXconfError(http.StatusNotFound, "ApprovedChange with "+changeId+" id does not exist")
+			return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "ApprovedChange with "+changeId+" id does not exist")
 		}
 		changesToRevert = append(changesToRevert, approvedChange)
 	}
@@ -475,9 +478,9 @@ func FindByContextForChanges(searchContext map[string]string) []*xwchange.Change
 		}
 		if profileName, ok := xutil.FindEntryInContext(searchContext, xcommon.ENTITY, false); ok {
 			if profileName != "" {
-				entity := &change.NewEntity
+				entity := change.NewEntity
 				if entity == nil {
-					entity = &change.OldEntity
+					entity = change.OldEntity
 					if entity == nil {
 						continue
 					}
@@ -512,9 +515,9 @@ func FindByContextForApprovedChanges(r *http.Request, searchContext map[string]s
 		}
 		if profileName, ok := xutil.FindEntryInContext(searchContext, xcommon.PROFILE_NAME, false); ok {
 			if profileName != "" {
-				entity := &change.NewEntity
+				entity := change.NewEntity
 				if entity == nil {
-					entity = &change.OldEntity
+					entity = change.OldEntity
 					if entity == nil {
 						continue
 					}

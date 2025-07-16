@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,9 @@ import (
 	"fmt"
 
 	xrfc "xconfadmin/shared/rfc"
-	xwrfc "xconfwebconfig/shared/rfc"
-	"xconfwebconfig/util"
+
+	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
 	errors "github.com/pkg/errors"
@@ -58,6 +59,7 @@ func ImportOrUpdateAllFeatureEntity(featureEntityList []*xwrfc.FeatureEntity, ap
 	importedList := []string{}
 	notImportedList := []string{}
 	for _, featureEntity := range featureEntityList {
+		featureEntity := featureEntity
 		var err error
 		var isValid bool
 		var doesExist bool
@@ -73,7 +75,7 @@ func ImportOrUpdateAllFeatureEntity(featureEntityList []*xwrfc.FeatureEntity, ap
 					_, err = PutFeatureEntity(featureEntity, applicationType)
 				} else {
 					// create feature
-					_, err = PostFeatureEntity(featureEntity, applicationType)
+					featureEntity, err = PostFeatureEntity(featureEntity, applicationType)
 				}
 			}
 			if err != nil {

@@ -1,31 +1,15 @@
-/**
- * Copyright 2023 Comcast Cable Communications Management, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 package change
 
 import (
 	"encoding/json"
 	"fmt"
 	"time"
-	"xconfwebconfig/db"
-	"xconfwebconfig/shared"
-	xwchange "xconfwebconfig/shared/change"
-	"xconfwebconfig/util"
-	xwutil "xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
+	"github.com/rdkcentral/xconfwebconfig/util"
+	xwutil "github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -134,7 +118,7 @@ func NewEmptyTelemetryTwoChange() *xwchange.TelemetryTwoChange {
 }
 
 func CreateOneChange(change *xwchange.Change) error {
-	change.Updated = util.GetTimestamp(time.Now().UTC())
+	change.Updated = util.GetTimestamp()
 
 	changeBytes, err := json.Marshal(change)
 	if err != nil {
@@ -180,7 +164,7 @@ func CreateOneTelemetryTwoChange(change *xwchange.TelemetryTwoChange) error {
 	if util.IsBlank(change.ID) {
 		change.ID = uuid.New().String()
 	}
-	change.Updated = util.GetTimestamp(time.Now().UTC())
+	change.Updated = util.GetTimestamp()
 
 	changeBytes, err := json.Marshal(change)
 	if err != nil {

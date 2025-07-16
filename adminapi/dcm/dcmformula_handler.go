@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,17 +26,16 @@ import (
 
 	"github.com/gorilla/mux"
 
-	xutil "xconfadmin/util"
-
-	xcommon "xconfadmin/common"
-
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/db"
-	"xconfwebconfig/shared/logupload"
-
 	"xconfadmin/adminapi/auth"
+	queries "xconfadmin/adminapi/queries"
+	"xconfadmin/common"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+	core "xconfadmin/shared"
+	requtil "xconfadmin/util"
+
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
 func GetDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +48,7 @@ func GetDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 	allFormulas := GetDcmFormulaAll()
 
 	queryParams := r.URL.Query()
-	_, ok := queryParams[xcommon.EXPORT]
+	_, ok := queryParams[common.EXPORT]
 	if ok {
 		fwsList := []*logupload.FormulaWithSettings{}
 		for _, DcmRule := range allFormulas {
@@ -68,8 +67,8 @@ func GetDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 			xhttp.AdminError(w, err)
 			return
 		}
-		headers := xhttp.CreateContentDispositionHeader(xcommon.ExportFileNames_ALL_FORMULAS + "_" + appType)
-		xwhttp.WriteXconfResponseWithHeaders(w, headers, http.StatusOK, response)
+		headers := xhttp.CreateContentDispositionHeader(common.ExportFileNames_ALL_FORMULAS + "_" + appType)
+		xhttp.WriteXconfResponseWithHeaders(w, headers, http.StatusOK, response)
 	} else {
 		list := []*logupload.DCMGenericRule{}
 		for _, DcmRule := range allFormulas {
@@ -83,7 +82,7 @@ func GetDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 			xhttp.AdminError(w, err)
 			return
 		}
-		xwhttp.WriteXconfResponse(w, http.StatusOK, response)
+		xhttp.WriteXconfResponse(w, http.StatusOK, response)
 	}
 }
 
@@ -94,9 +93,9 @@ func GetDcmFormulaByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, found := mux.Vars(r)[xwcommon.ID]
+	id, found := mux.Vars(r)[common.ID]
 	if !found {
-		errorStr := fmt.Sprintf("%v is invalid", xwcommon.ID)
+		errorStr := fmt.Sprintf("%v is invalid", common.ID)
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, errorStr)
 		return
 	}
@@ -114,7 +113,7 @@ func GetDcmFormulaByIdHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	queryParams := r.URL.Query()
-	_, ok := queryParams[xcommon.EXPORT]
+	_, ok := queryParams[common.EXPORT]
 	if ok {
 		fws := logupload.FormulaWithSettings{}
 		fws.Formula = formula
@@ -127,15 +126,15 @@ func GetDcmFormulaByIdHandler(w http.ResponseWriter, r *http.Request) {
 			xhttp.AdminError(w, err)
 			return
 		}
-		headers := xhttp.CreateContentDispositionHeader(xcommon.ExportFileNames_FORMULA + formula.ID + "_" + appType)
-		xwhttp.WriteXconfResponseWithHeaders(w, headers, http.StatusOK, exresponse)
+		headers := xhttp.CreateContentDispositionHeader(common.ExportFileNames_FORMULA + formula.ID + "_" + appType)
+		xhttp.WriteXconfResponseWithHeaders(w, headers, http.StatusOK, exresponse)
 	} else {
 		response, err := xhttp.ReturnJsonResponse(formula, r)
 		if err != nil {
 			xhttp.AdminError(w, err)
 			return
 		}
-		xwhttp.WriteXconfResponse(w, http.StatusOK, response)
+		xhttp.WriteXconfResponse(w, http.StatusOK, response)
 	}
 }
 
@@ -158,7 +157,7 @@ func GetDcmFormulaSizeHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
+	xhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
 func GetDcmFormulaNamesHandler(w http.ResponseWriter, r *http.Request) {
@@ -181,7 +180,7 @@ func GetDcmFormulaNamesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
+	xhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
 func DeleteDcmFormulaByIdHandler(w http.ResponseWriter, r *http.Request) {
@@ -191,19 +190,21 @@ func DeleteDcmFormulaByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, found := mux.Vars(r)[xwcommon.ID]
+	id, found := mux.Vars(r)[common.ID]
 	if !found {
-		errorStr := fmt.Sprintf("%v is invalid", xwcommon.ID)
+		errorStr := fmt.Sprintf("%v is invalid", common.ID)
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, errorStr)
 		return
 	}
+
+	ds.GetCacheManager().ForceSyncChanges()
 
 	respEntity := DeleteDcmFormulabyId(id, appType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
 	}
-	xwhttp.WriteXconfResponse(w, respEntity.Status, nil)
+	xhttp.WriteXconfResponse(w, respEntity.Status, nil)
 }
 
 func CreateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
@@ -227,6 +228,7 @@ func CreateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ds.GetCacheManager().ForceSyncChanges()
 	respEntity := CreateDcmRule(&newdfrule, appType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -238,7 +240,7 @@ func CreateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	xwhttp.WriteXconfResponse(w, respEntity.Status, res)
+	xhttp.WriteXconfResponse(w, respEntity.Status, res)
 }
 
 func UpdateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
@@ -251,7 +253,7 @@ func UpdateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "unable to cast XpcResponseWriter object")
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "unable to cast XResponseWriter object")
 		return
 	}
 	body := xw.Body()
@@ -262,6 +264,7 @@ func UpdateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ds.GetCacheManager().ForceSyncChanges()
 	respEntity := UpdateDcmRule(&newdfrule, appType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -273,7 +276,7 @@ func UpdateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	xwhttp.WriteXconfResponse(w, respEntity.Status, res)
+	xhttp.WriteXconfResponse(w, respEntity.Status, res)
 }
 
 func getsettings(value string, id string) bool {
@@ -324,7 +327,7 @@ func DcmFormulaSettingsAvailabilitygHandler(w http.ResponseWriter, r *http.Reque
 		xhttp.AdminError(w, err)
 		return
 	}
-	xwhttp.WriteXconfResponse(w, http.StatusOK, res)
+	xhttp.WriteXconfResponse(w, http.StatusOK, res)
 }
 
 func getiFormulaAvail(id string) bool {
@@ -361,7 +364,7 @@ func DcmFormulasAvailabilitygHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	xwhttp.WriteXconfResponse(w, http.StatusOK, res)
+	xhttp.WriteXconfResponse(w, http.StatusOK, res)
 }
 
 func PostDcmFormulaFilteredWithParamsHandler(w http.ResponseWriter, r *http.Request) {
@@ -385,8 +388,8 @@ func PostDcmFormulaFilteredWithParamsHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 	}
-	xutil.AddQueryParamsToContextMap(r, contextMap)
-	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
+	requtil.AddQueryParamsToContextMap(r, contextMap)
+	contextMap[core.APPLICATION_TYPE] = applicationType
 
 	dfrules := DcmFormulaFilterByContext(contextMap)
 	sizeHeader := xhttp.CreateNumberOfItemsHttpHeaders(len(dfrules))
@@ -401,7 +404,7 @@ func PostDcmFormulaFilteredWithParamsHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	xwhttp.WriteXconfResponseWithHeaders(w, sizeHeader, http.StatusOK, response)
+	xhttp.WriteXconfResponseWithHeaders(w, sizeHeader, http.StatusOK, response)
 }
 
 func DcmFormulaChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
@@ -411,18 +414,21 @@ func DcmFormulaChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, ok := mux.Vars(r)[xwcommon.ID]
+	id, ok := mux.Vars(r)[common.ID]
 	if !ok {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("%v is invalid", xwcommon.ID))
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("%v is invalid", common.ID))
 		return
 	}
-	newPriorityStr, ok := mux.Vars(r)[xcommon.NEW_PRIORITY]
+	newPriorityStr, ok := mux.Vars(r)[common.NEW_PRIORITY]
 	if !ok {
-		errorStr := fmt.Sprintf("%v is invalid", xcommon.NEW_PRIORITY)
+		errorStr := fmt.Sprintf("%v is invalid", common.NEW_PRIORITY)
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, errorStr)
 		return
 	}
+	ds.GetCacheManager().ForceSyncChanges()
 
+	formulaUpdateMutex.Lock()
+	defer formulaUpdateMutex.Unlock()
 	formulaToUpdate := logupload.GetOneDCMGenericRule(id)
 	if formulaToUpdate == nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("unable to find dcm formula  with id  %s", id))
@@ -430,22 +436,24 @@ func DcmFormulaChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newPriority, err := strconv.Atoi(newPriorityStr)
-	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("Incorrect priority value  for %s", newPriorityStr))
+	if err != nil || newPriority <= 0 {
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("Invalid priority value %s", newPriorityStr))
 		return
 	}
 	if appType != formulaToUpdate.ApplicationType {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "ApplicationType doesn't match")
 		return
 	}
-	reorganizedFormulas, err := UpdateItemAndRepriortize(formulaToUpdate, formulaToUpdate.Priority, newPriority)
+	formulasByApplicationType := GetDcmRulesByApplicationType(formulaToUpdate.ApplicationType)
+	prioritizables := DcmRulesToPrioritizables(formulasByApplicationType)
+	reorganizedFormulas := queries.UpdatePrioritizablesPriorities(prioritizables, formulaToUpdate.Priority, newPriority)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("unable to re-organize priorities: %s", err))
 		return
 	}
 
 	for _, entry := range reorganizedFormulas {
-		if err = db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, entry.ID, entry); err != nil {
+		if err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, entry.GetID(), entry); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("unable to update dcm rule: %s", err))
 			return
 		}
@@ -455,7 +463,7 @@ func DcmFormulaChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
+	xhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
 func ImportDcmFormulaWithOverwriteHandler(w http.ResponseWriter, r *http.Request) {
@@ -465,9 +473,9 @@ func ImportDcmFormulaWithOverwriteHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	overwriteStr, ok := mux.Vars(r)[xcommon.OVERWRITE]
+	overwriteStr, ok := mux.Vars(r)[common.OVERWRITE]
 	if !ok {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("%v is invalid", xcommon.OVERWRITE))
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("%v is invalid", common.OVERWRITE))
 		return
 	}
 	overwrite := false
@@ -488,6 +496,7 @@ func ImportDcmFormulaWithOverwriteHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	ds.GetCacheManager().ForceSyncChanges()
 	respEntity := importFormula(&formulaWithSettings, overwrite, appType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -498,7 +507,7 @@ func ImportDcmFormulaWithOverwriteHandler(w http.ResponseWriter, r *http.Request
 		xhttp.AdminError(w, err)
 		return
 	}
-	xwhttp.WriteXconfResponse(w, respEntity.Status, res)
+	xhttp.WriteXconfResponse(w, respEntity.Status, res)
 }
 
 func ImportDcmFormulasHandler(w http.ResponseWriter, r *http.Request) {
@@ -527,8 +536,10 @@ func ImportDcmFormulasHandler(w http.ResponseWriter, r *http.Request) {
 
 	failedToImport := []string{}
 	successfulImportIds := []string{}
+	ds.GetCacheManager().ForceSyncChanges()
 
 	for _, formulaWithSettings := range formulaWithSettingsList {
+		formulaWithSettings := formulaWithSettings
 		formula := formulaWithSettings.Formula
 		respEntity := importFormula(&formulaWithSettings, false, appType)
 		if respEntity.Error != nil {
@@ -548,7 +559,7 @@ func ImportDcmFormulasHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	xwhttp.WriteXconfResponse(w, http.StatusOK, res)
+	xhttp.WriteXconfResponse(w, http.StatusOK, res)
 }
 
 func PostDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
@@ -572,6 +583,7 @@ func PostDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ds.GetCacheManager().ForceSyncChanges()
 	result := importFormulas(formulaWithSettingsList, appType, false)
 
 	res, err := xhttp.ReturnJsonResponse(result, r)
@@ -579,7 +591,7 @@ func PostDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	xwhttp.WriteXconfResponse(w, http.StatusOK, res)
+	xhttp.WriteXconfResponse(w, http.StatusOK, res)
 }
 
 func PutDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
@@ -603,6 +615,7 @@ func PutDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ds.GetCacheManager().ForceSyncChanges()
 	result := importFormulas(formulaWithSettingsList, appType, true)
 
 	res, err := xhttp.ReturnJsonResponse(result, r)
@@ -610,5 +623,5 @@ func PutDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	xwhttp.WriteXconfResponse(w, http.StatusOK, res)
+	xhttp.WriteXconfResponse(w, http.StatusOK, res)
 }

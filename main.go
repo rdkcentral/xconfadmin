@@ -1,4 +1,4 @@
-// Copyright 2023 Comcast Cable Communications Management, LLC
+// Copyright 2025 Comcast Cable Communications Management, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,18 +20,18 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 	_ "time/tzdata"
 
-	"xconfwebconfig/dataapi"
-
 	"xconfadmin/adminapi"
 	xhttp "xconfadmin/http"
-	"xconfwebconfig/common"
-	xwhttp "xconfwebconfig/http"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
@@ -39,7 +39,7 @@ import (
 )
 
 const (
-	defaultConfigFile = "/app/xconfadmin/xconfwebconfig.conf"
+	defaultConfigFile = "/app/xconfadmin/xconfadmin.conf"
 )
 
 // main function to boot up everything
@@ -69,7 +69,8 @@ func main() {
 		os.Setenv("SAT_CLIENT_SECRET", "dGVzdFhwY0tleQo=")
 	}
 
-	server := xhttp.NewWebconfigServer(sc, false, nil)
+	server := xhttp.NewWebconfigServer(sc, false, nil, nil)
+	defer server.XW_XconfServer.StopXpcTracer()
 
 	// setup logging
 	logFile := server.XW_XconfServer.GetString("xconfwebconfig.log.file")
@@ -85,12 +86,20 @@ func main() {
 		log.SetOutput(os.Stdout)
 	}
 
-	log.SetFormatter(&log.JSONFormatter{
-		TimestampFormat: common.LOGGING_TIME_FORMAT,
-		FieldMap: log.FieldMap{
-			log.FieldKeyTime: "timestamp",
-		},
-	})
+	logFormat := server.XW_XconfServer.GetString("xconfwebconfig.log.format")
+	if logFormat == "text" {
+		log.SetFormatter(&log.TextFormatter{
+			FullTimestamp:   true,
+			TimestampFormat: common.LOGGING_TIME_FORMAT,
+		})
+	} else {
+		log.SetFormatter(&log.JSONFormatter{
+			TimestampFormat: common.LOGGING_TIME_FORMAT,
+			FieldMap: log.FieldMap{
+				log.FieldKeyTime: "timestamp",
+			},
+		})
+	}
 
 	// default log level info
 	logLevel := log.InfoLevel
@@ -112,19 +121,28 @@ func main() {
 	// register the notfound handler
 	router.NotFoundHandler = http.HandlerFunc(server.XW_XconfServer.NotFoundHandler)
 
-	tsr := adminapi.TrailingSlashRemover(router)
-
 	if server.XW_XconfServer.MetricsEnabled() {
 		router.Handle("/metrics", promhttp.Handler())
-		metrics := xwhttp.NewMetrics()
-		handler := server.XW_XconfServer.WebMetrics(metrics, tsr)
-		server.XW_XconfServer.Handler = handler
+		appmetrics := xhttp.NewMetrics()
+		metrics := server.XW_XconfServer.SetWebMetrics(appmetrics)
+		handler := metrics.MetricsHandler(router)
+		tsr := adminapi.TrailingSlashRemover(handler)
+		server.XW_XconfServer.Handler = tsr
 	} else {
+		tsr := adminapi.TrailingSlashRemover(router)
 		server.XW_XconfServer.Handler = tsr
 	}
-	// setup xconf APIs and tables
-	dataapi.XconfSetup(server.XW_XconfServer, router)
+
 	adminapi.XconfSetup(server, router)
+
+	router.HandleFunc("/debug/pprof/", pprof.Index)
+	router.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	router.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+	router.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
+	router.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
+	router.Handle("/debug/pprof/block", pprof.Handler("block"))
 
 	// Exit gracefully on Ctrl+C etc.
 	done := make(chan bool)

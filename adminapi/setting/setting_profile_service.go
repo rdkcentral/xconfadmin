@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,10 @@ import (
 	"xconfadmin/shared"
 	xlogupload "xconfadmin/shared/logupload"
 	"xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
-	ds "xconfwebconfig/db"
-	xwlogupload "xconfwebconfig/shared/logupload"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -47,7 +48,7 @@ func GetAll() []*xwlogupload.SettingProfiles {
 func GetOne(id string) (*xwlogupload.SettingProfiles, error) {
 	settingProfile := xlogupload.GetOneSettingProfile(id)
 	if settingProfile == nil {
-		return nil, xcommon.NewXconfError(http.StatusNotFound, "Entity with id: "+id+" does not exist")
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
 	return settingProfile, nil
 }
@@ -132,7 +133,7 @@ func FindByContext(searchContext map[string]string) []*xwlogupload.SettingProfil
 func validate(entity *xwlogupload.SettingProfiles) error {
 	msg := validateProperties(entity)
 	if msg != "" {
-		return xcommon.NewXconfError(http.StatusBadRequest, msg)
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, msg)
 	}
 	return nil
 }
@@ -161,7 +162,7 @@ func validateProperties(entity *xwlogupload.SettingProfiles) string {
 func validateAll(entity *xwlogupload.SettingProfiles, existingEntities []*xwlogupload.SettingProfiles) error {
 	for _, profile := range existingEntities {
 		if profile.ID != entity.ID && profile.SettingProfileID == entity.SettingProfileID {
-			return xcommon.NewXconfError(http.StatusConflict, "SettingProfile with such settingProfileId exists: "+entity.SettingProfileID)
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "SettingProfile with such settingProfileId exists: "+entity.SettingProfileID)
 		}
 	}
 	return nil
@@ -171,7 +172,7 @@ func validateUsage(id string) error {
 	all := GetSettingRulesList()
 	for _, rule := range all {
 		if rule.BoundSettingID == id {
-			return xcommon.NewXconfError(http.StatusConflict, "Can't delete profile as it's used in setting rule: "+rule.Name)
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Can't delete profile as it's used in setting rule: "+rule.Name)
 		}
 	}
 	return nil
@@ -197,9 +198,9 @@ func beforeCreating(entity *xwlogupload.SettingProfiles, writeApplication string
 	} else {
 		existingEntity := xlogupload.GetOneSettingProfile(id)
 		if existingEntity != nil && !shared.ApplicationTypeEquals(existingEntity.ApplicationType, entity.ApplicationType) {
-			return xcommon.NewXconfError(http.StatusConflict, "Entity with id: "+id+" already exists in "+existingEntity.ApplicationType+" application")
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Entity with id: "+id+" already exists in "+existingEntity.ApplicationType+" application")
 		} else if existingEntity != nil && shared.ApplicationTypeEquals(existingEntity.ApplicationType, writeApplication) {
-			return xcommon.NewXconfError(http.StatusConflict, "Entity with id: "+id+" already exists")
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Entity with id: "+id+" already exists")
 		}
 	}
 	return nil
@@ -208,14 +209,14 @@ func beforeCreating(entity *xwlogupload.SettingProfiles, writeApplication string
 func beforeUpdating(entity *xwlogupload.SettingProfiles, writeApplication string) error {
 	id := entity.ID
 	if id == "" {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Entity id is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Entity id is empty")
 	}
 	existingEntity := xlogupload.GetOneSettingProfile(id)
 	if !shared.ApplicationTypeEquals(existingEntity.ApplicationType, writeApplication) {
-		return xcommon.NewXconfError(http.StatusNotFound, "Entity with id: "+id+" does not exist")
+		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
 	if existingEntity == nil {
-		return xcommon.NewXconfError(http.StatusNotFound, "Entity with id: "+id+" does not exist")
+		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
 	return nil
 }

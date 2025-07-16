@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,9 @@
 package queries
 
 import (
-	"xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	logupload "xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	logupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
 func NullifyUnwantedFieldsPermanentTelemetryProfile(profile *logupload.PermanentTelemetryProfile) *logupload.PermanentTelemetryProfile {

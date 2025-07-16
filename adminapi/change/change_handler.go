@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,14 +27,16 @@ import (
 	xcommon "xconfadmin/common"
 	xshared "xconfadmin/shared"
 	xchange "xconfadmin/shared/change"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/shared"
-	xwchange "xconfwebconfig/shared/change"
-	"xconfwebconfig/util"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"xconfadmin/adminapi/auth"
 	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -315,7 +317,7 @@ func ApproveChangesHandler(w http.ResponseWriter, r *http.Request) {
 
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	var changeIds []string
@@ -347,7 +349,7 @@ func RevertChangesHandler(w http.ResponseWriter, r *http.Request) {
 
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	var changeIds []string
@@ -380,7 +382,7 @@ func GetApprovedFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	pageSize := 50
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	if values, ok := r.URL.Query()[xcommon.PAGE_NUMBER]; ok {
@@ -437,7 +439,7 @@ func GetChangesFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	pageSize := 50
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	if values, ok := r.URL.Query()[xcommon.PAGE_NUMBER]; ok {

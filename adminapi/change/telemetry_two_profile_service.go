@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import (
 	"sort"
 	"strings"
 
-	"xconfadmin/common"
 	"xconfadmin/shared"
 	xshared "xconfadmin/shared"
 	xutil "xconfadmin/util"
@@ -33,20 +32,20 @@ import (
 	"xconfadmin/adminapi/auth"
 	xchange "xconfadmin/shared/change"
 	xlogupload "xconfadmin/shared/logupload"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/rulesengine"
-	xwshared "xconfwebconfig/shared"
-	xwchange "xconfwebconfig/shared/change"
-	xwlogupload "xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/rulesengine"
+	xwshared "github.com/rdkcentral/xconfwebconfig/shared"
+	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
+	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
-	errors "github.com/pkg/errors"
 )
 
-func GetTelemetryTwoProfilesByIdList(idList []string) []xwlogupload.TelemetryTwoProfile {
+func GetTelemetryTwoProfilesByIdList(appType string, idList []string) []xwlogupload.TelemetryTwoProfile {
 	telemetryTwoProfiles := []xwlogupload.TelemetryTwoProfile{}
-	list := xlogupload.GetAllTelemetryTwoProfileList()
+	list := xlogupload.GetAllTelemetryTwoProfileList(appType)
 	for _, profile := range list {
 		for _, id := range idList {
 			if profile.ID == id {
@@ -59,7 +58,7 @@ func GetTelemetryTwoProfilesByIdList(idList []string) []xwlogupload.TelemetryTwo
 }
 
 func WriteCreateChangeTelemetryTwoProfile(r *http.Request, profile *xwlogupload.TelemetryTwoProfile) (*xwchange.TelemetryTwoChange, error) {
-	applicationType, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	applicationType, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY, profile.ApplicationType)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +74,7 @@ func WriteCreateChangeTelemetryTwoProfile(r *http.Request, profile *xwlogupload.
 		return nil, err
 	}
 
-	if _, err := auth.CanWrite(r, auth.CHANGE_ENTITY); err != nil {
+	if _, err := auth.CanWrite(r, auth.CHANGE_ENTITY, profile.ApplicationType); err != nil {
 		return nil, err
 	}
 	change := buildToCreateTelemetryTwoChange(profile, applicationType, auth.GetUserNameOrUnknown(r))
@@ -142,13 +141,12 @@ func WriteDeleteChangeTelemetryTwoProfile(r *http.Request, id string) (*xwchange
 
 func GetTelemetryTwoProfilesByContext(searchContext map[string]string) []*xwlogupload.TelemetryTwoProfile {
 	filteredProfiles := []*xwlogupload.TelemetryTwoProfile{}
-	profiles := xlogupload.GetAllTelemetryTwoProfileList()
+	applicationType, ok := xutil.FindEntryInContext(searchContext, shared.APPLICATION_TYPE, false)
+	if !ok {
+		return filteredProfiles
+	}
+	profiles := xlogupload.GetAllTelemetryTwoProfileList(applicationType)
 	for _, profile := range profiles {
-		if applicationType, ok := xutil.FindEntryInContext(searchContext, xwcommon.APPLICATION_TYPE, false); ok {
-			if profile.ApplicationType != applicationType {
-				continue
-			}
-		}
 		if name, ok := xutil.FindEntryInContext(searchContext, xcommon.NAME_UPPER, false); ok {
 			if !xutil.ContainsIgnoreCase(profile.Name, name) {
 				continue
@@ -177,7 +175,7 @@ func GeneratePageTelemetryTwoProfiles(list []*xwlogupload.TelemetryTwoProfile, p
 }
 
 func CreateTelemetryTwoProfile(r *http.Request, newProfile *xwlogupload.TelemetryTwoProfile) (*xwlogupload.TelemetryTwoProfile, error) {
-	applicationType, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	applicationType, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY, newProfile.ApplicationType)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +192,7 @@ func CreateTelemetryTwoProfile(r *http.Request, newProfile *xwlogupload.Telemetr
 }
 
 func UpdateTelemetryTwoProfile(r *http.Request, profile *xwlogupload.TelemetryTwoProfile) (*xwlogupload.TelemetryTwoProfile, error) {
-	applicationType, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	applicationType, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY, profile.ApplicationType)
 	if err != nil {
 		return nil, err
 	}
@@ -231,9 +229,9 @@ func beforeCreatingTelemetryTwoProfile(entity *xwlogupload.TelemetryTwoProfile, 
 		existingEntity := xwlogupload.GetOneTelemetryTwoProfile(entity.ID)
 		if existingEntity != nil {
 			if !xshared.ApplicationTypeEquals(existingEntity.ApplicationType, entity.ApplicationType) {
-				return common.NewXconfError(http.StatusConflict, fmt.Sprintf("Entity with id: %s already exists in %s application", entity.ID, existingEntity.ApplicationType))
+				return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Entity with id: %s already exists in %s application", entity.ID, existingEntity.ApplicationType))
 			} else if xshared.ApplicationTypeEquals(existingEntity.ApplicationType, writeApplication) {
-				return common.NewXconfError(http.StatusConflict, fmt.Sprintf("Entity with id: %s already exists", entity.ID))
+				return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Entity with id: %s already exists", entity.ID))
 
 			}
 		}
@@ -243,17 +241,17 @@ func beforeCreatingTelemetryTwoProfile(entity *xwlogupload.TelemetryTwoProfile, 
 
 func beforeUpdatingTelemetryTwoProfile(entity *xwlogupload.TelemetryTwoProfile, writeApplication string) error {
 	if entity.ID == "" {
-		return errors.New("Entity id is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity id is empty")
 	}
 	existingEntity := xwlogupload.GetOneTelemetryTwoProfile(entity.ID)
 	if existingEntity == nil {
-		return common.NewXconfError(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", entity.ID))
+		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", entity.ID))
 	} else {
 		if !shared.ApplicationTypeEquals(existingEntity.ApplicationType, writeApplication) {
-			return common.NewXconfError(http.StatusConflict, fmt.Sprintf("[%s] - current applicationType [%s] does not match with write applicationType [%s]", entity.ID, existingEntity.ApplicationType, writeApplication))
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("[%s] - current applicationType [%s] does not match with write applicationType [%s]", entity.ID, existingEntity.ApplicationType, writeApplication))
 		}
 		if !shared.ApplicationTypeEquals(existingEntity.ApplicationType, entity.ApplicationType) {
-			return common.NewXconfError(http.StatusConflict, fmt.Sprintf("Entity with id: %s already exists in %s application", entity.ID, existingEntity.ApplicationType))
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Entity with id: %s already exists in %s application", entity.ID, existingEntity.ApplicationType))
 		}
 	}
 	return nil
@@ -266,7 +264,7 @@ func beforeSavingTelemetryTwoProfile(entity *xwlogupload.TelemetryTwoProfile) er
 	if err := entity.Validate(); err != nil {
 		return err
 	}
-	existingEntities := xlogupload.GetAllTelemetryTwoProfileList()
+	existingEntities := xlogupload.GetAllTelemetryTwoProfileList(entity.ApplicationType)
 	return entity.ValidateAll(existingEntities)
 }
 
@@ -275,9 +273,9 @@ func ValidateTelemetryTwoProfilePendingChanges(entity *xwlogupload.TelemetryTwoP
 	for _, change := range telemetryTwoProfilechanges {
 		if change.ID != entity.ID {
 			if change.NewEntity != nil && entity.EqualChangeData(change.NewEntity) {
-				return common.NewXconfError(http.StatusConflict, "The same change already exists")
+				return xwcommon.NewRemoteErrorAS(http.StatusConflict, "The same change already exists")
 			} else if change.OldEntity != nil && entity.EqualChangeData(change.OldEntity) {
-				return common.NewXconfError(http.StatusConflict, "The same change already exists")
+				return xwcommon.NewRemoteErrorAS(http.StatusConflict, "The same change already exists")
 			}
 		}
 	}
@@ -287,7 +285,7 @@ func ValidateTelemetryTwoProfilePendingChanges(entity *xwlogupload.TelemetryTwoP
 func beforeRemovingTelemetryTwoProfile(id string, writeApplication string) (*xwlogupload.TelemetryTwoProfile, error) {
 	entity := xwlogupload.GetOneTelemetryTwoProfile(id)
 	if entity == nil || !shared.ApplicationTypeEquals(writeApplication, entity.ApplicationType) {
-		return nil, common.NewXconfError(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id))
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id))
 	}
 	if err := validateUsageTelemetryTwoProfile(id); err != nil {
 		return nil, err
@@ -296,10 +294,10 @@ func beforeRemovingTelemetryTwoProfile(id string, writeApplication string) (*xwl
 }
 
 func validateUsageTelemetryTwoProfile(id string) error {
-	all := xwlogupload.GetTelemetryTwoRuleList()
+	all := xwlogupload.GetTelemetryTwoRuleListForAS() // []*TelemetryTwoRule
 	for _, rule := range all {
 		if util.Contains(rule.BoundTelemetryIDs, id) {
-			return common.NewXconfError(http.StatusConflict, fmt.Sprintf("Can't delete profile as it's used in telemetry rule: %s", rule.Name))
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Can't delete profile as it's used in telemetry rule: %s", rule.Name))
 		}
 	}
 
@@ -310,7 +308,7 @@ func TelemetryTwoTestPageFilterByContext(searchContext map[string]string) []*xwl
 	var keyMatch bool
 	var valueMatch bool
 	TelemetryRuleList := []*xwlogupload.TelemetryTwoRule{}
-	TelemetryRules := xwlogupload.GetTelemetryTwoRuleList()
+	TelemetryRules := xwlogupload.GetTelemetryTwoRuleListForAS()
 	for _, tmRule := range TelemetryRules {
 		if tmRule == nil {
 			continue
@@ -349,7 +347,7 @@ func TelemetryTwoTestPageFilterByContext(searchContext map[string]string) []*xwl
 				}
 
 				if condition.GetOperation() != rulesengine.StandardOperationExists && condition.GetFixedArg() != nil && condition.GetFixedArg().IsStringValue() {
-					if strings.EqualFold(strings.ToLower(condition.FixedArg.Bean.Value.JLString), strings.ToLower(fixedArgValue)) {
+					if strings.EqualFold(strings.ToLower(*condition.FixedArg.Bean.Value.JLString), strings.ToLower(fixedArgValue)) {
 						valueMatch = true
 						break
 					}

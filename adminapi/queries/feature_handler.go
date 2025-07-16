@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,15 +22,16 @@ import (
 	"fmt"
 	"net/http"
 
+	xhttp "xconfadmin/http"
 	xrfc "xconfadmin/shared/rfc"
 	requtil "xconfadmin/util"
-	"xconfwebconfig/common"
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared/rfc"
-	"xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
 
 	"github.com/gorilla/mux"
 )
@@ -96,12 +97,6 @@ func GetFeatureEntityByIdHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PostFeatureEntityImportAllHandler(w http.ResponseWriter, r *http.Request) {
-	applicationType, err := auth.CanWrite(r, auth.DCM_ENTITY)
-	if err != nil {
-		xhttp.AdminError(w, err)
-		return
-	}
-
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
 		xwhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte("responsewriter cast error"))
@@ -109,103 +104,97 @@ func PostFeatureEntityImportAllHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	body := xw.Body()
 	var featureEntityList []*rfc.FeatureEntity
-	err = json.Unmarshal([]byte(body), &featureEntityList)
+	err := json.Unmarshal([]byte(body), &featureEntityList)
 	if err != nil {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf("\"%s\"", err.Error())))
 		return
 	}
+	determinedAppType := ""
+	for i, _ := range featureEntityList {
+		applicationType, err := auth.CanWrite(r, auth.DCM_ENTITY, featureEntityList[i].ApplicationType)
+		if err != nil {
+			xhttp.AdminError(w, err)
+			return
+		}
+		if determinedAppType != "" && determinedAppType != applicationType {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, "ApplicationType mixing not allowed")
+			return
+		}
+		if featureEntityList[i].ApplicationType == "" {
+			featureEntityList[i].ApplicationType = applicationType
+		} else if featureEntityList[i].ApplicationType != applicationType {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, "ApplicationType Conflict")
+			return
+		}
+		determinedAppType = applicationType
+	}
 
-	featureEntityMap := ImportOrUpdateAllFeatureEntity(featureEntityList, applicationType)
+	featureEntityMap := ImportOrUpdateAllFeatureEntity(featureEntityList, determinedAppType)
 	response, _ := util.XConfJSONMarshal(featureEntityMap, true)
 	xwhttp.WriteXconfResponse(w, http.StatusOK, []byte(response))
 }
 
 func PostFeatureEntityHandler(w http.ResponseWriter, r *http.Request) {
-	applicationType, err := auth.CanWrite(r, auth.DCM_ENTITY)
+	var featureEntity rfc.FeatureEntity
+	applicationType, err := auth.ExtractBodyAndCheckPermissions(&featureEntity, w, r, auth.DCM_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
 	}
-
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xwhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte("responsewriter cast error"))
-		return
-	}
-	body := xw.Body()
-	var featureEntity *rfc.FeatureEntity
-	err = json.Unmarshal([]byte(body), &featureEntity)
-	if err != nil {
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf("\"%s\"", err.Error())))
-		return
-	}
-
 	if xrfc.DoesFeatureExist(featureEntity.ID) {
 		xwhttp.WriteXconfResponse(w, http.StatusConflict, []byte(fmt.Sprintf("\"Entity with id: %s already exists\"", featureEntity.ID)))
 		return
 	}
-	isValid, errorMsg := xrfc.IsValidFeatureEntity(featureEntity)
+	isValid, errorMsg := xrfc.IsValidFeatureEntity(&featureEntity)
 	if !isValid {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf("\"%s\"", errorMsg)))
 		return
 	}
-	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherEntityId(featureEntity)
+	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherEntityId(&featureEntity)
 	if doesFeatureInstanceExist {
 		xwhttp.WriteXconfResponse(w, http.StatusConflict, []byte(fmt.Sprintf("\"Feature with such featureInstance already exists: %s\"", featureEntity.FeatureName)))
 		return
 	}
-	featureEntity, err = PostFeatureEntity(featureEntity, applicationType)
+	createdFeature, err := PostFeatureEntity(&featureEntity, applicationType)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
 	}
-	response, _ := util.XConfJSONMarshal(featureEntity, true)
+	response, _ := util.XConfJSONMarshal(createdFeature, true)
 	xwhttp.WriteXconfResponse(w, http.StatusCreated, []byte(response))
 }
 
 func PutFeatureEntityHandler(w http.ResponseWriter, r *http.Request) {
-	applicationType, err := auth.CanWrite(r, auth.DCM_ENTITY)
+	var featureEntity rfc.FeatureEntity
+	applicationType, err := auth.ExtractBodyAndCheckPermissions(&featureEntity, w, r, auth.DCM_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
-		return
-	}
-
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xwhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte("responsewriter cast error"))
-		return
-	}
-	body := xw.Body()
-	var featureEntity *rfc.FeatureEntity
-	err = json.Unmarshal([]byte(body), &featureEntity)
-	if err != nil {
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf("\"%s\"", err.Error())))
 		return
 	}
 
 	if featureEntity.ID == "" {
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("\"Entity id is empty\""))
+		xwhttp.WriteXconfResponse(w, http.StatusNotFound, []byte("\"Entity id is empty\""))
 		return
 	}
 	if !xrfc.DoesFeatureExist(featureEntity.ID) {
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf("\"Entity with id: %s does not exist\"", featureEntity.ID)))
+		xwhttp.WriteXconfResponse(w, http.StatusNotFound, []byte(fmt.Sprintf("\"Entity with id: %s does not exist\"", featureEntity.ID)))
 		return
 	}
-	isValid, errorMsg := xrfc.IsValidFeatureEntity(featureEntity)
+	isValid, errorMsg := xrfc.IsValidFeatureEntity(&featureEntity)
 	if !isValid {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf("\"%s\"", errorMsg)))
 		return
 	}
-	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherEntityId(featureEntity)
+	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherEntityId(&featureEntity)
 	if doesFeatureInstanceExist {
 		xwhttp.WriteXconfResponse(w, http.StatusConflict, []byte(fmt.Sprintf("\"Feature with such featureInstance already exists: %s\"", featureEntity.FeatureName)))
 		return
 	}
-	featureEntity, err = PutFeatureEntity(featureEntity, applicationType)
+	updatedFeature, err := PutFeatureEntity(&featureEntity, applicationType)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
 	}
-	response, _ := util.XConfJSONMarshal(featureEntity, true)
+	response, _ := util.XConfJSONMarshal(updatedFeature, true)
 	xwhttp.WriteXconfResponse(w, http.StatusOK, []byte(response))
 }

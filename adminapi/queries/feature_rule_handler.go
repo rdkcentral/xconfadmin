@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,18 +28,22 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 
+	"xconfadmin/shared"
 	xshared "xconfadmin/shared"
-	xwhttp "xconfwebconfig/http"
 
-	xrfc "xconfadmin/shared/rfc"
-	"xconfwebconfig/common"
-	ds "xconfwebconfig/db"
-	"xconfwebconfig/shared/rfc"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"xconfadmin/adminapi/auth"
 	xcommon "xconfadmin/common"
 	xhttp "xconfadmin/http"
+	xrfc "xconfadmin/shared/rfc"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 const (
@@ -101,7 +105,7 @@ func GetFeatureRulesFilteredWithPage(w http.ResponseWriter, r *http.Request) {
 	}
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xwhttp.Error(w, http.StatusInternalServerError, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xwhttp.Error(w, http.StatusInternalServerError, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	contextMap := make(map[string]string)
@@ -256,31 +260,19 @@ func GetFeatureRuleOne(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
-	applicationType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY)
-	if err != nil {
-		xhttp.AdminError(w, err)
-		return
-	}
-
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "responsewriter cast error")
-		return
-	}
-	body := xw.Body()
 	featureRule := rfc.FeatureRule{}
-	err = json.Unmarshal([]byte(body), &featureRule)
-	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	err = CreateFeatureRule(&featureRule, applicationType)
+	applicationType, err := auth.ExtractBodyAndCheckPermissions(&featureRule, w, r, auth.FIRMWARE_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
 	}
-	response, err := util.JSONMarshal(featureRule)
+	db.GetCacheManager().ForceSyncChanges()
+	createdFeatureRule, err := CreateFeatureRule(featureRule, applicationType)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+	response, err := util.JSONMarshal(createdFeatureRule)
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal featureRuleNew error: %v", err))
 	}
@@ -288,47 +280,29 @@ func CreateFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
-	applicationType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY)
-	if err != nil {
-		xhttp.AdminError(w, err)
-		return
-	}
-
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "responsewriter cast error")
-		return
-	}
-	body := xw.Body()
 	featureRule := rfc.FeatureRule{}
-	err = json.Unmarshal([]byte(body), &featureRule)
-	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	err = UpdateFeatureRule(&featureRule, applicationType)
+	applicationType, err := auth.ExtractBodyAndCheckPermissions(&featureRule, w, r, auth.FIRMWARE_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
 	}
-	response, err := util.JSONMarshal(featureRule)
+	ds.GetCacheManager().ForceSyncChanges()
+	updatedFeatureRule, err := UpdateFeatureRule(featureRule, applicationType)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+	response, err := util.JSONMarshal(updatedFeatureRule)
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal featureRuleNew error: %v", err))
 	}
-	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
+	xhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
 func ImportAllFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
-	applicationType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY)
-	if err != nil {
-		xhttp.AdminError(w, err)
-		return
-	}
-
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xwhttp.Error(w, http.StatusInternalServerError, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xwhttp.Error(w, http.StatusInternalServerError, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	var featureRules []rfc.FeatureRule
@@ -338,11 +312,33 @@ func ImportAllFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ds.GetCacheManager().ForceSyncChanges()
+
+	determinedAppType := ""
+	for i, _ := range featureRules {
+		applicationType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY, featureRules[i].ApplicationType)
+		if err != nil {
+			xhttp.AdminError(w, err)
+			return
+		}
+		if determinedAppType != "" && determinedAppType != applicationType {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, "ApplicationType mixing not allowed")
+			return
+		}
+		if featureRules[i].ApplicationType == "" {
+			featureRules[i].ApplicationType = applicationType
+		} else if featureRules[i].ApplicationType != applicationType {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, "ApplicationType Conflict")
+			return
+		}
+		determinedAppType = applicationType
+	}
+
 	sort.Slice(featureRules, func(i, j int) bool {
 		return featureRules[i].Priority < featureRules[j].Priority
 	})
 
-	importResult := ImportOrUpdateAllFeatureRule(featureRules, applicationType)
+	importResult := ImportOrUpdateAllFeatureRule(featureRules, determinedAppType)
 	response, err := util.JSONMarshal(importResult)
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal featureRuleNew error: %v", err))
@@ -356,6 +352,9 @@ func DeleteOneFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 		xwhttp.WriteXconfResponse(w, http.StatusMethodNotAllowed, nil)
 		return
 	}
+	ds.GetCacheManager().ForceSyncChanges()
+	featureRuleUpdateMutex.Lock()
+	defer featureRuleUpdateMutex.Unlock()
 	featureRuleToDelete := GetOne(id)
 	if featureRuleToDelete == nil {
 		xwhttp.WriteXconfResponse(w, http.StatusNotFound, []byte("\"Entity with id: "+id+" does not exist\""))
@@ -369,14 +368,12 @@ func DeleteOneFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 
 	xrfc.DeleteFeatureRule(id)
 
-	allFeatureRules := rfc.GetFeatureRuleList()
-	altered := PackFeaturePriorities(allFeatureRules, featureRuleToDelete)
-	for _, item := range altered {
-		if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, item.Id, item); err != nil {
-			response := "FeatureRule saving failed while updating priorities "
-			xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, response)
-			return
-		}
+	context := map[string]string{shared.APPLICATION_TYPE: featureRuleToDelete.ApplicationType}
+	prioritizableRules := FeatureRulesToPrioritizables(FindFeatureRuleByContext(context))
+	err := SaveFeatureRules(PackPriorities(prioritizableRules, featureRuleToDelete))
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
 	}
 	xwhttp.WriteXconfResponse(w, http.StatusNoContent, []byte(""))
 }
@@ -427,10 +424,18 @@ func ChangeFeatureRulePrioritiesHandler(w http.ResponseWriter, r *http.Request) 
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("newPriority must be a number"))
 		return
 	}
+	db.GetCacheManager().ForceSyncChanges()
 
-	featureRules, err := ChangeFeatureRulePriorities(id, newPriorityInt, applicationType)
+	featureRuleToUpdate := GetOne(id)
+	if featureRuleToUpdate == nil {
+		xhttp.WriteXconfResponse(w, http.StatusNotFound, []byte("FeatureRule with id: "+id+" does not exist"))
+	}
+
+	featureRuleUpdateMutex.Lock()
+	defer featureRuleUpdateMutex.Unlock()
+	featureRules, err := ChangePrioritizablePriorities(featureRuleToUpdate, newPriorityInt, applicationType)
 	if err != nil {
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
+		xhttp.AdminError(w, err)
 		return
 	}
 	response, err := util.JSONMarshal(featureRules)
@@ -493,11 +498,11 @@ func UpdateFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 	sort.Slice(entities, func(i, j int) bool {
 		return entities[i].Priority < entities[j].Priority
 	})
-
+	db.GetCacheManager().ForceSyncChanges()
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
-		err := UpdateFeatureRule(&entity, applicationType)
+		_, err := UpdateFeatureRule(entity, applicationType)
 		if err == nil {
 			entityMessage := xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_SUCCESS,
@@ -538,15 +543,14 @@ func CreateFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 	sort.Slice(entities, func(i, j int) bool {
 		return entities[i].Priority < entities[j].Priority
 	})
-
+	db.GetCacheManager().ForceSyncChanges()
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
-		entity := entity
-		err := CreateFeatureRule(&entity, applicationType)
+		featureRule, err := CreateFeatureRule(entity, applicationType)
 		if err == nil {
 			entityMessage := xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_SUCCESS,
-				Message: entity.Id,
+				Message: featureRule.Id,
 			}
 			entitiesMap[entity.Id] = entityMessage
 		} else {
@@ -571,7 +575,7 @@ func FeatureRuleTestPageHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -588,7 +592,7 @@ func FeatureRuleTestPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	contextMap[xcommon.APPLICATION_TYPE] = applicationType
+	contextMap[common.APPLICATION_TYPE] = applicationType
 
 	result := ProcessFeatureRules(contextMap, fields)
 

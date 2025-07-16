@@ -1,41 +1,33 @@
-/**
- * Copyright 2023 Comcast Cable Communications Management, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 package firmware
 
 import (
 	"fmt"
-	"time"
-	"xconfwebconfig/db"
-	"xconfwebconfig/util"
+	"sort"
+	"strings"
 
-	ru "xconfwebconfig/rulesengine"
-	corefw "xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/db"
 
-	"github.com/google/uuid"
+	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
+
 	log "github.com/sirupsen/logrus"
 )
 
-func CreateFirmwareRuleOneDBAfterValidate(fr *corefw.FirmwareRule) error {
-	if util.IsBlank(fr.ID) {
-		fr.ID = uuid.New().String()
-	}
-	fr.Updated = util.GetTimestamp(time.Now().UTC())
-	return db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, fr.ID, fr)
+type ApplicableAction struct {
+	Type                       string               `json:"type"` // Java class name
+	ActionType                 ApplicableActionType `json:"actionType,omitempty" jsonschema:"enum=RULE,enum=DEFINE_PROPERTIES,enum=BLOCKING_FILTER"`
+	ConfigId                   string               `json:"configId,omitempty"`
+	ConfigEntries              []ConfigEntry        `json:"configEntries"` // RuleAction
+	Active                     bool                 `json:"active"`
+	UseAccountPercentage       bool                 `json:"useAccountPercentage"`
+	FirmwareCheckRequired      bool                 `json:"firmwareCheckRequired"`
+	RebootImmediately          bool                 `json:"rebootImmediately"`
+	Whitelist                  string               `json:"whitelist,omitempty"`
+	IntermediateVersion        string               `json:"intermediateVersion,omitempty"`
+	FirmwareVersions           []string             `json:"firmwareVersions,omitempty"`
+	Properties                 map[string]string    `json:"properties,omitempty"` // DefinePropertiesAction
+	ByPassFilters              []string             `json:"byPassFilters,omitempty"`
+	ActivationFirmwareVersions map[string][]string  `json:"activationFirmwareVersions,omitempty"`
 }
 
 func GetFirmwareRuleTemplateCount() (int, error) {
@@ -85,4 +77,27 @@ func NewDefinePropertiesTemplate(id string, rule ru.Rule, properties map[string]
 		RequiredFields:   []string{},
 		ByPassFilters:    byPassFilter,
 	}
+}
+
+func GetFirmwareSortedRuleAllAsListDB() ([]*corefw.FirmwareRule, error) {
+	log.Debug("GetFirmwareSortedRuleAllAsListDB starts...")
+	rulemap, err := db.GetCachedSimpleDao().GetAllAsMap(db.TABLE_FIRMWARE_RULE)
+	if err != nil {
+		return nil, err
+	}
+
+	var rulereflst []*corefw.FirmwareRule
+
+	for _, v := range rulemap {
+		rule := v.(*corefw.FirmwareRule)
+		rulereflst = append(rulereflst, rule)
+	}
+
+	// sort rulereflst based on rule.Name
+	sort.Slice(rulereflst, func(i, j int) bool {
+		return strings.Compare(strings.ToLower(rulereflst[i].Name), strings.ToLower(rulereflst[j].Name)) < 0
+	})
+
+	log.Debug("GetFirmwareSortedRuleAllAsListDB ends...")
+	return rulereflst, nil
 }

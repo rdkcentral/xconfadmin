@@ -1,5 +1,5 @@
 #
-# Copyright 2023 Comcast Cable Communications Management, LLC
+# Copyright 2025 Comcast Cable Communications Management, LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,10 +15,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-GOARCH ?= amd64
-GOOS ?= linux
-GOHOSTARCH = $(shell go env GOHOSTARCH)
-GOHOSTOS = $(shell go env GOHOSTOS)
+GOARCH = $(shell go env GOARCH)
+GOOS = $(shell go env GOOS)
 
 BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
 Version ?= $(shell git log -1 --pretty=format:"%h")
@@ -31,6 +29,9 @@ build:  ## Build a version
 
 test:
 	ulimit -n 10000 ; go test ./... -cover -count=1
+
+localtest:
+	export RUN_IN_LOCAL=true ; go test ./... -cover -count=1 -failfast
 
 cover:
 	go test ./... -count=1 -coverprofile=coverage.out

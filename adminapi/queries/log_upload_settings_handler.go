@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,42 +24,47 @@ import (
 	"strings"
 	"time"
 
-	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
-
-	xcommon "xconfwebconfig/common"
-
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 
+	"xconfadmin/adminapi/auth"
 	"xconfadmin/common"
-	xlogupload "xconfadmin/shared/logupload"
-	ds "xconfwebconfig/db"
-	"xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
+	xhttp "xconfadmin/http"
+	"xconfadmin/shared/logupload"
+	"xconfadmin/util"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
+// This function is not being referenced in router.go. Should we delete it?
 func SaveLogUploadSettings(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.COMMON_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
 	logUploadSettings := logupload.LogUploadSettings{}
-	err := json.Unmarshal([]byte(body), &logUploadSettings)
+	err = json.Unmarshal([]byte(body), &logUploadSettings)
 	if err != nil {
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
 		return
 	}
-	timezone, found := mux.Vars(r)[xcommon.TIME_ZONE]
+	timezone, found := mux.Vars(r)[common.TIME_ZONE]
 	if !found || len(strings.TrimSpace(timezone)) == 0 {
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("timezone is blank"))
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("timezone is blank"))
 		return
 	}
 	scheduleTimezone, found := mux.Vars(r)[common.SCHEDULE_TIME_ZONE]
 	if !found || len(strings.TrimSpace(timezone)) == 0 {
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("timezone is blank"))
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("timezone is blank"))
 		return
 	}
 	schedule := logUploadSettings.Schedule
@@ -126,7 +131,7 @@ func SaveLogUploadSettings(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Error(fmt.Sprintf("json.Marshal featureRuleNew error: %v", err))
 		}
-		xwhttp.WriteXconfResponse(w, http.StatusCreated, response)
+		xhttp.WriteXconfResponse(w, http.StatusCreated, response)
 		return */
 
 	if logUploadSettings.ModeToGetLogFiles == logupload.MODE_TO_GET_LOG_FILES_0 {
@@ -144,7 +149,7 @@ func SaveLogUploadSettings(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		oneList.Data = append(oneList.Data, logFiles...)
-		xlogupload.DeleteOneLogFileList(logUploadSettings.ID)
+		logupload.DeleteOneLogFileList(logUploadSettings.ID)
 
 		err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_LOG_FILE_LIST, logUploadSettings.ID, oneList)
 		if err != nil {
@@ -167,12 +172,12 @@ func SaveLogUploadSettings(w http.ResponseWriter, r *http.Request) {
 		schedule.EndDate = converterDateTimeToUTC(schedule.EndDate, scheduleTimezone)
 	}
 	logUploadSettings.Schedule = schedule
-	xlogupload.SetOneLogUploadSettings(logUploadSettings.ID, &logUploadSettings)
+	logupload.SetOneLogUploadSettings(logUploadSettings.ID, &logUploadSettings)
 	response, err := util.JSONMarshal(logUploadSettings)
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal featureRuleNew error: %v", err))
 	}
-	xwhttp.WriteXconfResponse(w, http.StatusCreated, response)
+	xhttp.WriteXconfResponse(w, http.StatusCreated, response)
 }
 
 func checkDateStrLength(dateStr string) bool {
@@ -212,7 +217,7 @@ func converterDateTimeToUTC(timeStr string, sourceTZ string) string {
 }
 
 func validateName(logUploadSettings *logupload.LogUploadSettings) string {
-	logUploadSettingsList, err := xlogupload.GetAllLogUploadSettings(0)
+	logUploadSettingsList, err := logupload.GetAllLogUploadSettings(0)
 	if err != nil {
 		return ""
 	}
