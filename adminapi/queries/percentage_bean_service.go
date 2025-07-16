@@ -29,10 +29,10 @@ import (
 	"strings"
 	"time"
 
-	"xconfadmin/common"
-	xhttp "xconfadmin/http"
-	xshared "xconfadmin/shared"
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	xcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"

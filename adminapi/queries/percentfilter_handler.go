@@ -23,12 +23,12 @@ import (
 	"math"
 	"net/http"
 
-	"xconfadmin/adminapi/auth"
-	"xconfadmin/common"
-	xhttp "xconfadmin/http"
-	xshared "xconfadmin/shared"
-	xcoreef "xconfadmin/shared/estbfirmware"
-	xutil "xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	"github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	xcoreef "github.com/rdkcentral/xconfadmin/shared/estbfirmware"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"

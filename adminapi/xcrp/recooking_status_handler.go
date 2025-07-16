@@ -5,7 +5,8 @@ import (
 	"errors"
 	"net/http"
 	"time"
-	owhttp "xconfadmin/http"
+
+	owhttp "github.com/rdkcentral/xconfadmin/http"
 
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/util"

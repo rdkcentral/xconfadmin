@@ -26,12 +26,12 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"xconfadmin/adminapi/auth"
-	queries "xconfadmin/adminapi/queries"
-	"xconfadmin/common"
-	xhttp "xconfadmin/http"
-	core "xconfadmin/shared"
-	requtil "xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
+	"github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	core "github.com/rdkcentral/xconfadmin/shared"
+	requtil "github.com/rdkcentral/xconfadmin/util"
 
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"

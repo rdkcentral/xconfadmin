@@ -30,16 +30,16 @@ import (
 
 	"github.com/gorilla/mux"
 
-	xcommon "xconfadmin/common"
-	covt "xconfadmin/shared/estbfirmware"
-	"xconfadmin/util"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	covt "github.com/rdkcentral/xconfadmin/shared/estbfirmware"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	xutil "github.com/rdkcentral/xconfwebconfig/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )

@@ -24,19 +24,19 @@ import (
 	"sort"
 	"strings"
 
-	xcommon "xconfadmin/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	"github.com/rdkcentral/xconfwebconfig/shared"
 
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	xchange "github.com/rdkcentral/xconfadmin/shared/change"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 	xwshared "github.com/rdkcentral/xconfwebconfig/shared"
 	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
-	"xconfadmin/adminapi/auth"
-	xshared "xconfadmin/shared"
-	xchange "xconfadmin/shared/change"
-	xutil "xconfadmin/util"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

@@ -23,13 +23,13 @@ import (
 	"strconv"
 	"strings"
 
-	xshared "xconfadmin/shared"
-	xutil "xconfadmin/util"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
-	xcommon "xconfadmin/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"

@@ -28,14 +28,14 @@ import (
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
-	queries "xconfadmin/adminapi/queries"
-	"xconfadmin/common"
-	xcommon "xconfadmin/common"
-	xhttp "xconfadmin/http"
-	core "xconfadmin/shared"
+	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
+	"github.com/rdkcentral/xconfadmin/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	core "github.com/rdkcentral/xconfadmin/shared"
 
-	//	"xconfadmin/shared/logupload"
-	"xconfadmin/util"
+	//	"github.com/rdkcentral/xconfadmin/shared/logupload"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"

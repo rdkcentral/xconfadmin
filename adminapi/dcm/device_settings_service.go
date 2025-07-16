@@ -30,8 +30,8 @@ import (
 
 	"github.com/google/uuid"
 
-	xcommon "xconfadmin/common"
-	xutil "xconfadmin/util"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"

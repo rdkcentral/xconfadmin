@@ -27,8 +27,8 @@ import (
 	"time"
 	_ "time/tzdata"
 
-	"xconfadmin/adminapi"
-	xhttp "xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/adminapi"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"

@@ -11,9 +11,10 @@ import (
 	"os"
 	"strings"
 	"time"
-	taggingapi_config "xconfadmin/taggingapi/config"
 
-	xcommon "xconfadmin/common"
+	taggingapi_config "github.com/rdkcentral/xconfadmin/taggingapi/config"
+
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"

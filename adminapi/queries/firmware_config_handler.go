@@ -29,15 +29,15 @@ import (
 	xcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
-	"xconfadmin/common"
-	xutil "xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/common"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
-	estb "xconfadmin/shared/estbfirmware"
+	estb "github.com/rdkcentral/xconfadmin/shared/estbfirmware"
 
 	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 

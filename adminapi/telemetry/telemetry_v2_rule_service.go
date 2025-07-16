@@ -23,15 +23,15 @@ import (
 	"sort"
 	"strings"
 
-	xcommon "xconfadmin/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
-	queries "xconfadmin/adminapi/queries"
-	xshared "xconfadmin/shared"
-	"xconfadmin/shared/logupload"
-	xlogupload "xconfadmin/shared/logupload"
-	xutil "xconfadmin/util"
+	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfadmin/shared/logupload"
+	xlogupload "github.com/rdkcentral/xconfadmin/shared/logupload"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"

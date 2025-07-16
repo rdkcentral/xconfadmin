@@ -7,12 +7,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"xconfadmin/common"
-	"xconfadmin/http"
-	taggingapi_config "xconfadmin/taggingapi/config"
-	percentageutils "xconfadmin/taggingapi/percentage"
-	proto "xconfadmin/taggingapi/proto/generated"
-	"xconfadmin/util"
+
+	"github.com/rdkcentral/xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/http"
+	taggingapi_config "github.com/rdkcentral/xconfadmin/taggingapi/config"
+	percentageutils "github.com/rdkcentral/xconfadmin/taggingapi/percentage"
+	proto "github.com/rdkcentral/xconfadmin/taggingapi/proto/generated"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 

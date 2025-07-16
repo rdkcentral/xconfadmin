@@ -2,7 +2,8 @@ package common
 
 import (
 	"time"
-	"xconfadmin/util"
+
+	"github.com/rdkcentral/xconfadmin/util"
 )
 
 var SatOn bool

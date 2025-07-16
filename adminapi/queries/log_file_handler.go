@@ -24,10 +24,10 @@ import (
 	"net/http"
 	"strings"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
-	"xconfadmin/shared/logupload"
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/shared/logupload"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"

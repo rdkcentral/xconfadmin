@@ -24,17 +24,17 @@ import (
 	"sort"
 	"strconv"
 
-	xcommon "xconfadmin/common"
-	xshared "xconfadmin/shared"
-	xchange "xconfadmin/shared/change"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	xchange "github.com/rdkcentral/xconfadmin/shared/change"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 

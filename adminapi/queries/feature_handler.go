@@ -22,16 +22,16 @@ import (
 	"fmt"
 	"net/http"
 
-	xhttp "xconfadmin/http"
-	xrfc "xconfadmin/shared/rfc"
-	requtil "xconfadmin/util"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
+	requtil "github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
-	"xconfadmin/adminapi/auth"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 
 	"github.com/gorilla/mux"
 )

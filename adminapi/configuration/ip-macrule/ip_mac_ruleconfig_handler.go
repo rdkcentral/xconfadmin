@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"xconfadmin/adminapi/auth"
-	"xconfadmin/common"
-	ccommon "xconfadmin/common"
-	xhttp "xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	"github.com/rdkcentral/xconfadmin/common"
+	ccommon "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 )
 
 func GetIpMacRuleConfigurationHandler(w http.ResponseWriter, r *http.Request) {

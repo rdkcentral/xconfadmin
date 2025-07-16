@@ -25,18 +25,18 @@ import (
 	"strconv"
 	"strings"
 
-	xwutil "xconfadmin/util"
+	xwutil "github.com/rdkcentral/xconfadmin/util"
 
-	xcommon "xconfadmin/common"
-	xrfc "xconfadmin/shared/rfc"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
-	"xconfadmin/adminapi/auth"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 
-	xhttp "xconfadmin/http"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 

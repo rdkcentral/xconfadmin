@@ -23,8 +23,8 @@ import (
 	"net/http"
 	"strings"
 
-	xshared "xconfadmin/shared"
-	xcoreef "xconfadmin/shared/estbfirmware"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	xcoreef "github.com/rdkcentral/xconfadmin/shared/estbfirmware"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"

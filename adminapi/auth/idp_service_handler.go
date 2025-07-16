@@ -24,8 +24,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	xhttp "xconfadmin/http"
-	"xconfadmin/util"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/util"
 )
 
 const (

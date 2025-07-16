@@ -23,9 +23,9 @@ import (
 
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 
-	queries "xconfadmin/adminapi/queries"
-	common "xconfadmin/common"
-	xhttp "xconfadmin/http"
+	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
+	common "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 
 	log "github.com/sirupsen/logrus"
 )

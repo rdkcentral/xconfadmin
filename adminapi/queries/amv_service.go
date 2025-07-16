@@ -29,8 +29,8 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
-	util "xconfadmin/util"
-	xutil "xconfadmin/util"
+	util "github.com/rdkcentral/xconfadmin/util"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	ds "github.com/rdkcentral/xconfwebconfig/db"

@@ -23,8 +23,8 @@ import (
 	"time"
 	"unicode"
 
-	core "xconfadmin/shared"
-	"xconfadmin/util"
+	core "github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	shared "github.com/rdkcentral/xconfwebconfig/shared"
 

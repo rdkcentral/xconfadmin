@@ -26,13 +26,13 @@ import (
 	"strings"
 	"time"
 
-	xcommon "xconfadmin/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
-	xutil "xconfadmin/util"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/google/uuid"
 

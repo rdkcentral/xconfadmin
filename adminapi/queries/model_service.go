@@ -28,11 +28,11 @@ import (
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
+	"github.com/rdkcentral/xconfadmin/util"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwutil "github.com/rdkcentral/xconfwebconfig/util"
-	"xconfadmin/util"
 
-	xcommon "xconfadmin/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
