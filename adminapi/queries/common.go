@@ -27,10 +27,10 @@ import (
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	util "github.com/rdkcentral/xconfwebconfig/util"
 
-	"xconfadmin/adminapi/auth"
-	xcommon "xconfadmin/common"
-	xhttp "xconfadmin/http"
-	xutil "xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 

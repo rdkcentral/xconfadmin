@@ -24,8 +24,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"xconfadmin/shared"
-	xlogupload "xconfadmin/shared/logupload"
+	"github.com/rdkcentral/xconfadmin/shared"
+	xlogupload "github.com/rdkcentral/xconfadmin/shared/logupload"
 
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"

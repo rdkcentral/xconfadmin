@@ -23,9 +23,9 @@ import (
 	"net/url"
 	"time"
 
-	"xconfadmin/common"
-	xhttp "xconfadmin/http"
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 

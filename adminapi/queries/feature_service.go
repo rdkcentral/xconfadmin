@@ -20,7 +20,7 @@ package queries
 import (
 	"fmt"
 
-	xrfc "xconfadmin/shared/rfc"
+	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
 
 	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
 	"github.com/rdkcentral/xconfwebconfig/util"

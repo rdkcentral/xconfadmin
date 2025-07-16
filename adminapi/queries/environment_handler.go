@@ -21,13 +21,13 @@ import (
 	"encoding/json"
 	"net/http"
 
-	xcommon "xconfadmin/common"
-	xutil "xconfadmin/util"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/rdkcentral/xconfwebconfig/shared"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )

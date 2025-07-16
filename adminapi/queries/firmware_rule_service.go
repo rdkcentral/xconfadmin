@@ -27,9 +27,9 @@ import (
 
 	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
-	xcommon "xconfadmin/common"
-	xshared "xconfadmin/shared"
-	xutil "xconfadmin/util"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"

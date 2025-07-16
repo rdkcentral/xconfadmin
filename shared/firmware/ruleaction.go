@@ -20,7 +20,7 @@ import (
 	"sort"
 	"strings"
 
-	core "xconfadmin/shared"
+	core "github.com/rdkcentral/xconfadmin/shared"
 )
 
 type Void struct{}

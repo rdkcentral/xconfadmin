@@ -23,10 +23,10 @@ import (
 	"sort"
 	"strings"
 
-	xhttp "xconfadmin/http"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 
-	xcommon "xconfadmin/common"
-	xrfc "xconfadmin/shared/rfc"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"

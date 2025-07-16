@@ -24,15 +24,15 @@ import (
 	"sort"
 	"strings"
 
-	xhttp "xconfadmin/http"
-	xutil "xconfadmin/util"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
-	xcommon "xconfadmin/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
-	"xconfadmin/adminapi/auth"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 

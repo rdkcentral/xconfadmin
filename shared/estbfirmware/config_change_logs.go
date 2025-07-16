@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/rdkcentral/xconfwebconfig/db"
 	sharedef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"

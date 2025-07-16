@@ -24,7 +24,7 @@ import (
 	"sort"
 	"strconv"
 
-	core "xconfadmin/shared"
+	core "github.com/rdkcentral/xconfadmin/shared"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 

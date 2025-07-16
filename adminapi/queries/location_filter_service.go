@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"strings"
 
-	xcoreef "xconfadmin/shared/estbfirmware"
+	xcoreef "github.com/rdkcentral/xconfadmin/shared/estbfirmware"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
@@ -32,7 +32,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	xshared "xconfadmin/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"

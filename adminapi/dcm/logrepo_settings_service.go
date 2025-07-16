@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"strings"
 
-	xutil "xconfadmin/util"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/rdkcentral/xconfwebconfig/util"
@@ -35,7 +35,7 @@ import (
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
-	"xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/common"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"

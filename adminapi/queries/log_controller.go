@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
-	"xconfadmin/shared/estbfirmware"
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/shared/estbfirmware"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"

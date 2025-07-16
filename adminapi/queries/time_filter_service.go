@@ -24,14 +24,14 @@ import (
 	"strings"
 	"time"
 
-	coreef "xconfadmin/shared/estbfirmware"
+	coreef "github.com/rdkcentral/xconfadmin/shared/estbfirmware"
 
 	xcoreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
 	daef "github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
 
-	xshared "xconfadmin/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"

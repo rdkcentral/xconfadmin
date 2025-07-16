@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/common"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 

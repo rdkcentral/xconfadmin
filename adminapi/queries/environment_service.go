@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
