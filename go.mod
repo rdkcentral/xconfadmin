@@ -36,7 +36,7 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.uber.org/automaxprocs v1.5.3
 	gotest.tools v2.2.0+incompatible
-	github.com/rdkcentral/xconfwebconfig develop
+	github.com/rdkcentral/xconfwebconfig v0.0.0
 )
 
 require (
