@@ -24,7 +24,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
@@ -167,7 +166,7 @@ func validateUsageForModel(modelId string) error {
 
 	// Check for usage in FirmwareConfig
 	list, err := coreef.GetFirmwareConfigAsListDB()
-	if err != nil && err.Error() != common.NotFound.Error() {
+	if err != nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, err.Error())
 	}
 
