@@ -142,7 +142,7 @@ func PostFirmwareRuleFilteredHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Get all sorted rules
 	dbrules, err := firmware.GetFirmwareRuleAllAsListDBForAdmin()
-	if err != common.NotFound && err != nil {
+	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
