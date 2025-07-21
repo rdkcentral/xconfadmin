@@ -24,34 +24,24 @@ BUILDTIME := $(shell date -u +"%F_%T_%Z")
 
 all: build
 
-ifeq ($(BRANCH),main)
-prepare:
-	@echo "Building production binaries"
-	go get github.com/rdkcentral/xconfwebconfig@latest
-else
-prepare:
-	@echo "Building development binaries"
-	go get github.com/rdkcentral/xconfwebconfig@develop
-endif
+build: ## Build a version
+	go build -v -ldflags="-X github.com/rdkcentral/xconfadmin/common.BinaryBranch=${BRANCH} -X github.com/rdkcentral/xconfadmin/common.BinaryVersion=${Version} -X github.com/rdkcentral/xconfadmin/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfadmin-${GOOS}-${GOARCH} main.go
 
-build: prepare ## Build a version
-	go build -v -ldflags="-X xconfadmin/common.BinaryBranch=${BRANCH} -X xconfadmin/common.BinaryVersion=${Version} -X xconfadmin/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfadmin-${GOOS}-${GOARCH} main.go
-
-test: prepare
+test:
 	ulimit -n 10000 ; go test ./... -cover -count=1
 
 localtest:
 	export RUN_IN_LOCAL=true ; go test ./... -cover -count=1 -failfast
 
-cover: prepare
+cover:
 	go test ./... -count=1 -coverprofile=coverage.out
 
-html: prepare
+html:
 	go tool cover -html=coverage.out
 
 clean: ## Remove temporary files
 	go clean
 	go clean --testcache
 
-release: prepare
-	go build -v -ldflags="-X xconfadmin/common.BinaryBranch=${BRANCH} -X xconfadmin/common.BinaryVersion=${Version} -X xconfadmin/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfadmin-${GOOS}-${GOARCH} main.go
+release:
+	go build -v -ldflags="-X github.com/rdkcentral/xconfadmin/common.BinaryBranch=${BRANCH} -X github.com/rdkcentral/xconfadmin/common.BinaryVersion=${Version} -X github.com/rdkcentral/xconfadmin/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfadmin-${GOOS}-${GOARCH} main.go
