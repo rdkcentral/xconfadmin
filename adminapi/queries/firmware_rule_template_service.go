@@ -18,6 +18,7 @@
 package queries
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"sort"
@@ -515,7 +516,12 @@ func CreateFirmwareRuleTemplates() {
 			panic(err)
 		}
 		template.Updated = util.GetTimestamp()
-		if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template.ID, &template); err != nil {
+		if jsonData, err := json.Marshal(template); err != nil {
+			panic(err)
+		} else {
+			if err := ds.GetSimpleDao().SetOne(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template.ID, jsonData); err != nil {
+				panic(err)
+			}
 		}
 	}
 }
