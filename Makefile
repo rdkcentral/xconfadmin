@@ -35,29 +35,23 @@ prepare:
 endif
 
 build: prepare ## Build a version
-	go get github.com/rdkcentral/xconfwebconfig@develop
 	go build -v -ldflags="-X xconfadmin/common.BinaryBranch=${BRANCH} -X xconfadmin/common.BinaryVersion=${Version} -X xconfadmin/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfadmin-${GOOS}-${GOARCH} main.go
 
 test: prepare
-	go get github.com/rdkcentral/xconfwebconfig@develop
 	ulimit -n 10000 ; go test ./... -cover -count=1
 
 localtest:
 	export RUN_IN_LOCAL=true ; go test ./... -cover -count=1 -failfast
 
 cover: prepare
-	go get github.com/rdkcentral/xconfwebconfig@develop
 	go test ./... -count=1 -coverprofile=coverage.out
 
 html: prepare
-	go get github.com/rdkcentral/xconfwebconfig@develop
 	go tool cover -html=coverage.out
 
 clean: ## Remove temporary files
-	go get github.com/rdkcentral/xconfwebconfig@develop
 	go clean
 	go clean --testcache
 
 release: prepare
-	go get github.com/rdkcentral/xconfwebconfig@develop
 	go build -v -ldflags="-X xconfadmin/common.BinaryBranch=${BRANCH} -X xconfadmin/common.BinaryVersion=${Version} -X xconfadmin/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfadmin-${GOOS}-${GOARCH} main.go
