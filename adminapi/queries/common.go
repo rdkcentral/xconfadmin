@@ -131,7 +131,7 @@ func GetInfoTable(w http.ResponseWriter, r *http.Request) {
 		} else {
 			// Use the appropriate db based on compression policy
 			if tableInfo.IsCompressAndSplit() {
-				data, err = db.GetCompressingDataDao().GetAllAsMap(tableInfo.TableName)
+				data, err = db.GetCompressingDataDao().GetAllAsMap(tableInfo.TableName, false)
 			} else {
 				data, err = db.GetSimpleDao().GetAllAsMap(tableInfo.TableName, 0)
 			}
