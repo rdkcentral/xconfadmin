@@ -17,7 +17,7 @@
 #
 GOARCH = $(shell go env GOARCH)
 GOOS = $(shell go env GOOS)
-
+REPO := github.com/rdkcentral/xconfadmin
 BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
 Version ?= $(shell git log -1 --pretty=format:"%h")
 BUILDTIME := $(shell date -u +"%F_%T_%Z")
@@ -25,7 +25,7 @@ BUILDTIME := $(shell date -u +"%F_%T_%Z")
 all: build
 
 build: ## Build a version
-	go build -v -ldflags="-X github.com/rdkcentral/xconfadmin/common.BinaryBranch=${BRANCH} -X github.com/rdkcentral/xconfadmin/common.BinaryVersion=${Version} -X github.com/rdkcentral/xconfadmin/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfadmin-${GOOS}-${GOARCH} main.go
+	go build -v -ldflags="-X ${REPO}/common.BinaryBranch=${BRANCH} -X ${REPO}/common.BinaryVersion=${Version} -X ${REPO}/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfadmin-${GOOS}-${GOARCH} main.go
 
 test:
 	ulimit -n 10000 ; go test ./... -cover -count=1
@@ -44,4 +44,4 @@ clean: ## Remove temporary files
 	go clean --testcache
 
 release:
-	go build -v -ldflags="-X github.com/rdkcentral/xconfadmin/common.BinaryBranch=${BRANCH} -X github.com/rdkcentral/xconfadmin/common.BinaryVersion=${Version} -X github.com/rdkcentral/xconfadmin/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfadmin-${GOOS}-${GOARCH} main.go
+	go build -v -ldflags="-X ${REPO}/common.BinaryBranch=${BRANCH} -X ${REPO}/common.BinaryVersion=${Version} -X ${REPO}/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfadmin-${GOOS}-${GOARCH} main.go
