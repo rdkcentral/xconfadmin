@@ -24,8 +24,12 @@ type GroupServiceConnector struct {
 	Client  *HttpClient
 }
 
-func (c *GroupServiceConnector) GetGrpServiceHost() string {
+func (c *GroupServiceConnector) GetGroupServiceHost() string {
 	return c.BaseURL
+}
+
+func (c *GroupServiceConnector) SetGroupServiceHost(host string) {
+	c.BaseURL = host
 }
 
 func NewGroupServiceConnector(conf *configuration.Config, tlsConfig *tls.Config) *GroupServiceConnector {
@@ -48,7 +52,7 @@ func (c *GroupServiceConnector) DoRequest(method string, url string, headers map
 }
 
 func (c *GroupServiceConnector) GetGroupsMemberBelongsTo(memberId string) (*proto2.XdasHashes, error) {
-	url := fmt.Sprintf(GetGroupsMembers, c.GetGrpServiceHost(), memberId)
+	url := fmt.Sprintf(GetGroupsMembers, c.GetGroupServiceHost(), memberId)
 	rbytes, err := c.DoRequest(HttpGet, url, protobufHeaders(), nil)
 	if err != nil {
 		return nil, err
@@ -57,7 +61,7 @@ func (c *GroupServiceConnector) GetGroupsMemberBelongsTo(memberId string) (*prot
 }
 
 func (c *GroupServiceConnector) GetAllGroups() (*proto2.XdasHashes, error) {
-	url := fmt.Sprintf(GetAllGroups, c.GetGrpServiceHost())
+	url := fmt.Sprintf(GetAllGroups, c.GetGroupServiceHost())
 	rbytes, err := c.DoRequest(HttpGet, url, protobufHeaders(), nil)
 	if err != nil {
 		return nil, err

@@ -17,25 +17,15 @@
 #
 GOARCH = $(shell go env GOARCH)
 GOOS = $(shell go env GOOS)
-
+REPO := github.com/rdkcentral/xconfadmin
 BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
 Version ?= $(shell git log -1 --pretty=format:"%h")
 BUILDTIME := $(shell date -u +"%F_%T_%Z")
 
 all: build
 
-ifeq ($(BRANCH),main)
-prepare:
-	@echo "Building production binaries"
-	go get github.com/rdkcentral/xconfwebconfig@latest
-else
-prepare:
-	@echo "Building development binaries"
-	go get github.com/rdkcentral/xconfwebconfig@develop
-endif
-
-build: prepare ## Build a version
-	go build -v -ldflags="-X xconfadmin/common.BinaryBranch=${BRANCH} -X xconfadmin/common.BinaryVersion=${Version} -X xconfadmin/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfadmin-${GOOS}-${GOARCH} main.go
+build: ## Build a version
+	go build -v -ldflags="-X ${REPO}/common.BinaryBranch=${BRANCH} -X ${REPO}/common.BinaryVersion=${Version} -X ${REPO}/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfadmin-${GOOS}-${GOARCH} main.go
 
 test: prepare
 	ulimit -n 10000 ; go test ./... -cover -count=1
@@ -53,5 +43,5 @@ clean: ## Remove temporary files
 	go clean
 	go clean --testcache
 
-release: prepare
-	go build -v -ldflags="-X xconfadmin/common.BinaryBranch=${BRANCH} -X xconfadmin/common.BinaryVersion=${Version} -X xconfadmin/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfadmin-${GOOS}-${GOARCH} main.go
+release:
+	go build -v -ldflags="-X ${REPO}/common.BinaryBranch=${BRANCH} -X ${REPO}/common.BinaryVersion=${Version} -X ${REPO}/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfadmin-${GOOS}-${GOARCH} main.go
