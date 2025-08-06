@@ -89,6 +89,11 @@ func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 				common.CanaryPercentFilterNameSet.Add(name)
 			}
 
+			wakeupPercentFilterNameString := strings.ToLower(ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.canary_wakeup_percent_filter_list"))
+			for _, name := range strings.Split(wakeupPercentFilterNameString, ",") {
+				common.CanaryWakeupPercentFilterNameSet.Add(name)
+			}
+
 			videoModelListString := strings.ToUpper(ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.canary_video_model_list"))
 			for _, model := range strings.Split(videoModelListString, ",") {
 				common.CanaryVideoModelSet.Add(model)
