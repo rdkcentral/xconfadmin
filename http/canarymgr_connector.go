@@ -15,6 +15,7 @@ import (
 const (
 	canarymgrServiceName = "canarymgr"
 	createCanaryPath     = "%s/api/v1/canarygroup"
+	createWakeupPoolPath = "%s/api/v1/wakeuppool"
 )
 
 type CanaryMgrConnector struct {
@@ -33,6 +34,27 @@ type CanaryRequestBody struct {
 	TimeZones              []string `json:"timeZones"`
 	StartPercentRange      float64  `json:"startPercentRange"`
 	EndPercentRange        float64  `json:"endPercentRange"`
+}
+
+type WakeupPoolDistribution struct {
+	ConfigId          string  `json:"configId"`
+	StartPercentRange float64 `json:"startPercentRange"`
+	EndPercentRange   float64 `json:"endPercentRange"`
+}
+
+type WakeupPoolPercentFilter struct {
+	Name          string                   `json:"name"`
+	DeviceType    string                   `json:"deviceType"`
+	Size          int                      `json:"size"`
+	Partner       string                   `json:"partner"`
+	Model         string                   `json:"model"`
+	TimeZones     []string                 `json:"timeZones"`
+	Distributions []WakeupPoolDistribution `json:"distributions"`
+}
+
+// Define the request body struct
+type WakeupPoolRequestBody struct {
+	PercentFilters []WakeupPoolPercentFilter `json:"percentFilters"`
 }
 
 func NewCanaryMgrConnector(conf *configuration.Config, tlsConfig *tls.Config) *CanaryMgrConnector {
@@ -72,5 +94,21 @@ func (c *CanaryMgrConnector) CreateCanary(canaryRequestBody *CanaryRequestBody, 
 		return err
 	}
 
+	return nil
+}
+
+func (c *CanaryMgrConnector) CreateWakeupPool(wakeuppoolRequestBody *WakeupPoolRequestBody, fields log.Fields) error {
+	url := fmt.Sprintf(createWakeupPoolPath, c.GetCanaryMgrHost())
+	headers := map[string]string{
+		common.HeaderUserAgent: common.HeaderXconfAdminService,
+	}
+	requestBody, err := json.Marshal(wakeuppoolRequestBody)
+	if err != nil {
+		return err
+	}
+	_, err = c.DoWithRetries("POST", url, headers, []byte(requestBody), fields, canarymgrServiceName)
+	if err != nil {
+		return err
+	}
 	return nil
 }

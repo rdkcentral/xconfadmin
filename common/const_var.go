@@ -28,7 +28,7 @@ var CanaryFwUpgradeEndTime int
 var CanaryPercentFilterNameSet = util.Set{}
 var CanaryVideoModelSet = util.Set{}
 var CanarySyndicatePartnerSet = util.Set{}
-
+var CanaryWakeupPercentFilterNameSet = util.Set{}
 var AuthProvider string
 var ApplicationTypes []string
 
