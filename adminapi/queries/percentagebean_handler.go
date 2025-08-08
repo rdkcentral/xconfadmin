@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	xcommon "github.com/rdkcentral/xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/shared"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
@@ -329,4 +330,10 @@ func PostPercentageBeanFilteredWithParamsHandler(w http.ResponseWriter, r *http.
 		return
 	}
 	xwhttp.WriteXconfResponseWithHeaders(w, sizeHeader, http.StatusOK, response)
+}
+
+func CreateWakeupPoolHandler(w http.ResponseWriter, r *http.Request) {
+	CreateWakeupPoolList(shared.STB)
+
+	xhttp.WriteXconfResponse(w, http.StatusOK, nil)
 }
