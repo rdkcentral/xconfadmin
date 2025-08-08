@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	canarymgrServiceName = "canarymgr"
-	createCanaryPath     = "%s/api/v1/canarygroup"
-	createWakeupPoolPath = "%s/api/v1/wakeuppool"
+	canarymgrServiceName  = "canarymgr"
+	createCanaryPath      = "%s/api/v1/canarygroup"
+	createWakeupPoolPath  = "%s/api/v1/wakeuppool"
+	createWakeupPoolGroup = "%s/api/v1/canarygroup/deepsleep"
 )
 
 type CanaryMgrConnector struct {
@@ -110,5 +111,24 @@ func (c *CanaryMgrConnector) CreateWakeupPool(wakeuppoolRequestBody *WakeupPoolR
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (c *CanaryMgrConnector) CreateWakeupPoolGroup(canaryRequestBody *CanaryRequestBody, fields log.Fields) error {
+	url := fmt.Sprintf(createWakeupPoolGroup, c.GetCanaryMgrHost())
+	headers := map[string]string{
+		common.HeaderUserAgent: common.HeaderXconfAdminService,
+	}
+
+	requestBody, err := json.Marshal(canaryRequestBody)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.DoWithRetries("POST", url, headers, []byte(requestBody), fields, canarymgrServiceName)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

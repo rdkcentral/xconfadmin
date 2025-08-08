@@ -49,6 +49,7 @@ func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 		common.VideoCanaryCreationEnabled = false
 		common.AuthProvider = "acl"
 		common.ApplicationTypes = []string{"stb"}
+		common.Wakeuppool_tag_name = "t_canary_wakeup"
 	} else {
 		common.AuthProvider = ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.authprovider")
 		applicationTypeString := ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.application_types")
@@ -93,6 +94,8 @@ func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 			for _, name := range strings.Split(wakeupPercentFilterNameString, ",") {
 				common.CanaryWakeupPercentFilterNameSet.Add(name)
 			}
+
+			common.Wakeuppool_tag_name = strings.ToLower(ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.wakeuppool_tag_name"))
 
 			videoModelListString := strings.ToUpper(ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.canary_video_model_list"))
 			for _, model := range strings.Split(videoModelListString, ",") {
