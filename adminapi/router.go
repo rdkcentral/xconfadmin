@@ -790,7 +790,6 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	// api to create wakeuppool manually
 	wakeupPoolCreationPath := r.PathPrefix("/xconfAdminService/wakeuppool").Subrouter()
 	wakeupPoolCreationPath.HandleFunc("", queries.CreateWakeupPoolHandler).Methods("POST").Name("createwakeuppool")
-	wakeupPoolCreationPath.HandleFunc("/removeTag", canary.RemoveCanaryWakeupTagHandler).Methods("DELETE").Name("CanaryWakeup")
 	authPaths = append(authPaths, wakeupPoolCreationPath)
 	// CORS
 	c := cors.New(cors.Options{
