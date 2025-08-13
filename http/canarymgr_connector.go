@@ -98,12 +98,12 @@ func (c *CanaryMgrConnector) CreateCanary(canaryRequestBody *CanaryRequestBody, 
 	return nil
 }
 
-func (c *CanaryMgrConnector) CreateWakeupPool(wakeuppoolRequestBody *WakeupPoolRequestBody, fields log.Fields) error {
+func (c *CanaryMgrConnector) CreateWakeupPool(wakeupPoolRequestBody *WakeupPoolRequestBody, fields log.Fields) error {
 	url := fmt.Sprintf(createWakeupPoolPath, c.GetCanaryMgrHost())
 	headers := map[string]string{
 		common.HeaderUserAgent: common.HeaderXconfAdminService,
 	}
-	requestBody, err := json.Marshal(wakeuppoolRequestBody)
+	requestBody, err := json.Marshal(wakeupPoolRequestBody)
 	if err != nil {
 		return err
 	}

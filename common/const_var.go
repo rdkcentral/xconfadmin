@@ -29,7 +29,7 @@ var CanaryPercentFilterNameSet = util.Set{}
 var CanaryVideoModelSet = util.Set{}
 var CanarySyndicatePartnerSet = util.Set{}
 var CanaryWakeupPercentFilterNameSet = util.Set{}
-var Wakeuppool_tag_name string
+var WakeupPoolTagName string
 var AuthProvider string
 var ApplicationTypes []string
 

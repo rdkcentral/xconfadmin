@@ -36,7 +36,7 @@ func RemoveCanaryWakeupTagHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	tagName := common.Wakeuppool_tag_name
+	tagName := common.WakeupPoolTagName
 	// Get all members of the tag
 	members, err := tag.GetTagMembers(tagName)
 	if err != nil {
