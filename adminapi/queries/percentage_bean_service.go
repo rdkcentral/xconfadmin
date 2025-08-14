@@ -526,24 +526,13 @@ func createCanaries(newBean *coreef.PercentageBean, oldRule *firmware.FirmwareRu
 						canaryRequest.FwAppliedRule = oldRule.Name
 					}
 					log.WithFields(fields).Infof("Creating canary, configId=%s, canaryGroupName=%s", canaryConfigEntry.ConfigId, canaryGroupName)
-					var err error
-					//checking if the Percent Filter trigger is of DeepSleep percent filter list, calling new wakeupool canarymgr api
-					var createCanaryFunc func(*xhttp.CanaryRequestBody, log.Fields) error
-					var apiName string
 
-					if common.CanaryWakeupPercentFilterNameSet.Contains(strings.ToLower(newBean.Name)) {
-						createCanaryFunc = xhttp.WebConfServer.CanaryMgrConnector.CreateWakeupPoolGroup
-						apiName = "wakeup pool group"
-					} else {
-						createCanaryFunc = xhttp.WebConfServer.CanaryMgrConnector.CreateCanary
-						apiName = "canary"
-					}
+					isDeepSleepPercentFilter := common.CanaryWakeupPercentFilterNameSet.Contains(strings.ToLower(newBean.Name))
 
-					// Call the selected API
-					if err = createCanaryFunc(canaryRequest, tfields); err != nil {
-						log.WithFields(fields).Errorf("Error calling canarymgr to create %s, canaryGroupName=%s, err=%+v", apiName, canaryGroupName, err)
+					if err := xhttp.WebConfServer.CanaryMgrConnector.CreateCanary(canaryRequest, isDeepSleepPercentFilter, tfields); err != nil {
+						log.WithFields(fields).Errorf("Error calling canarymgr to create canary, canaryGroupName=%s,isDeepSleepPercentFilter=%v, err=%+v", canaryGroupName, isDeepSleepPercentFilter, err)
 					} else {
-						log.WithFields(fields).Infof("Successfully called canarymgr to create %s, canaryGroupName=%s", apiName, canaryGroupName)
+						log.WithFields(fields).Infof("Successfully called canarymgr to create canary, canaryGroupName=%s,isDeepSleepPercentFilter=%v", canaryGroupName, isDeepSleepPercentFilter)
 					}
 				}
 			}
