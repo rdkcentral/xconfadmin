@@ -787,6 +787,10 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	macipruleconfigPath.HandleFunc("/maciprule", ipmacrule.GetIpMacRuleConfigurationHandler).Methods("GET").Name("Mac-Ip-RuleConfig")
 	paths = append(paths, macipruleconfigPath)
 
+	// api to create wakeuppool manually
+	wakeupPoolCreationPath := r.PathPrefix("/xconfAdminService/wakeuppool").Subrouter()
+	wakeupPoolCreationPath.HandleFunc("", queries.CreateWakeupPoolHandler).Methods("POST").Name("createwakeuppool")
+	authPaths = append(authPaths, wakeupPoolCreationPath)
 	// CORS
 	c := cors.New(cors.Options{
 		AllowCredentials: true,

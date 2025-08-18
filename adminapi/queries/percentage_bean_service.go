@@ -526,10 +526,13 @@ func createCanaries(newBean *coreef.PercentageBean, oldRule *firmware.FirmwareRu
 						canaryRequest.FwAppliedRule = oldRule.Name
 					}
 					log.WithFields(fields).Infof("Creating canary, configId=%s, canaryGroupName=%s", canaryConfigEntry.ConfigId, canaryGroupName)
-					if err := xhttp.WebConfServer.CanaryMgrConnector.CreateCanary(canaryRequest, tfields); err != nil {
-						log.WithFields(fields).Errorf("Error calling canarymgr to create canary, canaryGroupName=%s, err=%+v", canaryGroupName, err)
+
+					isDeepSleepPercentFilter := common.CanaryWakeupPercentFilterNameSet.Contains(strings.ToLower(newBean.Name))
+
+					if err := xhttp.WebConfServer.CanaryMgrConnector.CreateCanary(canaryRequest, isDeepSleepPercentFilter, tfields); err != nil {
+						log.WithFields(fields).Errorf("Error calling canarymgr to create canary, canaryGroupName=%s,isDeepSleepPercentFilter=%v, err=%+v", canaryGroupName, isDeepSleepPercentFilter, err)
 					} else {
-						log.WithFields(fields).Infof("Successfully called canarymgr to create canary, canaryGroupName=%s", canaryGroupName)
+						log.WithFields(fields).Infof("Successfully called canarymgr to create canary, canaryGroupName=%s,isDeepSleepPercentFilter=%v", canaryGroupName, isDeepSleepPercentFilter)
 					}
 				}
 			}
@@ -754,4 +757,64 @@ func replaceFieldsWithFirmwareVersion(bean *coreef.PercentageBean) *coreef.Perce
 	}
 
 	return bean
+}
+
+func CreateWakeupPoolList(applicationType string) {
+	var fields log.Fields
+	deviceType := "VIDEO"
+	percentageBeans, err := GetAllPercentageBeansFromDB(applicationType, true, false)
+	if err != nil {
+		return
+	}
+
+	var percentFilters []xhttp.WakeupPoolPercentFilter
+
+	for _, bean := range percentageBeans {
+		if common.CanaryWakeupPercentFilterNameSet.Contains(strings.ToLower(bean.Name)) {
+			percentFilterName := bean.Name
+			partnerId, err := getPartnerOptionalCondition(bean)
+			if err != nil {
+				log.WithFields(fields).Errorf("Error getting partnerId: %v", err)
+				continue
+			}
+			timeZoneList := common.CanaryTimezoneList
+			if common.CanarySyndicatePartnerSet.Contains(partnerId) {
+				partnerTimezoneStr := common.GetStringAppSetting(common.PROP_CANARY_TIMEZONE_LIST + "_" + partnerId)
+				if partnerTimezoneStr != "" {
+					timeZoneList = strings.Split(partnerTimezoneStr, ",")
+				}
+			}
+			size := common.GetIntAppSetting(common.PROP_CANARY_MAXSIZE, common.CanarySize)
+
+			var distributions []xhttp.WakeupPoolDistribution
+			for _, dist := range bean.Distributions {
+				distributions = append(distributions, xhttp.WakeupPoolDistribution{
+					ConfigId:          dist.ConfigId,
+					StartPercentRange: dist.StartPercentRange,
+					EndPercentRange:   dist.EndPercentRange,
+				})
+			}
+
+			percentFilters = append(percentFilters, xhttp.WakeupPoolPercentFilter{
+				Name:          percentFilterName,
+				DeviceType:    deviceType,
+				Size:          size,
+				Partner:       partnerId,
+				Model:         bean.Model,
+				TimeZones:     timeZoneList,
+				Distributions: distributions,
+			})
+		}
+	}
+
+	if len(percentFilters) > 0 {
+		reqBody := xhttp.WakeupPoolRequestBody{
+			PercentFilters: percentFilters,
+		}
+		if err := xhttp.WebConfServer.CanaryMgrConnector.CreateWakeupPool(&reqBody, fields); err != nil {
+			log.WithFields(fields).Errorf("Error calling canarymgr to create wakeup pools, err=%+v", err)
+		} else {
+			log.WithFields(fields).Infof("Successfully called canarymgr to create wakeup pool")
+		}
+	}
 }

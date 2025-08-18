@@ -231,6 +231,7 @@ func RemoveDataIpAddressGroupHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
 	}
+	xwhttp.WriteXconfResponse(w, respEntity.Status, nil)
 }
 
 func DeleteIpAddressGroupHandler(w http.ResponseWriter, r *http.Request) {
