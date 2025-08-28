@@ -15,7 +15,7 @@ import (
 const (
 	canarymgrServiceName      = "canarymgr"
 	createCanaryPath          = "%s/api/v1/canarygroup"
-	createWakeupPoolPath      = "%s/api/v1/wakeuppool"
+	createWakeupPoolPath      = "%s/api/v1/wakeuppool?force=%v"
 	createWakeupPoolGroupPath = "%s/api/v1/canarygroup/deepsleep"
 )
 
@@ -102,8 +102,8 @@ func (c *CanaryMgrConnector) CreateCanary(canaryRequestBody *CanaryRequestBody, 
 	return nil
 }
 
-func (c *CanaryMgrConnector) CreateWakeupPool(wakeupPoolRequestBody *WakeupPoolRequestBody, fields log.Fields) error {
-	url := fmt.Sprintf(createWakeupPoolPath, c.GetCanaryMgrHost())
+func (c *CanaryMgrConnector) CreateWakeupPool(wakeupPoolRequestBody *WakeupPoolRequestBody, force bool, fields log.Fields) error {
+	url := fmt.Sprintf(createWakeupPoolPath, c.GetCanaryMgrHost(), force)
 	headers := map[string]string{
 		common.HeaderUserAgent: common.HeaderXconfAdminService,
 	}
