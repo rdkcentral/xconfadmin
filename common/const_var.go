@@ -53,6 +53,7 @@ const (
 const (
 	HOST_MAC_PARAM = "hostMac"
 	ECM_MAC_PARAM  = "ecmMac"
+	FORCE_PARAM    = "force"
 )
 
 const (

@@ -759,12 +759,12 @@ func replaceFieldsWithFirmwareVersion(bean *coreef.PercentageBean) *coreef.Perce
 	return bean
 }
 
-func CreateWakeupPoolList(applicationType string) {
-	var fields log.Fields
+func CreateWakeupPoolList(applicationType string, force bool, fields log.Fields) error {
 	deviceType := "VIDEO"
 	percentageBeans, err := GetAllPercentageBeansFromDB(applicationType, true, false)
 	if err != nil {
-		return
+		log.WithFields(fields).Errorf("Failed to get percentage beans: %v", err)
+		return err
 	}
 
 	var percentFilters []xhttp.WakeupPoolPercentFilter
@@ -811,10 +811,16 @@ func CreateWakeupPoolList(applicationType string) {
 		reqBody := xhttp.WakeupPoolRequestBody{
 			PercentFilters: percentFilters,
 		}
-		if err := xhttp.WebConfServer.CanaryMgrConnector.CreateWakeupPool(&reqBody, fields); err != nil {
+		log.WithFields(fields).Infof("Calling canarymgr to create wakeup pool with force=%v", force)
+		if err := xhttp.WebConfServer.CanaryMgrConnector.CreateWakeupPool(&reqBody, force, fields); err != nil {
 			log.WithFields(fields).Errorf("Error calling canarymgr to create wakeup pools, err=%+v", err)
+			return err
 		} else {
 			log.WithFields(fields).Infof("Successfully called canarymgr to create wakeup pool")
+			return nil
 		}
 	}
+
+	log.WithFields(fields).Warn("No percent filters found for wakeup pool creation")
+	return nil
 }
