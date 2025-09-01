@@ -791,6 +791,7 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	wakeupPoolCreationPath := r.PathPrefix("/xconfAdminService/wakeuppool").Subrouter()
 	wakeupPoolCreationPath.HandleFunc("", queries.CreateWakeupPoolHandler).Methods("POST").Name("createwakeuppool")
 	authPaths = append(authPaths, wakeupPoolCreationPath)
+
 	// CORS
 	c := cors.New(cors.Options{
 		AllowCredentials: true,
