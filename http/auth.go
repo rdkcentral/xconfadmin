@@ -332,18 +332,14 @@ func getSubjectAndCapabilitiesFromSatToken(token string, verifyStageHost bool) (
 
 	// 2 Validate Sat Token
 	if verifyStageHost {
-		// If the flag is true, validate with stage host first
-		log.Info("Flag is enabled: Attempting to validate token using staging host")
 		webValidator = getWebValidator()
 		claims, err = webValidator.Validate(token)
 		if err != nil {
-			log.Warn("Validation failed with staging host, falling back to prod host")
+			log.Error("Validation failed with staging host")
+			return "", nil, errors.New("unable to validate sat token with staging host")
 		}
-	}
-
-	// If staging host validation failed or flag is disabled, validate with prod host during transition period
-	if err != nil || !verifyStageHost {
-		log.Info("Attempting to validate token using prod host")
+	} else {
+		// Validate with sat service host if flag is disabled.
 		satServiceKeysUrl := fmt.Sprintf("%s%s", WebConfServer.XW_XconfServer.SatServiceConnector.SatServiceHost(), KeysURL)
 		webValidator = &WebValidator{
 			Client:  http.DefaultClient,
@@ -352,8 +348,8 @@ func getSubjectAndCapabilitiesFromSatToken(token string, verifyStageHost bool) (
 		}
 		claims, err = webValidator.Validate(token)
 		if err != nil {
-			log.Warn("Validation failed with prod host")
-			return "", nil, errors.New("unable to extract valid sat token")
+			log.Error("Validation failed with prod host")
+			return "", nil, errors.New("unable to validate sat token with prod host")
 		}
 	}
 	// get capabilities
