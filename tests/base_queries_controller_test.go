@@ -139,7 +139,7 @@ func CreateFirmwareRule(id string, templateId string, applicationType string, ac
 	return firmwareRule
 }
 
-// Java createRuleActionn return *corefw.RuleAction
+// createRuleActionn return *corefw.RuleAction
 // but due to FirmwaereRule and FirmwareRuleTemplate has only corefw.ApplicableAction
 // OR TemplateApplicableAction
 // so We have no change it as two methods

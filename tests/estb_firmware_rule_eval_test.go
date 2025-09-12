@@ -144,7 +144,7 @@ func TestDoFilters(t *testing.T) {
 	contextMap["eStbMac"] = "00:0a:95:9d:68:16"
 	contextMap["eCMMac"] = "00:0a:95:9d:68:17"
 	contextMap["partnerId"] = "comcast"
-	contextMap["ipAddress"] = "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+	contextMap["ipAddress"] = "2001:0db8:0000:0000:0000:8a2e:0000:0000"
 	contextMap["bypassFilters"] = "someFilter,bypassFilters,PercentFilter"
 	contextMap["time"] = "time"
 	contextMap["applicationType"] = "stb"
@@ -195,7 +195,7 @@ func TestApplyMatchedFilters(t *testing.T) {
 
 	context := map[string]string{}
 	bypassFilters := map[string]struct{}{}
-	context[coreef.FIRMWARE_VERSION] = "DPC3939B_3.9p32s1_PROD_sey"
+	context[coreef.FIRMWARE_VERSION] = "firmwareversion"
 
 	// ses the default method to create EstbFirmwareRuleBase
 	es := estbfirmware.NewEvaluationResult()
@@ -213,10 +213,10 @@ func TestEvalEmpty(t *testing.T) {
 	assert.Assert(t, genlist != nil)
 
 	contextMap := map[string]string{}
-	contextMap["eStbMac"] = "00:0a:95:9d:68:16"
-	contextMap["eCMMac"] = "00:0a:95:9d:68:17"
+	contextMap["eStbMac"] = "00:0a:00:00:68:16"
+	contextMap["eCMMac"] = "00:0a:00:00:00:17"
 	contextMap["partnerId"] = "comcast"
-	contextMap["ipAddress"] = "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+	contextMap["ipAddress"] = "2001:0db8:85a3:0000:0000:8a2e:0000:0000"
 	contextMap["bypassFilters"] = "someFilter,bypassFilters,PercentFilter"
 	contextMap["time"] = "time"
 	contextMap["applicationType"] = "stb"
@@ -251,7 +251,7 @@ func TestEval(t *testing.T) {
 	contextMap["eStbMac"] = "00:0a:95:9d:68:16"
 	contextMap["eCMMac"] = "00:0a:95:9d:68:17"
 	contextMap["partnerId"] = "comcast"
-	contextMap["ipAddress"] = "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+	contextMap["ipAddress"] = "2001:0db8:85a3:0000:0000:0000:0000:7334"
 	contextMap["bypassFilters"] = "someFilter,bypassFilters,PercentFilter"
 	contextMap["time"] = "time"
 	contextMap["applicationType"] = "stb"
@@ -473,7 +473,7 @@ func TestGetBoundConfigId(t *testing.T) {
 	contextMap["eStbMac"] = "00:0a:95:9d:68:16"
 	contextMap["eCMMac"] = "00:0a:95:9d:68:17"
 	contextMap["partnerId"] = "comcast"
-	contextMap["ipAddress"] = "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+	contextMap["ipAddress"] = "2001:0db8:85a3:0000:0000:8a2e:0000:0000"
 	contextMap["bypassFilters"] = "someFilter,bypassFilters,PercentFilter"
 	contextMap["time"] = "time"
 	contextMap["applicationType"] = "stb"

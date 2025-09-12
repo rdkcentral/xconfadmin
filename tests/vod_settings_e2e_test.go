@@ -75,7 +75,7 @@ func TestAllVodSettingsApis(t *testing.T) {
 
 	//CREATE VOD SETTING
 	vsdata := []byte(
-		`{"id":"33af3261-d74a-40fd-8aa1-884e4f5479a1","updated":1635290206352,"name":"dineshgocheckvod","locationsURL":"http://test.com","ipNames":["ip1","ip2"],"ipList":["1.1.1.1","2.2.2.2"], "applicationType":"stb"}`)
+		`{"id":"33af3261-d74a-40fd-8aa1-884e4f5479a1","updated":1635290206352,"name":"testvod","locationsURL":"http://test.com","ipNames":["ip1","ip2"],"ipList":["1.1.1.1","2.2.2.2"], "applicationType":"stb"}`)
 
 	urlCr := "/xconfAdminService/dcm/vodsettings?applicationType=stb"
 	req, err = http.NewRequest("POST", urlCr, bytes.NewBuffer(vsdata))
@@ -98,7 +98,7 @@ func TestAllVodSettingsApis(t *testing.T) {
 
 	//UPDATE EXISING ENTRY
 	vsdataup := []byte(
-		`{"id":"33af3261-d74a-40fd-8aa1-884e4f5479a1","updated":1635290206352,"name":"dineshupdate","locationsURL":"http://test.com","ipNames":["ip1","ip2"],"ipList":["14.14.14.1","2.2.2.2"],"applicationType":"stb"}`)
+		`{"id":"33af3261-d74a-40fd-8aa1-884e4f5479a1","updated":1635290206352,"name":"testdata","locationsURL":"http://test.com","ipNames":["ip1","ip2"],"ipList":["14.14.14.1","2.2.2.2"],"applicationType":"stb"}`)
 
 	urlup := "/xconfAdminService/dcm/vodsettings?applicationType=stb"
 	req, err = http.NewRequest("PUT", urlup, bytes.NewBuffer(vsdataup))
@@ -111,7 +111,7 @@ func TestAllVodSettingsApis(t *testing.T) {
 
 	//UPDATE NON EXISTING ENTRY
 	vsdataerr := []byte(
-		`{"id":"33af3261-d74a-40fd-8aa1-884e4f5479a1err","updated":1635290206352,"name":"dineshupdate","locationsURL":"http://test.com","ipNames":["ip1","ip2"],"ipList":["14.14.14.1","2.2.2.2"],"applicationType":"stb"}`)
+		`{"id":"33af3261-d74a-40fd-8aa1-884e4f5479a1err","updated":1635290206352,"name":"testdata","locationsURL":"http://test.com","ipNames":["ip1","ip2"],"ipList":["14.14.14.1","2.2.2.2"],"applicationType":"stb"}`)
 
 	urlup = "/xconfAdminService/dcm/vodsettings?applicationType=stb"
 	req, err = http.NewRequest("PUT", urlup, bytes.NewBuffer(vsdataerr))
@@ -171,7 +171,7 @@ func TestAllVodSettingsApis(t *testing.T) {
 
 	//GET VOD RULES BY FILTERED NAMES
 	urlWithfilt := "/xconfAdminService/dcm/vodsettings/filtered?pageNumber=1&pageSize=50"
-	postmapname1 := []byte(`{"NAME": "dineshupdate"}`)
+	postmapname1 := []byte(`{"NAME": "testdata"}`)
 	req, err = http.NewRequest("POST", urlWithfilt, bytes.NewBuffer(postmapname1))
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")

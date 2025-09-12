@@ -126,7 +126,7 @@ func TestIfFeatureRuleIsAppliedByRangeOperation(t *testing.T) {
 	DeleteAllEntities()
 	server, router := GetTestWebConfigServer(testFile)
 
-	taggingMockServer := SetupTaggingMockServer404Response(t, *server, fmt.Sprintf(URL_TAGS_MAC_ADDRESS, "B4:F2:E8:15:67:46"))
+	taggingMockServer := SetupTaggingMockServer404Response(t, *server, fmt.Sprintf(URL_TAGS_MAC_ADDRESS, "AA:AA:AA:AA:AA:AA"))
 	defer taggingMockServer.Close()
 
 	feature := createAndSaveFeature()
@@ -134,7 +134,7 @@ func TestIfFeatureRuleIsAppliedByRangeOperation(t *testing.T) {
 	featureResponse := []rfc.FeatureResponse{
 		rfc.CreateFeatureResponseObject(*feature),
 	}
-	macFits50To100Range := "B4:F2:E8:15:67:46"
+	macFits50To100Range := "AA:AA:AA:AA:AA:AA"
 	verifyPercentRangeRuleApplying(t, server, router, macFits50To100Range, featureResponse)
 }
 

@@ -56,8 +56,6 @@ func TestDownloadLocationRoundRobinFilterSetLocationByConnectionType(t *testing.
 }
 
 // based on package com.comcast.xconf.estbfirmware.evaluation.percentfilter
-
-// based on package com.comcast.xconf.estbfirmware.evaluation.percentfilter
 func initPercentConditions(t *testing.T) {
 	//todo if not return, other tests would failure
 	if initDone {
@@ -109,7 +107,7 @@ func initPercentConditions(t *testing.T) {
 	assert.Assert(t, initDone)
 }
 
-//  based on Java PercentFilterTestCase1
+// PercentFilterTestCase1
 
 func TestPercentageIs100AndActive(t *testing.T) {
 	//t.Skip("")
@@ -179,7 +177,7 @@ func performAndVerifyRequest(firmwareConfigForRequest *coreef.FirmwareConfig, ex
 	assert.Equal(t, evaluationResult.FirmwareConfig.GetUpgradeDelay(), expectedConfig.GetUpgradeDelay())
 }
 
-// based on Java PercentFilterTestCase2
+//PercentFilterTestCase2
 
 func TestPercentageIs0AndRuleIsEqualLkgAndActive(t *testing.T) {
 	initPercentConditions(t)
@@ -216,25 +214,3 @@ func TestPercentageIs100AndRuleIsNotEqualLkgAndActive(t *testing.T) {
 	performAndVerifyRequest(firmwareConfig, HttpStatus.OK, expectedRuleConfig);
 	**/
 }
-
-/*** original java code using Mock
-func performAndVerifyRequest(FirmwareConfig firmwareConfigForRequest, HttpStatus status, FirmwareConfigFacade expectedConfig) throws Exception {
-	ResultActions resultActions = null;
-	if (firmwareConfigForRequest !=  null) {
-		resultActions = mockMvc.perform(get("/xconf/swu/stb")
-				.param("eStbMac", macList.getData().iterator().next())
-				.param("env", environment.getId())
-				.param("model", model.getId())
-				.param("firmwareVersion", firmwareConfigForRequest.getFirmwareVersion()))
-				.andExpect(status().is(status.value()));
-	} else {
-		resultActions = mockMvc.perform(get("/xconf/swu/stb")
-				.param("eStbMac", macList.getData().iterator().next())
-				.param("env", environment.getId())
-				.param("model", model.getId()))
-				.andExpect(status().is(status.value()));
-	}
-	verifyResponseContent(resultActions, status, expectedConfig);
-}
-
-**/

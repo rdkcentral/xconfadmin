@@ -125,7 +125,6 @@ func createDownloadLocationFilter() *coreef.DownloadLocationFilter {
 	return filter
 }
 
-// based on Java DownloadLocationFilterConverterTest
 func TestDownloadLocationFilterConverterConvertFilterWithTftpConditions(t *testing.T) {
 	downloadLocFilter := GetGetRDKCDownloadLocationROUNDROBINFILTERVALUE()
 	assert.Assert(t, downloadLocFilter != nil)
@@ -141,16 +140,11 @@ func TestDownloadLocationFilterConverterConvertFilterWithTftpConditions(t *testi
 			**/
 }
 
-// based on java RebootImmediatelyConverter
 func TestRebootImmediatelyConverterTest(t *testing.T) {
 }
 
-// based on Java  EnvModelRuleConverterTest
-
 func TestEnvModelRuleConverter(t *testing.T) {
 }
-
-// based on Java  IpFilterConverterTest
 
 func TestIpFilterConverterConvertFirmwareRuleToIpFilterByMultipleRuleConditions(t *testing.T) {
 	//t.Skip()
@@ -211,14 +205,14 @@ func createIpRule() *corefw.FirmwareRule {
 	return firmwareRule
 }
 
-// based on Java  IpRuleConverterTest
+// IpRuleConverterTest
 func TestIpRuleConverter(t *testing.T) {
 }
 
-// based on Java  MacRuleConverterTest
+// MacRuleConverterTest
 func TestMacRuleConverter(t *testing.T) {
 }
 
-// based on Java  TimeFilterConverterTest
+// TimeFilterConverterTest
 func TestTimeFilterConverter(t *testing.T) {
 }

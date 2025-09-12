@@ -97,7 +97,7 @@ func TestTelemetryTwoHandlerSampleData(t *testing.T) {
 		{"model", "CGM4140COM"},
 		{"partnerId", "comcast"},
 		{"accountId", "1234567890"},
-		{"firmwareVersion", "CGM4140COM_4.4p1s11_PROD_sey"},
+		{"firmwareVersion", "testfirmwareVersion"},
 		{"estbMacAddress", "112233445565"},
 		{"ecmMacAddress", "112233445567"},
 	}
@@ -116,7 +116,7 @@ func TestTelemetryTwoHandlerSampleData(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Assert(t, len(telemetryTwoResponse.Profiles) == 1)
 	firstProfile := telemetryTwoResponse.Profiles[0]
-	expectedName := "xpc_test_profile_001"
+	expectedName := "test_profile_001"
 	assert.Equal(t, firstProfile.Name, expectedName)
 
 	// ==== case 2 build the query params ====
@@ -159,7 +159,7 @@ func TestTelemetryTwoHandlerSampleData(t *testing.T) {
 
 	// ==== case 4 build the query params ====
 	params = [][]string{
-		{"estbMacAddress", "84:E0:58:57:53:F0"},
+		{"estbMacAddress", "AA:AA:AA:AA:AA:AA"},
 	}
 	queryParamString, err = util.GetURLQueryParameterString(params)
 	url = fmt.Sprintf("/loguploader/getTelemetryProfiles?%v", queryParamString)

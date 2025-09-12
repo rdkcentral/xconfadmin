@@ -157,7 +157,7 @@ var (
 
 	fwRuleJsonTemplate2 = `{
   "id": "%v",
-  "name": "1717_LED_AXG1v1",
+  "name": "1717_LED_ABC23",
   "rule": {
     "negated": false,
     "compoundParts": [
@@ -172,7 +172,7 @@ var (
           "fixedArg": {
             "bean": {
               "value": {
-                "java.lang.String": "1717_LED_AXG1v3"
+                "java.lang.String": "1717_LED_ABCD"
               }
             }
           }

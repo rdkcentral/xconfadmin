@@ -34,14 +34,14 @@ import (
 
 var (
 	configChangeLogJsonTemplate1 = `{
-		"id": "B4:F2:E8:79:B8:90",
+		"id": "AA:AA:AA:AA:AA:AA",
 		"updated": 1,
 		"input": {
-			"estbMac": "B4:F2:E8:79:B8:90",
-			"ecmMac": "B4:F2:E8:79:B8:90",
+			"estbMac": "AA:AA:AA:AA:AA:AA",
+			"ecmMac": "AA:AA:AA:AA:AA:AA",
 			"env": "TEST",
-			"model": "PACEXG1",
-			"firmwareVersion": "PX001AN_2.4p10s2_VBN_HYBsd",
+			"model": "testmodel",
+			"firmwareVersion": "testfw",
 			"receiverId": "receiverId",
 			"controllerId": 1,
 			"channelMapId": 1,
@@ -58,7 +58,7 @@ var (
 			"rebootDecoupled": false
 		},
 		"rule": {
-			"id": "595cd34d-f572-4f86-b5e2-3ded98113874",
+			"id": "123cd12d-f572-4f86-b5e2-3ded98113874",
 			"type": "MAC_RULE",
 			"name": "XconfTest",
 			"noop": true,
@@ -77,12 +77,12 @@ var (
 				"blocking": false
 			}
 		],
-		"explanation": "Request: firmwareVersion=abc\ncapabilities=RCDL\nenv=TEST\nmodel=PACEXG1\nipAddress=68.46.240.162\neStbMac=B4:F2:E8:79:B8:90\napplicationType=stb\nHA-Haproxy-xconf-http=\ntime=6/4/2021 15:25\n\\n matched MAC_RULE 595cd34d-f572-4f86-b5e2-3ded98113874: XconfTest\n received config: &{Properties:map[description:PX001AN_2.4p10s2_VBN_HYBsd Signed firmwareDownloadProtocol:http firmwareFilename:PX001AN_2.4p10s2_VBN_HYBsd-signed.bin firmwareLocation:test.net firmwareVersion:PX001AN_2.4p10s2_VBN_HYBsd id:38db58a7-94d6-43e6-90a1-91b2b511e5c2 rebootImmediately:true supportedModelIds:[PX001ANC PX001ANM] updated:1492179526599 upgradeDelay:0]}\n was blocked/modified by filter RI_3[ FirmwareRule{id=99c5aa54-95c5-423e-bd7e-e91046e89354, name=XCONFRI_3, type=RI_3} ]",
+		"explanation": "Request: firmwareVersion=abc\ncapabilities=RCDL\nenv=TEST\nmodel=testmodel\nipAddress=68.46.240.162\neStbMac=AA:AA:AA:AA:AA:AA\napplicationType=stb\nHA-Haproxy-xconf-http=\ntime=6/4/2021 15:25\n\\n matched MAC_RULE 123cd12d-f572-4f86-b5e2-3ded98113874: XconfTest\n received config: &{Properties:map[description:testfw Signed firmwareDownloadProtocol:http firmwareFilename:testfw-signed.bin firmwareLocation:test.com firmwareVersion:testfw id:38db58a7-94d6-43e6-90a1-91b2b511e5c2 rebootImmediately:true supportedModelIds:[abc abcd] updated:1492179526599 upgradeDelay:0]}\n was blocked/modified by filter RI_3[ FirmwareRule{id=99c5aa54-95c5-423e-bd7e-e91046e89354, name=XCONFRI_3, type=RI_3} ]",
 		"config": {
 			"firmwareDownloadProtocol": "http",
-			"firmwareFilename": "PX001AN_2.4p10s2_VBN_HYBsd-signed.bin",
-			"firmwareLocation": "test.net",
-			"firmwareVersion": "PX001AN_2.4p10s2_VBN_HYBsd",
+			"firmwareFilename": "testfw-signed.bin",
+			"firmwareLocation": "test.com",
+			"firmwareVersion": "testfw",
 			"rebootImmediately": true
 		},
 		"hasMinimumFirmware": true
@@ -92,14 +92,14 @@ var (
 func TestListingCRUD(t *testing.T) {
 	truncateTable(ds.TABLE_LOGS)
 
-	rowKey := "B4:F2:E8:79:B8:90"
+	rowKey := "AA:AA:AA:AA:AA:AA"
 
 	// test create
 	err := ds.GetListingDao().SetOne(ds.TABLE_LOGS, rowKey, coreef.LAST_CONFIG_LOG_ID, []byte(configChangeLogJsonTemplate1))
 	assert.NilError(t, err)
-	err = ds.GetListingDao().SetOne(ds.TABLE_LOGS, rowKey, "tvxads-de-k8-xconfds-0153e903b521e2a9e_1", []byte(configChangeLogJsonTemplate1))
+	err = ds.GetListingDao().SetOne(ds.TABLE_LOGS, rowKey, "abc-de-k8-xconf-0153e903b521e2a9e_1", []byte(configChangeLogJsonTemplate1))
 	assert.NilError(t, err)
-	err = ds.GetListingDao().SetOne(ds.TABLE_LOGS, rowKey, "tvxads-de-k8-xconfds-0153e903b521e2a9e_2", []byte(configChangeLogJsonTemplate1))
+	err = ds.GetListingDao().SetOne(ds.TABLE_LOGS, rowKey, "abc-de-k8-xconf-0153e903b521e2a9e_2", []byte(configChangeLogJsonTemplate1))
 	assert.NilError(t, err)
 
 	// test retrieve
@@ -112,8 +112,8 @@ func TestListingCRUD(t *testing.T) {
 	assert.Equal(t, changeLog.Input.EstbMac, rowKey)
 	assert.Equal(t, changeLog.Input.EcmMac, rowKey)
 	assert.Equal(t, changeLog.Input.Env, "TEST")
-	assert.Equal(t, changeLog.Input.Model, "PACEXG1")
-	assert.Equal(t, changeLog.Input.FirmwareVersion, "PX001AN_2.4p10s2_VBN_HYBsd")
+	assert.Equal(t, changeLog.Input.Model, "testmodel")
+	assert.Equal(t, changeLog.Input.FirmwareVersion, "testfw")
 	assert.Equal(t, changeLog.Input.ReceiverId, "receiverId")
 	assert.Equal(t, changeLog.Input.AccountId, "accountId")
 	assert.Equal(t, changeLog.Input.IpAddress, "68.46.240.162")
@@ -132,7 +132,7 @@ func TestListingCRUD(t *testing.T) {
 	assert.Assert(t, changeLog.Rule != nil)
 	assert.Assert(t, changeLog.Rule.NoOp)
 	assert.Assert(t, changeLog.Rule.Blocking)
-	assert.Equal(t, changeLog.Rule.ID, "595cd34d-f572-4f86-b5e2-3ded98113874")
+	assert.Equal(t, changeLog.Rule.ID, "123cd12d-f572-4f86-b5e2-3ded98113874")
 	assert.Equal(t, changeLog.Rule.Type, "MAC_RULE")
 	assert.Equal(t, changeLog.Rule.Name, "XconfTest")
 
@@ -142,9 +142,9 @@ func TestListingCRUD(t *testing.T) {
 	assert.Assert(t, changeLog.FirmwareConfig != nil)
 	assert.Assert(t, changeLog.FirmwareConfig.Properties["rebootImmediately"])
 	assert.Equal(t, changeLog.FirmwareConfig.Properties["firmwareDownloadProtocol"], "http")
-	assert.Equal(t, changeLog.FirmwareConfig.Properties["firmwareFilename"], "PX001AN_2.4p10s2_VBN_HYBsd-signed.bin")
-	assert.Equal(t, changeLog.FirmwareConfig.Properties["firmwareLocation"], "test.net")
-	assert.Equal(t, changeLog.FirmwareConfig.Properties["firmwareVersion"], "PX001AN_2.4p10s2_VBN_HYBsd")
+	assert.Equal(t, changeLog.FirmwareConfig.Properties["firmwareFilename"], "testfw-signed.bin")
+	assert.Equal(t, changeLog.FirmwareConfig.Properties["firmwareLocation"], "test.com")
+	assert.Equal(t, changeLog.FirmwareConfig.Properties["firmwareVersion"], "testfw")
 
 	assert.Assert(t, len(changeLog.Explanation) > 100)
 	assert.Assert(t, changeLog.HasMinimumFirmware)
@@ -163,7 +163,7 @@ func TestListingCRUD(t *testing.T) {
 	assert.Assert(t, list != nil)
 	assert.Assert(t, len(list) == 2)
 
-	keys := []string{"tvxads-de-k8-xconfds-0153e903b521e2a9e_1", "tvxads-de-k8-xconfds-0153e903b521e2a9e_2"}
+	keys := []string{"abc-de-k8-xconf-0153e903b521e2a9e_1", "abc-de-k8-xconf-0153e903b521e2a9e_2"}
 	assert.Assert(t, util.Contains(keys, list[0]))
 	assert.Assert(t, util.Contains(keys, list[1]))
 

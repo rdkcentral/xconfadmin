@@ -227,7 +227,7 @@ func TestGetFirmwareRuleFilteredFromQueryParams(t *testing.T) {
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?applicationType=stb&applicationType=stb&applicationType=json", http.StatusOK, "fetched=" + stPt, aut.firmwareRuleArrayValidator},
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?name=1-3939&applicationType=stb&name=second", http.StatusOK, "fetched=1", aut.firmwareRuleArrayValidator},
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?key=eStbMac&applicationType=stb&key=second", http.StatusOK, "fetched=2", aut.firmwareRuleArrayValidator},
-		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?value=1717_LED_AXG1v3&applicationType=stb&value=second", http.StatusOK, "fetched=1", aut.firmwareRuleArrayValidator},
+		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?value=1717_LED_ABCD&applicationType=stb&value=second", http.StatusOK, "fetched=1", aut.firmwareRuleArrayValidator},
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?templateId=IP_RULE_1&applicationType=stb&templateId=second", http.StatusOK, "fetched=2", aut.firmwareRuleArrayValidator},
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?FIRMWARE_VERSION=unit&applicationType=stb&FIRMWARE_VERSION=second", http.StatusOK, "fetched=4", aut.firmwareRuleArrayValidator},
 
@@ -240,7 +240,7 @@ func TestGetFirmwareRuleFilteredFromQueryParams(t *testing.T) {
 		// name - Happy Paths
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?applicationType=stb&name=nonexistant", http.StatusOK, "fetched=0", aut.firmwareRuleArrayValidator},
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?applicationType=stb&name=1-3939", http.StatusOK, "fetched=1", aut.firmwareRuleArrayValidator},
-		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?applicationType=stb&name=1717_LED_AXG1v1", http.StatusOK, "fetched=1", aut.firmwareRuleArrayValidator},
+		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?applicationType=stb&name=1717_LED_ABC23", http.StatusOK, "fetched=1", aut.firmwareRuleArrayValidator},
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?applicationType=stb&name=000ipPerformanceTestRule", http.StatusOK, "fetched=2", aut.firmwareRuleArrayValidator},
 		// Case sensitivity
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?applicationType=stb&name=000ipPERFORMANCETESTRULE", http.StatusOK, "fetched=2", aut.firmwareRuleArrayValidator},
@@ -258,9 +258,9 @@ func TestGetFirmwareRuleFilteredFromQueryParams(t *testing.T) {
 
 		// value - Happy Paths
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?applicationType=stb&value=nonexistant", http.StatusOK, "fetched=0", aut.firmwareRuleArrayValidator},
-		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?applicationType=stb&value=1717_LED_AXG1v3", http.StatusOK, "fetched=1", aut.firmwareRuleArrayValidator},
+		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?applicationType=stb&value=1717_LED_ABCD", http.StatusOK, "fetched=1", aut.firmwareRuleArrayValidator},
 		// Case sensitiity
-		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?applicationType=stb&value=1717_LED_axg1v3", http.StatusOK, "fetched=1", aut.firmwareRuleArrayValidator},
+		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?applicationType=stb&value=1717_LED_ABCD", http.StatusOK, "fetched=1", aut.firmwareRuleArrayValidator},
 		// partial representation for value
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?applicationType=stb&value=1717_LED", http.StatusOK, "fetched=1", aut.firmwareRuleArrayValidator},
 
@@ -278,7 +278,7 @@ func TestGetFirmwareRuleFilteredFromQueryParams(t *testing.T) {
 		// Happy paths- order of params reversed
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?name=1-3939&applicationType=stb", http.StatusOK, "fetched=1", aut.firmwareRuleArrayValidator},
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?key=eStbMac&applicationType=stb", http.StatusOK, "fetched=2", aut.firmwareRuleArrayValidator},
-		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?value=1717_LED_AXG1v3&applicationType=stb", http.StatusOK, "fetched=1", aut.firmwareRuleArrayValidator},
+		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?value=1717_LED_ABCD&applicationType=stb", http.StatusOK, "fetched=1", aut.firmwareRuleArrayValidator},
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?templateId=IP_RULE_1&applicationType=stb", http.StatusOK, "fetched=2", aut.firmwareRuleArrayValidator},
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?FIRMWARE_VERSION=firmware_config_unit&applicationType=stb", http.StatusOK, "fetched=4", aut.firmwareRuleArrayValidator},
 	}

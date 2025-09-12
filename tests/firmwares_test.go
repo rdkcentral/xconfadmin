@@ -254,14 +254,14 @@ func TestPostFirmwaresBySupportedModels(t *testing.T) {
 func TestFirmwaresCRUD(t *testing.T) {
 	aut := newFirmwaresApiUnitTest(t)
 	testCases := []apiUnitTestCase{
-		{FWS_QAPI, NO_INPUT, NO_PRETERMS, nil, "GET", "/fw_393e2152-9d50-4f30-aab9-c74977471632", http.StatusNotFound, NO_POSTERMS, nil},
+		{FWS_QAPI, NO_INPUT, NO_PRETERMS, nil, "GET", "/fw_393e2152-9d50-4f30-aab9-c12345678901", http.StatusNotFound, NO_POSTERMS, nil},
 		{FWS_UAPI, "firmwares_two", NO_PRETERMS, nil, "PUT", "", http.StatusNotFound, NO_POSTERMS, nil},
 		{FWS_UAPI, "firmwares_two", NO_PRETERMS, nil, "POST", "", http.StatusCreated, NO_POSTERMS, nil},
 		{FWS_UAPI, "firmwares_two", NO_PRETERMS, nil, "PUT", "", http.StatusOK, NO_POSTERMS, nil},
-		{FWS_QAPI, NO_INPUT, NO_PRETERMS, nil, "GET", "/fw_393e2152-9d50-4f30-aab9-c74977471632", http.StatusOK, "ID=fw_393e2152-9d50-4f30-aab9-c74977471632", aut.firmwareConfigSingleValidator},
-		{FWS_DAPI, NO_INPUT, NO_PRETERMS, nil, "DELETE", "/fw_393e2152-9d50-4f30-aab9-c74977471632", http.StatusNoContent, NO_POSTERMS, nil},
-		{FWS_QAPI, NO_INPUT, NO_PRETERMS, nil, "GET", "/fw_393e2152-9d50-4f30-aab9-c74977471632", http.StatusNotFound, NO_POSTERMS, nil},
-		{FWS_DAPI, NO_INPUT, NO_PRETERMS, nil, "DELETE", "/fw_393e2152-9d50-4f30-aab9-c74977471632", http.StatusNotFound, NO_POSTERMS, nil},
+		{FWS_QAPI, NO_INPUT, NO_PRETERMS, nil, "GET", "/fw_393e2152-9d50-4f30-aab9-c12345678901", http.StatusOK, "ID=fw_393e2152-9d50-4f30-aab9-c12345678901", aut.firmwareConfigSingleValidator},
+		{FWS_DAPI, NO_INPUT, NO_PRETERMS, nil, "DELETE", "/fw_393e2152-9d50-4f30-aab9-c12345678901", http.StatusNoContent, NO_POSTERMS, nil},
+		{FWS_QAPI, NO_INPUT, NO_PRETERMS, nil, "GET", "/fw_393e2152-9d50-4f30-aab9-c12345678901", http.StatusNotFound, NO_POSTERMS, nil},
+		{FWS_DAPI, NO_INPUT, NO_PRETERMS, nil, "DELETE", "/fw_393e2152-9d50-4f30-aab9-c12345678901", http.StatusNotFound, NO_POSTERMS, nil},
 	}
 	aut.run(testCases)
 }

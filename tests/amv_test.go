@@ -127,7 +127,7 @@ const (
 )
 
 func TestAmvAllApi(t *testing.T) {
-	t.Skip("TODO: cpatel550 - need to move this to adminapi")
+	t.Skip("TODO:need to move this to adminapi")
 	config := GetTestConfig()
 	_, router := GetTestWebConfigServer(config)
 
@@ -293,7 +293,7 @@ func TestAmvAllApi(t *testing.T) {
 	assert.Equal(t, res.StatusCode, http.StatusNoContent)
 
 	// delete non existing amv by id
-	// TODO: cpatel550 -- commenting this to make sure there is no issue else where...
+	// TODO:commenting this to make sure there is no issue else where...
 	// req, err = http.NewRequest("DELETE", urlWithId, nil)
 	// req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	// req.Header.Set("Accept", "application/json")

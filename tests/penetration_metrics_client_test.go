@@ -56,13 +56,13 @@ func TestGetPenetrationMetrics(t *testing.T) {
 	res.Body.Close()
 
 	//When Estmac Present in PenetrationTable (Response 200)
-	url = "/xconfAdminService/penetrationdata/AA:10:18:31:49:35"
+	url = "/xconfAdminService/penetrationdata/AA:10:AA:31:AA:35"
 	req, err = http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 	res = ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
-	url = "/xconfAdminService/penetrationdata/aa1018314935"
+	url = "/xconfAdminService/penetrationdata/aa10aa31aa35"
 	req, err = http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 	res = ExecuteRequest(req, router).Result()
@@ -74,13 +74,13 @@ func createPenetrationSampleData() error {
 	cassandraClient, ok := dbClient.(*db.CassandraClient)
 	if ok {
 		penetrationdata := &db.PenetrationMetrics{
-			EstbMac:                 "AA:10:18:31:49:35",
+			EstbMac:                 "AA:10:AA:31:AA:35",
 			Partner:                 "COMCAST",
 			Model:                   "TG1682G",
-			FwVersion:               "TG1682_4.12p24s1_PROD_sey",
-			FwReportedVersion:       "TG1682_4.12p24s1_PROD_sey",
-			FwAdditionalVersionInfo: "TG1682_4.12p",
-			FwAppliedRule:           "_XB3_Prod",
+			FwVersion:               "test.12p24s1_PROD_sey",
+			FwReportedVersion:       "test.12p24s1_PROD_sey",
+			FwAdditionalVersionInfo: "test.12p",
+			FwAppliedRule:           "testrule",
 			FwTs:                    time.Now(),
 			RfcAppliedRules:         "Rule1",
 			RfcFeatures:             "Feature1",
