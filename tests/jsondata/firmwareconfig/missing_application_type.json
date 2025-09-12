@@ -1,0 +1,12 @@
+{
+  "id": "e4b10a02-094b-4941-8aee-6b10a996829d",
+  "updated": 1591807259972,
+  "description":"firmware_config_unit_test_23",
+  "supportedModelIds": [
+    "DPC8888",
+    "DPC8888T"
+  ],
+  "firmwareFilename": "DPC7777_4.2p1s8_DEV_sey-signed.bin",
+  "firmwareVersion": "DPC7777_4.2p1s8_DEV_sey-signed",
+  "firmwareDownloadProtocol": "tftp",
+}

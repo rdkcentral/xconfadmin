@@ -1,0 +1,13 @@
+{
+  "id": "de529a04-3bab-41e3-ad79-f1e583723b47",
+  "updated": 1591807259972,
+  "description":"firmware_config_unit_test_9",
+  "supportedModelIds": [
+    "DPC9999",
+    "DPC9999T"
+  ],
+  "firmwareFilename": "DPC9999_4.2p1s8_DEV_sey-signed.bin",
+  "firmwareVersion": "DPC9999_4.2p1s8_DEV_sey-signed",
+  "firmwareDownloadProtocol": "tftp",
+  "applicationType": "stb"
+}

@@ -1,0 +1,13 @@
+{
+  "id": "fw_e4b10a02-094b-4941-8aee-6b10a996829d",
+  "updated": 1591807259972,
+  "description":"fws_firmwares_unit_test_38",
+  "supportedModelIds": [
+    "FWS_DPC8888",
+    "FWS_DPC8888T"
+  ],
+  "firmwareFilename": "DPC7777_4.2p1s8_DEV_sey-signed.bin",
+  "firmwareVersion": "DPC7777_4.2p1s8_DEV_sey-signed",
+  "firmwareDownloadProtocol": "tftp",
+  "applicationType": "stb"
+}

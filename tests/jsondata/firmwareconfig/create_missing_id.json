@@ -1,0 +1,9 @@
+{
+"updated":1615477769313,
+"description":"SYSTEM_GENERATED_UNIQUE_IDENTIFIER",
+"supportedModelIds":["DPC9999T"],
+"firmwareFilename":"DPC3939_DEV_stable2_20200319155131sdy_NG-signed.bin",
+"firmwareVersion":"DPC3939_DEV_stable2_20200319155131sdy_NG",
+"firmwareDownloadProtocol": "tftp",
+"applicationType":"stb"
+}

@@ -61,7 +61,7 @@ func TestGetQueryParameters(t *testing.T) {
 		{"env", "PROD"},
 		{"version", "2.0"},
 		{"model", "CGM4140COM"},
-		{"partnerId", "abcd", "cox"},
+		{"partnerId", "abcd", "abcde"},
 		{"accountId", "1234567890"},
 		{"firmwareVersion", "CGM4140COM_4.4p1s11_PROD_sey"},
 		{"estbMacAddress", "112233445565"},

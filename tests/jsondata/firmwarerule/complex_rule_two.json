@@ -1,0 +1,59 @@
+  {
+    "id": "SYSTEM_GENERATED_UNIQUE_IDENTIFIER",
+    "name": "SYSTEM_GENERATED_UNIQUE_IDENTIFIER",
+    "rule": {
+      "negated": false,
+      "compoundParts": [
+        {
+          "negated": false,
+          "condition": {
+            "freeArg": {
+              "type": "STRING",
+              "name": "eStbMac"
+            },
+            "operation": "IS",
+            "fixedArg": {
+              "bean": {
+                "value": {
+                  "java.lang.String": "AA:AA:AA:AA:AA:AA"
+                }
+              }
+            }
+          },
+          "compoundParts": []
+        },
+        {
+          "negated": false,
+          "relation": "OR",
+          "condition": {
+            "freeArg": {
+              "type": "STRING",
+              "name": "eStbMac"
+            },
+            "operation": "IS",
+            "fixedArg": {
+              "bean": {
+                "value": {
+                  "java.lang.String": "AA:AA:AA:AA:AA:AA"
+                }
+              }
+            }
+          },
+          "compoundParts": []
+        }
+      ]
+    },
+    "applicableAction": {
+      "type": ".DefinePropertiesAction",
+      "ttlMap": {},
+      "actionType": "DEFINE_PROPERTIES",
+      "properties": {
+        "rebootImmediately": "false"
+      },
+      "byPassFilters": [],
+      "activationFirmwareVersions": {}
+    },
+    "type": "RI_MACLIST",
+    "active": true,
+    "applicationType": "stb"
+  }
