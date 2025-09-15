@@ -1,0 +1,9 @@
+{
+"updated":1615477769313,
+"description":"SYSTEM_GENERATED_UNIQUE_IDENTIFIER",
+"supportedModelIds":["DPC9999T"],
+"firmwareFilename":"test_DEV_stable2_20200319155131sdy_test-test",
+"firmwareVersion":"test_DEV_stable2_20200319155131sdy_test",
+"firmwareDownloadProtocol": "tftp",
+"applicationType":"stb"
+}

@@ -47,11 +47,11 @@ func TestGetQueryParameters(t *testing.T) {
 		{"model", "CGM4140COM"},
 		{"partnerId", "abcd"},
 		{"accountId", "1234567890"},
-		{"firmwareVersion", "CGM4140COM_4.4p1s11_PROD_sey"},
+		{"firmwareVersion", "testfirmwareVersion"},
 		{"estbMacAddress", "112233445565"},
 		{"ecmMacAddress", "112233445567"},
 	}
-	expected := "env=PROD&version=2.0&model=CGM4140COM&partnerId=abcd&accountId=1234567890&firmwareVersion=CGM4140COM_4.4p1s11_PROD_sey&estbMacAddress=112233445565&ecmMacAddress=112233445567"
+	expected := "env=PROD&version=2.0&model=CGM4140COM&partnerId=abcd&accountId=1234567890&firmwareVersion=testfirmwareVersion&estbMacAddress=112233445565&ecmMacAddress=112233445567"
 	queryParams, err := GetURLQueryParameterString(kvs)
 	assert.NilError(t, err)
 	assert.Equal(t, expected, queryParams)
@@ -61,9 +61,9 @@ func TestGetQueryParameters(t *testing.T) {
 		{"env", "PROD"},
 		{"version", "2.0"},
 		{"model", "CGM4140COM"},
-		{"partnerId", "abcd", "cox"},
+		{"partnerId", "abcd", "abcde"},
 		{"accountId", "1234567890"},
-		{"firmwareVersion", "CGM4140COM_4.4p1s11_PROD_sey"},
+		{"firmwareVersion", "testfirmwareVersion"},
 		{"estbMacAddress", "112233445565"},
 		{"ecmMacAddress", "112233445567"},
 	}
