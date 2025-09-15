@@ -193,7 +193,7 @@ func (s *AppMetrics) UpdateAPIMetrics(r *http.Request, status int, startTime tim
 	metrics.reqsByOriginCounter.With(vals).Inc()
 }
 
-// updateExternalAPIMetrics updates duration and counts for external API calls to titan, sat etc.
+// updateExternalAPIMetrics updates duration and counts for external API calls to account, sat etc.
 func (s *AppMetrics) UpdateExternalAPIMetrics(service string, method string, statusCode int, startTime time.Time) {
 	if metrics == nil {
 		// Metrics may not be initialized in tests, or disabled by a config flag

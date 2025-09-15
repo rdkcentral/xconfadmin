@@ -32,7 +32,6 @@ import (
 const (
 	STB      = "stb"
 	RDKCLOUD = "rdkcloud"
-	XHOME    = "xhome"
 	ALL      = "all"
 )
 

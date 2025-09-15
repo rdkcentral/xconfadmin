@@ -53,7 +53,7 @@ func TestValidateTelemetryTwoProfileJson(t *testing.T) {
 		"ReportingInterval": 60,
 		"Version": "0.1",
 		"HTTP": {
-		  "URL": "https://rdkrtldev.stb.r53.xcal.tv/",
+		  "URL": "https://test.net/",
 		  "RequestURIParameter": [
 			{
 			  "Name": "profileName",

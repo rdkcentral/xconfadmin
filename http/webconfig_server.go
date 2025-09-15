@@ -193,6 +193,9 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 		VerifyStageHost:           verifyStageHost,
 	}
 
+	if testOnly {
+		WebConfServer.setupMocks()
+	}
 	return WebConfServer
 }
 

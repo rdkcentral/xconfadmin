@@ -79,14 +79,14 @@ func TestFeatureEntityAndUnmarshall(t *testing.T) {
 	assert.Equal(t, featureEntity.Whitelisted, false)
 	assert.Equal(t, featureEntity.WhitelistProperty, nilWhitelistProperty)
 
-	jsonString = "{\"id\":\"id\",\"name\":\"name\",\"featureName\":\"featureInstance\",\"applicationType\":\"xhome\",\"effectiveImmediate\":true,\"enable\":true,\"configData\":{\"key\":\"value\"},\"whitelisted\":true,\"whitelistProperty\":{\"key\":\"key\",\"value\":\"value\",\"namespacedListType\":\"namespacedListType\",\"typeName\":\"typeName\"}}"
+	jsonString = "{\"id\":\"id\",\"name\":\"name\",\"featureName\":\"featureInstance\",\"applicationType\":\"rdkcloud\",\"effectiveImmediate\":true,\"enable\":true,\"configData\":{\"key\":\"value\"},\"whitelisted\":true,\"whitelistProperty\":{\"key\":\"key\",\"value\":\"value\",\"namespacedListType\":\"namespacedListType\",\"typeName\":\"typeName\"}}"
 
 	err = json.Unmarshal([]byte(jsonString), &featureEntity)
 	assert.NilError(t, err)
 	assert.Equal(t, featureEntity.ID, "id")
 	assert.Equal(t, featureEntity.Name, "name")
 	assert.Equal(t, featureEntity.FeatureName, "featureInstance")
-	assert.Equal(t, featureEntity.ApplicationType, "xhome")
+	assert.Equal(t, featureEntity.ApplicationType, "rdkcloud")
 	assert.Equal(t, len(featureEntity.ConfigData), 1)
 	assert.Equal(t, featureEntity.ConfigData["key"], "value")
 	assert.Equal(t, featureEntity.EffectiveImmediate, true)

@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	defaultXconfHost = "http://qa2.xconfds.coast.xcal.tv:8080"
+	defaultXconfHost = "http://test.net:8080"
 	xconfUrlTemplate = "%s/loguploader/getTelemetryProfiles?%s"
 )
 
