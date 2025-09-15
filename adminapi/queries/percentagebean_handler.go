@@ -350,7 +350,15 @@ func CreateWakeupPoolHandler(w http.ResponseWriter, r *http.Request) {
 			force = boolVal
 		} else {
 			log.WithFields(fields).Errorf("invalid parameter value for force: %v", err.Error())
+			xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("invalid parameter value for force: %v", err.Error()))
+			return
 		}
+	}
+
+	if force {
+		log.WithFields(fields).Info("Force flag is unsupported, returning bad request")
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "force flag is unsupported")
+		return
 	}
 
 	log.WithFields(fields).Infof("Received request to create wakeup pool. force=%v", force)
