@@ -3,8 +3,8 @@
 "updated":1615477769313,
 "description":"firmware_config_unit_test_5",
 "supportedModelIds":["DPC9999T"],
-"firmwareFilename":"DPC3939_DEV_stable2_20200319155131sdy_NG-signed.bin",
-"firmwareVersion":"DPC3939_DEV_stable2_20200319155131sdy_NG",
+"firmwareFilename":"test_DEV_stable2_20200319155131sdy_test-test",
+"firmwareVersion":"test_DEV_stable2_20200319155131sdy_test",
 "firmwareDownloadProtocol": "tftp",
 "applicationType":"stb"
 }

@@ -25,8 +25,6 @@ import (
 	"strings"
 	"testing"
 
-	//ashttp "xconfas/http"
-
 	"github.com/rdkcentral/xconfadmin/adminapi/queries"
 
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"

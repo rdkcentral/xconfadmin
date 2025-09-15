@@ -77,10 +77,10 @@ var (
 				"blocking": false
 			}
 		],
-		"explanation": "Request: firmwareVersion=abc\ncapabilities=RCDL\nenv=TEST\nmodel=testmodel\nipAddress=68.46.240.162\neStbMac=AA:AA:AA:AA:AA:AA\napplicationType=stb\nHA-Haproxy-xconf-http=\ntime=6/4/2021 15:25\n\\n matched MAC_RULE 123cd12d-f572-4f86-b5e2-3ded98113874: XconfTest\n received config: &{Properties:map[description:testfw Signed firmwareDownloadProtocol:http firmwareFilename:testfw-signed.bin firmwareLocation:test.com firmwareVersion:testfw id:38db58a7-94d6-43e6-90a1-91b2b511e5c2 rebootImmediately:true supportedModelIds:[abc abcd] updated:1492179526599 upgradeDelay:0]}\n was blocked/modified by filter RI_3[ FirmwareRule{id=99c5aa54-95c5-423e-bd7e-e91046e89354, name=XCONFRI_3, type=RI_3} ]",
+		"explanation": "Request: firmwareVersion=abc\ncapabilities=RCDL\nenv=TEST\nmodel=testmodel\nipAddress=68.46.240.162\neStbMac=AA:AA:AA:AA:AA:AA\napplicationType=stb\nHA-Haproxy-xconf-http=\ntime=6/4/2021 15:25\n\\n matched MAC_RULE 123cd12d-f572-4f86-b5e2-3ded98113874: XconfTest\n received config: &{Properties:map[description:testfw Signed firmwareDownloadProtocol:http firmwareFilename:testfw-test firmwareLocation:test.com firmwareVersion:testfw id:38db58a7-94d6-43e6-90a1-91b2b511e5c2 rebootImmediately:true supportedModelIds:[abc abcd] updated:1492179526599 upgradeDelay:0]}\n was blocked/modified by filter RI_3[ FirmwareRule{id=99c5aa54-95c5-423e-bd7e-e91046e89354, name=XCONFRI_3, type=RI_3} ]",
 		"config": {
 			"firmwareDownloadProtocol": "http",
-			"firmwareFilename": "testfw-signed.bin",
+			"firmwareFilename": "testfw-test",
 			"firmwareLocation": "test.com",
 			"firmwareVersion": "testfw",
 			"rebootImmediately": true
@@ -142,7 +142,7 @@ func TestListingCRUD(t *testing.T) {
 	assert.Assert(t, changeLog.FirmwareConfig != nil)
 	assert.Assert(t, changeLog.FirmwareConfig.Properties["rebootImmediately"])
 	assert.Equal(t, changeLog.FirmwareConfig.Properties["firmwareDownloadProtocol"], "http")
-	assert.Equal(t, changeLog.FirmwareConfig.Properties["firmwareFilename"], "testfw-signed.bin")
+	assert.Equal(t, changeLog.FirmwareConfig.Properties["firmwareFilename"], "testfw-test")
 	assert.Equal(t, changeLog.FirmwareConfig.Properties["firmwareLocation"], "test.com")
 	assert.Equal(t, changeLog.FirmwareConfig.Properties["firmwareVersion"], "testfw")
 

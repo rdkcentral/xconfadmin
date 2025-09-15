@@ -6,7 +6,7 @@
     "DPC9999",
     "DPC9999T"
   ],
-  "firmwareFilename": "DPC9999_4.2p1s8_DEV_sey-signed.bin",
+  "firmwareFilename": "DPC9999_4.2p1s8_DEV_sey-test",
   "firmwareVersion": "DPC9999_4.2p1s8_DEV_sey-signed",
   "firmwareDownloadProtocol": "tftp",
   "applicationType": "stb"

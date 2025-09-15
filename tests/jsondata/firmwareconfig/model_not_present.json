@@ -6,7 +6,7 @@
     "DPC7777",
     "DPC7777T"
   ],
-  "firmwareFilename": "DPC7777_4.2p1s8_DEV_sey-signed.bin",
+  "firmwareFilename": "DPC7777_4.2p1s8_DEV_sey-test",
   "firmwareVersion": "DPC7777_4.2p1s8_DEV_sey-signed",
   "firmwareDownloadProtocol": "tftp",
   "applicationType": "stb"

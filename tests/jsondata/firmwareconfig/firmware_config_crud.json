@@ -6,7 +6,7 @@
     "DPC8888",
     "DPC8888T"
   ],
-  "firmwareFilename": "DPC8888_4.2p1s8_DEV_sey-signed.bin",
+  "firmwareFilename": "DPC8888_4.2p1s8_DEV_sey-test",
   "firmwareVersion": "DPC8888_4.2p1s8_DEV_sey-signed",
   "firmwareDownloadProtocol": "tftp",
   "applicationType": "stb"

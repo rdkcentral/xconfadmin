@@ -124,7 +124,7 @@ func TestAllDeviceSettingsApis(t *testing.T) {
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
 
 	// UpdateDeviceSettings BadJSON
-	// commenting out this test because this API is now using NotImplementedHandler XPC-12612
+	// commenting out this test because this API is now using NotImplementedHandler
 	// badPayload := []byte(`{"foo":}`)
 	// url := "/xconfAdminService/updates/deviceSettings/UTC"
 	// performRequest(t, router, url, "POST", badPayload, http.StatusBadRequest)

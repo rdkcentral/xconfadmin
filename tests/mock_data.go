@@ -48,8 +48,8 @@ const (
 	IpAddress4                                              = "10.0.0.11"
 	IPAddressV61                                            = "2600:1f18:227b:c01:b161:3d17:7a86:fe36"
 	IPAddressV62                                            = "2600:1f18:227b:c01:b161:3d17:7a86:fe37"
-	DownloadLocationRoundRobinFilterHTTPFULLURLLOCATION     = "http://comcast.com"
-	DownloadLocationRoundRobinFilterHTTPLOCATION            = "comcast.com"
+	DownloadLocationRoundRobinFilterHTTPFULLURLLOCATION     = "http://test.com"
+	DownloadLocationRoundRobinFilterHTTPLOCATION            = "test.com"
 	DownloadLocationRoundRobinFilterIPADDRESS               = "192.168.1.1"
 	RDKCLOUD_DOWNLOAD_LOCATION_ROUND_ROBIN_FILTER_VALUE_KEY = "RDKCLOUD_DOWNLOAD_LOCATION_ROUND_ROBIN_FILTER_VALUE"
 	FIREBOLT_DOWNLOAD_LOCATION_ROUND_ROBIN_FILTER_VALUE_KEY = "FIREBOLT_DOWNLOAD_LOCATION_ROUND_ROBIN_FILTER_VALUE"
@@ -90,8 +90,8 @@ var (
     "DPC9999",
     "DPC9999T"
   ],
-  "firmwareFilename": "DPC9999_4.2p1s8_DEV_sey-signed.bin",
-  "firmwareVersion": "DPC9999_4.2p1s8_DEV_sey-signed",
+  "firmwareFilename": "DPC9999_4.2p1s8_DEV_sey-test",
+  "firmwareVersion": "DPC9999_4.2p1s8_DEV_sey-test",
   "applicationType": "stb"
 }`
 	firmwareConfigJsonTemplate2 = `{
@@ -102,8 +102,8 @@ var (
     "DPC8888",
     "DPC8888T"
   ],
-  "firmwareFilename": "DPC8888_4.2p1s8_DEV_sey-signed.bin",
-  "firmwareVersion": "DPC8888_4.2p1s8_DEV_sey-signed",
+  "firmwareFilename": "DPC8888_4.2p1s8_DEV_sey-test",
+  "firmwareVersion": "DPC8888_4.2p1s8_DEV_sey-test",
   "applicationType": "stb"
 }`
 	firmwareConfigJsonTemplate3 = `{
@@ -114,8 +114,8 @@ var (
     "DPC7777",
     "DPC7777T"
   ],
-  "firmwareFilename": "DPC7777_4.2p1s8_DEV_sey-signed.bin",
-  "firmwareVersion": "DPC7777_4.2p1s8_DEV_sey-signed",
+  "firmwareFilename": "DPC7777_4.2p1s8_DEV_sey-test",
+  "firmwareVersion": "DPC7777_4.2p1s8_DEV_sey-test",
   "applicationType": "stb"
 }`
 
@@ -383,7 +383,7 @@ var (
     "httpLocation":"test.com",
     "httpFullUrlLocation":"http://test.com:8080/Images",
     "neverUseHttp":false,
-    "firmwareVersions":"SERICAM2_3.1s1_VBNsd\nABC\nTG3482SHW_DEV_2.8_p14axb6_20171222031047sdy\nDPC3941_2.9p1s5_DEV_sey\nSERXW3_2.6s3_VBNsd\nSERXW3_VBN_master_043018152018sd_NOCHK_2054\nSERICAM2_3.1s2_VBNsd\nTG3482_2.8p19s1_DEV_sey\nSERICAM2_VBN_master_042007592018sd_NOCHK_GRT\nTG1682_DEV_master_20180103230428sdy_N\nSERXW3_3.0p3s1_PRODsd\nCGA4131COM_2.9s6_DEV_sey\nCGM4140COM_DEV_master_20171227230711sdy_NG\nPX5001_VBN_master_20171221160245sdy\nTG1682_DEV_master_20180101230410sdy_N\nTG3482SHW_2.8p22s1_DEV_sey\nSERXW3_VBN_master_042703462018sd_NOCHK\nCGM4140COM_DEV_master_20180103230730sdy_NG\nSERICAM2_VBN_master_042703462018sd_NOCHK\nSERICAM2_VBN_1808_sprint_080700412018sd_NOCHK_NG\nSERXW3_VBN_master_071809322017sd\nSERICAM2_VBN_master_052722042018sd_NOCHK_NG"
+    "firmwareVersions":"SERICAM2_3.1s1_VBNsd\nABC\nTG3482SHW_DEV_2.8_p14axb6_20171222031047sdy\nDPC3941_2.9p1s5_DEV_sey\nSERXW3_2.6s3_VBNsd\nSERXW3_VBN_master_043018152018sd_NOCHK_2054\nSERICAM2_3.1s2_VBNsd\nTG3482_2.8p19s1_DEV_sey\nSERICAM2_VBN_master_042007592018sd_NOCHK_GRT\nTG1682_DEV_master_20180103230428sdy_N\nSERXW3_3.0p3s1_PRODsd\nCGA4131COM_2.9s6_DEV_sey\nCGM4140COM_DEV_master_20171227230711sdy_test\nPX5001_VBN_master_20171221160245sdy\nTG1682_DEV_master_20180101230410sdy_N\nTG3482SHW_2.8p22s1_DEV_sey\nSERXW3_VBN_master_042703462018sd_NOCHK\nCGM4140COM_DEV_master_20180103230730sdy_test\nSERICAM2_VBN_master_042703462018sd_NOCHK\nSERICAM2_VBN_1808_sprint_080700412018sd_NOCHK_test\nSERXW3_VBN_master_071809322017sd\nSERICAM2_VBN_master_052722042018sd_NOCHK_test"
   }`
 	firmwareConfig1Bytes []byte
 	firmwareConfig2Bytes []byte

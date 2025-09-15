@@ -343,7 +343,7 @@ func TestGetAccountIdBySecondAccountCall(t *testing.T) {
 // 	headers := map[string]string{
 // 		"HA-Haproxy-xconf-http": "xconf-https",
 // 	}
-// 	performGetSettingsRequestAndVerifyFeatureControl(t, server, router, fmt.Sprintf("?accountId=unknown&serialNum=%s&accountMgmt=xpc", serialNum), headers, expectedFeatureResponse)
+// 	performGetSettingsRequestAndVerifyFeatureControl(t, server, router, fmt.Sprintf("?accountId=unknown&serialNum=%s&accountMgmt=test", serialNum), headers, expectedFeatureResponse)
 // }
 
 // func TestGetAccountIdByOdpCallWithPartnerAndTimezoneKnownButInvalid(t *testing.T) {
@@ -367,7 +367,7 @@ func TestGetAccountIdBySecondAccountCall(t *testing.T) {
 // 	headers := map[string]string{
 // 		"HA-Haproxy-xconf-http": "xconf-https",
 // 	}
-// 	performGetSettingsRequestAndVerifyFeatureControl(t, server, router, fmt.Sprintf("?accountId=unknown&serialNum=%s&accountMgmt=xpc", serialNum), headers, expectedFeatureResponse)
+// 	performGetSettingsRequestAndVerifyFeatureControl(t, server, router, fmt.Sprintf("?accountId=unknown&serialNum=%s&accountMgmt=test", serialNum), headers, expectedFeatureResponse)
 // }
 
 // func TestGetAccountIdByOdpCallWithPartnerAndTimezoneUnknown(t *testing.T) {
@@ -391,7 +391,7 @@ func TestGetAccountIdBySecondAccountCall(t *testing.T) {
 // 	headers := map[string]string{
 // 		"HA-Haproxy-xconf-http": "xconf-https",
 // 	}
-// 	performGetSettingsRequestAndVerifyFeatureControl(t, server, router, fmt.Sprintf("?accountId=unknown&serialNum=%s&accountMgmt=xpc", serialNum), headers, expectedFeatureResponse)
+// 	performGetSettingsRequestAndVerifyFeatureControl(t, server, router, fmt.Sprintf("?accountId=unknown&serialNum=%s&accountMgmt=test", serialNum), headers, expectedFeatureResponse)
 // }
 
 func TestDontCallAccountSecondTimeIfFirstCallSuccessful(t *testing.T) {
