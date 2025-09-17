@@ -59,8 +59,7 @@ func DcmTestPageHandler(w http.ResponseWriter, r *http.Request) {
 	dataapi.NormalizeCommonContext(searchContext, common.ESTB_MAC_ADDRESS, common.ECM_MAC_ADDRESS)
 
 	searchContext[xwcommon.APPLICATION_TYPE] = applicationType
-
-	var fields log.Fields
+	fields := log.Fields{}
 	logUploadRuleBase := dcmlogupload.NewLogUploadRuleBase()
 	eval := logUploadRuleBase.Eval(searchContext, fields)
 
