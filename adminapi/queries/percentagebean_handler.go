@@ -21,8 +21,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+
+	log "github.com/sirupsen/logrus"
 
 	xcommon "github.com/rdkcentral/xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/shared"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
@@ -329,4 +333,41 @@ func PostPercentageBeanFilteredWithParamsHandler(w http.ResponseWriter, r *http.
 		return
 	}
 	xwhttp.WriteXconfResponseWithHeaders(w, sizeHeader, http.StatusOK, response)
+}
+
+func CreateWakeupPoolHandler(w http.ResponseWriter, r *http.Request) {
+	xw, ok := w.(*xwhttp.XResponseWriter)
+	if !ok {
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Unable to extract Body")
+		return
+	}
+	fields := xw.Audit()
+
+	var force bool
+
+	if values, ok := r.URL.Query()[xcommon.FORCE_PARAM]; ok {
+		if boolVal, err := strconv.ParseBool(values[0]); err == nil {
+			force = boolVal
+		} else {
+			log.WithFields(fields).Errorf("invalid parameter value for force: %v", err.Error())
+			xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("invalid parameter value for force: %v", err.Error()))
+			return
+		}
+	}
+
+	if force {
+		log.WithFields(fields).Info("Force flag is unsupported, returning bad request")
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "force flag is unsupported")
+		return
+	}
+
+	log.WithFields(fields).Infof("Received request to create wakeup pool. force=%v", force)
+
+	err := CreateWakeupPoolList(shared.STB, force, fields)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+
+	xhttp.WriteXconfResponseAsText(w, http.StatusOK, []byte(http.StatusText(http.StatusOK)))
 }
