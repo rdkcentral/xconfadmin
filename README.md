@@ -117,8 +117,8 @@ The XConf Admin server provides several API endpoints organized by functionality
 
 ### Core APIs
 
-- **Version**: `GET /api/v1/version` - Get application version info
-- **Health**: `GET /health` - Health check endpoint
+- **Version**: `GET /version` - Get application version info
+- **Health**: `GET /healthz`  - Health check endpoint
 - **Metrics**: `GET /metrics` - Prometheus metrics
 
 ### Administrative APIs
@@ -147,22 +147,25 @@ curl -X POST -H "Authorization: Bearer <token>" \
 
 ```
 xconfadmin/
-├── adminapi/           # Admin API handlers and services
-│   ├── auth/          # Authentication and authorization
-│   ├── canary/        # Canary deployment management
-│   ├── change/        # Change management
-│   ├── dcm/           # Device Control Manager
-│   ├── firmware/      # Firmware management
-│   ├── queries/       # Query handlers
-│   ├── rfc/           # Remote Feature Control
-│   ├── setting/       # Settings management
-│   └── telemetry/     # Telemetry services
-├── common/            # Common utilities and constants
-├── config/            # Configuration files
-├── http/              # HTTP utilities and middleware
-├── shared/            # Shared components
-├── taggingapi/        # Tagging API
-└── util/              # Utility functions
+├── adminapi/             # Admin API handlers and business logic
+│   ├── auth/             # Authentication and authorization
+│   ├── canary/           # Canary deployment management
+│   ├── change/           # Change management
+│   ├── configuration/    # Configuration management APIs and logic
+│   ├── dcm/              # Device Control Manager
+│   ├── firmware/         # Firmware management
+│   ├── lockdown/         # Lockdown and recooking logic
+│   ├── queries/          # Query handlers
+│   ├── rfc/              # Remote Feature Control
+│   ├── setting/          # Settings management
+│   ├── telemetry/        # Telemetry services
+│   └── xcrp/             # XConf Configuration Rollback Platform (XCRP) logic
+├── common/               # Common utilities and constants
+├── config/               # Configuration files
+├── http/                 # HTTP utilities and middleware
+├── shared/               # Shared components
+├── taggingapi/           # Tagging API 
+└── util/                 # Utility functions
 ```
 
 ## 🧪 Testing
