@@ -117,7 +117,6 @@ func (server *WebconfigServer) mockXconf() {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(mockEmptyResponse))
 		}))
-	server.XW_XconfServer.AccountServiceConnector.SetAccountServiceHost(mockServer.URL)
-	//server.XconfConnector.SetXconfHost(mockServer.URL)
+	server.XconfConnector.SetXconfHost(mockServer.URL)
 	//TODO
 }
