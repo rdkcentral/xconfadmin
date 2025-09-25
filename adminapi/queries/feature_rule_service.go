@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,27 +24,31 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
-	"xconfwebconfig/dataapi/featurecontrol"
-	ru "xconfwebconfig/rulesengine"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/dataapi/featurecontrol"
+	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
-	xcommon "xconfadmin/common"
-	xshared "xconfadmin/shared"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	core "github.com/rdkcentral/xconfadmin/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 
-	xrfc "xconfadmin/shared/rfc"
-	"xconfadmin/util"
-	"xconfwebconfig/common"
-	"xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/shared/rfc"
-	xutil "xconfwebconfig/util"
+	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
+	"github.com/rdkcentral/xconfadmin/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
 
+var featureRuleUpdateMutex sync.Mutex
+
 func GetAllFeatureRulesByType(applicationType string) []*rfc.FeatureRule {
-	ruleList := rfc.GetFeatureRuleList()
+	ruleList := rfc.GetFeatureRuleListForAS()
 
 	featureRules := []*rfc.FeatureRule{}
 	for _, featureRule := range ruleList {
@@ -63,7 +67,7 @@ func GetOne(id string) *rfc.FeatureRule {
 }
 
 func FindFeatureRuleByContext(searchContext map[string]string) []*rfc.FeatureRule {
-	featureRules := rfc.GetFeatureRuleList()
+	featureRules := rfc.GetFeatureRuleListForAS()
 	sort.Slice(featureRules, func(i, j int) bool {
 		if featureRules[i].Priority < featureRules[j].Priority {
 			return true
@@ -132,7 +136,7 @@ func FindFeatureRuleByContext(searchContext map[string]string) []*rfc.FeatureRul
 					break
 				}
 				if condition.GetOperation() != rulesengine.StandardOperationExists && condition.GetFixedArg() != nil && condition.GetFixedArg().IsStringValue() {
-					if strings.Contains(strings.ToLower(condition.FixedArg.Bean.Value.JLString), strings.ToLower(fixedArgValue)) {
+					if strings.Contains(strings.ToLower(*condition.FixedArg.Bean.Value.JLString), strings.ToLower(fixedArgValue)) {
 						valueMatch = true
 						break
 					}
@@ -147,21 +151,24 @@ func FindFeatureRuleByContext(searchContext map[string]string) []*rfc.FeatureRul
 	return featureRuleList
 }
 
-func CreateFeatureRule(featureRule *rfc.FeatureRule, applicationType string) error {
-	err := beforeCreating(featureRule)
+func CreateFeatureRule(featureRule rfc.FeatureRule, applicationType string) (*rfc.FeatureRule, error) {
+	err := beforeCreating(&featureRule)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	err = beforeSaving(featureRule, applicationType)
+	err = beforeSaving(&featureRule, applicationType)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	contextMap := map[string]string{common.APPLICATION_TYPE: featureRule.ApplicationType}
-	featureRules := addNewFeatureRuleAndReorganize(featureRule, FindFeatureRuleByContext(contextMap))
-	for _, featureRule := range featureRules {
-		xrfc.SetFeatureRule(featureRule.Id, featureRule)
+	contextMap := map[string]string{core.APPLICATION_TYPE: featureRule.ApplicationType}
+	featureRuleUpdateMutex.Lock()
+	defer featureRuleUpdateMutex.Unlock()
+	prioritizableRules := FeatureRulesToPrioritizables(FindFeatureRuleByContext(contextMap))
+	featureRules := AddNewPrioritizableAndReorganizePriorities(&featureRule, prioritizableRules)
+	if err = SaveFeatureRules(featureRules); err != nil {
+		return nil, err
 	}
-	return nil
+	return &featureRule, nil
 }
 
 func addNewFeatureRuleAndReorganize(newItem *rfc.FeatureRule, itemsList []*rfc.FeatureRule) []*rfc.FeatureRule {
@@ -172,6 +179,7 @@ func addNewFeatureRuleAndReorganize(newItem *rfc.FeatureRule, itemsList []*rfc.F
 	return reorganizeFeatureRulePriorities(itemsList, len(itemsList), newItem.Priority)
 }
 
+// private static <T extends Prioritizable> List<T> reorganizePriorities(List<T> sortedItemsList, Integer oldPriority, Integer newPriority)
 func reorganizeFeatureRulePriorities(sortedItemsList []*rfc.FeatureRule, oldPriority int, newPriority int) []*rfc.FeatureRule {
 	if newPriority < 1 || int(newPriority) > len(sortedItemsList) {
 		newPriority = len(sortedItemsList)
@@ -209,7 +217,7 @@ func beforeCreating(entity *rfc.FeatureRule) error {
 	} else {
 		featureRule := GetOne(id)
 		if featureRule != nil {
-			return xcommon.NewXconfError(http.StatusConflict, "\"FeatureRule with id: "+id+" already exists\"")
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "\"FeatureRule with id: "+id+" already exists\"")
 		}
 	}
 	return nil
@@ -217,7 +225,7 @@ func beforeCreating(entity *rfc.FeatureRule) error {
 
 func beforeSaving(featureRule *rfc.FeatureRule, applicationType string) error {
 	if featureRule == nil {
-		return xcommon.NewXconfError(http.StatusBadRequest, "FeatureRule is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FeatureRule is empty")
 	}
 	if featureRule.ApplicationType == "" {
 		featureRule.ApplicationType = applicationType
@@ -242,10 +250,10 @@ func beforeSaving(featureRule *rfc.FeatureRule, applicationType string) error {
 
 func ValidateFeatureRule(featureRule *rfc.FeatureRule, applicationType string) error {
 	if featureRule == nil {
-		return xcommon.NewXconfError(http.StatusBadRequest, "FeatureRule is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FeatureRule is empty")
 	}
 	if featureRule.Rule == nil {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Rule is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Rule is empty")
 	}
 	err := ValidateRuleStructure(featureRule.Rule)
 	if err != nil {
@@ -256,20 +264,20 @@ func ValidateFeatureRule(featureRule *rfc.FeatureRule, applicationType string) e
 		return err
 	}
 	if featureRule.Name == "" {
-		return xcommon.NewXconfError(http.StatusBadRequest, "FeatureRule name is blank")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FeatureRule name is blank")
 	}
 	if len(featureRule.FeatureIds) < 1 {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Features should be specified")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Features should be specified")
 	} else if len(featureRule.FeatureIds) > xcommon.AllowedNumberOfFeatures {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Number of Features should be up to "+strconv.Itoa(xcommon.AllowedNumberOfFeatures)+" items")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Number of Features should be up to "+strconv.Itoa(xcommon.AllowedNumberOfFeatures)+" items")
 	} else {
 		for _, featureId := range featureRule.FeatureIds {
 			feature := rfc.GetOneFeature(featureId)
 			if feature == nil {
-				return xcommon.NewXconfError(http.StatusNotFound, "Feature with id: "+featureId+" does not exist")
+				return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Feature with id: "+featureId+" does not exist")
 			}
 			if feature.ApplicationType != featureRule.ApplicationType {
-				return xcommon.NewXconfError(http.StatusBadRequest, "Application Mismatch of Feature and Feature Rule:")
+				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Application Mismatch of Feature and Feature Rule:")
 			}
 		}
 	}
@@ -279,9 +287,10 @@ func ValidateFeatureRule(featureRule *rfc.FeatureRule, applicationType string) e
 	}
 
 	if !strings.EqualFold(featureRule.ApplicationType, applicationType) {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Current application type "+applicationType+" doesn't match with entity application type: "+featureRule.ApplicationType)
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Current application type "+applicationType+" doesn't match with entity application type: "+featureRule.ApplicationType)
 	}
 
+	//List<PercentRange> percentRanges = getPercentRanges(entity.getRule());
 	percentRanges, err := getPercentRanges(featureRule.Rule)
 	if err != nil {
 		return err
@@ -289,20 +298,21 @@ func ValidateFeatureRule(featureRule *rfc.FeatureRule, applicationType string) e
 	for _, percentRange := range percentRanges {
 		//validateStartRange
 		if percentRange.StartRange < 0 || percentRange.StartRange >= 100 {
-			return xcommon.NewXconfError(http.StatusBadRequest, "Start range "+fmt.Sprint(percentRange.StartRange)+" is not valid")
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Start range "+fmt.Sprint(percentRange.StartRange)+" is not valid")
 		}
 		//validateEndRange
 		if percentRange.EndRange < 0 || percentRange.EndRange > 100 {
-			return xcommon.NewXconfError(http.StatusBadRequest, "End range "+fmt.Sprint(percentRange.EndRange)+" is not valid")
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "End range "+fmt.Sprint(percentRange.EndRange)+" is not valid")
 		}
 		//validateRanges
 		if percentRange.StartRange >= percentRange.EndRange {
-			return xcommon.NewXconfError(http.StatusBadRequest, "Start range should be less than end range")
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Start range should be less than end range")
 		}
 		//validateRangesOverlapping
+		//for (PercentRange range : percentRanges) {
 		for _, percentRange_1 := range percentRanges {
 			if !percentRange.Equals(&percentRange_1) && percentRange.StartRange <= percentRange_1.StartRange && percentRange_1.StartRange < percentRange.EndRange {
-				return xcommon.NewXconfError(http.StatusBadRequest, "Ranges overlap each other")
+				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Ranges overlap each other")
 			}
 		}
 	}
@@ -313,7 +323,7 @@ func getPercentRanges(rule *rulesengine.Rule) ([]rfc.PercentRange, error) {
 	percentRanges := []rfc.PercentRange{}
 	for _, condition := range ru.ToConditions(rule) {
 		if rulesengine.StandardOperationRange == condition.GetOperation() && condition.GetFixedArg() != nil && condition.GetFixedArg().IsStringValue() {
-			percentRangeString := condition.FixedArg.Bean.Value.JLString
+			percentRangeString := *condition.FixedArg.Bean.Value.JLString
 			percentRange, err := parsePercentRange(percentRangeString)
 			if err != nil {
 				return nil, err
@@ -329,17 +339,18 @@ func getPercentRanges(rule *rulesengine.Rule) ([]rfc.PercentRange, error) {
 
 func parsePercentRange(percentRange string) (*rfc.PercentRange, error) {
 	splitRange := strings.Split(strings.Trim(percentRange, " "), "-")
+	//String[] splitRange = percentRange.trim().split("-");
 	if len(splitRange) < 2 {
-		return nil, xcommon.NewXconfError(http.StatusBadRequest, "Range format exception "+percentRange+", format pattern is: startRange-endRange")
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Range format exception "+percentRange+", format pattern is: startRange-endRange")
 	}
 	convertedRange := rfc.PercentRange{}
 	startRange, err := strconv.ParseFloat(splitRange[0], 8)
 	if err != nil {
-		return nil, xcommon.NewXconfError(http.StatusBadRequest, "Percent range "+percentRange+" is not valid")
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Percent range "+percentRange+" is not valid")
 	}
 	endRange, err := strconv.ParseFloat(splitRange[1], 8)
 	if err != nil {
-		return nil, xcommon.NewXconfError(http.StatusBadRequest, "Percent range "+percentRange+" is not valid")
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Percent range "+percentRange+" is not valid")
 	}
 	convertedRange.StartRange = startRange
 	convertedRange.EndRange = endRange
@@ -347,7 +358,7 @@ func parsePercentRange(percentRange string) (*rfc.PercentRange, error) {
 }
 
 func validateAllFeatureRule(ruleToCheck *rfc.FeatureRule) error {
-	existingFeatureRules := rfc.GetFeatureRuleList()
+	existingFeatureRules := rfc.GetFeatureRuleListForAS()
 	for _, featureRule := range existingFeatureRules {
 		if featureRule.Id == ruleToCheck.Id {
 			continue
@@ -356,39 +367,56 @@ func validateAllFeatureRule(ruleToCheck *rfc.FeatureRule) error {
 			continue
 		}
 		if ruleToCheck.GetName() == featureRule.GetName() {
-			return xcommon.NewXconfError(http.StatusConflict, "\"Name is already used\"")
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "\"Name is already used\"")
 		}
 		if ruleToCheck.GetRule().Equals(featureRule.GetRule()) {
-			return xcommon.NewXconfError(http.StatusConflict, "Rule has duplicate:"+featureRule.GetName())
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Rule has duplicate:"+featureRule.GetName())
 		}
 	}
 	return nil
 }
 
-func UpdateFeatureRule(featureRule *rfc.FeatureRule, applicationType string) error {
+func UpdateFeatureRule(featureRule rfc.FeatureRule, applicationType string) (*rfc.FeatureRule, error) {
+	//beforeUpdating(featureRule):
 	if featureRule.Id == "" {
-		return xcommon.NewXconfError(http.StatusBadRequest, "FeatureRule id is empty")
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "FeatureRule id is empty")
 	}
-	if err := beforeSaving(featureRule, applicationType); err != nil {
-		return err
+	if err := beforeSaving(&featureRule, applicationType); err != nil {
+		return nil, err
 	}
+	featureRuleUpdateMutex.Lock()
+	defer featureRuleUpdateMutex.Unlock()
 
 	featureRuleToUpdate := GetOne(featureRule.Id)
 	if featureRuleToUpdate == nil {
-		return xcommon.NewXconfError(http.StatusNotFound, "FeatureRule with id: "+featureRule.Id+" does not exist")
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "FeatureRule with id: "+featureRule.Id+" does not exist")
 	}
 	if featureRuleToUpdate.ApplicationType != featureRule.ApplicationType {
-		return xcommon.NewXconfError(http.StatusConflict, "ApplicationType cannot be changed: Existing value:"+featureRuleToUpdate.ApplicationType+" New Value:"+featureRule.ApplicationType)
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusConflict, "ApplicationType cannot be changed: Existing value:"+featureRuleToUpdate.ApplicationType+" New Value:"+featureRule.ApplicationType)
+	}
+
+	if featureRuleToUpdate.Priority == featureRule.Priority {
+		if err := rfc.SetFeatureRule(featureRule.Id, &featureRule); err != nil {
+			return nil, err
+		}
+		return &featureRule, nil
 	}
 
 	contextMap := map[string]string{common.APPLICATION_TYPE: featureRule.ApplicationType}
-	featureRules := updateFeatureRuleByPriorityAndReorganize(featureRule, FindFeatureRuleByContext(contextMap), featureRuleToUpdate.Priority)
-	for _, featureRule := range featureRules {
-		xrfc.SetFeatureRule(featureRule.Id, featureRule)
+	prioritizableRules := FeatureRulesToPrioritizables(FindFeatureRuleByContext(contextMap))
+	featureRules := UpdatePrioritizablePriorityAndReorganize(&featureRule, prioritizableRules, featureRuleToUpdate.Priority)
+
+	if !findPrioritizableById(featureRule.Id, featureRules) {
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Updated feature rule '%s' is not present in reorganized feature rule", featureRule.Id))
 	}
-	return nil
+
+	if err := SaveFeatureRules(featureRules); err != nil {
+		return nil, err
+	}
+	return &featureRule, nil
 }
 
+// public static <T extends Prioritizable> List<T> updateItemByPriorityAndReorganize(T itemToSave, List<T> itemsList, Integer currentItemPriority)
 func updateFeatureRuleByPriorityAndReorganize(newItem *rfc.FeatureRule, itemsList []*rfc.FeatureRule, priority int) []*rfc.FeatureRule {
 	sort.Slice(itemsList, func(i, j int) bool {
 		return itemsList[i].Priority < itemsList[j].Priority
@@ -403,28 +431,25 @@ func updateFeatureRuleByPriorityAndReorganize(newItem *rfc.FeatureRule, itemsLis
 	} else {
 		itemsList = append(itemsList, newItem)
 	}
-	return reorganizeFeatureRulePriorities(itemsList, priority, newItem.Priority)
+	return reorganizeFeatureRulePriorities(itemsList, priority, newItem.GetPriority())
 }
 
 func ImportOrUpdateAllFeatureRule(featureRuleList []rfc.FeatureRule, applicationType string) map[string][]string {
 	importResult := make(map[string][]string, 2)
 	imported := []string{}
 	notImported := []string{}
-	var err error
 	for _, featureRule := range featureRuleList {
-		if featureRule.Id != "" {
-			err = CreateFeatureRule(&featureRule, applicationType)
+		var err error
+		var importedFeatureRule *rfc.FeatureRule
+		if featureRuleDB := GetOne(featureRule.Id); featureRuleDB != nil {
+			importedFeatureRule, err = UpdateFeatureRule(featureRule, applicationType)
 		} else {
-			if featureRuleDB := GetOne(featureRule.Id); featureRuleDB != nil {
-				err = UpdateFeatureRule(&featureRule, applicationType)
-			} else {
-				err = CreateFeatureRule(&featureRule, applicationType)
-			}
+			importedFeatureRule, err = CreateFeatureRule(featureRule, applicationType)
 		}
 		if err == nil {
-			imported = append(imported, featureRule.Id)
+			imported = append(imported, importedFeatureRule.Id)
 		} else {
-			b, err := xutil.JSONMarshal(featureRule)
+			b, err := util.JSONMarshal(featureRule)
 			if err != nil {
 				log.Error(fmt.Println(err))
 			} else {
@@ -438,13 +463,14 @@ func ImportOrUpdateAllFeatureRule(featureRuleList []rfc.FeatureRule, application
 	return importResult
 }
 
+// List<FeatureRule> changePriorities(String featureRuleId, Integer newPriority)
 func ChangeFeatureRulePriorities(featureRuleId string, newPriority int, applicationType string) ([]*rfc.FeatureRule, error) {
 	featureRuleToUpdate := GetOne(featureRuleId)
 	if featureRuleToUpdate == nil {
-		return nil, xcommon.NewXconfError(http.StatusNotFound, "FeatureRule with id: "+featureRuleId+" does not exist")
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "FeatureRule with id: "+featureRuleId+" does not exist")
 	}
 	oldPriority := featureRuleToUpdate.Priority
-	featureRuleList := rfc.GetFeatureRuleList()
+	featureRuleList := rfc.GetFeatureRuleListForAS()
 	featureRuleListForApplicationType := []*rfc.FeatureRule{}
 	if applicationType != "" {
 		for _, featureRule := range featureRuleList {
@@ -463,6 +489,7 @@ func ChangeFeatureRulePriorities(featureRuleId string, newPriority int, applicat
 	return reorganizedFeatureRules, nil
 }
 
+// <T extends Prioritizable> List<T> updatePriorities(List<T> itemsList, Integer oldPriority, Integer newPriority)
 func UpdateFeatureRulePriorities(itemsList []*rfc.FeatureRule, oldPriority int, newPriority int) []*rfc.FeatureRule {
 	sort.Slice(itemsList, func(i, j int) bool {
 		return itemsList[i].Priority < itemsList[j].Priority
@@ -475,7 +502,7 @@ func GetAllowedNumberOfFeatures() int {
 }
 
 func GetFeatureRulesSize(appType string) int {
-	featureRuleList := rfc.GetFeatureRuleList()
+	featureRuleList := rfc.GetFeatureRuleListForAS()
 	cnt := 0
 	for _, entry := range featureRuleList {
 		if entry.ApplicationType == appType {
@@ -495,9 +522,30 @@ func ProcessFeatureRules(context map[string]string, fields log.Fields) map[strin
 	} else {
 		result["result"] = nil
 	}
-	featureControl := featureControlRuleBase.Eval(context, context[common.APPLICATION_TYPE], fields)
+	featureControl, _ := featureControlRuleBase.Eval(context, context[common.APPLICATION_TYPE], fields)
 	result["featureControl"] = featureControl
 	result["context"] = context
 
 	return result
+}
+
+func FeatureRulesToPrioritizables(featureRules []*rfc.FeatureRule) []core.Prioritizable {
+	prioritizables := make([]core.Prioritizable, len(featureRules))
+	for i, item := range featureRules {
+		itemCopy := *item
+		prioritizables[i] = &itemCopy
+	}
+	return prioritizables
+}
+
+func SaveFeatureRules(itemList []core.Prioritizable) error {
+	log.Debugf("SaveFeatureRules: begin saving %v entries.", len(itemList))
+	for _, item := range itemList {
+		fr := item.(*rfc.FeatureRule)
+		if err := rfc.SetFeatureRule(item.GetID(), fr); err != nil {
+			return err
+		}
+	}
+	log.Debugf("SaveFeatureRules: end saving %v entries.", len(itemList))
+	return nil
 }

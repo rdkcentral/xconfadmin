@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,18 +23,19 @@ import (
 	"math"
 	"net/http"
 
-	xutil "xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	"github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	xcoreef "github.com/rdkcentral/xconfadmin/shared/estbfirmware"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
-	"xconfadmin/common"
-	xcoreef "xconfadmin/shared/estbfirmware"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/shared/firmware"
-	corefw "xconfwebconfig/shared/firmware"
-	"xconfwebconfig/util"
-
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/dchest/siphash"
 	log "github.com/sirupsen/logrus"
@@ -56,6 +57,38 @@ func UpdatePercentFilterGlobal(applicationType string, globalPercentage *coreef.
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, globalPercentage)
 }
 
+func GetCalculatedHashAndPercentHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+	macAddress := r.FormValue("esbMac")
+	if macAddress == "" {
+		http.Error(w, "Missing 'esbMac' parameter", http.StatusBadRequest)
+		return
+	}
+	_, err = util.MACAddressValidator(macAddress)
+	if err != nil {
+		http.Error(w, "Invalid Estb Mac", http.StatusBadRequest)
+		return
+	}
+	source := fmt.Sprintf(`"%v"`, macAddress)
+	hashCode, percent := xshared.CalculateHashAndPercent(source)
+	response := map[string]interface{}{
+		"hashValue": hashCode,
+		"percent":   percent,
+	}
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Failed to marshal JSON response", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonResponse)
+}
+
 func UpdatePercentFilterGlobalHandler(w http.ResponseWriter, r *http.Request) {
 	applicationType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
@@ -66,7 +99,7 @@ func UpdatePercentFilterGlobalHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, common.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -127,6 +160,7 @@ func GetPercentFilterGlobalHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, ok := contextMap[common.EXPORT]
 	if ok {
+		//TODO: rework with struct avoiding map type below
 		percentageBeans, err := GetAllPercentageBeansFromDB(applicationType, true, false)
 		if err != nil {
 			xhttp.AdminError(w, err)
@@ -158,7 +192,7 @@ func GetGlobalPercentFilter(applicationType string) (*coreef.PercentFilterVo, er
 		globalPercentage = coreef.ConvertIntoGlobalPercentageFirmwareRule(globalPercentageRule)
 	}
 	PercentfilterVo := coreef.NewDefaultPercentFilterVo()
-	PercentfilterVo.GlobalPercentage = *globalPercentage
+	PercentfilterVo.GlobalPercentage = globalPercentage
 	PercentfilterVo.GlobalPercentage.ApplicationType = applicationType
 	return PercentfilterVo, nil
 }
@@ -194,7 +228,6 @@ func GetGlobalPercentFilterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Hard-coded constant value for siphash to calculate hash and percent of PercentageFilter
 const (
 	SipHashKey0 = uint64(506097522914230528)
 	SipHashKey1 = uint64(1084818905618843912)

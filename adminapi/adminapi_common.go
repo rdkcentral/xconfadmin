@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,16 @@
 package adminapi
 
 import (
-	"xconfwebconfig/dataapi"
+	"strings"
+	"time"
 
-	xcommon "xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/dataapi"
 
-	queries "xconfadmin/adminapi/queries"
-	xhttp "xconfadmin/http"
-	xshared "xconfadmin/shared"
+	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
+	common "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Ws - webserver object
@@ -38,22 +40,74 @@ var (
 func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 	Ws = ws
 	if ws == nil {
-		xwcommon.CacheUpdateWindowSize = 60000
-		xcommon.AllowedNumberOfFeatures = 100
-		xcommon.ActiveAuthProfiles = "dev"
-		xcommon.DefaultAuthProfiles = "prod"
-		xcommon.SatOn = false
-		xcommon.IpMacIsConditionLimit = 20
+		common.CacheUpdateWindowSize = 60000
+		common.AllowedNumberOfFeatures = 100
+		common.ActiveAuthProfiles = "dev"
+		common.DefaultAuthProfiles = "prod"
+		common.IpMacIsConditionLimit = 20
+		common.CanaryCreationEnabled = false
+		common.VideoCanaryCreationEnabled = false
+		common.AuthProvider = "acl"
+		common.ApplicationTypes = []string{"stb"}
+		common.WakeupPoolTagName = "t_canary_wakeup"
 	} else {
-		xwcommon.CacheUpdateWindowSize = ws.XW_XconfServer.ServerConfig.GetInt64("xconfwebconfig.xconf.cache_update_window_size")
-		xcommon.AllowedNumberOfFeatures = int(ws.XW_XconfServer.ServerConfig.GetInt32("xconfwebconfig.xconf.allowedNumberOfFeatures", 100))
-		xcommon.ActiveAuthProfiles = ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.authProfilesActive")
-		xcommon.DefaultAuthProfiles = ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.authProfilesDefault")
-		xcommon.SatOn = ws.XW_XconfServer.ServerConfig.GetBoolean("xconfwebconfig.sat.SAT_ON")
-		xcommon.IpMacIsConditionLimit = int(ws.XW_XconfServer.ServerConfig.GetInt32("xconfwebconfig.xconf.ipMacIsConditionLimit", 20))
-	}
-	if ws.TestOnly() {
-		xcommon.SatOn = false
+		common.AuthProvider = ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.authprovider")
+		applicationTypeString := ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.application_types")
+		if applicationTypeString == "" {
+			applicationTypeString = "stb"
+		}
+		common.ApplicationTypes = strings.Split(applicationTypeString, ",")
+		common.CacheUpdateWindowSize = ws.XW_XconfServer.ServerConfig.GetInt64("xconfwebconfig.xconf.cache_update_window_size")
+		common.SatOn = ws.XW_XconfServer.ServerConfig.GetBoolean("xconfwebconfig.sat.SAT_ON")
+		common.AllowedNumberOfFeatures = int(ws.XW_XconfServer.ServerConfig.GetInt32("xconfwebconfig.xconf.allowedNumberOfFeatures", 100))
+		common.ActiveAuthProfiles = ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.authProfilesActive")
+		common.DefaultAuthProfiles = ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.authProfilesDefault")
+		common.IpMacIsConditionLimit = int(ws.XW_XconfServer.ServerConfig.GetInt32("xconfwebconfig.xconf.ipMacIsConditionLimit", 20))
+		common.CanaryCreationEnabled = ws.XW_XconfServer.ServerConfig.GetBoolean("xconfwebconfig.xconf.enable_canary_creation")
+		common.VideoCanaryCreationEnabled = ws.XW_XconfServer.ServerConfig.GetBoolean("xconfwebconfig.xconf.enable_video_canary_creation")
+		common.LockDuration = ws.XW_XconfServer.ServerConfig.GetInt32("xconfwebconfig.xcrp.lock_duration_in_secs", common.DefaultLockDuration)
+		if common.CanaryCreationEnabled {
+			timezoneStr := ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.canary_time_zone")
+			timezone, err := time.LoadLocation(timezoneStr)
+			if err != nil {
+				log.Errorf("Error loading timezone: %s", timezoneStr)
+				panic(err)
+			}
+			common.CanaryTimezone = timezone
+			timezoneListString := ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.canary_timezone_list")
+			common.CanaryTimezoneList = strings.Split(timezoneListString, ",")
+			common.CanaryStartTime = ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.canary_start_time")
+			common.CanaryEndTime = ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.canary_end_time")
+			common.CanaryTimeFormat = ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.canary_time_format")
+			common.CanaryDefaultPartner = strings.ToLower(ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.canary_default_partner"))
+			common.CanarySize = int(ws.XW_XconfServer.ServerConfig.GetInt64("xconfwebconfig.xconf.canary_size"))
+			common.CanaryDistributionPercentage = ws.XW_XconfServer.ServerConfig.GetFloat64("xconfwebconfig.xconf.canary_distribution_percentage")
+			common.CanaryFwUpgradeStartTime = int(ws.XW_XconfServer.ServerConfig.GetInt64("xconfwebconfig.xconf.canary_firmware_upgrade_start_time"))
+			common.CanaryFwUpgradeEndTime = int(ws.XW_XconfServer.ServerConfig.GetInt64("xconfwebconfig.xconf.canary_firmware_upgrade_end_time"))
+
+			percentFilterNameString := strings.ToLower(ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.canary_percent_filter_name"))
+			for _, name := range strings.Split(percentFilterNameString, ";") {
+				common.CanaryPercentFilterNameSet.Add(name)
+			}
+
+			wakeupPercentFilterNameString := strings.ToLower(ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.canary_wakeup_percent_filter_list"))
+			for _, name := range strings.Split(wakeupPercentFilterNameString, ",") {
+				common.CanaryWakeupPercentFilterNameSet.Add(name)
+			}
+
+			videoModelListString := strings.ToUpper(ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.canary_video_model_list"))
+			for _, model := range strings.Split(videoModelListString, ",") {
+				common.CanaryVideoModelSet.Add(model)
+			}
+
+			syndicatePartnerList := strings.ToLower(ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.canary_appsettings_partner_list"))
+			for _, name := range strings.Split(syndicatePartnerList, ",") {
+				common.CanarySyndicatePartnerSet.Add(name)
+				common.AllAppSettings = append(common.AllAppSettings, (common.PROP_CANARY_FW_UPGRADE_STARTTIME + "_" + name))
+				common.AllAppSettings = append(common.AllAppSettings, (common.PROP_CANARY_FW_UPGRADE_ENDTIME + "_" + name))
+				common.AllAppSettings = append(common.AllAppSettings, (common.PROP_CANARY_TIMEZONE_LIST + "_" + name))
+			}
+		}
 	}
 	Xc = xc
 }
@@ -64,13 +118,44 @@ func initDB() {
 }
 
 func initAppSettings() {
-	settings, err := xshared.GetAppSettings()
+	settings, err := common.GetAppSettings()
 	if err != nil {
 		panic(err)
 	}
-	if len(settings) == 0 {
-		if _, ok := settings[xcommon.READONLY_MODE]; !ok {
-			xshared.SetAppSetting(xcommon.READONLY_MODE, false)
-		}
+	if _, ok := settings[common.PROP_LOCKDOWN_ENABLED]; !ok {
+		common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, false)
 	}
+	if _, ok := settings[common.PROP_CANARY_MAXSIZE]; !ok {
+		common.SetAppSetting(common.PROP_CANARY_MAXSIZE, common.CanarySize)
+	}
+	if _, ok := settings[common.PROP_CANARY_DISTRIBUTION_PERCENTAGE]; !ok {
+		common.SetAppSetting(common.PROP_CANARY_DISTRIBUTION_PERCENTAGE, common.CanaryDistributionPercentage)
+	}
+	if _, ok := settings[common.PROP_CANARY_FW_UPGRADE_STARTTIME]; !ok {
+		common.SetAppSetting(common.PROP_CANARY_FW_UPGRADE_STARTTIME, common.CanaryFwUpgradeStartTime)
+	}
+	if _, ok := settings[common.PROP_CANARY_FW_UPGRADE_ENDTIME]; !ok {
+		common.SetAppSetting(common.PROP_CANARY_FW_UPGRADE_ENDTIME, common.CanaryFwUpgradeEndTime)
+	}
+
+	if _, ok := settings[common.PROP_LOCKDOWN_STARTTIME]; !ok {
+		common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, common.DefaultLockdownStartTime)
+	}
+
+	if _, ok := settings[common.PROP_LOCKDOWN_ENDTIME]; !ok {
+		common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, common.DefaultLockdownEndTime)
+	}
+
+	if _, ok := settings[common.PROP_LOCKDOWN_MODULES]; !ok {
+		common.SetAppSetting(common.PROP_LOCKDOWN_MODULES, common.DefaultLockdownModules)
+	}
+
+	if _, ok := settings[common.PROP_PRECOOK_LOCKDOWN_ENABLED]; !ok {
+		common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, common.DefaultPrecookLockdownEnabled)
+	}
+
+	if _, ok := settings[common.PROP_CANARY_TIMEZONE_LIST]; !ok {
+		common.SetAppSetting(common.PROP_CANARY_TIMEZONE_LIST, common.DefaultCanaryTimezone)
+	}
+
 }

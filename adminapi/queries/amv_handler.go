@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,15 +24,17 @@ import (
 	"sort"
 	"strings"
 
-	xutil "xconfadmin/util"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
-	xcommon "xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/shared/firmware"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
 )
@@ -182,26 +184,12 @@ func DeleteAmvByIdHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateAmvHandler(w http.ResponseWriter, r *http.Request) {
-	applicationType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY)
+	newAmv := firmware.ActivationVersion{}
+	applicationType, err := auth.ExtractBodyAndCheckPermissions(&newAmv, w, r, auth.FIRMWARE_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
 	}
-
-	// r.Body is already drained in the middleware
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "responsewriter cast error")
-		return
-	}
-	body := xw.Body()
-	newAmv := firmware.ActivationVersion{}
-	err = json.Unmarshal([]byte(body), &newAmv)
-	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
 	respEntity := CreateAmv(&newAmv, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -217,12 +205,6 @@ func CreateAmvHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ImportAllAmvHandler(w http.ResponseWriter, r *http.Request) {
-	applicationType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY)
-	if err != nil {
-		xhttp.AdminError(w, err)
-		return
-	}
-
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
 		response := "Unable to extract Body"
@@ -236,8 +218,27 @@ func ImportAllAmvHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, response)
 		return
 	}
+	determinedAppType := ""
+	for i := range amvlist {
+		applicationType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY, amvlist[i].ApplicationType)
+		if err != nil {
+			xhttp.AdminError(w, err)
+			return
+		}
+		if determinedAppType != "" && determinedAppType != applicationType {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, "ApplicationType mixing not allowed")
+			return
+		}
+		if amvlist[i].ApplicationType == "" {
+			amvlist[i].ApplicationType = applicationType
+		} else if amvlist[i].ApplicationType != applicationType {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, "ApplicationType Conflict")
+			return
+		}
+		determinedAppType = applicationType
+	}
 
-	result, err := importOrUpdateAllAmvs(amvlist, applicationType)
+	result, err := importOrUpdateAllAmvs(amvlist, determinedAppType)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -247,30 +248,16 @@ func ImportAllAmvHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
+	xhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
 func UpdateAmvHandler(w http.ResponseWriter, r *http.Request) {
-	applicationType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY)
+	newAmv := firmware.ActivationVersion{}
+	applicationType, err := auth.ExtractBodyAndCheckPermissions(&newAmv, w, r, auth.FIRMWARE_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
 	}
-
-	// r.Body is already drained in the middleware
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "responsewriter cast error")
-		return
-	}
-	body := xw.Body()
-	newAmv := firmware.ActivationVersion{}
-	err = json.Unmarshal([]byte(body), &newAmv)
-	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
 	respEntity := UpdateAmv(&newAmv, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())

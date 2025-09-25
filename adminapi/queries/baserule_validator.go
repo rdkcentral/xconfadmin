@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,14 +23,14 @@ import (
 	"strconv"
 	"strings"
 
-	xcommon "xconfadmin/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/rulesengine"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	logupload "xconfwebconfig/shared/logupload"
-	util "xconfwebconfig/util"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/rulesengine"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	logupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	util "github.com/rdkcentral/xconfwebconfig/util"
 )
 
 var allowedOperations = []string{
@@ -39,6 +39,8 @@ var allowedOperations = []string{
 	re.StandardOperationExists,
 	re.StandardOperationPercent,
 	re.StandardOperationInList,
+	re.StandardOperationGte,
+	re.StandardOperationLte,
 }
 
 var firmwareRuleAllowedOperations = []string{
@@ -77,7 +79,7 @@ func isNotBlank(str string) bool {
 func RunGlobalValidation(rule re.Rule, fp func() []string) error {
 	conditions := re.ToConditions(&rule)
 	if len(conditions) == 0 {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Rule is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Rule is empty")
 	}
 	err := validateRelation(&rule)
 	if err != nil {
@@ -85,7 +87,7 @@ func RunGlobalValidation(rule re.Rule, fp func() []string) error {
 	}
 	err = checkDuplicateConditions(&rule)
 	if err != nil {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Duplicate Conditions present")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Duplicate Conditions present")
 	}
 	for _, condition := range conditions {
 		err := checkConditionNullsOrBlanks(*condition)
@@ -131,30 +133,30 @@ func RunGlobalValidation(rule re.Rule, fp func() []string) error {
 func checkConditionNullsOrBlanks(condition re.Condition) error {
 	freeArg := condition.GetFreeArg()
 	if freeArg == nil || util.IsBlank(freeArg.GetName()) {
-		return xcommon.NewXconfError(http.StatusBadRequest, "FreeArg is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FreeArg is empty")
 	}
 
 	operation := condition.GetOperation()
 	if util.IsBlank(operation) {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Operation is null")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Operation is null")
 	}
 
 	fixedArg := condition.GetFixedArg()
 	if re.StandardOperationExists != operation {
 		if fixedArg == nil || fixedArg.GetValue() == nil {
-			return xcommon.NewXconfError(http.StatusBadRequest, "FixedArg is null")
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FixedArg is null")
 		}
 
 		if re.StandardOperationIn == operation {
 			if !fixedArg.IsCollectionValue() {
-				return xcommon.NewXconfError(http.StatusBadRequest, freeArg.GetName()+" is not collection")
+				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, freeArg.GetName()+" is not collection")
 			}
 			if len(fixedArg.Collection.Value) == 0 {
-				return xcommon.NewXconfError(http.StatusBadRequest, freeArg.GetName()+" is empty")
+				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, freeArg.GetName()+" is empty")
 			}
 		} else {
 			if fixedArg.GetValue() == "" {
-				return xcommon.NewXconfError(http.StatusBadRequest, freeArg.GetName()+" is empty")
+				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, freeArg.GetName()+" is empty")
 			}
 		}
 	}
@@ -166,7 +168,7 @@ func checkDuplicateFixedArgListItems(condition re.Condition) error {
 	if fixedArg != nil && fixedArg.GetValue() != nil {
 		duplicateFixedArgListItems := re.GetDuplicateFixedArgListItems(*fixedArg)
 		if len(duplicateFixedArgListItems) > 0 {
-			return xcommon.NewXconfError(http.StatusBadRequest, "FixedArg of condition contains duplicate items: ")
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FixedArg of condition contains duplicate items: ")
 		}
 	}
 	return nil
@@ -178,14 +180,14 @@ func checkFixedArgValue(condition re.Condition, fp func(string) bool) error {
 		fixedArgValues := condition.GetFixedArg().Collection.Value
 		for _, val := range fixedArgValues {
 			if !fp(val) {
-				return xcommon.NewXconfError(http.StatusBadRequest, "Incorrect Collection Value")
+				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Incorrect Collection Value")
 			}
 		}
 	} else if re.StandardOperationIs == operation {
 		fixedArgValue := condition.GetFixedArg().GetValue().(string)
 		//fixedArgValue := coreef.trimSingleQuote (condition.GetFixedArg().String())
 		if !fp(fixedArgValue) {
-			return xcommon.NewXconfError(http.StatusBadRequest, condition.FreeArg.GetName()+" is invalid: "+fixedArgValue)
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, condition.FreeArg.GetName()+" is invalid: "+fixedArgValue)
 		}
 	} else if re.StandardOperationPercent == operation {
 		ret, err := checkPercentOperation(condition)
@@ -193,7 +195,7 @@ func checkFixedArgValue(condition re.Condition, fp func(string) bool) error {
 			return err
 		}
 		if !ret {
-			return xcommon.NewXconfError(http.StatusBadRequest, "Invalid value for operations")
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Invalid value for operations")
 		}
 		return nil
 	} else if re.StandardOperationLike == operation {
@@ -202,24 +204,27 @@ func checkFixedArgValue(condition re.Condition, fp func(string) bool) error {
 	return nil
 }
 
+var startPercent float64 = 0.0
+
 func checkPercentOperation(condition re.Condition) (bool, error) {
 	if condition.GetFixedArg().IsDoubleValue() {
 		fixedArgDouble := condition.GetFixedArg().Bean.Value.JLDouble
-		if fixedArgDouble >= 0.0 && fixedArgDouble <= 100.0 {
+		if fixedArgDouble != nil && *fixedArgDouble >= 0.0 && *fixedArgDouble <= 100.0 {
 			return true, nil
 		}
 	} else if condition.GetFixedArg().IsStringValue() {
 		const bitSize = 64
-		fixedArgDouble, _ := strconv.ParseFloat(condition.GetFixedArg().Bean.Value.JLString, bitSize)
+		fixedArgDouble, _ := strconv.ParseFloat(*condition.GetFixedArg().Bean.Value.JLString, bitSize)
 		if fixedArgDouble >= 0.0 && fixedArgDouble <= 100.0 {
 			return true, nil
 		}
 	}
-	return false, xcommon.NewXconfError(http.StatusBadRequest, "Invalid value for percent "+condition.GetFixedArg().String())
+	return false, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Invalid value for percent "+condition.GetFixedArg().String())
 }
 
 func checkLikeOperation(condition re.Condition) error {
 	_, err := regexp.Compile(condition.GetFixedArg().GetValue().(string))
+	// _, err := regexp.Compile(coreef.trimSingleQuote (condition.GetFixedArg().String()))
 	return err
 }
 
@@ -229,7 +234,7 @@ func equalTypes(type1 string, type2 string) bool {
 
 func assertDuplicateConditions(duplicateConditions []re.Condition) error {
 	if len(duplicateConditions) > 0 {
-		return xcommon.NewXconfError(http.StatusBadRequest, ": Duplicate conditions present ")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, ": Duplicate conditions present ")
 	}
 	return nil
 }
@@ -257,7 +262,7 @@ func checkOperationName(cond *re.Condition, fp func() []string) error {
 	}
 
 	if !isExists {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Operation is not valid: "+string(ruleOperation))
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Operation is not valid: "+string(ruleOperation))
 	}
 	return nil
 }
@@ -280,7 +285,7 @@ func validateCompoundPartsTree(rule *re.Rule) error {
 	}
 	for _, compoundPart := range rule.GetCompoundParts() {
 		if len(compoundPart.GetCompoundParts()) > 0 {
-			return xcommon.NewXconfError(http.StatusBadRequest, "CompoundPart rule should not have one more compoundParts")
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "CompoundPart rule should not have one more compoundParts")
 		}
 	}
 	return nil
@@ -288,7 +293,7 @@ func validateCompoundPartsTree(rule *re.Rule) error {
 
 func ValidateRuleStructure(rule *re.Rule) error {
 	if !rule.IsCompound() && len(rule.GetCompoundParts()) > 0 {
-		return xcommon.NewXconfError(http.StatusBadRequest, "rule should have only condition or compoundParts field")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "rule should have only condition or compoundParts field")
 	}
 	return validateCompoundPartsTree(rule)
 }
@@ -300,7 +305,7 @@ func validateRelation(rule *re.Rule) error {
 				continue
 			}
 			if compoundPart.Relation == "" {
-				return xcommon.NewXconfError(http.StatusBadRequest, "Relation of "+compoundPart.Condition.FreeArg.Name+" is empty")
+				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Relation of "+compoundPart.Condition.FreeArg.Name+" is empty")
 			}
 		}
 	}

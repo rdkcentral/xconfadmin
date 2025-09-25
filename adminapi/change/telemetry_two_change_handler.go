@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,16 +24,18 @@ import (
 	"sort"
 	"strconv"
 
-	xchange "xconfadmin/shared/change"
+	xchange "github.com/rdkcentral/xconfadmin/shared/change"
 
-	xutil "xconfadmin/util"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
-	xcommon "xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -78,6 +80,11 @@ func GetApprovedTwoChangesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetTwoChangeEntityIdsHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanRead(r, auth.CHANGE_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	entityIds := GetTelemetryTwoChangeEntityIds()
 	res, err := xhttp.ReturnJsonResponse(entityIds, r)
 	if err != nil {
@@ -125,7 +132,7 @@ func ApproveTwoChangesHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -184,7 +191,7 @@ func RevertTwoChangesHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -231,6 +238,11 @@ func CancelTwoChangeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetGroupedTwoChangesHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanRead(r, auth.CHANGE_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	queryParams := map[string]string{}
 	xutil.AddQueryParamsToContextMap(r, queryParams)
 	pageNumber, err := strconv.Atoi(queryParams[xcommon.PAGE_NUMBER])
@@ -262,6 +274,11 @@ func GetGroupedTwoChangesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetGroupedApprovedTwoChangesHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanRead(r, auth.CHANGE_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	queryParams := map[string]string{}
 	xutil.AddQueryParamsToContextMap(r, queryParams)
 	pageNumber, err := strconv.Atoi(queryParams[xcommon.PAGE_NUMBER])
@@ -315,7 +332,7 @@ func GetApprovedTwoChangesFilteredHandler(w http.ResponseWriter, r *http.Request
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()
@@ -366,7 +383,7 @@ func GetTwoChangesFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()

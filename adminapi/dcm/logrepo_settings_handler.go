@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,15 +24,17 @@ import (
 
 	"github.com/gorilla/mux"
 
-	xutil "xconfadmin/util"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
-	xcommon "xconfadmin/common"
-	"xconfwebconfig/common"
-	"xconfwebconfig/shared/logupload"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 func GetLogRepoSettingsHandler(w http.ResponseWriter, r *http.Request) {

@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,16 +22,17 @@ import (
 	"net/http"
 	"sort"
 
-	xwcommon "xconfwebconfig/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
-	"xconfadmin/adminapi/auth"
-	xcommon "xconfadmin/common"
-	xchange "xconfadmin/shared/change"
-	xutil "xconfadmin/util"
-	xwhttp "xconfwebconfig/http"
-	xwchange "xconfwebconfig/shared/change"
-	"xconfwebconfig/shared/logupload"
-	xwutil "xconfwebconfig/util"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xchange "github.com/rdkcentral/xconfadmin/shared/change"
+	xutil "github.com/rdkcentral/xconfadmin/util"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	xwutil "github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -136,7 +137,7 @@ func GetApprovedTelemetryTwoChangesByContext(searchContext map[string]string) []
 func ApproveTelemetryTwoChange(r *http.Request, changeId string) (*xwchange.ApprovedTelemetryTwoChange, error) {
 	change := xchange.GetOneTelemetryTwoChange(changeId)
 	if change == nil {
-		return nil, xcommon.NewXconfError(http.StatusNotFound, fmt.Sprintf("Entity with id  %s does not exist", changeId))
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id  %s does not exist", changeId))
 	}
 
 	if change.Operation == xchange.Create {
@@ -225,7 +226,7 @@ func DeleteTelemetryTwoChange(changeId string) error {
 		return err
 	}
 	if err := xchange.DeleteOneTelemetryTwoChange(changeId); err != nil {
-		return xcommon.NewXconfError(http.StatusInternalServerError, err.Error())
+		return xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, err.Error())
 	}
 	return nil
 }
@@ -347,6 +348,10 @@ func beforeSavingTelemetryTwoChange(r *http.Request, change *xwchange.TelemetryT
 		change.ID = uuid.New().String()
 	}
 	if change.ApplicationType == "" {
+		/* Todo: wait for permissionService.getWriteApplication() to be ready in Golang
+		if (change != null && StringUtils.isBlank(change.getApplicationType())) {
+			change.setApplicationType(permissionService.getWriteApplication());
+		} */
 		application, err := auth.CanWrite(r, auth.CHANGE_ENTITY)
 		if err != nil {
 			return err
@@ -354,7 +359,7 @@ func beforeSavingTelemetryTwoChange(r *http.Request, change *xwchange.TelemetryT
 		change.ApplicationType = application
 	}
 	if err := change.Validate(); err != nil {
-		return xcommon.NewXconfError(http.StatusBadRequest, err.Error())
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, err.Error())
 	}
 	return nil
 }
@@ -374,34 +379,34 @@ func beforeSavingApprovedTelemetryTwoChange(r *http.Request, approvedChange *xwc
 		approvedChange.ApplicationType = application
 	}
 	if err := approvedChange.Validate(); err != nil {
-		return xcommon.NewXconfError(http.StatusBadRequest, err.Error())
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, err.Error())
 	}
 	return nil
 }
 
 func beforeDeleteTelemetryTwoChange(id string) error {
 	if id == "" {
-		xcommon.NewXconfError(http.StatusBadRequest, "Id is blank")
+		xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Id is blank")
 	}
 	if change := xchange.GetOneTelemetryTwoChange(id); change == nil {
-		xcommon.NewXconfError(http.StatusNotFound, fmt.Sprintf("TelemetryTwoChange with %s id does not exist", id))
+		xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("TelemetryTwoChange with %s id does not exist", id))
 	}
 	return nil
 }
 
 func beforeDeleteApprovedTelemetryTwoChange(id string) error {
 	if id == "" {
-		xcommon.NewXconfError(http.StatusBadRequest, "Id is blank")
+		xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Id is blank")
 	}
 	if change := xchange.GetOneApprovedTelemetryTwoChange(id); change == nil {
-		xcommon.NewXconfError(http.StatusNotFound, fmt.Sprintf("ApprovedTelemetryTwoChange with %s id does not exist", id))
+		xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("ApprovedTelemetryTwoChange with %s id does not exist", id))
 	}
 	return nil
 }
 
 func revertDeleteApprovedTelemetryTwoChange(r *http.Request, approvedChange *xwchange.ApprovedTelemetryTwoChange) error {
 	if approvedChange.OldEntity == nil {
-		return xcommon.NewXconfError(http.StatusInternalServerError, fmt.Sprintf("OldEntity is empty for ApprovedTelemetryTwoChange with id %s", approvedChange.ID))
+		return xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, fmt.Sprintf("OldEntity is empty for ApprovedTelemetryTwoChange with id %s", approvedChange.ID))
 	}
 	if _, err := CreateTelemetryTwoProfile(r, approvedChange.OldEntity); err != nil {
 		return err
@@ -416,7 +421,7 @@ func revertDeleteApprovedTelemetryTwoChange(r *http.Request, approvedChange *xwc
 func revertCreateOrUpdateApprovedTelemetryTwoChange(r *http.Request, approvedChange *xwchange.ApprovedTelemetryTwoChange) error {
 	entityToRevert := logupload.GetOneTelemetryTwoProfile(approvedChange.EntityID)
 	if entityToRevert == nil {
-		return xcommon.NewXconfError(http.StatusNotFound, fmt.Sprintf("TelemetryTwoProfile with id %s does not exist", approvedChange.EntityID))
+		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("TelemetryTwoProfile with id %s does not exist", approvedChange.EntityID))
 	}
 
 	if approvedChange.Operation == xchange.Create {
@@ -472,6 +477,8 @@ func buildToDeleteTelemetryTwoChange(oldEntity *logupload.TelemetryTwoProfile, a
 func updateDeleteEntityTelemetryTwoChange(r *http.Request, change *xwchange.TelemetryTwoChange) (*xwchange.ApprovedTelemetryTwoChange, error) {
 	currentEntity := change.OldEntity
 	entityToChange := logupload.GetOneTelemetryTwoProfile(change.EntityID)
+	// in Java, equalPendingEntities(currentEntity, entityToChange) always return true
+	//if (entityToChange != null && equalPendingEntities(currentEntity, entityToChange)) {
 	if entityToChange != nil {
 		if change.Operation == xchange.Delete {
 			if err := DeleteTelemetryTwoProfile(r, currentEntity.ID); err != nil {
@@ -493,7 +500,7 @@ func updateDeleteEntityTelemetryTwoChange(r *http.Request, change *xwchange.Tele
 		return approvedChange, nil
 	} else {
 		msg := fmt.Sprintf("Change could not be approved, TelemetryTwoProfile have been already changed: TelemetryTwoChange %s - EntityID %s", change.ID, change.EntityID)
-		return nil, xcommon.NewXconfError(http.StatusConflict, msg)
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusConflict, msg)
 	}
 }
 

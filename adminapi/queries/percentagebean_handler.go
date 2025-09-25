@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,20 +21,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
-	xcommon "xconfadmin/common"
-	"xconfwebconfig/common"
-	"xconfwebconfig/shared/firmware"
+	log "github.com/sirupsen/logrus"
+
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/shared"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
 	"github.com/gorilla/mux"
 
-	"xconfadmin/util"
+	"github.com/rdkcentral/xconfadmin/util"
 
-	coreef "xconfwebconfig/shared/estbfirmware"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 const (
@@ -72,6 +78,7 @@ func GetPercentageBeanAllHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, ok := contextMap[xcommon.EXPORT]
 	if ok {
+		//TODO: replace to struct instead of map
 		percentageBeansToExport := make(map[string]interface{})
 		percentageBeansToExport["percentageBeans"] = result
 		res, err := xhttp.ReturnJsonResponse(percentageBeansToExport, r)
@@ -222,10 +229,11 @@ func PostPercentageBeanEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, response)
 		return
 	}
+	fields := xw.Audit()
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
-		respEntity := CreatePercentageBean(&entity, applicationType)
+		respEntity := CreatePercentageBean(&entity, applicationType, fields)
 		if respEntity.Status != http.StatusCreated {
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_FAILURE,
@@ -258,6 +266,7 @@ func PutPercentageBeanEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Unable to extract Body")
 		return
 	}
+	fields := xw.Audit()
 	entities := []coreef.PercentageBean{}
 	if err := json.Unmarshal([]byte(xw.Body()), &entities); err != nil {
 		response := "Unable to extract entity from json file:" + err.Error()
@@ -267,7 +276,7 @@ func PutPercentageBeanEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
-		respEntity := UpdatePercentageBean(&entity, applicationType)
+		respEntity := UpdatePercentageBean(&entity, applicationType, fields)
 		if respEntity.Status == http.StatusOK {
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_SUCCESS,
@@ -309,7 +318,7 @@ func PostPercentageBeanFilteredWithParamsHandler(w http.ResponseWriter, r *http.
 		}
 	}
 	util.AddQueryParamsToContextMap(r, contextMap)
-	contextMap[xcommon.APPLICATION_TYPE] = applicationType
+	contextMap[common.APPLICATION_TYPE] = applicationType
 
 	pbrules := PercentageBeanFilterByContext(contextMap, applicationType)
 	sizeHeader := xhttp.CreateNumberOfItemsHttpHeaders(len(pbrules))
@@ -324,4 +333,41 @@ func PostPercentageBeanFilteredWithParamsHandler(w http.ResponseWriter, r *http.
 		return
 	}
 	xwhttp.WriteXconfResponseWithHeaders(w, sizeHeader, http.StatusOK, response)
+}
+
+func CreateWakeupPoolHandler(w http.ResponseWriter, r *http.Request) {
+	xw, ok := w.(*xwhttp.XResponseWriter)
+	if !ok {
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Unable to extract Body")
+		return
+	}
+	fields := xw.Audit()
+
+	var force bool
+
+	if values, ok := r.URL.Query()[xcommon.FORCE_PARAM]; ok {
+		if boolVal, err := strconv.ParseBool(values[0]); err == nil {
+			force = boolVal
+		} else {
+			log.WithFields(fields).Errorf("invalid parameter value for force: %v", err.Error())
+			xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("invalid parameter value for force: %v", err.Error()))
+			return
+		}
+	}
+
+	if force {
+		log.WithFields(fields).Info("Force flag is unsupported, returning bad request")
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "force flag is unsupported")
+		return
+	}
+
+	log.WithFields(fields).Infof("Received request to create wakeup pool. force=%v", force)
+
+	err := CreateWakeupPoolList(shared.STB, force, fields)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+
+	xhttp.WriteXconfResponseAsText(w, http.StatusOK, []byte(http.StatusText(http.StatusOK)))
 }

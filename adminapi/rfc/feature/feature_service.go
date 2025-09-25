@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,13 @@ import (
 	"sort"
 	"strings"
 
-	xhttp "xconfadmin/http"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 
-	xcommon "xconfadmin/common"
-	xrfc "xconfadmin/shared/rfc"
-	xwrfc "xconfwebconfig/shared/rfc"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
 
 	"github.com/google/uuid"
 )
@@ -85,7 +87,7 @@ func IsFeatureUsedInFeatureRule(id string) (bool, string) {
 }
 
 func GetFeaturesByApplicationTypeSorted(applicationType string) []*xwrfc.Feature {
-	contextMap := map[string]string{xcommon.APPLICATION_TYPE: applicationType}
+	contextMap := map[string]string{xwcommon.APPLICATION_TYPE: applicationType}
 	featureList := xrfc.GetFilteredFeatureList(contextMap)
 	if featureList == nil {
 		featureList = make([]*xwrfc.Feature, 0)
@@ -97,7 +99,7 @@ func GetFeaturesByApplicationTypeSorted(applicationType string) []*xwrfc.Feature
 }
 
 func GetFeatureEntityListByApplicationTypeSorted(applicationType string) []*xwrfc.FeatureEntity {
-	contextMap := map[string]string{xcommon.APPLICATION_TYPE: applicationType}
+	contextMap := map[string]string{xwcommon.APPLICATION_TYPE: applicationType}
 	featureEntityList := xrfc.GetFilteredFeatureEntityList(contextMap)
 	if featureEntityList == nil {
 		featureEntityList = make([]*xwrfc.FeatureEntity, 0)
@@ -152,23 +154,23 @@ func CreateEntity(feature *xwrfc.Feature, applicationType string) error {
 	} else {
 		doesFeatureExist, appType := xrfc.DoesFeatureExistInSomeApplicationType(feature.ID)
 		if doesFeatureExist && feature.ApplicationType != appType {
-			return xcommon.NewXconfError(http.StatusConflict, fmt.Sprintf("Entity with id: %s already exists in %s", feature.ID, appType))
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Entity with id: %s already exists in %s", feature.ID, appType))
 		}
 		if doesFeatureExist && applicationType == appType {
-			return xcommon.NewXconfError(http.StatusConflict, fmt.Sprintf("Entity with id: %s already exists", feature.ID))
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Entity with id: %s already exists", feature.ID))
 		}
 		if feature.ApplicationType == "" {
 			feature.ApplicationType = applicationType
 		}
 	}
-
+	// TODO add call to permissionService for validateWrite
 	isValid, errorMsg := xrfc.IsValidFeature(feature)
 	if !isValid {
-		return xcommon.NewXconfError(http.StatusBadRequest, errorMsg)
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, errorMsg)
 	}
 	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherIdForApplicationType(feature, applicationType)
 	if doesFeatureInstanceExist {
-		return xcommon.NewXconfError(http.StatusConflict, fmt.Sprintf("Feature with such featureInstance already exists: %s", feature.FeatureName))
+		return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Feature with such featureInstance already exists: %s", feature.FeatureName))
 	}
 	feature, err := FeaturePost(feature)
 	if err != nil {
@@ -179,26 +181,26 @@ func CreateEntity(feature *xwrfc.Feature, applicationType string) error {
 
 func UpdateEntity(feature *xwrfc.Feature, applicationType string) error {
 	if feature.ID == "" {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Entity id is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Entity id is empty")
 	}
 	doesFeatureExist, appType := xrfc.DoesFeatureExistInSomeApplicationType(feature.ID)
 	if !doesFeatureExist || applicationType != appType {
-		return xcommon.NewXconfError(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", feature.ID))
+		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", feature.ID))
 	}
 	if doesFeatureExist && feature.ApplicationType != appType {
-		return xcommon.NewXconfError(http.StatusConflict, fmt.Sprintf("Entity with id: %s already exists in %s", feature.ID, appType))
+		return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Entity with id: %s already exists in %s", feature.ID, appType))
 	}
 	if feature.ApplicationType == "" {
 		feature.ApplicationType = applicationType
 	}
-
+	// TODO add call to permissionService for validateWrite
 	isValid, errorMsg := xrfc.IsValidFeature(feature)
 	if !isValid {
-		return xcommon.NewXconfError(http.StatusBadRequest, errorMsg)
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, errorMsg)
 	}
 	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherIdForApplicationType(feature, applicationType)
 	if doesFeatureInstanceExist {
-		return xcommon.NewXconfError(http.StatusConflict, fmt.Sprintf("Feature with such featureInstance already exists: %s", feature.FeatureName))
+		return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Feature with such featureInstance already exists: %s", feature.FeatureName))
 	}
 	feature, err := PutFeature(feature)
 	if err != nil {

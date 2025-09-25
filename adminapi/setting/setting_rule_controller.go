@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,16 +30,18 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 
-	xwcommon "xconfwebconfig/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
-	xcommon "xconfadmin/common"
-	"xconfadmin/shared"
-	"xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/shared"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 func GetSettingRulesAllExport(w http.ResponseWriter, r *http.Request) {
@@ -102,37 +104,6 @@ func GetSettingRuleOneExport(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetAllSettingRulesWithPage(w http.ResponseWriter, r *http.Request) {
-	var pageNumberStr, pageSizeStr string
-	pageNumber := 1
-	pageSize := 50
-	var err error
-	if values, ok := r.URL.Query()[PageNumber]; ok {
-		pageNumberStr = values[0]
-		pageNumber, err = strconv.Atoi(pageNumberStr)
-		if err != nil {
-			xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("pageNumber must be a number"))
-			return
-		}
-	}
-	if values, ok := r.URL.Query()[PageSize]; ok {
-		pageSizeStr = values[0]
-		pageSize, err = strconv.Atoi(pageSizeStr)
-		if err != nil {
-			xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("pageSize must be a number"))
-			return
-		}
-	}
-	settingRules := GetAllSettingRules()
-	settingRuleList := SettingRulesGeneratePage(settingRules, pageNumber, pageSize)
-	response, err := util.JSONMarshal(settingRuleList)
-	if err != nil {
-		log.Error(fmt.Sprintf("json.Marshal featureRules error: %v", err))
-	}
-	headerMap := createNumberOfSettingRulesHttpHeaders(settingRules)
-	xwhttp.WriteXconfResponseWithHeaders(w, headerMap, http.StatusOK, response)
-}
-
 func DeleteOneSettingRulesHandler(w http.ResponseWriter, r *http.Request) {
 	applicationType, err := auth.CanWrite(r, auth.DCM_ENTITY)
 	if err != nil {
@@ -180,7 +151,7 @@ func GetSettingRulesFilteredWithPage(w http.ResponseWriter, r *http.Request) {
 	}
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xwhttp.Error(w, http.StatusInternalServerError, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xwhttp.Error(w, http.StatusInternalServerError, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	contextMap := make(map[string]string)
@@ -208,6 +179,12 @@ func GetSettingRulesFilteredWithPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateSettingRuleHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.DCM_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "responsewriter cast error")
@@ -215,7 +192,6 @@ func CreateSettingRuleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	body := xw.Body()
 	settingRules := logupload.SettingRule{}
-	var err error
 	if body != "" {
 		err := json.Unmarshal([]byte(body), &settingRules)
 		if err != nil {
@@ -236,6 +212,12 @@ func CreateSettingRuleHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateSettingRulesPackageHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.DCM_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Unable to extract Body")
@@ -271,6 +253,11 @@ func CreateSettingRulesPackageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateSettingRulesHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.DCM_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
@@ -278,7 +265,6 @@ func UpdateSettingRulesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	body := xw.Body()
-	var err error
 	settingRules := logupload.SettingRule{}
 	if body != "" {
 		err := json.Unmarshal([]byte(body), &settingRules)
@@ -301,6 +287,11 @@ func UpdateSettingRulesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateSettingRulesPackageHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.DCM_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("Unable to extract Body"))
@@ -348,14 +339,14 @@ func createNumberOfSettingRulesHttpHeaders(entities []*logupload.SettingRule) ma
 func SettingTestPageHandler(w http.ResponseWriter, r *http.Request) {
 	settingTypes := r.URL.Query()[xwcommon.SETTING_TYPE]
 	if len(settingTypes) == 0 {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusBadRequest, "Define settings type"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Define settings type"))
 		return
 	}
 
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.AdminError(w, xcommon.NewXconfError(http.StatusInternalServerError, "responsewriter cast error"))
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
 	body := xw.Body()

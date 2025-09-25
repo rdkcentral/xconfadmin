@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,25 +21,30 @@ import (
 	"fmt"
 	"net/http"
 
-	"xconfadmin/util"
-	"xconfwebconfig/shared/estbfirmware"
-	xwutil "xconfwebconfig/util"
-
-	xwhttp "xconfwebconfig/http"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/shared/estbfirmware"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
 
 func GetLogs(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanRead(r, auth.COMMON_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
 	macStr, found := mux.Vars(r)["macStr"]
 	if !found || macStr == "" {
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("missing macStr"))
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("missing macStr"))
 		return
 	}
 	macAddress, err := util.ValidateAndNormalizeMacAddress(macStr)
 	if err != nil {
-		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("invalid mac address: "+macStr))
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("invalid mac address: "+macStr))
 		return
 	}
 	result := make(map[string]interface{}, 2)
@@ -49,11 +54,11 @@ func GetLogs(w http.ResponseWriter, r *http.Request) {
 		result["lastConfigLog"] = last
 		result["configChangeLog"] = configChangeLogList
 	}
-	response, err := xwutil.JSONMarshal(result)
+	response, err := util.JSONMarshal(result)
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal result error: %v", err))
 	}
-	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
+	xhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
 func getOneConfigChangeLog(macAddress string) *estbfirmware.ConfigChangeLog {

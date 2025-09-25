@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,16 +24,18 @@ import (
 
 	"github.com/gorilla/mux"
 
-	xutil "xconfadmin/util"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
-	xcommon "xconfadmin/common"
-	xlogupload "xconfadmin/shared/logupload"
-	xwcommon "xconfwebconfig/common"
-	xwlogupload "xconfwebconfig/shared/logupload"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xlogupload "github.com/rdkcentral/xconfadmin/shared/logupload"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
+
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 func GetTelemetryRulesHandler(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +46,7 @@ func GetTelemetryRulesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := []*xwlogupload.TelemetryRule{}
-	ruleList := xwlogupload.GetTelemetryRuleList()
+	ruleList := xwlogupload.GetTelemetryRuleListForAs()
 	for _, teleRule := range ruleList {
 		if teleRule.ApplicationType != applicationType {
 			continue
@@ -181,7 +183,7 @@ func UpdateTelemetryRuleHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "unable to cast XpcResponseWriter object")
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "unable to cast XResponseWriter object")
 		return
 	}
 	body := xw.Body()

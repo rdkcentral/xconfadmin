@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,18 +26,19 @@ import (
 	"strings"
 	"time"
 
-	xcommon "xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
-	"xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
-	xutil "xconfadmin/util"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
+
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/google/uuid"
 
-	ds "xconfwebconfig/db"
-	xwhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -166,7 +167,7 @@ func CreateLogUploadSettings(lu *logupload.LogUploadSettings, app string) *xwhtt
 		return respEntity
 	}
 
-	lu.Updated = util.GetTimestamp(time.Now().UTC())
+	lu.Updated = util.GetTimestamp()
 	if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_LOG_UPLOAD_SETTINGS, lu.ID, lu); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -192,7 +193,7 @@ func UpdateLogUploadSettings(lu *logupload.LogUploadSettings, app string) *xwhtt
 		return respEntity
 	}
 
-	lu.Updated = util.GetTimestamp(time.Now().UTC())
+	lu.Updated = util.GetTimestamp()
 	if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_LOG_UPLOAD_SETTINGS, lu.ID, lu); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}

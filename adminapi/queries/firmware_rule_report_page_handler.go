@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,17 +22,24 @@ import (
 
 	"net/http"
 
-	"xconfwebconfig/db"
-	"xconfwebconfig/shared"
-	corefw "xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
-	re "xconfwebconfig/rulesengine"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
-	xhttp "xconfadmin/http"
-	xwhttp "xconfwebconfig/http"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 func PostFirmwareRuleReportPageHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "Unable to extract ResponseWriter")
@@ -40,7 +47,7 @@ func PostFirmwareRuleReportPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	body := xw.Body()
 	macRuleIds := []string{}
-	err := json.Unmarshal([]byte(body), &macRuleIds)
+	err = json.Unmarshal([]byte(body), &macRuleIds)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

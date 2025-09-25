@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,31 +18,37 @@
 package queries
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
+	"sync"
 
 	"net/http"
 
-	ruleutil "xconfwebconfig/rulesengine"
-	xutil "xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	ruleutil "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	xutil "github.com/rdkcentral/xconfwebconfig/util"
 
-	"xconfwebconfig/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
-	xcommon "xconfadmin/common"
-	xcorefw "xconfadmin/shared/firmware"
-	"xconfadmin/util"
-	ds "xconfwebconfig/db"
-	re "xconfwebconfig/rulesengine"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	corefw "xconfwebconfig/shared/firmware"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	core "github.com/rdkcentral/xconfadmin/shared"
+	xcorefw "github.com/rdkcentral/xconfadmin/shared/firmware"
+	"github.com/rdkcentral/xconfadmin/util"
+
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
+
+var firmwareRuleTemplateUpdateMutex sync.Mutex
 
 const (
 	cFirmwareRTName                 = xcommon.NAME
@@ -57,6 +63,7 @@ const (
 )
 
 func honoredByFirmwareRT(context map[string]string, firmwareRT *corefw.FirmwareRuleTemplate) bool {
+	// Objects.nonNull(xRule) && StringUtils.containsIgnoreCase(xRule.getName(), name);
 	name, filterByName := util.FindEntryInContext(context, cFirmwareRTName, false)
 	if filterByName {
 		baseName := strings.ToLower(firmwareRT.GetName())
@@ -66,11 +73,13 @@ func honoredByFirmwareRT(context map[string]string, firmwareRT *corefw.FirmwareR
 		}
 	}
 
+	// xRule -> Objects.nonNull(xRule) && RuleUtil.isExistConditionByFreeArgName(xRule.getRule(), key);
 	key, filterByKey := util.FindEntryInContext(context, cFirmwareRTKey, false)
 	if filterByKey && !re.IsExistConditionByFreeArgName(firmwareRT.Rule, key) {
 		return false
 	}
 
+	//xRule -> Objects.nonNull(xRule) && RuleUtil.isExistConditionByFixedArgValue(xRule.getRule(), value);
 	val, filterByVal := util.FindEntryInContext(context, cFirmwareRTValue, false)
 	if filterByVal && !re.IsExistConditionByFixedArgValue(firmwareRT.Rule, val) {
 		return false
@@ -143,7 +152,7 @@ func generateFirmwareRTPageByContext(dbrules []*corefw.FirmwareRuleTemplate, con
 		pageSize, _ = strconv.Atoi(szStr)
 	}
 	if pageNum < 1 || pageSize < 1 {
-		return nil, xcommon.NewXconfError(http.StatusBadRequest, "pageNumber and pageSize should both be greater than zero")
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "pageNumber and pageSize should both be greater than zero")
 	}
 	return extractFirmwareRTPage(dbrules, pageNum, pageSize), nil
 }
@@ -164,7 +173,7 @@ func validateProperties(applicableAction *corefw.TemplateApplicableAction) error
 	if applicableAction.ActionType == corefw.DEFINE_PROPERTIES_TEMPLATE {
 		for k := range applicableAction.Properties {
 			if xutil.IsBlank(k) {
-				return xcommon.NewXconfError(http.StatusBadRequest, "properties key is blank")
+				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "properties key is blank")
 			}
 		}
 	}
@@ -183,7 +192,7 @@ func validateRule(fr *re.Rule, action *corefw.TemplateApplicableAction) error {
 	}
 	conditions := ruleutil.ToConditions(fr)
 	if len(conditions) == 0 {
-		return xcommon.NewXconfError(http.StatusBadRequest, "FirmwareRuleTemplate "+fr.Id()+" should have a minimum one condition")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FirmwareRuleTemplate "+fr.Id()+" should have a minimum one condition")
 	}
 	for _, c := range conditions {
 		if err := checkOperationName(c, GetFirmwareRuleAllowedOperations); err != nil {
@@ -195,7 +204,7 @@ func validateRule(fr *re.Rule, action *corefw.TemplateApplicableAction) error {
 
 func validateOneFirmwareRT(frt corefw.FirmwareRuleTemplate) error {
 	if frt.ApplicableAction == nil {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Missing applicable action type ")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Missing applicable action type ")
 	}
 	validActionTypes := []corefw.ApplicableActionType{
 		cFirmwareRT, cFirmwareRTBlockingFilter, cFirmwareRTDefineProperties,
@@ -208,7 +217,7 @@ func validateOneFirmwareRT(frt corefw.FirmwareRuleTemplate) error {
 		}
 	}
 	if !found {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Invalid action type "+string(frt.ApplicableAction.ActionType)+" in "+frt.GetName())
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Invalid action type "+string(frt.ApplicableAction.ActionType)+" in "+frt.GetName())
 	}
 	return validateRule(frt.GetRule(), frt.ApplicableAction)
 }
@@ -219,10 +228,10 @@ func validateAgainstFirmwareRTs(frt *corefw.FirmwareRuleTemplate, entities []*co
 			continue
 		}
 		if frt.GetName() == rule.GetName() {
-			return xcommon.NewXconfError(http.StatusConflict, rule.GetName()+" is already used")
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, rule.GetName()+" is already used")
 		}
 		if ruleutil.EqualComplexRules(frt.GetRule(), rule.GetRule()) {
-			return xcommon.NewXconfError(http.StatusConflict, "Rule is duplicate of "+rule.ID)
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Rule is duplicate of "+rule.ID)
 		}
 	}
 	return nil
@@ -290,35 +299,63 @@ func addNewFirmwareRTAndReorganize(newItem corefw.FirmwareRuleTemplate, itemsLis
 	return reorganizeFirmwareRTPriorities(itemsList, len(itemsList), int(newItem.Priority))
 }
 
-func saveAllFirmwareRTs(templateList []*corefw.FirmwareRuleTemplate) error {
+// func saveAllFirmwareRTs(templateList []*corefw.FirmwareRuleTemplate) error {
+// 	for _, template := range templateList {
+// 		template.Updated = xutil.GetTimestamp(time.Now().UTC())
+// 		if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template.ID, template); err != nil {
+// 			return err
+// 		}
+// 	}
+// 	return nil
+// }
+
+func saveAllTemplates(templateList []core.Prioritizable) error {
 	for _, template := range templateList {
-		template.Updated = xutil.GetTimestamp(time.Now().UTC())
-		if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template.ID, template); err != nil {
+		frt := template.(*corefw.FirmwareRuleTemplate)
+		if err := frt.Validate(); err != nil {
+			return err
+		}
+		frt.Updated = util.GetTimestamp()
+		if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template.GetID(), template); err != nil {
 			return err
 		}
 	}
 	return nil
 }
+func firmwareRuleTemplatesToPrioritizables(frts []*corefw.FirmwareRuleTemplate) []core.Prioritizable {
+	prioritizables := make([]core.Prioritizable, len(frts))
+	for i, item := range frts {
+		itemCopy := *item
+		prioritizables[i] = &itemCopy
+	}
+	return prioritizables
+}
 
-func updateFirmwareRT(frtToImport corefw.FirmwareRuleTemplate, frtOnDb *corefw.FirmwareRuleTemplate) error {
-	err := validateOneFirmwareRT(frtToImport)
-	if err != nil {
-		return err
-	}
-	similarFrtsOnDb, err := corefw.GetFirmwareRuleTemplateAllAsListDB(frtToImport.ApplicableAction.ActionType)
-	if err != nil {
-		return err
-	}
-	err = validateAgainstFirmwareRTs(&frtToImport, similarFrtsOnDb)
+func updateFirmwareRT(templateToUpdate corefw.FirmwareRuleTemplate, frtOnDb *corefw.FirmwareRuleTemplate) error {
+	err := validateOneFirmwareRT(templateToUpdate)
 	if err != nil {
 		return err
 	}
 
-	list, err := updateFirmwareRTByPriorityAndReorganize(&frtToImport, similarFrtsOnDb, int(frtToImport.Priority))
+	//TODO
+	firmwareRuleTemplateUpdateMutex.Lock()
+	defer firmwareRuleTemplateUpdateMutex.Unlock()
+	existingTemplate, err := corefw.GetFirmwareRuleTemplateOneDB(templateToUpdate.ID)
+	if err != nil {
+		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "FirmwareRuleTemplate does not exist for "+templateToUpdate.ID)
+	}
+	templatesByActionType, err := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(templateToUpdate.ApplicableAction.ActionType)
 	if err != nil {
 		return err
 	}
-	if err = saveAllFirmwareRTs(list); err != nil {
+	err = validateAgainstFirmwareRTs(&templateToUpdate, templatesByActionType)
+	if err != nil {
+		return err
+	}
+
+	templatesByActionTypeCopy := firmwareRuleTemplatesToPrioritizables(templatesByActionType) //TODO
+	list := UpdatePrioritizablePriorityAndReorganize(&templateToUpdate, templatesByActionTypeCopy, int(existingTemplate.Priority))
+	if err = saveAllTemplates(list); err != nil {
 		return err
 	}
 	return nil
@@ -329,7 +366,10 @@ func createFirmwareRT(template corefw.FirmwareRuleTemplate) (templ *corefw.Firmw
 	if err != nil {
 		return nil, err
 	}
-	templatesOfCurrentType, err := corefw.GetFirmwareRuleTemplateAllAsListDB(template.ApplicableAction.ActionType)
+
+	firmwareRuleTemplateUpdateMutex.Lock()
+	defer firmwareRuleTemplateUpdateMutex.Unlock()
+	templatesOfCurrentType, err := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(template.ApplicableAction.ActionType)
 	if err != nil {
 		if err.Error() != common.NotFound.Error() {
 			return nil, err
@@ -339,7 +379,9 @@ func createFirmwareRT(template corefw.FirmwareRuleTemplate) (templ *corefw.Firmw
 	if err != nil {
 		return nil, err
 	}
-	if err = saveAllFirmwareRTs(addNewFirmwareRTAndReorganize(template, templatesOfCurrentType)); err != nil {
+	templatesOfCurrentTypeCopy := firmwareRuleTemplatesToPrioritizables(templatesOfCurrentType)
+	reorganizedTemplates := AddNewPrioritizableAndReorganizePriorities(&template, templatesOfCurrentTypeCopy)
+	if err = saveAllTemplates(reorganizedTemplates); err != nil {
 		return nil, err
 	}
 	templ = &template
@@ -470,9 +512,16 @@ func CreateFirmwareRuleTemplates() {
 	templateList = append(templateList, templ)
 
 	for _, template := range templateList {
-		template.Updated = xutil.GetTimestamp(time.Now().UTC())
-		if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template.ID, &template); err != nil {
+		if err := template.Validate(); err != nil {
 			panic(err)
+		}
+		template.Updated = util.GetTimestamp()
+		if jsonData, err := json.Marshal(template); err != nil {
+			panic(err)
+		} else {
+			if err := ds.GetSimpleDao().SetOne(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template.ID, jsonData); err != nil {
+				panic(err)
+			}
 		}
 	}
 }

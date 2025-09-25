@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,14 +23,15 @@ import (
 	"net/http"
 	"strings"
 
-	xshared "xconfadmin/shared"
-	xcoreef "xconfadmin/shared/estbfirmware"
-	xwhttp "xconfwebconfig/http"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/util"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	xcoreef "github.com/rdkcentral/xconfadmin/shared/estbfirmware"
 
-	"xconfwebconfig/shared/firmware"
-	corefw "xconfwebconfig/shared/firmware"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
 func UpdateRebootImmediatelyFilter(applicationType string, rebootFilter *coreef.RebootImmediatelyFilter) *xwhttp.ResponseEntity {
@@ -42,7 +43,7 @@ func UpdateRebootImmediatelyFilter(applicationType string, rebootFilter *coreef.
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	if err := firmware.ValidateRuleName(rebootFilter.Id, rebootFilter.Name); err != nil {
+	if err := firmware.ValidateRuleName(rebootFilter.Id, rebootFilter.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
@@ -74,7 +75,8 @@ func UpdateRebootImmediatelyFilter(applicationType string, rebootFilter *coreef.
 	if rebootFilter.IpAddressGroup != nil {
 		for _, ipAddressGroup := range rebootFilter.IpAddressGroup {
 			if ipAddressGroup != nil && IsChangedIpAddressGroup(ipAddressGroup) {
-				return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("IP address group is not matched by existed IP address group"), nil)
+				return xwhttp.NewResponseEntity(http.StatusBadRequest,
+					fmt.Errorf("IP address group denoted by '%s' does not match any existing ipAddressGroup", ipAddressGroup.Name), nil)
 			}
 		}
 	}

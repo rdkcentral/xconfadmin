@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,24 +23,27 @@ import (
 	"sort"
 	"strings"
 
-	xcommon "xconfadmin/common"
-	xwcommon "xconfwebconfig/common"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 
-	queries "xconfadmin/adminapi/queries"
-	xshared "xconfadmin/shared"
-	xlogupload "xconfadmin/shared/logupload"
-	xutil "xconfadmin/util"
-	"xconfwebconfig/rulesengine"
-	ru "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	xwlogupload "xconfwebconfig/shared/logupload"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+
+	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfadmin/shared/logupload"
+	xlogupload "github.com/rdkcentral/xconfadmin/shared/logupload"
+	xutil "github.com/rdkcentral/xconfadmin/util"
+
+	"github.com/rdkcentral/xconfwebconfig/rulesengine"
+	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
 
 func GetAll() []*xwlogupload.TelemetryTwoRule {
-	telemetryTwoRules := xwlogupload.GetTelemetryTwoRuleList()
+	telemetryTwoRules := xwlogupload.GetTelemetryTwoRuleListForAS()
 	sort.Slice(telemetryTwoRules, func(i, j int) bool {
 		return strings.ToLower(telemetryTwoRules[i].Name) < strings.ToLower(telemetryTwoRules[j].Name)
 	})
@@ -50,7 +53,7 @@ func GetAll() []*xwlogupload.TelemetryTwoRule {
 func GetOne(id string) (*xwlogupload.TelemetryTwoRule, error) {
 	settingProfile := xlogupload.GetOneTelemetryTwoRule(id)
 	if settingProfile == nil {
-		return nil, xcommon.NewXconfError(http.StatusNotFound, "Entity with id: "+id+" does not exist")
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
 	return settingProfile, nil
 }
@@ -61,7 +64,7 @@ func Delete(id string) (*xwlogupload.TelemetryTwoRule, error) {
 		return nil, err
 	}
 	if entity == nil {
-		return nil, xcommon.NewXconfError(http.StatusNotFound, "Entity with id: "+id+" does not exist")
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
 	DeleteTelemetryTwoRule(id)
 	return entity, nil
@@ -77,7 +80,7 @@ func DeleteTelemetryTwoRule(id string) {
 func findByContext(r *http.Request, searchContext map[string]string) []*xwlogupload.TelemetryTwoRule {
 	telemetryTwoRulesFound := []*xwlogupload.TelemetryTwoRule{}
 
-	telemetryTwoRules := xwlogupload.GetTelemetryTwoRuleList()
+	telemetryTwoRules := xwlogupload.GetTelemetryTwoRuleListForAS()
 	for _, telemetryTwoRule := range telemetryTwoRules {
 		if applicationType, ok := xutil.FindEntryInContext(searchContext, xwcommon.APPLICATION_TYPE, false); ok {
 			if applicationType != "" && applicationType != shared.ALL {
@@ -137,7 +140,7 @@ func findByContext(r *http.Request, searchContext map[string]string) []*xwlogupl
 					break
 				}
 				if condition.GetOperation() != rulesengine.StandardOperationExists && condition.GetFixedArg() != nil && condition.GetFixedArg().IsStringValue() {
-					if strings.Contains(strings.ToLower(condition.FixedArg.Bean.Value.JLString), strings.ToLower(fixedArgValue)) {
+					if strings.Contains(strings.ToLower(*condition.FixedArg.Bean.Value.JLString), strings.ToLower(fixedArgValue)) {
 						valueMatch = true
 						break
 					}
@@ -155,7 +158,7 @@ func findByContext(r *http.Request, searchContext map[string]string) []*xwlogupl
 func validate(entity *xwlogupload.TelemetryTwoRule) error {
 	msg := validateProperties(entity)
 	if msg != "" {
-		return xcommon.NewXconfError(http.StatusBadRequest, msg)
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, msg)
 	}
 	return nil
 }
@@ -164,14 +167,17 @@ func validateProperties(entity *xwlogupload.TelemetryTwoRule) string {
 	if entity.Name == "" {
 		return "Name is empty"
 	}
-	if len(entity.BoundTelemetryIDs) < 1 {
-		return "Bound profile is not set"
+	if !entity.NoOp && len(entity.BoundTelemetryIDs) == 0 {
+		return "Profiles are not set"
+	}
+	if entity.NoOp && len(entity.BoundTelemetryIDs) > 0 {
+		return "NoOp rule: profiles should be empty"
 	}
 	for _, boundTelemetryId := range entity.BoundTelemetryIDs {
 		if boundTelemetryId == "" {
 			continue
 		}
-		if xwlogupload.GetOneTelemetryTwoProfile(boundTelemetryId) == nil {
+		if logupload.GetOneTelemetryTwoProfile(boundTelemetryId) == nil {
 			return "Telemetry 2.0 profile with id: " + boundTelemetryId + " does not exist"
 		}
 	}
@@ -184,10 +190,10 @@ func validateAll(entity *xwlogupload.TelemetryTwoRule, existingEntities []*xwlog
 			continue
 		}
 		if rule.Name == entity.Name {
-			return xcommon.NewXconfError(http.StatusConflict, "Name is already used")
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Name is already used")
 		}
 		if ru.EqualComplexRules(&rule.Rule, &entity.Rule) {
-			return xcommon.NewXconfError(http.StatusConflict, "Rule has duplicate: "+rule.Name)
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Rule has duplicate: "+rule.Name)
 		}
 	}
 	return nil
@@ -213,9 +219,9 @@ func beforeCreating(entity *xwlogupload.TelemetryTwoRule, writeApplication strin
 	} else {
 		existingEntity := xlogupload.GetOneTelemetryTwoRule(id)
 		if existingEntity != nil && !xshared.ApplicationTypeEquals(existingEntity.ApplicationType, entity.ApplicationType) {
-			return xcommon.NewXconfError(http.StatusConflict, "Entity with id: "+id+" already exists in "+existingEntity.ApplicationType+" application")
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Entity with id: "+id+" already exists in "+existingEntity.ApplicationType+" application")
 		} else if existingEntity != nil && xshared.ApplicationTypeEquals(existingEntity.ApplicationType, writeApplication) {
-			return xcommon.NewXconfError(http.StatusConflict, "Entity with id: "+id+" already exists")
+			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Entity with id: "+id+" already exists")
 		}
 	}
 	return nil
@@ -224,14 +230,14 @@ func beforeCreating(entity *xwlogupload.TelemetryTwoRule, writeApplication strin
 func beforeUpdating(entity *xwlogupload.TelemetryTwoRule, writeApplication string) error {
 	id := entity.ID
 	if id == "" {
-		return xcommon.NewXconfError(http.StatusBadRequest, "Entity id is empty")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Entity id is empty")
 	}
 	existingEntity := xlogupload.GetOneTelemetryTwoRule(id)
 	if !xshared.ApplicationTypeEquals(existingEntity.ApplicationType, writeApplication) {
-		return xcommon.NewXconfError(http.StatusNotFound, "Entity with id: "+id+" does not exist")
+		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
 	if existingEntity == nil {
-		return xcommon.NewXconfError(http.StatusNotFound, "Entity with id: "+id+" does not exist")
+		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
 	return nil
 }
@@ -252,7 +258,7 @@ func beforeSaving(entity *xwlogupload.TelemetryTwoRule, writeApplication string)
 	if err != nil {
 		return err
 	}
-	all := xwlogupload.GetTelemetryTwoRuleList()
+	all := xwlogupload.GetTelemetryTwoRuleListForAS()
 	err = validateAll(entity, all)
 	if err != nil {
 		return err

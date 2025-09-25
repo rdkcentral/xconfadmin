@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,19 +21,22 @@ import (
 	"fmt"
 	"net/http"
 
-	xutil "xconfadmin/util"
-	ef "xconfwebconfig/dataapi/estbfirmware"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 
-	xcommon "xconfadmin/common"
-	xshared "xconfadmin/shared"
-	xwshared "xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/util"
+	ef "github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
 
-	"xconfadmin/adminapi/auth"
-	xhttp "xconfadmin/http"
-	xwcommon "xconfwebconfig/common"
-	xwhttp "xconfwebconfig/http"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+
+	xwshared "github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	log "github.com/sirupsen/logrus"
 )

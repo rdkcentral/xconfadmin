@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Comcast Cable Communications Management, LLC
+ * Copyright 2025 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,21 +23,20 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
-	xhttp "xconfadmin/http"
-	"xconfwebconfig/common"
-	xwhttp "xconfwebconfig/http"
-	ru "xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
-	"xconfadmin/util"
-	xwcommon "xconfwebconfig/common"
-	xwutil "xconfwebconfig/util"
+	"github.com/rdkcentral/xconfadmin/util"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwutil "github.com/rdkcentral/xconfwebconfig/util"
 
-	xcommon "xconfadmin/common"
-	ds "xconfwebconfig/db"
-	"xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 )
 
 const (
@@ -85,7 +84,7 @@ func CreateModel(model *shared.Model) *xwhttp.ResponseEntity {
 
 	}
 
-	model.Updated = xwutil.GetTimestamp(time.Now().UTC())
+	model.Updated = xwutil.GetTimestamp()
 	env, err := shared.SetOneModel(model)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, model)
@@ -108,7 +107,7 @@ func UpdateModel(model *shared.Model) *xwhttp.ResponseEntity {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, errors.New(model.ID+" model does not exist"), model)
 	}
 
-	model.Updated = xwutil.GetTimestamp(time.Now().UTC())
+	model.Updated = xwutil.GetTimestamp()
 	env, err := shared.SetOneModel(model)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, model)
@@ -117,23 +116,23 @@ func UpdateModel(model *shared.Model) *xwhttp.ResponseEntity {
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, env)
 }
 
-func DeleteModel(id string) *xhttp.ResponseEntity {
+func DeleteModel(id string) *xcommon.ResponseEntity {
 	err := validateUsageForModel(id)
 	if err != nil {
-		return xhttp.NewResponseEntity(err, id)
+		return xcommon.NewResponseEntity(err, id)
 	}
-
+	//TODO - Use NewResponseEntity at either one place
 	existingModel := shared.GetOneModel(id)
 	if existingModel == nil {
-		return xhttp.NewResponseEntityWithStatus(http.StatusNotFound, errors.New("Entity with id: "+id+" does not exist"), id)
+		return xcommon.NewResponseEntityWithStatus(http.StatusNotFound, errors.New("Entity with id: "+id+" does not exist"), id)
 	}
 
 	err = shared.DeleteOneModel(id)
 	if err != nil {
-		return xhttp.NewResponseEntityWithStatus(http.StatusInternalServerError, err, id)
+		return xcommon.NewResponseEntityWithStatus(http.StatusInternalServerError, err, id)
 	}
 
-	return xhttp.NewResponseEntityWithStatus(http.StatusNoContent, nil, id)
+	return xcommon.NewResponseEntityWithStatus(http.StatusNoContent, nil, id)
 }
 
 // Return usage info if Model is used by a rule, empty string otherwise
@@ -158,10 +157,10 @@ func validateUsageForModel(modelId string) error {
 		for _, v := range resultMap {
 			xrule, ok := v.(ru.XRule)
 			if !ok {
-				return xcommon.NewXconfError(http.StatusInternalServerError, fmt.Sprintf("Failed to assert %s as XRule type", tableName))
+				return xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, fmt.Sprintf("Failed to assert %s as XRule type", tableName))
 			}
 			if ru.IsExistConditionByFreeArgAndFixedArg(xrule.GetRule(), coreef.RuleFactoryMODEL.GetName(), modelId) {
-				return xcommon.NewXconfError(http.StatusConflict, fmt.Sprintf("Model %s is used by %s %s(%s)", modelId, xrule.GetRuleType(), xrule.GetName(), tableName))
+				return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Model %s is used by %s %s(%s)", modelId, xrule.GetRuleType(), xrule.GetName(), tableName))
 			}
 		}
 	}
@@ -169,13 +168,13 @@ func validateUsageForModel(modelId string) error {
 	// Check for usage in FirmwareConfig
 	list, err := coreef.GetFirmwareConfigAsListDB()
 	if err != nil && err.Error() != common.NotFound.Error() {
-		return xcommon.NewXconfError(http.StatusInternalServerError, err.Error())
+		return xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, err.Error())
 	}
 
 	for _, config := range list {
 		if config != nil {
 			if xwutil.Contains(config.SupportedModelIds, modelId) {
-				return xcommon.NewXconfError(http.StatusConflict, fmt.Sprintf("Model %s is used by FirmwareConfig %s", modelId, config.Description))
+				return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Model %s is used by FirmwareConfig %s", modelId, config.Description))
 			}
 		}
 	}
@@ -205,7 +204,7 @@ func generateModelPageByContext(dbrules []*shared.Model, contextMap map[string]s
 			if searchList(validContexts, k, false) {
 				continue
 			}
-			return nil, xwcommon.NewXconfError (http.StatusBadRequest, "Inapplicable parameter: " + k)
+			return nil, xwcommon.NewRemoteErrorAS (http.StatusBadRequest, "Inapplicable parameter: " + k)
 
 		}
 	*/
@@ -220,7 +219,7 @@ func generateModelPageByContext(dbrules []*shared.Model, contextMap map[string]s
 		pageSize, _ = strconv.Atoi(szStr)
 	}
 	if pageNum < 1 || pageSize < 1 {
-		return nil, xcommon.NewXconfError(http.StatusBadRequest, "pageNumber and pageSize should both be greater than zero")
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "pageNumber and pageSize should both be greater than zero")
 	}
 	return extractModelPage(dbrules, pageNum, pageSize), nil
 }
@@ -232,7 +231,7 @@ func filterModelsByContext(entries []*shared.Model, searchContext map[string]str
 			if searchList(validFilters, k, false) {
 				continue
 			}
-			return nil, xwcommon.NewXconfError (http.StatusBadRequest, "Invalid param " + k + ". Valid Params are: " + strings.Join(validFilters[:], ","))
+			return nil, xwcommon.NewRemoteErrorAS (http.StatusBadRequest, "Invalid param " + k + ". Valid Params are: " + strings.Join(validFilters[:], ","))
 		}
 	*/
 
