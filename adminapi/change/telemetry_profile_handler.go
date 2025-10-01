@@ -134,7 +134,6 @@ func CreateTelemetryProfileChangeHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	ds.GetCacheManager().ForceSyncChanges()
 	change, err := WriteCreateChange(r, permTelemetryProfile)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -158,7 +157,6 @@ func CreateTelemetryProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ds.GetCacheManager().ForceSyncChanges()
 	savedProfile, err := CreatePermanentTelemetryProfile(r, permTelemetryProfile)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -181,7 +179,6 @@ func UpdateTelemetryProfileChangeHandler(w http.ResponseWriter, r *http.Request)
 		xhttp.AdminError(w, err)
 		return
 	}
-	ds.GetCacheManager().ForceSyncChanges()
 	change, err := WriteUpdateChangeOrSave(r, permTelemetryProfile)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -205,7 +202,6 @@ func UpdateTelemetryProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ds.GetCacheManager().ForceSyncChanges()
 	updatedProfile, err := UpdatePermanentTelemetryProfile(permTelemetryProfile)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -239,7 +235,6 @@ func DeleteTelemetryProfileChangeHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	ds.GetCacheManager().ForceSyncChanges()
 	change, err := WriteDeleteChange(r, id)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -274,7 +269,6 @@ func DeleteTelemetryProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ds.GetCacheManager().ForceSyncChanges()
 	_, err = DeletePermanentTelemetryProfile(r, id)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -323,7 +317,6 @@ func PostTelemetryProfileEntitiesHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	ds.GetCacheManager().ForceSyncChanges()
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		if util.IsBlank(entity.Type) {
@@ -370,7 +363,6 @@ func PutTelemetryProfileEntitiesHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ds.GetCacheManager().ForceSyncChanges()
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		if _, err := WriteUpdateChangeOrSave(r, &entity); err != nil {
@@ -548,7 +540,6 @@ func AddTelemetryProfileEntryChangeHandler(w http.ResponseWriter, r *http.Reques
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	ds.GetCacheManager().ForceSyncChanges()
 	profile := xwlogupload.GetOnePermanentTelemetryProfile(id)
 	if profile == nil {
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
@@ -675,7 +666,6 @@ func RemoveTelemetryProfileEntryChangeHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	ds.GetCacheManager().ForceSyncChanges()
 	profile := xwlogupload.GetOnePermanentTelemetryProfile(id)
 	if profile == nil {
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
