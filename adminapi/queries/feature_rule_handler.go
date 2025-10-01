@@ -28,20 +28,16 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/rdkcentral/xconfadmin/shared"
-	xshared "github.com/rdkcentral/xconfadmin/shared"
-
-	"github.com/rdkcentral/xconfwebconfig/db"
-	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
-
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
-
 	"github.com/rdkcentral/xconfwebconfig/common"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
 	"github.com/rdkcentral/xconfwebconfig/util"
 )
@@ -266,7 +262,19 @@ func CreateFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := featureRuleTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := featureRuleTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
 	db.GetCacheManager().ForceSyncChanges()
+
 	createdFeatureRule, err := CreateFeatureRule(featureRule, applicationType)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -286,7 +294,19 @@ func UpdateFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	ds.GetCacheManager().ForceSyncChanges()
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := featureRuleTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := featureRuleTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
 	updatedFeatureRule, err := UpdateFeatureRule(featureRule, applicationType)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -312,8 +332,6 @@ func ImportAllFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ds.GetCacheManager().ForceSyncChanges()
-
 	determinedAppType := ""
 	for i, _ := range featureRules {
 		applicationType, err := auth.CanWrite(r, auth.FIRMWARE_ENTITY, featureRules[i].ApplicationType)
@@ -338,7 +356,19 @@ func ImportAllFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 		return featureRules[i].Priority < featureRules[j].Priority
 	})
 
-	importResult := ImportOrUpdateAllFeatureRule(featureRules, determinedAppType)
+	owner := auth.GetDistributedLockOwner(r)
+	if err := featureRuleTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := featureRuleTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
+	importResult := importOrUpdateAllFeatureRule(featureRules, determinedAppType)
 	response, err := util.JSONMarshal(importResult)
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal featureRuleNew error: %v", err))
@@ -352,9 +382,19 @@ func DeleteOneFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 		xwhttp.WriteXconfResponse(w, http.StatusMethodNotAllowed, nil)
 		return
 	}
-	ds.GetCacheManager().ForceSyncChanges()
-	featureRuleUpdateMutex.Lock()
-	defer featureRuleUpdateMutex.Unlock()
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := featureRuleTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := featureRuleTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
 	featureRuleToDelete := GetOne(id)
 	if featureRuleToDelete == nil {
 		xwhttp.WriteXconfResponse(w, http.StatusNotFound, []byte("\"Entity with id: "+id+" does not exist\""))
@@ -424,6 +464,17 @@ func ChangeFeatureRulePrioritiesHandler(w http.ResponseWriter, r *http.Request) 
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("newPriority must be a number"))
 		return
 	}
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := featureRuleTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := featureRuleTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
 	db.GetCacheManager().ForceSyncChanges()
 
 	featureRuleToUpdate := GetOne(id)
@@ -431,8 +482,6 @@ func ChangeFeatureRulePrioritiesHandler(w http.ResponseWriter, r *http.Request) 
 		xhttp.WriteXconfResponse(w, http.StatusNotFound, []byte("FeatureRule with id: "+id+" does not exist"))
 	}
 
-	featureRuleUpdateMutex.Lock()
-	defer featureRuleUpdateMutex.Unlock()
 	featureRules, err := ChangePrioritizablePriorities(featureRuleToUpdate, newPriorityInt, applicationType)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -498,7 +547,19 @@ func UpdateFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 	sort.Slice(entities, func(i, j int) bool {
 		return entities[i].Priority < entities[j].Priority
 	})
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := featureRuleTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := featureRuleTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
 	db.GetCacheManager().ForceSyncChanges()
+
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
@@ -543,7 +604,19 @@ func CreateFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 	sort.Slice(entities, func(i, j int) bool {
 		return entities[i].Priority < entities[j].Priority
 	})
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := featureRuleTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := featureRuleTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
 	db.GetCacheManager().ForceSyncChanges()
+
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		featureRule, err := CreateFeatureRule(entity, applicationType)

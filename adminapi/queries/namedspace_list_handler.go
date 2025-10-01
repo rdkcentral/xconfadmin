@@ -26,22 +26,17 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rdkcentral/xconfwebconfig/shared"
-
 	"github.com/gorilla/mux"
-
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	covt "github.com/rdkcentral/xconfadmin/shared/estbfirmware"
 	"github.com/rdkcentral/xconfadmin/util"
-
-	xutil "github.com/rdkcentral/xconfwebconfig/util"
-
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-
-	"github.com/rdkcentral/xconfadmin/adminapi/auth"
-	xhttp "github.com/rdkcentral/xconfadmin/http"
-
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	xutil "github.com/rdkcentral/xconfwebconfig/util"
+	log "github.com/sirupsen/logrus"
 )
 
 func GetQueriesIpAddressGroups(w http.ResponseWriter, r *http.Request) {
@@ -185,6 +180,17 @@ func AddDataIpAddressGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, listId); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, listId); err != nil {
+			log.Error(err)
+		}
+	}()
+
 	respEntity := AddNamespacedListData(shared.IP_LIST, listId, &stringListWrapper)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -226,6 +232,17 @@ func RemoveDataIpAddressGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, listId); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, listId); err != nil {
+			log.Error(err)
+		}
+	}()
+
 	respEntity := RemoveNamespacedListData(shared.IP_LIST, listId, &stringListWrapper)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -246,6 +263,17 @@ func DeleteIpAddressGroupHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, errorStr)
 		return
 	}
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, id); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, id); err != nil {
+			log.Error(err)
+		}
+	}()
 
 	respEntity := DeleteNamespacedList(shared.IP_LIST, id)
 	if respEntity.Error != nil {
@@ -350,6 +378,17 @@ func CreateIpAddressGroupHandlerV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, newIpList.ID); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, newIpList.ID); err != nil {
+			log.Error(err)
+		}
+	}()
+
 	respEntity := CreateNamespacedList(newIpList, false)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -385,6 +424,17 @@ func UpdateIpAddressGroupHandlerV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, newIpList.ID); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, newIpList.ID); err != nil {
+			log.Error(err)
+		}
+	}()
+
 	respEntity := UpdateNamespacedList(newIpList, "")
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -411,6 +461,17 @@ func DeleteIpAddressGroupHandlerV2(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, errorStr)
 		return
 	}
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, id); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, id); err != nil {
+			log.Error(err)
+		}
+	}()
 
 	respEntity := DeleteNamespacedList(shared.IP_LIST, id)
 	if respEntity.Error != nil {
@@ -507,6 +568,17 @@ func SaveMacListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, newMacList.ID); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, newMacList.ID); err != nil {
+			log.Error(err)
+		}
+	}()
+
 	// Create the new MacList or update an existing one
 	respEntity := CreateNamespacedList(newMacList, true)
 	if respEntity.Error != nil {
@@ -542,6 +614,17 @@ func CreateMacListHandlerV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, newMacList.ID); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, newMacList.ID); err != nil {
+			log.Error(err)
+		}
+	}()
+
 	respEntity := CreateNamespacedList(newMacList, false)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -575,6 +658,17 @@ func UpdateMacListHandlerV2(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, newMacList.ID); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, newMacList.ID); err != nil {
+			log.Error(err)
+		}
+	}()
 
 	respEntity := UpdateNamespacedList(newMacList, "")
 	if respEntity.Error != nil {
@@ -617,6 +711,17 @@ func AddDataMacListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, listId); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, listId); err != nil {
+			log.Error(err)
+		}
+	}()
+
 	respEntity := AddNamespacedListData(shared.MAC_LIST, listId, &stringListWrapper)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -658,6 +763,17 @@ func RemoveDataMacListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, listId); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, listId); err != nil {
+			log.Error(err)
+		}
+	}()
+
 	respEntity := RemoveNamespacedListData(shared.MAC_LIST, listId, &stringListWrapper)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -683,6 +799,17 @@ func DeleteMacListHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, errorStr)
 		return
 	}
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, id); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, id); err != nil {
+			log.Error(err)
+		}
+	}()
 
 	respEntity := DeleteNamespacedList(shared.MAC_LIST, id)
 	if respEntity.Error != nil {
@@ -736,6 +863,17 @@ func DeleteMacListHandlerV2(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, errorStr)
 		return
 	}
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, id); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, id); err != nil {
+			log.Error(err)
+		}
+	}()
 
 	respEntity := DeleteNamespacedList(shared.MAC_LIST, id)
 	if respEntity.Error != nil {
@@ -921,6 +1059,17 @@ func CreateNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, newNamespacedListList.ID); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, newNamespacedListList.ID); err != nil {
+			log.Error(err)
+		}
+	}()
+
 	respEntity := CreateNamespacedList(newNamespacedListList, false)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -955,6 +1104,17 @@ func UpdateNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, namespacedListList.ID); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, namespacedListList.ID); err != nil {
+			log.Error(err)
+		}
+	}()
 
 	respEntity := UpdateNamespacedList(namespacedListList, "")
 	if respEntity.Error != nil {
@@ -998,6 +1158,17 @@ func RenameNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, id); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, id); err != nil {
+			log.Error(err)
+		}
+	}()
+
 	respEntity := UpdateNamespacedList(namespacedListList, id)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -1024,6 +1195,17 @@ func DeleteNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, errorStr)
 		return
 	}
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := namedListTableLock.LockRow(owner, id); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer func() {
+		if err := namedListTableLock.UnlockRow(owner, id); err != nil {
+			log.Error(err)
+		}
+	}()
 
 	respEntity := DeleteNamespacedList("", id)
 	if respEntity.Error != nil {
@@ -1106,21 +1288,37 @@ func PostNamespacedListEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	owner := auth.GetDistributedLockOwner(r)
 	entitiesMap := map[string]xhttp.EntityMessage{}
-	for _, entity := range entities {
-		entity := entity
-		respEntity := CreateNamespacedList(&entity, false)
-		if respEntity.Error == nil {
-			entitiesMap[entity.ID] = xhttp.EntityMessage{
-				Status:  xcommon.ENTITY_STATUS_SUCCESS,
-				Message: entity.ID,
+	for _, e := range entities {
+		// Using a closure to correctly scope the defer for the lock
+		func(entity shared.GenericNamespacedList) {
+			if err := namedListTableLock.LockRow(owner, entity.ID); err != nil {
+				entitiesMap[entity.ID] = xhttp.EntityMessage{
+					Status:  xcommon.ENTITY_STATUS_FAILURE,
+					Message: err.Error(),
+				}
+				return
 			}
-		} else {
-			entitiesMap[entity.ID] = xhttp.EntityMessage{
-				Status:  xcommon.ENTITY_STATUS_FAILURE,
-				Message: respEntity.Error.Error(),
+			defer func() {
+				if err := namedListTableLock.UnlockRow(owner, entity.ID); err != nil {
+					log.Error(err)
+				}
+			}()
+
+			respEntity := CreateNamespacedList(&entity, false)
+			if respEntity.Error == nil {
+				entitiesMap[entity.ID] = xhttp.EntityMessage{
+					Status:  xcommon.ENTITY_STATUS_SUCCESS,
+					Message: entity.ID,
+				}
+			} else {
+				entitiesMap[entity.ID] = xhttp.EntityMessage{
+					Status:  xcommon.ENTITY_STATUS_FAILURE,
+					Message: respEntity.Error.Error(),
+				}
 			}
-		}
+		}(e)
 	}
 
 	response, err := xhttp.ReturnJsonResponse(entitiesMap, r)
@@ -1149,21 +1347,37 @@ func PutNamespacedListEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	owner := auth.GetDistributedLockOwner(r)
 	entitiesMap := map[string]xhttp.EntityMessage{}
-	for _, entity := range entities {
-		entity := entity
-		respEntity := UpdateNamespacedList(&entity, "")
-		if respEntity.Error == nil {
-			entitiesMap[entity.ID] = xhttp.EntityMessage{
-				Status:  xcommon.ENTITY_STATUS_SUCCESS,
-				Message: entity.ID,
+	for _, e := range entities {
+		// Using a closure to correctly scope the defer for the lock
+		func(entity shared.GenericNamespacedList) {
+			if err := namedListTableLock.LockRow(owner, entity.ID); err != nil {
+				entitiesMap[entity.ID] = xhttp.EntityMessage{
+					Status:  xcommon.ENTITY_STATUS_FAILURE,
+					Message: err.Error(),
+				}
+				return
 			}
-		} else {
-			entitiesMap[entity.ID] = xhttp.EntityMessage{
-				Status:  xcommon.ENTITY_STATUS_FAILURE,
-				Message: respEntity.Error.Error(),
+			defer func() {
+				if err := namedListTableLock.UnlockRow(owner, entity.ID); err != nil {
+					log.Error(err)
+				}
+			}()
+
+			respEntity := UpdateNamespacedList(&entity, "")
+			if respEntity.Error == nil {
+				entitiesMap[entity.ID] = xhttp.EntityMessage{
+					Status:  xcommon.ENTITY_STATUS_SUCCESS,
+					Message: entity.ID,
+				}
+			} else {
+				entitiesMap[entity.ID] = xhttp.EntityMessage{
+					Status:  xcommon.ENTITY_STATUS_FAILURE,
+					Message: respEntity.Error.Error(),
+				}
 			}
-		}
+		}(e)
 	}
 
 	response, err := xhttp.ReturnJsonResponse(entitiesMap, r)
