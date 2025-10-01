@@ -24,26 +24,20 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 
-	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-
-	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
+	"github.com/google/uuid"
+	"github.com/rdkcentral/xconfadmin/adminapi/queries"
 	"github.com/rdkcentral/xconfadmin/common"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	core "github.com/rdkcentral/xconfadmin/shared"
-
-	//	"github.com/rdkcentral/xconfadmin/shared/logupload"
 	"github.com/rdkcentral/xconfadmin/util"
-
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
-
-	"github.com/google/uuid"
 )
 
 const (
@@ -51,7 +45,7 @@ const (
 	cDcmRulePageSize   = "pageSize"
 )
 
-var formulaUpdateMutex sync.Mutex
+var dcmRuleTableLock = db.NewDistributedLock(db.TABLE_DCM_RULE, 10)
 
 func GetDcmFormulaAll() []*logupload.DCMGenericRule {
 	dcmformularules := logupload.GetDCMGenericRuleListForAS()
@@ -76,8 +70,6 @@ func validateIfExists(id string, appType string) error {
 }
 
 func DeleteDcmFormulabyId(id string, appType string) *xcommon.ResponseEntity {
-	formulaUpdateMutex.Lock()
-	defer formulaUpdateMutex.Unlock()
 	err := validateIfExists(id, appType)
 	if err != nil {
 		return xcommon.NewResponseEntityWithStatus(http.StatusNotFound, err, nil)
@@ -94,7 +86,7 @@ func DeleteDcmFormulabyId(id string, appType string) *xcommon.ResponseEntity {
 func SaveDcmRules(itemList []core.Prioritizable) error {
 	for _, item := range itemList {
 		rule := item.(*logupload.DCMGenericRule)
-		if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, rule.GetID(), rule); err != nil {
+		if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, rule.GetID(), rule); err != nil {
 			return err
 		}
 	}
@@ -106,27 +98,27 @@ func DeleteOneDcmFormula(id string, appType string) error {
 	if existingRule == nil {
 		return fmt.Errorf("Entity with id %s does not exist", id)
 	}
-	err := ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_DCM_RULE, id)
+	err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_DCM_RULE, id)
 	if err != nil {
 		return err
 	}
 	devicesettings := logupload.GetOneDeviceSettings(id)
 	if devicesettings != nil {
-		err := ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_DEVICE_SETTINGS, id)
+		err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_DEVICE_SETTINGS, id)
 		if err != nil {
 			return err
 		}
 	}
 	loguploadsettings := logupload.GetOneLogUploadSettings(id)
 	if loguploadsettings != nil {
-		err := ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_LOG_UPLOAD_SETTINGS, id)
+		err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_LOG_UPLOAD_SETTINGS, id)
 		if err != nil {
 			return err
 		}
 	}
 	vodsettings := logupload.GetOneVodSettings(id)
 	if vodsettings != nil {
-		err := ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_VOD_SETTINGS, id)
+		err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_VOD_SETTINGS, id)
 		if err != nil {
 			return err
 		}
@@ -232,13 +224,11 @@ func CreateDcmRule(dfrule *logupload.DCMGenericRule, appType string) *xwhttp.Res
 		return respEntity
 	}
 
-	formulaUpdateMutex.Lock()
-	defer formulaUpdateMutex.Unlock()
 	dcmRulesByAppType := GetDcmRulesByApplicationType(dfrule.ApplicationType)
 	changedDcmRules := queries.AddNewPrioritizableAndReorganizePriorities(dfrule, DcmRulesToPrioritizables(dcmRulesByAppType))
 	for _, entry := range changedDcmRules {
 		entry.(*logupload.DCMGenericRule).Updated = util.GetTimestamp()
-		if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, entry.GetID(), entry); err != nil {
+		if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, entry.GetID(), entry); err != nil {
 			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 		}
 	}
@@ -263,8 +253,7 @@ func UpdateDcmRule(incomingFormula *logupload.DCMGenericRule, appType string) *x
 	if incomingFormula.ApplicationType != appType {
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s ApplicationType doesn't match", incomingFormula.ID), nil)
 	}
-	formulaUpdateMutex.Lock()
-	defer formulaUpdateMutex.Unlock()
+
 	existingFormula := logupload.GetOneDCMGenericRule(incomingFormula.ID)
 	if existingFormula == nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s does not exist", incomingFormula.ID), nil)
@@ -279,7 +268,7 @@ func UpdateDcmRule(incomingFormula *logupload.DCMGenericRule, appType string) *x
 
 	if incomingFormula.Priority == existingFormula.Priority {
 		incomingFormula.Updated = util.GetTimestamp()
-		if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, incomingFormula.ID, incomingFormula); err != nil {
+		if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, incomingFormula.ID, incomingFormula); err != nil {
 			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 		}
 	} else {
@@ -287,7 +276,7 @@ func UpdateDcmRule(incomingFormula *logupload.DCMGenericRule, appType string) *x
 		changedFormulae := queries.UpdatePrioritizablePriorityAndReorganize(incomingFormula, DcmRulesToPrioritizables(formulasByApplicationType), existingFormula.Priority)
 		for _, entry := range changedFormulae {
 			entry.(*logupload.DCMGenericRule).Updated = util.GetTimestamp()
-			if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, entry.GetID(), entry); err != nil {
+			if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, entry.GetID(), entry); err != nil {
 				return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 			}
 		}

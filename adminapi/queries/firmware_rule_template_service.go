@@ -24,31 +24,24 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 
 	"net/http"
 
-	"github.com/rdkcentral/xconfwebconfig/common"
-	ruleutil "github.com/rdkcentral/xconfwebconfig/rulesengine"
-	xutil "github.com/rdkcentral/xconfwebconfig/util"
-
-	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-
+	"github.com/google/uuid"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
-	core "github.com/rdkcentral/xconfadmin/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xcorefw "github.com/rdkcentral/xconfadmin/shared/firmware"
 	"github.com/rdkcentral/xconfadmin/util"
-
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
-
-	"github.com/google/uuid"
+	xutil "github.com/rdkcentral/xconfwebconfig/util"
 	log "github.com/sirupsen/logrus"
 )
 
-var firmwareRuleTemplateUpdateMutex sync.Mutex
+var fwRuleTemplateTableLock = db.NewDistributedLock(db.TABLE_FIRMWARE_RULE_TEMPLATE, 10)
 
 const (
 	cFirmwareRTName                 = xcommon.NAME
@@ -190,7 +183,7 @@ func validateRule(fr *re.Rule, action *corefw.TemplateApplicableAction) error {
 	if err := checkDuplicateConditions(fr); err != nil {
 		return err
 	}
-	conditions := ruleutil.ToConditions(fr)
+	conditions := re.ToConditions(fr)
 	if len(conditions) == 0 {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FirmwareRuleTemplate "+fr.Id()+" should have a minimum one condition")
 	}
@@ -230,7 +223,7 @@ func validateAgainstFirmwareRTs(frt *corefw.FirmwareRuleTemplate, entities []*co
 		if frt.GetName() == rule.GetName() {
 			return xwcommon.NewRemoteErrorAS(http.StatusConflict, rule.GetName()+" is already used")
 		}
-		if ruleutil.EqualComplexRules(frt.GetRule(), rule.GetRule()) {
+		if re.EqualComplexRules(frt.GetRule(), rule.GetRule()) {
 			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Rule is duplicate of "+rule.ID)
 		}
 	}
@@ -309,21 +302,22 @@ func addNewFirmwareRTAndReorganize(newItem corefw.FirmwareRuleTemplate, itemsLis
 // 	return nil
 // }
 
-func saveAllTemplates(templateList []core.Prioritizable) error {
+func saveAllTemplates(templateList []xshared.Prioritizable) error {
 	for _, template := range templateList {
 		frt := template.(*corefw.FirmwareRuleTemplate)
 		if err := frt.Validate(); err != nil {
 			return err
 		}
 		frt.Updated = util.GetTimestamp()
-		if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template.GetID(), template); err != nil {
+		if err := db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE_TEMPLATE, template.GetID(), template); err != nil {
 			return err
 		}
 	}
 	return nil
 }
-func firmwareRuleTemplatesToPrioritizables(frts []*corefw.FirmwareRuleTemplate) []core.Prioritizable {
-	prioritizables := make([]core.Prioritizable, len(frts))
+
+func firmwareRuleTemplatesToPrioritizables(frts []*corefw.FirmwareRuleTemplate) []xshared.Prioritizable {
+	prioritizables := make([]xshared.Prioritizable, len(frts))
 	for i, item := range frts {
 		itemCopy := *item
 		prioritizables[i] = &itemCopy
@@ -336,10 +330,6 @@ func updateFirmwareRT(templateToUpdate corefw.FirmwareRuleTemplate, frtOnDb *cor
 	if err != nil {
 		return err
 	}
-
-	//TODO
-	firmwareRuleTemplateUpdateMutex.Lock()
-	defer firmwareRuleTemplateUpdateMutex.Unlock()
 	existingTemplate, err := corefw.GetFirmwareRuleTemplateOneDB(templateToUpdate.ID)
 	if err != nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "FirmwareRuleTemplate does not exist for "+templateToUpdate.ID)
@@ -366,12 +356,9 @@ func createFirmwareRT(template corefw.FirmwareRuleTemplate) (templ *corefw.Firmw
 	if err != nil {
 		return nil, err
 	}
-
-	firmwareRuleTemplateUpdateMutex.Lock()
-	defer firmwareRuleTemplateUpdateMutex.Unlock()
 	templatesOfCurrentType, err := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(template.ApplicableAction.ActionType)
 	if err != nil {
-		if err.Error() != common.NotFound.Error() {
+		if err.Error() != xwcommon.NotFound.Error() {
 			return nil, err
 		}
 	}
@@ -519,7 +506,7 @@ func CreateFirmwareRuleTemplates() {
 		if jsonData, err := json.Marshal(template); err != nil {
 			panic(err)
 		} else {
-			if err := ds.GetSimpleDao().SetOne(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template.ID, jsonData); err != nil {
+			if err := db.GetSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE_TEMPLATE, template.ID, jsonData); err != nil {
 				panic(err)
 			}
 		}
