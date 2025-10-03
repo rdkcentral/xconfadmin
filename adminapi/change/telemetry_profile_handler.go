@@ -41,6 +41,8 @@ import (
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
+	ds "github.com/rdkcentral/xconfwebconfig/db"
+
 	"github.com/gorilla/mux"
 )
 
@@ -476,6 +478,7 @@ func AddTelemetryProfileEntryHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	ds.GetCacheManager().ForceSyncChanges()
 	profile := xwlogupload.GetOnePermanentTelemetryProfile(id)
 	if profile == nil {
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
@@ -599,6 +602,7 @@ func RemoveTelemetryProfileEntryHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	ds.GetCacheManager().ForceSyncChanges()
 	profile := xwlogupload.GetOnePermanentTelemetryProfile(id)
 	if profile == nil {
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
