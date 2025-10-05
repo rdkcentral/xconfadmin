@@ -14,7 +14,8 @@ import (
 )
 
 var (
-	TZ, _ = time.LoadLocation("UTC")
+	TZ, _      = time.LoadLocation("UTC")
+	testConfig = "/app/xconfadmin/xconfadmin.conf"
 )
 
 // UtcCurrentTimestamp - return current timestamp in UTC timezone
@@ -199,4 +200,8 @@ func ValidateTimezoneList(timezoneList string) error {
 		}
 	}
 	return nil // All timezones are valid
+}
+
+func GetTestConfig() string {
+	return testConfig
 }
