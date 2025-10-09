@@ -193,7 +193,7 @@ func PostFirmwareRuleTemplateImportAllHandler(w http.ResponseWriter, r *http.Req
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -250,7 +250,7 @@ func PostFirmwareRuleTemplateImportHandler(w http.ResponseWriter, r *http.Reques
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -327,7 +327,7 @@ func PostChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -386,7 +386,7 @@ func PostFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -436,7 +436,7 @@ func PutFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -494,7 +494,7 @@ func DeleteFirmwareRuleTemplateByIdHandler(w http.ResponseWriter, r *http.Reques
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -621,7 +621,7 @@ func PostFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Requ
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -690,7 +690,7 @@ func PutFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Reque
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {

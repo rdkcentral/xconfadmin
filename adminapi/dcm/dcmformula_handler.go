@@ -198,7 +198,7 @@ func DeleteDcmFormulaByIdHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -239,7 +239,7 @@ func CreateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -286,7 +286,7 @@ func UpdateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -459,7 +459,7 @@ func DcmFormulaChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -538,7 +538,7 @@ func ImportDcmFormulaWithOverwriteHandler(w http.ResponseWriter, r *http.Request
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -590,7 +590,7 @@ func ImportDcmFormulasHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -647,7 +647,7 @@ func PostDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -690,7 +690,7 @@ func PutDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
