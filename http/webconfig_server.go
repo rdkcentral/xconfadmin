@@ -36,13 +36,14 @@ const (
 	MetricsEnabledDefault     = true
 	responseLoggingLowerBound = 1000
 	responseLoggingUpperBound = 5000
+
+	DEV_PROFILE = "dev"
 )
 
-const DEV_PROFILE string = "dev"
-
 var (
-	WebConfServer *WebconfigServer
-	//ds            *xhttp.XconfServer //TODO
+	WebConfServer              *WebconfigServer
+	DistributedLockTableTTL    int
+	DistributedLockTableRowTTL int
 )
 
 // len(response) < lowerBound               ==> convert to json
@@ -79,6 +80,7 @@ type ExternalConnectors struct {
 	xw_ect *xhttp.ExternalConnectors
 	IdpServiceConnector
 }
+
 type ProcessHook interface {
 	Process(*WebconfigServer, ...interface{})
 }
@@ -135,6 +137,9 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 	conf := sc.Config
 	var err error
 
+	DistributedLockTableTTL = int(conf.GetInt32("xconfwebconfig.xconf.distributed_lock_table_ttl", 5))
+	DistributedLockTableRowTTL = int(conf.GetInt32("xconfwebconfig.xconf.distributed_lock_table_row_ttl", 2))
+
 	// appname from config
 	appName := strings.Split(conf.GetString("xconfwebconfig.code_git_commit", "xconfadmin-xconf"), "-")[0]
 
@@ -147,6 +152,7 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 	for _, x := range ignoredHeaders {
 		notLoggedHeaders = append(notLoggedHeaders, strings.ToLower(x))
 	}
+
 	// idp api paths fetching
 	idpAuthProvider := conf.GetString("xconfwebconfig.xconf.authprovider", "acl")
 	idpAuthServer := conf.GetString("xconfwebconfig.xconf.idp_service_name")
@@ -157,11 +163,12 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 	idpLogoutAfterPath := conf.GetString(fmt.Sprintf("xconfwebconfig.%v.idp_logout_after_path", idpAuthServer), idpAuthProvider+"/logout/after")
 	verifyStageHost := conf.GetBoolean("xconfwebconfig.sat_consumer.verify_stage_host", false)
 
-	// tlsConfig, here we ignore any error
+	// tlsConfig for http clients
 	tlsConfig, err := NewTlsConfig(conf)
 	if err != nil && !testOnly {
 		panic(err)
 	}
+
 	var idpSvc IdpServiceConnector
 	if idpAuthProvider != "acl" {
 		idpSvc = NewIdpServiceConnector(conf, ec.IdpServiceConnector)
@@ -196,6 +203,7 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 	if testOnly {
 		WebConfServer.setupMocks()
 	}
+
 	return WebConfServer
 }
 

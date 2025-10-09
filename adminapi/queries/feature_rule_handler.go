@@ -265,7 +265,7 @@ func CreateFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := featureRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -297,7 +297,7 @@ func UpdateFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := featureRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -358,7 +358,7 @@ func ImportAllFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := featureRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -385,7 +385,7 @@ func DeleteOneFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := featureRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -467,7 +467,7 @@ func ChangeFeatureRulePrioritiesHandler(w http.ResponseWriter, r *http.Request) 
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := featureRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -550,7 +550,7 @@ func UpdateFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := featureRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -607,7 +607,7 @@ func CreateFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := featureRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
