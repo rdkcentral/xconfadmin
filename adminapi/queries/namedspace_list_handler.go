@@ -182,7 +182,7 @@ func AddDataIpAddressGroupHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, listId); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -234,7 +234,7 @@ func RemoveDataIpAddressGroupHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, listId); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -266,7 +266,7 @@ func DeleteIpAddressGroupHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, id); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -380,7 +380,7 @@ func CreateIpAddressGroupHandlerV2(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, newIpList.ID); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -426,7 +426,7 @@ func UpdateIpAddressGroupHandlerV2(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, newIpList.ID); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -464,7 +464,7 @@ func DeleteIpAddressGroupHandlerV2(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, id); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -570,7 +570,7 @@ func SaveMacListHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, newMacList.ID); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -616,7 +616,7 @@ func CreateMacListHandlerV2(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, newMacList.ID); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -661,7 +661,7 @@ func UpdateMacListHandlerV2(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, newMacList.ID); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -713,7 +713,7 @@ func AddDataMacListHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, listId); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -765,7 +765,7 @@ func RemoveDataMacListHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, listId); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -802,7 +802,7 @@ func DeleteMacListHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, id); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -866,7 +866,7 @@ func DeleteMacListHandlerV2(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, id); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -1061,7 +1061,7 @@ func CreateNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, newNamespacedListList.ID); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -1107,7 +1107,7 @@ func UpdateNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, namespacedListList.ID); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -1160,7 +1160,7 @@ func RenameNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, id); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
@@ -1198,7 +1198,7 @@ func DeleteNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 
 	owner := auth.GetDistributedLockOwner(r)
 	if err := namedListTableLock.LockRow(owner, id); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
 	defer func() {
