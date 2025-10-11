@@ -550,8 +550,8 @@ func dcmSetup(server *oshttp.WebconfigServer, r *mux.Router) {
 	initDB()
 	db.GetCacheManager() // Initialize cache manager
 	SetupDCMRoutes(server, r)
-
 }
+
 func SetupDCMRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	paths := []*mux.Router{}
 	//authPaths := []*mux.Router{} // Do not required auth token validation middleware
@@ -791,45 +791,6 @@ func GetTestWebConfigServer(testConfigFile string) (*oshttp.WebconfigServer, *mu
 
 	return server, router
 }
-
-// func router *mux.Router {
-// 	if dcmTestRouter == nil {
-// 		cfg := GetTestConfig()
-// 		// Get server and router but don't call adminapi.XconfSetup
-// 		server, r := GetTestWebConfigServer(cfg)
-
-// 		// Set up database connections
-// 		db.SetDatabaseClient(server.XW_XconfServer.DatabaseClient)
-
-// 		// Register core service
-// 		xc := dataapi.GetXconfConfigs(server.XW_XconfServer.ServerConfig.Config)
-// 		dataapi.WebServerInjection(server.XW_XconfServer, xc)
-
-// 		// Register DCM formula routes directly without going through adminapi
-// 		dcmFormulaPath := r.PathPrefix("/xconfAdminService/dcm/formula").Subrouter()
-
-// 		// Register all the routes we need for testing
-// 		// We're calling our own functions directly, no need to reference functions from adminapi
-// 		dcmFormulaPath.HandleFunc("", GetDcmFormulaHandler).Methods("GET")
-// 		dcmFormulaPath.HandleFunc("", CreateDcmFormulaHandler).Methods("POST")
-// 		dcmFormulaPath.HandleFunc("", UpdateDcmFormulaHandler).Methods("PUT")
-// 		dcmFormulaPath.HandleFunc("/filtered", PostDcmFormulaFilteredWithParamsHandler).Methods("POST")
-// 		dcmFormulaPath.HandleFunc("/size", GetDcmFormulaSizeHandler).Methods("GET")
-// 		dcmFormulaPath.HandleFunc("/names", GetDcmFormulaNamesHandler).Methods("GET")
-// 		dcmFormulaPath.HandleFunc("/formulasAvailability", DcmFormulasAvailabilitygHandler).Methods("POST")
-// 		dcmFormulaPath.HandleFunc("/settingsAvailability", DcmFormulaSettingsAvailabilitygHandler).Methods("POST")
-// 		dcmFormulaPath.HandleFunc("/import/{overwrite}", ImportDcmFormulaWithOverwriteHandler).Methods("POST")
-
-// 		// URL with var has to be placed last otherwise, it gets confused with url with defined paths
-// 		dcmFormulaPath.HandleFunc("/{id}", GetDcmFormulaByIdHandler).Methods("GET")
-// 		dcmFormulaPath.HandleFunc("/{id}", DeleteDcmFormulaByIdHandler).Methods("DELETE")
-// 		dcmFormulaPath.HandleFunc("/{id}/priority/{newPriority}", DcmFormulaChangePriorityHandler).Methods("POST")
-
-// 		dcmTestServer = server
-// 		dcmTestRouter = r
-// 	}
-// 	return dcmTestRouter
-// }
 
 func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRecorder { // restored local version
 	recorder := httptest.NewRecorder()
@@ -1148,7 +1109,7 @@ func TestUpdatePriorityAndRuleInFormula_RuleIsUpdatedAndPrioritiesAreReorganized
 	var formulaToUpdate *logupload.DCMGenericRule
 	b, _ := json.Marshal(formulas[formulaToChangeIndex])
 	json.Unmarshal(b, &formulaToUpdate)
-	newPriority := 10
+	newPriority := 8
 	formulaToUpdate.Priority = newPriority
 	formulaToUpdate.Rule = *CreateRule(rulesengine.RelationAnd, *coreef.RuleFactoryIP, rulesengine.StandardOperationIs, "10.10.10.10")
 
