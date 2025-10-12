@@ -89,10 +89,10 @@ func TestFirmwareConfigParametersCanNotBeOverriddenByDefinePropertiesRule(t *tes
 	applicableAction := corefw.NewTemplateApplicableActionAndType(corefw.RuleActionClass, corefw.RULE_TEMPLATE, "")
 	rt := CreateAndSaveFirmwareRuleTemplate("ENV_MODEL_RULE", CreateDefaultEnvModelRule(), applicableAction)
 	assert.Assert(t, rt != nil)
-	percentageBean := CreatePercentageBean("test percentage bean", defaultEnvironmentId, definePropertiesModelId, "", "", defaultFirmwareVersion, "stb")
+	percentageBean := CreatePercentageBeanPB("test percentage bean", defaultEnvironmentId, definePropertiesModelId, "", "", defaultFirmwareVersion, "stb")
 	percentageBean.LastKnownGood = firmwareConfig.ID
 	percentageBean.FirmwareVersions = append(percentageBean.FirmwareVersions, firmwareConfig.FirmwareVersion)
-	err = SavePercentageBean(percentageBean)
+	err = SavePercentageBeanPB(percentageBean)
 	assert.NilError(t, err)
 
 	defineProperties := map[string]string{}
@@ -125,13 +125,13 @@ func TestFirmwareConfigParametersCanNotBeOverriddenByDefinePropertiesRule(t *tes
 }
 
 func createAndSaveUseAccountPercentageBean(lkgConfig *coreef.FirmwareConfig) (*coreef.PercentageBean, error) {
-	useAccountBean := CreatePercentageBean("useAccountName", defaultEnvironmentId, defaultModelId, "", "", defaultFirmwareVersion, "stb")
+	useAccountBean := CreatePercentageBeanPB("useAccountName", defaultEnvironmentId, defaultModelId, "", "", defaultFirmwareVersion, "stb")
 	useAccountBean.UseAccountIdPercentage = true
 	useAccountBean.LastKnownGood = lkgConfig.ID
 	firmwareVersions := useAccountBean.FirmwareVersions
 	firmwareVersions = append(firmwareVersions, lkgConfig.FirmwareVersion)
 	useAccountBean.FirmwareVersions = firmwareVersions
-	err := SavePercentageBean(useAccountBean)
+	err := SavePercentageBeanPB(useAccountBean)
 	return useAccountBean, err
 }
 
@@ -148,7 +148,7 @@ func buildDefinePropertyTemplateAction(parameters map[string]string, requiredAll
 	return propertyValues
 }
 
-func SavePercentageBean(percentageBean *coreef.PercentageBean) error {
+func SavePercentageBeanPB(percentageBean *coreef.PercentageBean) error {
 	firmwareRule := coreef.ConvertPercentageBeanToFirmwareRule(*percentageBean)
 	return corefw.CreateFirmwareRuleOneDB(firmwareRule)
 }

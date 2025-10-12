@@ -42,12 +42,12 @@ import (
 const (
 	FC_API                         = "/xconfAdminService/firmwareconfig"
 	jsonFirmwareConfigTestDataLocn = "jsondata/firmwareconfig/"
-	MODEL_QAPI                     = "/xconfAdminService/queries/models"
-	MODEL_UAPI                     = "/xconfAdminService/updates/models"
-	MODEL_DAPI                     = "/xconfAdminService/delete/models"
+	MODEL_Q_API                    = "/xconfAdminService/queries/models"
+	MODEL_U_API                    = "/xconfAdminService/updates/models"
+	//MODEL_DAPI = "/xconfAdminService/delete/models"
 	//FRT_API                        = "/xconfAdminService/firmwareruletemplate"
-	FR_API                     = "/xconfAdminService/firmwarerule"
-	jsonModelTestDataLocn      = "jsondata/model/"
+	FR_API = "/xconfAdminService/firmwarerule"
+	//jsonModelTestDataLocn      = "jsondata/model/"
 	MODEL_WHOLE_API            = "/xconfAdminService/model"
 	jsonModelWholeTestDataLocn = "jsondata/model/"
 	FWS_QAPI                   = "/xconfAdminService/queries/firmwares"
@@ -75,7 +75,7 @@ func newFirmwareConfigApiUnitTest(t *testing.T) *apiUnitTest {
 	aut.setupFirmwareConfigApi()
 	return aut
 }
-func SavePercentageBean(percentageBean *coreef.PercentageBean) error {
+func SavePercentageBeanPB(percentageBean *coreef.PercentageBean) error {
 	firmwareRule := coreef.ConvertPercentageBeanToFirmwareRule(*percentageBean)
 	return corefw.CreateFirmwareRuleOneDB(firmwareRule)
 }
@@ -92,8 +92,8 @@ func PreCreatePercentageBean() (*coreef.PercentageBean, error) {
 	CreateAndSaveFirmwareRuleTemplate("ENV_MODEL_RULE", CreateDefaultEnvModelRule(), applicableAction)
 
 	percentageBean := CreatePercentageBeanPB("test percentage bean", defaultEnvironmentId, definePropertiesModelId, "", "", defaultFirmwareVersion, "stb")
-	SavePercentageBean(percentageBean)
-	err := SavePercentageBean(percentageBean)
+	SavePercentageBeanPB(percentageBean)
+	err := SavePercentageBeanPB(percentageBean)
 	return percentageBean, err
 }
 

@@ -31,6 +31,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	"github.com/rdkcentral/xconfadmin/adminapi/firmware"
 	"github.com/rdkcentral/xconfadmin/adminapi/rfc/feature"
 	"github.com/rdkcentral/xconfadmin/common"
 	oshttp "github.com/rdkcentral/xconfadmin/http"
@@ -481,6 +482,76 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	modelPath.HandleFunc("/{id}", DeleteModelHandler).Methods("DELETE").Name("Models")
 	modelPath.HandleFunc("/{id}", GetModelByIdHandler).Methods("GET").Name("Models")
 	paths = append(paths, modelPath)
+
+	// firmwarerule
+	firmwareRulePath := r.PathPrefix("/xconfAdminService/firmwarerule").Subrouter()
+	firmwareRulePath.HandleFunc("/filtered", GetFirmwareRuleFilteredHandler).Methods("GET").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("/importAll", PostFirmwareRuleImportAllHandler).Methods("POST").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("/{type}/names", GetFirmwareRuleByTypeNamesHandler).Methods("GET").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("/byTemplate/{templateId}/names", GetFirmwareRuleByTemplateByTemplateIdNamesHandler).Methods("GET").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("/export/byType", GetFirmwareRuleExportByTypeHandler).Methods("GET").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("/export/allTypes", GetFirmwareRuleExportAllTypesHandler).Methods("GET").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("/testpage", firmware.GetFirmwareTestPageHandler).Methods("GET").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("", GetFirmwareRuleHandler).Methods("GET").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("", PostFirmwareRuleHandler).Methods("POST").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("", PutFirmwareRuleHandler).Methods("PUT").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("/entities", PostFirmwareRuleEntitiesHandler).Methods("POST").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("/entities", PutFirmwareRuleEntitiesHandler).Methods("PUT").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("/filtered", PostFirmwareRuleFilteredHandler).Methods("POST").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-Rules")
+	// url with var has to be placed last otherwise, it gets confused with url with defined paths
+	firmwareRulePath.HandleFunc("/{id}", DeleteFirmwareRuleByIdHandler).Methods("DELETE").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("/{id}", GetFirmwareRuleByIdHandler).Methods("GET").Name("Firmware-Rules")
+	paths = append(paths, firmwareRulePath)
+
+	// firmwareruletemplate
+	firmwareRuleTempPath := r.PathPrefix("/xconfAdminService/firmwareruletemplate").Subrouter()
+	firmwareRuleTempPath.HandleFunc("/filtered", GetFirmwareRuleTemplateFilteredHandler).Methods("GET").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("/importAll", PostFirmwareRuleTemplateImportAllHandler).Methods("POST").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("/all/{type}", GetFirmwareRuleTemplateAllByTypeHandler).Methods("GET").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("/ids", GetFirmwareRuleTemplateIdsHandler).Methods("GET").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("/{id}/priority/{newPriority}", PostChangePriorityHandler).Methods("POST").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("/export", GetFirmwareRuleTemplateExportHandler).Methods("GET").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("/{type}/{isEditable}", GetFirmwareRuleTemplateWithVarWithVarHandler).Methods("GET").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("", GetFirmwareRuleTemplateHandler).Methods("GET").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("", PostFirmwareRuleTemplateHandler).Methods("POST").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("", PutFirmwareRuleTemplateHandler).Methods("PUT").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("/entities", PostFirmwareRuleTemplateEntitiesHandler).Methods("POST").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("/entities", PutFirmwareRuleTemplateEntitiesHandler).Methods("PUT").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("/filtered", PostFirmwareRuleTemplateFilteredHandler).Methods("POST").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-Templates")
+	// url with var has to be placed last otherwise, it gets confused with url with defined paths
+	firmwareRuleTempPath.HandleFunc("/{id}", DeleteFirmwareRuleTemplateByIdHandler).Methods("DELETE").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("/{id}", GetFirmwareRuleTemplateByIdHandler).Methods("GET").Name("Firmware-Templates")
+	paths = append(paths, firmwareRuleTempPath)
+
+	// penetration data report
+	penetrationPath := r.PathPrefix("/xconfAdminService/penetrationdata").Subrouter()
+	penetrationPath.HandleFunc("/{macAddress}", GetPenetrationDataByMacHandler).Methods("GET").Name("PenetrationData")
+	paths = append(paths, penetrationPath)
+
+	// percentfilter/percentageBean
+	percentageBeanPath := r.PathPrefix("/xconfAdminService/percentfilter/percentageBean").Subrouter()
+	percentageBeanPath.HandleFunc("", GetPercentageBeanAllHandler).Methods("GET").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("", CreatePercentageBeanHandler).Methods("POST").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("", UpdatePercentageBeanHandler).Methods("PUT").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/filtered", PostPercentageBeanFilteredWithParamsHandler).Methods("POST").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/entities", PostPercentageBeanEntitiesHandler).Methods("POST").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/entities", PutPercentageBeanEntitiesHandler).Methods("PUT").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/allAsRules", GetAllPercentageBeanAsRule).Methods("GET").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/asRule/{id}", GetPercentageBeanAsRuleById).Methods("GET").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/{id}", GetPercentageBeanByIdHandler).Methods("GET").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/{id}", DeletePercentageBeanByIdHandler).Methods("DELETE").Name("Firmware-PercentFilter")
+	paths = append(paths, percentageBeanPath)
+	// percentfilter
+	percentageFilterPath := r.PathPrefix("/xconfAdminService/percentfilter").Subrouter()
+	percentageFilterPath.HandleFunc("", GetPercentFilterGlobalHandler).Methods("GET").Name("Firmware-PercentFilter")
+	percentageFilterPath.HandleFunc("", UpdatePercentFilterGlobalHandler).Methods("POST").Name("Firmware-PercentFilter")
+	percentageFilterPath.HandleFunc("/globalPercentage", GetGlobalPercentFilterHandler).Methods("GET").Name("Firmware-PercentFilter")
+	percentageFilterPath.HandleFunc("/calculator", GetCalculatedHashAndPercentHandler).Methods("GET").Name("Firmware-PercentFilter")
+	percentageFilterPath.HandleFunc("/globalPercentage/asRule", GetGlobalPercentFilterAsRuleHandler).Methods("GET").Name("Firmware-PercentFilter")
+	paths = append(paths, percentageFilterPath)
 
 	c := cors.New(cors.Options{
 		AllowCredentials: true,

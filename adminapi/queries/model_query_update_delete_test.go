@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package tests
+package queries
 
 import (
 	"bytes"
@@ -49,16 +49,16 @@ func newModelApiUnitTest(t *testing.T) *apiUnitTest {
 	return aut
 }
 
-func (aut *apiUnitTest) setupModelApi() {
-	if aut.getValOf(MODEL_QAPI) == "Done" {
-		return
-	}
-	aut.setValOf(MODEL_QAPI+DATA_LOCN_SUFFIX, jsonModelTestDataLocn)
-	aut.setValOf(MODEL_UAPI+DATA_LOCN_SUFFIX, jsonModelTestDataLocn)
-	aut.setValOf(MODEL_DAPI+DATA_LOCN_SUFFIX, jsonModelTestDataLocn)
+// func (aut *apiUnitTest) setupModelApi() {
+// 	if aut.getValOf(MODEL_QAPI) == "Done" {
+// 		return
+// 	}
+// 	aut.setValOf(MODEL_QAPI+DATA_LOCN_SUFFIX, jsonModelTestDataLocn)
+// 	aut.setValOf(MODEL_UAPI+DATA_LOCN_SUFFIX, jsonModelTestDataLocn)
+// 	aut.setValOf(MODEL_DAPI+DATA_LOCN_SUFFIX, jsonModelTestDataLocn)
 
-	aut.setValOf(MODEL_QAPI, "Done")
-}
+// 	aut.setValOf(MODEL_QAPI, "Done")
+// }
 
 func (aut *apiUnitTest) cleanupModelApi() {
 	if aut.getValOf(MODEL_QAPI) == "" {
@@ -67,19 +67,19 @@ func (aut *apiUnitTest) cleanupModelApi() {
 	aut.setValOf(MODEL_QAPI, "")
 }
 
-func (aut *apiUnitTest) modelArrayValidator(tcase apiUnitTestCase, rsp *http.Response, reqBody *bytes.Buffer) {
-	rspBody, _ := ioutil.ReadAll(rsp.Body)
-	assert.Equal(aut.t, tcase.api == MODEL_QAPI || tcase.api == MODEL_WHOLE_API, true)
+// func (aut *apiUnitTest) modelArrayValidator(tcase apiUnitTestCase, rsp *http.Response, reqBody *bytes.Buffer) {
+// 	rspBody, _ := ioutil.ReadAll(rsp.Body)
+// 	assert.Equal(aut.t, tcase.api == MODEL_QAPI || tcase.api == MODEL_WHOLE_API, true)
 
-	var entries = []core.Model{}
-	json.Unmarshal(rspBody, &entries)
+// 	var entries = []core.Model{}
+// 	json.Unmarshal(rspBody, &entries)
 
-	kvMap, err := url.ParseQuery(tcase.postTerms)
-	assert.NilError(aut.t, err)
+// 	kvMap, err := url.ParseQuery(tcase.postTerms)
+// 	assert.NilError(aut.t, err)
 
-	aut.assertFetched(kvMap, len(entries))
-	aut.saveFetchedCntIn(kvMap, len(entries))
-}
+// 	aut.assertFetched(kvMap, len(entries))
+// 	aut.saveFetchedCntIn(kvMap, len(entries))
+// }
 
 func (aut *apiUnitTest) modelSingleValidator(tcase apiUnitTestCase, rsp *http.Response, reqBody *bytes.Buffer) {
 	rspBody, _ := ioutil.ReadAll(rsp.Body)

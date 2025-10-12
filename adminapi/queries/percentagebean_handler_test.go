@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package tests
+package queries
 
 import (
 	"bytes"
@@ -30,9 +30,6 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
-
-	"github.com/rdkcentral/xconfadmin/adminapi"
-
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
@@ -61,8 +58,8 @@ func PBCreateFirmwareConfig(firmwareVersion string, modelId string, firmwareDown
 
 func TestPBAllApi(t *testing.T) {
 	DeleteAllEntities()
-	_, router := GetTestWebConfigServer(testconfig)
-	adminapi.XconfSetup(server, router)
+	//	_, router := GetTestWebConfigServer(testconfig)
+	//adminapi.XconfSetup(server, router)
 
 	parameters := map[string]string{}
 	configKey := "bindingUrl"
@@ -79,10 +76,10 @@ func TestPBAllApi(t *testing.T) {
 	applicableAction := corefw.NewTemplateApplicableActionAndType(corefw.RuleActionClass, corefw.RULE_TEMPLATE, "")
 	CreateAndSaveFirmwareRuleTemplate("ENV_MODEL_RULE", CreateDefaultEnvModelRule(), applicableAction)
 
-	percentageBean := CreatePercentageBean("test percentage bean", defaultEnvironmentId, definePropertiesModelId, "", "", defaultFirmwareVersion, "stb")
+	percentageBean := CreatePercentageBeanPB("test percentage bean", defaultEnvironmentId, definePropertiesModelId, "", "", defaultFirmwareVersion, "stb")
 	percentageBean.LastKnownGood = firmwareConfig.ID
 	percentageBean.FirmwareVersions = append(percentageBean.FirmwareVersions, firmwareConfig.FirmwareVersion)
-	err = SavePercentageBean(percentageBean)
+	err = SavePercentageBeanPB(percentageBean)
 	assert.Nil(t, err)
 
 	// get PBrule by id
@@ -314,8 +311,8 @@ func TestSearchPercentageBeanByMinCheckVersion(t *testing.T) {
 	assert.Nil(t, err)
 
 	firmwareVersion2 := "TEST_FIRMWARE_VERSION"
-	percentageBean2 := CreatePercentageBean("NEW PERCENTAGE BEAN", "environment2", "model2", "", "", firmwareVersion2, "stb")
-	err = SavePercentageBean(percentageBean2)
+	percentageBean2 := CreatePercentageBeanPB("NEW PERCENTAGE BEAN", "environment2", "model2", "", "", firmwareVersion2, "stb")
+	err = SavePercentageBeanPB(percentageBean2)
 	assert.Nil(t, err)
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
 		{"applicationType", "stb"},
@@ -398,26 +395,6 @@ func TestSearchPercentageBeanByMinCheckVersion(t *testing.T) {
 	assert.Equal(t, 2, len(percentageBeans))
 	assert.Contains(t, percentageBeans, percentageBean1)
 	assert.Contains(t, percentageBeans, percentageBean2)
-}
-
-func PreCreatePercentageBean() (*coreef.PercentageBean, error) {
-	_, router := GetTestWebConfigServer(testconfig)
-	adminapi.XconfSetup(server, router)
-
-	parameters := map[string]string{}
-	configKey := "bindingUrl"
-	configValue := "http://test.url.com"
-	parameters[configKey] = configValue
-
-	definePropertiesModelId := "DEFINE_PROPERTIES_MODEL_ID"
-
-	applicableAction := corefw.NewTemplateApplicableActionAndType(corefw.RuleActionClass, corefw.RULE_TEMPLATE, "")
-	CreateAndSaveFirmwareRuleTemplate("ENV_MODEL_RULE", CreateDefaultEnvModelRule(), applicableAction)
-
-	percentageBean := CreatePercentageBean("test percentage bean", defaultEnvironmentId, definePropertiesModelId, "", "", defaultFirmwareVersion, "stb")
-	SavePercentageBean(percentageBean)
-	err := SavePercentageBean(percentageBean)
-	return percentageBean, err
 }
 
 func assertPercentageBeanVersionUUIDs(t *testing.T, expectedPB *coreef.PercentageBean, actualPB *coreef.PercentageBean) {

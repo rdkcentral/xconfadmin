@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package tests
+package queries
 
 import (
 	"fmt"
@@ -24,16 +24,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rdkcentral/xconfadmin/adminapi"
-
 	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCalculateHashAndPercent(t *testing.T) {
-	_, router := GetTestWebConfigServer(testconfig)
-	adminapi.XconfSetup(server, router)
+	//	_, router := GetTestWebConfigServer(testconfig)
+	//adminapi.XconfSetup(server, router)
 	testCases := []struct {
 		queryParams     [][]string
 		expectedCode    int

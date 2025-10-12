@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package tests
+package queries
 
 import (
 	"net/http"
@@ -23,11 +23,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-)
-
-const (
-	MODEL_WHOLE_API            = "/xconfAdminService/model"
-	jsonModelWholeTestDataLocn = "jsondata/model/"
 )
 
 func newModelWholeApiUnitTest(t *testing.T) *apiUnitTest {
