@@ -32,6 +32,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	"github.com/rdkcentral/xconfadmin/adminapi/firmware"
+	"github.com/rdkcentral/xconfadmin/adminapi/queries"
 	"github.com/rdkcentral/xconfadmin/adminapi/rfc/feature"
 	"github.com/rdkcentral/xconfadmin/common"
 	oshttp "github.com/rdkcentral/xconfadmin/http"
@@ -569,6 +570,21 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	deletePath.HandleFunc("/filters/locations/{name}", DeleteLocationFilterHandler).Methods("DELETE").Name("Delete")
 	deletePath.HandleFunc("/filters/ri/{name}", DeleteRebootImmediatelyHandler).Methods("DELETE").Name("Delete")
 	paths = append(paths, deletePath)
+
+	// percentfilter/percentageBean
+	percentageBeanPath := r.PathPrefix("/xconfAdminService/percentfilter/percentageBean").Subrouter()
+	percentageBeanPath.HandleFunc("", queries.GetPercentageBeanAllHandler).Methods("GET").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("", queries.CreatePercentageBeanHandler).Methods("POST").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("", queries.UpdatePercentageBeanHandler).Methods("PUT").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/filtered", queries.PostPercentageBeanFilteredWithParamsHandler).Methods("POST").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/entities", queries.PostPercentageBeanEntitiesHandler).Methods("POST").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/entities", queries.PutPercentageBeanEntitiesHandler).Methods("PUT").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/allAsRules", queries.GetAllPercentageBeanAsRule).Methods("GET").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/asRule/{id}", queries.GetPercentageBeanAsRuleById).Methods("GET").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/{id}", queries.GetPercentageBeanByIdHandler).Methods("GET").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/{id}", queries.DeletePercentageBeanByIdHandler).Methods("DELETE").Name("Firmware-PercentFilter")
+	paths = append(paths, percentageBeanPath)
 
 	c := cors.New(cors.Options{
 		AllowCredentials: true,
