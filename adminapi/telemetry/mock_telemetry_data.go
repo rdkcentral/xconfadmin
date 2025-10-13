@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package tests
+package telemetry
 
 const (
 	// arg1: telemetry2rule uuid

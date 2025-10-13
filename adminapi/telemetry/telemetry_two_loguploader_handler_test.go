@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package tests
+package telemetry
 
 import (
 	"encoding/json"
@@ -54,8 +54,8 @@ func TestTelemetryTwoHandlerSampleData(t *testing.T) {
 	// Walk(router)
 
 	// set up Sat mock server for ok response
-	satMockServer := SetupSatServiceMockServerOkResponse(t, *server)
-	defer satMockServer.Close()
+	//satMockServer := SetupSatServiceMockServerOkResponse(t, *server)
+	//defer satMockServer.Close()
 
 	// ==== setup build sample data ====
 	// build sample t2rules
@@ -301,8 +301,8 @@ func TestTelemetryTwoHandlerIpRange(t *testing.T) {
 	// Walk(router)
 
 	// set up sat mock server for ok response
-	satMockServer := SetupSatServiceMockServerErrorResponse(t, *server)
-	defer satMockServer.Close()
+	//satMockServer := SetupSatServiceMockServerErrorResponse(t, *server)
+	//defer satMockServer.Close()
 
 	// ==== setup mock data ====
 	namedlistKey := fmt.Sprintf("red%v", uuid.New().String()[:4])

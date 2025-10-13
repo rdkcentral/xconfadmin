@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package tests
+package telemetry
 
 import (
 	"bytes"
@@ -110,7 +110,16 @@ func TestTelemetryTwoRuleNotCreateInNoOpValidationFails(t *testing.T) {
 		})
 	}
 }
+func createRule(condition *re.Condition) *re.Rule {
+	rule := &re.Rule{
+		Condition: condition,
+	}
+	return rule
+}
 
+func CreateCondition(freeArg re.FreeArg, operation string, fixedArgValue string) *re.Condition {
+	return re.NewCondition(&freeArg, operation, re.NewFixedArg(fixedArgValue))
+}
 func createTelemetryTwoRule(noOp bool, profiles []string) *xwlogupload.TelemetryTwoRule {
 	telemetryRule := &xwlogupload.TelemetryTwoRule{}
 	telemetryRule.ID = uuid.NewString()
