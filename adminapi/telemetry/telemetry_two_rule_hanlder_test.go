@@ -130,3 +130,141 @@ func createTelemetryTwoRule(noOp bool, profiles []string) *xwlogupload.Telemetry
 	telemetryRule.Rule = *createRule(CreateCondition(*estbfirmware.RuleFactoryVERSION, re.StandardOperationIs, "TEST_FIRMWARE_VERSION"))
 	return telemetryRule
 }
+
+// Additional tests for telemetry_v2_rule_handler.go
+
+func TestGetTelemetryTwoRulesAllExport_EmptyAndHeader(t *testing.T) {
+	DeleteAllEntities()
+	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/v2/rule?applicationType=stb", nil)
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Contains(t, rr.Body.String(), "[]")
+	// create one rule to test export header path
+	prof := createTelemetryTwoProfile()
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+	rule := createTelemetryTwoRule(false, []string{prof.ID})
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
+	r = httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/v2/rule?applicationType=stb&export=true", nil)
+	rr = ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	cd := rr.Header().Get("Content-Disposition")
+	assert.NotEmpty(t, cd)
+}
+
+func TestGetTelemetryTwoRuleById_SuccessExportAndNotFound(t *testing.T) {
+	DeleteAllEntities()
+	prof := createTelemetryTwoProfile()
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+	rule := createTelemetryTwoRule(false, []string{prof.ID})
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
+	// success normal
+	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/rule/%s?applicationType=stb", rule.ID)
+	r := httptest.NewRequest(http.MethodGet, url, nil)
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	// export
+	url = fmt.Sprintf("/xconfAdminService/telemetry/v2/rule/%s?applicationType=stb&export=true", rule.ID)
+	r = httptest.NewRequest(http.MethodGet, url, nil)
+	rr = ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.NotEmpty(t, rr.Header().Get("Content-Disposition"))
+	// not found
+	url = fmt.Sprintf("/xconfAdminService/telemetry/v2/rule/%s?applicationType=stb", uuid.NewString())
+	r = httptest.NewRequest(http.MethodGet, url, nil)
+	rr = ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestDeleteOneTelemetryTwoRuleHandler_SuccessAndNotFound(t *testing.T) {
+	DeleteAllEntities()
+	prof := createTelemetryTwoProfile()
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+	rule := createTelemetryTwoRule(false, []string{prof.ID})
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
+	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/rule/%s?applicationType=stb", rule.ID)
+	r := httptest.NewRequest(http.MethodDelete, url, nil)
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusNoContent, rr.Code)
+	// not found
+	url = fmt.Sprintf("/xconfAdminService/telemetry/v2/rule/%s?applicationType=stb", uuid.NewString())
+	r = httptest.NewRequest(http.MethodDelete, url, nil)
+	rr = ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestCreateTelemetryTwoRulesPackageHandler_Mixed(t *testing.T) {
+	DeleteAllEntities()
+	prof := createTelemetryTwoProfile()
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+	valid := createTelemetryTwoRule(false, []string{prof.ID})
+	invalid := createTelemetryTwoRule(false, []string{}) // no profiles -> validation failure
+	entities := []*xwlogupload.TelemetryTwoRule{valid, invalid}
+	b, _ := json.Marshal(entities)
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/rule/entities?applicationType=stb", bytes.NewReader(b))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.True(t, bytes.Contains(rr.Body.Bytes(), []byte(valid.ID)))
+}
+
+func TestUpdateTelemetryTwoRuleHandler_SuccessConflict(t *testing.T) {
+	DeleteAllEntities()
+	prof := createTelemetryTwoProfile()
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+	rule := createTelemetryTwoRule(false, []string{prof.ID})
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
+	rule.Name = "UpdatedName"
+	b, _ := json.Marshal(rule)
+	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/rule?applicationType=stb", bytes.NewReader(b))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	// mismatch application type -> internal server error from service (fmt error path)
+	rule.ApplicationType = "wrong"
+	b, _ = json.Marshal(rule)
+	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/rule?applicationType=stb", bytes.NewReader(b))
+	rr = ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusInternalServerError, rr.Code)
+}
+
+func TestUpdateTelemetryTwoRulesPackageHandler_Mixed(t *testing.T) {
+	DeleteAllEntities()
+	prof := createTelemetryTwoProfile()
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+	a := createTelemetryTwoRule(false, []string{prof.ID})
+	bRule := createTelemetryTwoRule(false, []string{prof.ID})
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, a.ID, a)
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, bRule.ID, bRule)
+	a.Name = "AUpdated"             // valid
+	bRule.ApplicationType = "wrong" // conflict
+	entities := []*xwlogupload.TelemetryTwoRule{a, bRule}
+	b, _ := json.Marshal(entities)
+	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/rule/entities?applicationType=stb", bytes.NewReader(b))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.True(t, bytes.Contains(rr.Body.Bytes(), []byte(a.ID)))
+}
+
+func TestGetTelemetryTwoRulesFilteredWithPage_PagingAndInvalid(t *testing.T) {
+	DeleteAllEntities()
+	prof := createTelemetryTwoProfile()
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+	for i := 0; i < 12; i++ {
+		rule := createTelemetryTwoRule(false, []string{prof.ID})
+		rule.Name = fmt.Sprintf("Rule_%02d", i)
+		ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
+	}
+	// page 2 size 5
+	bodyMap := map[string]string{}
+	b, _ := json.Marshal(bodyMap)
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/rule/filtered?pageNumber=2&pageSize=5&applicationType=stb", bytes.NewReader(b))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Contains(t, rr.Body.String(), "Rule_")
+	// invalid pageNumber
+	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/rule/filtered?pageNumber=Z&pageSize=5&applicationType=stb", bytes.NewReader(b))
+	rr = ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	// invalid pageSize
+	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/rule/filtered?pageNumber=1&pageSize=X&applicationType=stb", bytes.NewReader(b))
+	rr = ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
