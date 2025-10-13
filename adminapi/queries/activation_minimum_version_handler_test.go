@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package tests
+package queries
 
 import (
 	"encoding/json"
@@ -24,8 +24,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/rdkcentral/xconfadmin/adminapi/queries"
 
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	"github.com/rdkcentral/xconfwebconfig/util"
@@ -120,7 +118,7 @@ func perCreateActivationVersion(modelId string, firmwareVersion string, regex st
 	}
 	amv.PartnerId = "TEST_PARTNER_ID"
 
-	queries.CreateAmv(amv, amv.ApplicationType)
+	CreateAmv(amv, amv.ApplicationType)
 
 	return amv
 }

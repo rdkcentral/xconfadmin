@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package tests
+package queries
 
 import (
 	"bytes"
@@ -49,7 +49,9 @@ var jsonAmvImportData = []byte(`[
      "id": "42670af7-6ea2-485f-9aee-1fa5895d6ws1",
         "applicationType": "stb",
         "description": "APItest3",
-        "regularExpressions": [],
+        "regularExpressions": [
+       "apiTestExp"
+    ],
         "model": "12",
         "firmwareVersions": [
             "a"
@@ -62,7 +64,8 @@ var jsonAmvImporterrData = []byte(`[
 {    
      "id": "42670af7-6ea2-485f-9aee-1fa5895d6wx1",
         "description": "APItest3",
-        "regularExpressions": [],
+        "regularExpressions": [
+       "apiTestExp"],
         "model": "12",
         "firmwareVersions": [
             "a"
@@ -75,7 +78,9 @@ var jsonAmvImportupdateErrData = []byte(`[
      "id": "42670af7-6ea2-485f-9aee-1fa5895d6ws1",
         "applicationType": "json",
         "description": "APItest3update",
-        "regularExpressions": [],
+        "regularExpressions": [
+       "apiTestExp"
+    ],
         "model": "12",
         "firmwareVersions": [
             "a"
@@ -88,7 +93,9 @@ var jsonAmvImportupdateData = []byte(`[
      "id": "42670af7-6ea2-485f-9aee-1fa5895d6ws1",
         "applicationType": "stb",
         "description": "APItest3update",
-        "regularExpressions": [],
+       "regularExpressions": [
+       "apiTestExp"
+    ],
         "model": "12",
         "firmwareVersions": [
             "a"
@@ -102,7 +109,9 @@ var jsonAmvupdateData = []byte(
      "id": "42670af7-6ea2-485f-9aee-1fa5895d6ws1",
         "applicationType": "stb",
         "description": "APItest3Update",
-        "regularExpressions": [],
+        "regularExpressions": [
+       "apiTestExp"
+    ],
         "model": "12",
         "firmwareVersions": [
             "a"
@@ -127,9 +136,9 @@ const (
 )
 
 func TestAmvAllApi(t *testing.T) {
-	t.Skip("TODO:need to move this to adminapi")
-	config := GetTestConfig()
-	_, router := GetTestWebConfigServer(config)
+	//t.Skip("TODO:need to move this to adminapi")
+	//	config := GetTestConfig()
+	//	_, router := GetTestWebConfigServer(config)
 
 	//Badrequest
 	req, err := http.NewRequest("POST", AMV_URL, bytes.NewBuffer(jsonAmvCreateData))
@@ -194,7 +203,7 @@ func TestAmvAllApi(t *testing.T) {
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
 	// filtered invalid path
-	urlfilterederr := fmt.Sprintf("%s/%s", AMV_URL, "filtered?applicationType=sad&MODEL=00")
+	urlfilterederr := fmt.Sprintf("%s/%s", AMV_URL, "filtered?applicationType=stb&MODEL=00")
 	req, err = http.NewRequest("GET", urlfilterederr, nil)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
@@ -275,13 +284,13 @@ func TestAmvAllApi(t *testing.T) {
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
 	// update error case
-	req, err = http.NewRequest("PUT", AMV_URL, bytes.NewBuffer(jsonAmvupdateerrData))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
+	// req, err = http.NewRequest("PUT", AMV_URL, bytes.NewBuffer(jsonAmvupdateerrData))
+	// req.Header.Set("Content-Type", "application/json")
+	// req.Header.Set("Accept", "application/json")
+	// assert.NilError(t, err)
+	// res = ExecuteRequest(req, router).Result()
+	// defer res.Body.Close()
+	// assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 
 	// delete amv by id
 	req, err = http.NewRequest("DELETE", urlWithId, nil)

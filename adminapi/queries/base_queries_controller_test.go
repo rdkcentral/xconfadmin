@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package tests
+package queries
 
 import (
 	"bytes"
@@ -28,7 +28,6 @@ import (
 
 	estb "github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
 
-	"github.com/rdkcentral/xconfwebconfig/db"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
@@ -76,26 +75,6 @@ const (
 	APPLICATION_TYPE_PARAM = "applicationType"
 	WRONG_APPLICATION      = "wrongVersion"
 )
-
-func DeleteAllEntities() {
-	for _, tableInfo := range ds.GetAllTableInfo() {
-		if err := truncateTable(tableInfo.TableName); err != nil {
-			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
-		}
-		if tableInfo.CacheData {
-			ds.GetCachedSimpleDao().RefreshAll(tableInfo.TableName)
-		}
-	}
-}
-
-func truncateTable(tableName string) error {
-	dbClient := db.GetDatabaseClient()
-	cassandraClient, ok := dbClient.(*db.CassandraClient)
-	if ok {
-		return cassandraClient.DeleteAllXconfData(tableName)
-	}
-	return nil
-}
 
 func CreateGenericNamespacedList(name string, ttype string, data string) *shared.GenericNamespacedList {
 	namespacedList := shared.NewGenericNamespacedList(name, ttype, strings.Split(data, ","))
@@ -262,7 +241,7 @@ func CreateAndSaveGenericNamespacedList(name string, ttype string, data string) 
 	return namespacedList
 }
 
-func CreateFirmwareConfig(firmwareVersion string, modelId string, firmwareDownloadProtocol string, applicationType string) *coreef.FirmwareConfig {
+func CreateFirmwareConfigfw(firmwareVersion string, modelId string, firmwareDownloadProtocol string, applicationType string) *coreef.FirmwareConfig {
 	firmwareConfig := coreef.NewEmptyFirmwareConfig()
 	firmwareConfig.ID = uuid.New().String()
 	firmwareConfig.Description = "FirmwareDescription"
@@ -278,7 +257,7 @@ func CreateFirmwareConfig(firmwareVersion string, modelId string, firmwareDownlo
 }
 
 func CreateAndSaveFirmwareConfig(firmwareVersion string, modelId string, firmwareDownloadProtocol string, applicationType string) *coreef.FirmwareConfig {
-	firmwareConfig := CreateFirmwareConfig(firmwareVersion, modelId, firmwareDownloadProtocol, applicationType)
+	firmwareConfig := CreateFirmwareConfigfw(firmwareVersion, modelId, firmwareDownloadProtocol, applicationType)
 	err := SetFirmwareConfig(firmwareConfig)
 	if err != nil {
 		return nil
@@ -294,7 +273,7 @@ func SetFirmwareConfig(firmwareConfig *coreef.FirmwareConfig) error {
 	return nil
 }
 
-func CreatePercentageBean(name string, envId string, modelId string, whitelistId string, whitelistData string, firmwareVersion string, applicationType string) *coreef.PercentageBean {
+func CreatePercentageBeanPB(name string, envId string, modelId string, whitelistId string, whitelistData string, firmwareVersion string, applicationType string) *coreef.PercentageBean {
 	var whitelist string
 	if whitelistId != "" {
 		whitelist = CreateAndSaveGenericNamespacedList(whitelistId, "IP_LIST", whitelistData).ID

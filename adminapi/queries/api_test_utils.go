@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package tests
+package queries
 
 import (
 	"bytes"
@@ -277,6 +277,23 @@ func (aut *apiUnitTest) eval(val string) string {
 	return strconv.Itoa(evaled)
 }
 
+const (
+	MODEL_QUERYAPI         = "/xconfAdminService/queries/models"
+	MODEL_UPAPI            = "/xconfAdminService/updates/models"
+	MODEL_DELAPI           = "/xconfAdminService/delete/models"
+	jsonModelTestDataLocan = "jsondata/model/"
+)
+
+func (aut *apiUnitTest) setupModelApi() {
+	if aut.getValOf(MODEL_QUERYAPI) == "Done" {
+		return
+	}
+	aut.setValOf(MODEL_QUERYAPI+DATA_LOCN_SUFFIX, jsonModelTestDataLocan)
+	aut.setValOf(MODEL_UPAPI+DATA_LOCN_SUFFIX, jsonModelTestDataLocan)
+	aut.setValOf(MODEL_DELAPI+DATA_LOCN_SUFFIX, jsonModelTestDataLocan)
+
+	aut.setValOf(MODEL_QUERYAPI, "Done")
+}
 func ParseNEval(line string) (int, error) {
 	exp, err := parser.ParseExpr(line)
 	if err != nil {

@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package tests
+package queries
 
 import (
 	"bytes"
@@ -28,13 +28,14 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/rdkcentral/xconfwebconfig/shared"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
 	"gotest.tools/assert"
 )
 
 const (
-	FR_API                       = "/xconfAdminService/firmwarerule"
+	//	FR_API                       = "/xconfAdminService/firmwarerule"
 	jsonFirmwareRuleTestDataLocn = "jsondata/firmwarerule/"
 )
 
@@ -118,6 +119,20 @@ func (aut *apiUnitTest) firmwareRuleResponseValidator(tcase apiUnitTestCase, gen
 		assert.Equal (aut.t, rsp.FirmwareVersion, req.FirmwareVersion)
 		assert.Equal (aut.t, IsEqual (req.SupportedModelIds, rsp.SupportedModelIds), true)
 	*/
+}
+
+func (aut *apiUnitTest) modelArrayValidator(tcase apiUnitTestCase, rsp *http.Response, reqBody *bytes.Buffer) {
+	rspBody, _ := ioutil.ReadAll(rsp.Body)
+	assert.Equal(aut.t, tcase.api == MODEL_QAPI || tcase.api == MODEL_WHOLE_API, true)
+
+	var entries = []shared.Model{}
+	json.Unmarshal(rspBody, &entries)
+
+	kvMap, err := url.ParseQuery(tcase.postTerms)
+	assert.NilError(aut.t, err)
+
+	aut.assertFetched(kvMap, len(entries))
+	aut.saveFetchedCntIn(kvMap, len(entries))
 }
 
 func (aut *apiUnitTest) firmwareRuleArrayValidator(tcase apiUnitTestCase, rsp *http.Response, reqBody *bytes.Buffer) {

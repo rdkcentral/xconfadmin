@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package tests
+package dcm
 
 import (
 	"bytes"
@@ -30,28 +30,31 @@ import (
 	"gotest.tools/assert"
 )
 
-func ImportLogRepTableData(data []string, tabletype logupload.UploadRepository) error {
+func ImportVodSettingsTableData(data []string, tabletype logupload.VodSettings) error {
 	var err error
 	for _, row := range data {
 		err = json.Unmarshal([]byte(row), &tabletype)
-		err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_UPLOAD_REPOSITORY, tabletype.ID, &tabletype)
+		err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_VOD_SETTINGS, tabletype.ID, &tabletype)
 	}
 	return err
 }
 
-func TestAllLogRepoSettingsAPIs(t *testing.T) {
+func TestAllVodSettingsApis(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
-	//GET ALL LOG REPO SETTINGS
-
+	//GET ALL VOD SETTINGS
 	var tableData = []string{
-		`{"id":"fbf6c28a-ef6c-4494-8894-f77f03a62ba5","updated":1428932050824,"name":"protocoltest_6","description":"SCP","url":"tftp://pro.net","applicationType":"stb","protocol":"SCP"}`,
-		`{"id":"fbf6c28a-ef6c-4494-8894-f77f03a62ca5","updated":1428932050824,"name":"dineshprotocoltest_6","description":"SCP","url":"tftp://pro.net","applicationType":"stb","protocol":"SCP"}`,
+		`{"id":"07f05421-8e6e-4f93-8918-46fc247a61d3","updated":1572462347409,"ttlMap":{},"name":"wsmithDCM6VOD","locationsURL":"http://www.dcmTest.com","ipNames":[],"ipList":[],"srmIPList":{},"applicationType":"stb"}`,
+		`{"id":"07f05421-8e6e-4f93-8918-46fc247a61d3id","updated":1572462347409,"ttlMap":{},"name":"wsmithDCM6VOD","locationsURL":"http://www.dcmTest.com","ipNames":[],"ipList":[],"srmIPList":{},"applicationType":"stb"}`,
+		`{"id":"07f05421-8e6e-4f93-8918-46fc247a61d3sz","updated":1572462347409,"ttlMap":{},"name":"wsmithDCM6VOD","locationsURL":"http://www.dcmTest.com","ipNames":[],"ipList":[],"srmIPList":{},"applicationType":"stb"}`,
+		`{"id":"07f05421-8e6e-4f93-8918-46fc247a61d3nsz","updated":1572462347409,"ttlMap":{},"name":"wsmithDCM3VOD","locationsURL":"http://www.dcmTest.com","ipNames":[],"ipList":[],"srmIPList":{},"applicationType":"stb"}`,
+		`{"id":"07f05421-8e6e-4f93-8918-46fc247a61d3fz","updated":1572462347409,"ttlMap":{},"name":"dineshfiltVOD","locationsURL":"http://www.dcmTest.com","ipNames":[],"ipList":[],"srmIPList":{},"applicationType":"stb"}`,
+		`{"id":"07f05421-8e6e-4f93-8918-46fc247a61d3dl","updated":1572462347409,"ttlMap":{},"name":"wsmithDCM6VOD","locationsURL":"http://www.dcmTest.com","ipNames":[],"ipList":[],"srmIPList":{},"applicationType":"stb"}`,
 	}
-	ImportLogRepTableData(tableData, logupload.UploadRepository{})
+	ImportVodSettingsTableData(tableData, logupload.VodSettings{})
 
-	urlall := "/xconfAdminService/dcm/uploadRepository"
+	urlall := "/xconfAdminService/dcm/vodsettings"
 	req, err := http.NewRequest("GET", urlall, nil)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
@@ -65,17 +68,17 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	assert.NilError(t, err)
 
 	if res.StatusCode == http.StatusOK {
-		var dss = []logupload.UploadRepository{}
+		var dss = []logupload.VodSettings{}
 		json.Unmarshal(body, &dss)
 		assert.Equal(t, len(dss) > 0, true)
 	}
 
-	//CREATE A NEW ENTRY
-	lrdata := []byte(
-		`{"id":"60b1e67c-d099-45d7-b163-dae9463dd6cr","updated":1635957735115,"name":"dineshcreate","description":"crtest","url":"http://test.com","applicationType":"stb","protocol":"HTTP"}`)
+	//CREATE VOD SETTING
+	vsdata := []byte(
+		`{"id":"33af3261-d74a-40fd-8aa1-884e4f5479a1","updated":1635290206352,"name":"testvod","locationsURL":"http://test.com","ipNames":["ip1","ip2"],"ipList":["1.1.1.1","2.2.2.2"], "applicationType":"stb"}`)
 
-	urlCr := "/xconfAdminService/dcm/uploadRepository?applicationType=stb"
-	req, err = http.NewRequest("POST", urlCr, bytes.NewBuffer(lrdata))
+	urlCr := "/xconfAdminService/dcm/vodsettings?applicationType=stb"
+	req, err = http.NewRequest("POST", urlCr, bytes.NewBuffer(vsdata))
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
@@ -84,8 +87,8 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
 
 	//ERROR CREATING AGAIN SAME ENTRY
-	urlCr = "/xconfAdminService/dcm/uploadRepository?applicationType=stb"
-	req, err = http.NewRequest("POST", urlCr, bytes.NewBuffer(lrdata))
+	urlCr = "/xconfAdminService/dcm/vodsettings?applicationType=stb"
+	req, err = http.NewRequest("POST", urlCr, bytes.NewBuffer(vsdata))
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
@@ -93,12 +96,12 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
 
-	//UPDATE EXISITNG ENTRY
+	//UPDATE EXISING ENTRY
+	vsdataup := []byte(
+		`{"id":"33af3261-d74a-40fd-8aa1-884e4f5479a1","updated":1635290206352,"name":"testdata","locationsURL":"http://test.com","ipNames":["ip1","ip2"],"ipList":["14.14.14.1","2.2.2.2"],"applicationType":"stb"}`)
 
-	lrdataup := []byte(
-		`{"id":"60b1e67c-d099-45d7-b163-dae9463dd6cr","updated":1635957735115,"name":"dineshupdate","description":"uptest","url":"http://test.com","applicationType":"stb","protocol":"HTTP"}`)
-	urlup := "/xconfAdminService/dcm/uploadRepository?applicationType=stb"
-	req, err = http.NewRequest("PUT", urlup, bytes.NewBuffer(lrdataup))
+	urlup := "/xconfAdminService/dcm/vodsettings?applicationType=stb"
+	req, err = http.NewRequest("PUT", urlup, bytes.NewBuffer(vsdataup))
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
@@ -107,11 +110,11 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
 	//UPDATE NON EXISTING ENTRY
+	vsdataerr := []byte(
+		`{"id":"33af3261-d74a-40fd-8aa1-884e4f5479a1err","updated":1635290206352,"name":"testdata","locationsURL":"http://test.com","ipNames":["ip1","ip2"],"ipList":["14.14.14.1","2.2.2.2"],"applicationType":"stb"}`)
 
-	lrdataer := []byte(
-		`{"id":"60b1e67c-d099-45d7-b163-dae9463dd6er","updated":1635957735115,"name":"dineshupdate","description":"uptest","url":"http://test.com","applicationType":"stb","protocol":"HTTP"}`)
-	urlup = "/xconfAdminService/dcm/uploadRepository?applicationType=stb"
-	req, err = http.NewRequest("PUT", urlup, bytes.NewBuffer(lrdataer))
+	urlup = "/xconfAdminService/dcm/vodsettings?applicationType=stb"
+	req, err = http.NewRequest("PUT", urlup, bytes.NewBuffer(vsdataerr))
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
@@ -119,9 +122,8 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
 
-	//GET ONE LOG REPO SETTINGS
-
-	urlWithId := "/xconfAdminService/dcm/uploadRepository/fbf6c28a-ef6c-4494-8894-f77f03a62ba5?applicationType=stb"
+	//GET VOD SETTING BY ID
+	urlWithId := "/xconfAdminService/dcm/vodsettings/07f05421-8e6e-4f93-8918-46fc247a61d3id?applicationType=stb"
 	req, err = http.NewRequest("GET", urlWithId, nil)
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
@@ -130,8 +132,9 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
-	//GET LOG REPO SETTINGS BY SIZE
-	urlWithId = "/xconfAdminService/dcm/uploadRepository/size"
+	//GET VOD SETTING BY SIZE
+
+	urlWithId = "/xconfAdminService/dcm/vodsettings/size?applicationType=stb"
 	req, err = http.NewRequest("GET", urlWithId, nil)
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
@@ -148,8 +151,8 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 		assert.Equal(t, size > 0, true)
 	}
 
-	//GET LOG REPO SETTINGS BY NAMES
-	urlWithId = "/xconfAdminService/dcm/uploadRepository/names"
+	//GET VOD SETTING BY NAMES
+	urlWithId = "/xconfAdminService/dcm/vodsettings/names?applicationType=stb"
 	req, err = http.NewRequest("GET", urlWithId, nil)
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
@@ -161,50 +164,49 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
 	if res.StatusCode == http.StatusOK {
-		var dss = []logupload.UploadRepository{}
-		json.Unmarshal(body, &dss)
-		assert.Equal(t, len(dss) > 0, true)
+		var vss = []logupload.VodSettings{}
+		json.Unmarshal(body, &vss)
+		assert.Equal(t, len(vss) > 0, true)
 	}
 
-	//GET LOG REPO SETTINGS WITH FILTERED
-	urlWithId = "/xconfAdminService/dcm/uploadRepository/filtered?pageNumber=1&pageSize=50"
-	req, err = http.NewRequest("POST", urlWithId, bytes.NewBuffer(postmapname))
+	//GET VOD RULES BY FILTERED NAMES
+	urlWithfilt := "/xconfAdminService/dcm/vodsettings/filtered?pageNumber=1&pageSize=50"
+	postmapname1 := []byte(`{"NAME": "testdata"}`)
+	req, err = http.NewRequest("POST", urlWithfilt, bytes.NewBuffer(postmapname1))
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
+	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
 	res = ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
 	if res.StatusCode == http.StatusOK {
-		var dss = []logupload.UploadRepository{}
-		json.Unmarshal(body, &dss)
-		assert.Equal(t, len(dss) > 0, true)
+		var vss = []logupload.VodSettings{}
+		json.Unmarshal(body, &vss)
+		assert.Equal(t, len(vss) > 0, true)
 	}
 
-	//DELETE LOG REPO SETTINGS BY ID
-	urlWithId = "/xconfAdminService/dcm/uploadRepository/fbf6c28a-ef6c-4494-8894-f77f03a62ba5"
+	//DELETE VOD SETTINGS BY ID
+	urlWithId = "/xconfAdminService/dcm/vodsettings/07f05421-8e6e-4f93-8918-46fc247a61d3dl?applicationType=stb"
 	req, err = http.NewRequest("DELETE", urlWithId, nil)
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 	res = ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusNoContent)
 
-	// DELETE NON EXISTING BY ID
+	//DELETE NON EXISTING VOD SETTINGS BY ID
+	urlWithId = "/xconfAdminService/dcm/vodsettings/23069266-45b7-4bf6-a255-e6ee584cd6xxxx?applicationType=stb"
 
-	urlWithId = "/xconfAdminService/dcm/uploadRepository/23069266-45b7-4bf6-a255-e6ee584cd6xxxx"
-	// delete non existing device Settings by id
 	req, err = http.NewRequest("DELETE", urlWithId, nil)
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 	res = ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
+
 }

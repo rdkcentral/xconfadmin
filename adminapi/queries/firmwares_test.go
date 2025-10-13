@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package tests
+package queries
 
 import (
 	"net/http"
@@ -25,9 +25,6 @@ import (
 )
 
 const (
-	FWS_QAPI                  = "/xconfAdminService/queries/firmwares"
-	FWS_UAPI                  = "/xconfAdminService/updates/firmwares"
-	FWS_DAPI                  = "/xconfAdminService/delete/firmwares"
 	jsonFirmwaresTestDataLocn = "jsondata/firmwares/"
 )
 
