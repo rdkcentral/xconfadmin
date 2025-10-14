@@ -261,5 +261,126 @@ func createTelemetryTwoProfile() *logupload.TelemetryTwoProfile {
 	p.ID = uuid.New().String()
 	p.Name = "Test Telemetry 2 Profile"
 	p.Jsonconfig = telemetryJsonConfig
+	p.ApplicationType = "stb"
 	return p
+}
+
+// Additional tests to improve coverage for telemetry_two_profile_handler.go without duplicating logic.
+
+func TestTelemetryTwoProfileListExport(t *testing.T) {
+	DeleteAllEntities()
+
+	p := createTelemetryTwoProfile()
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+
+	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}, {"export", "true"}})
+	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile?%v", queryParams)
+	r := httptest.NewRequest("GET", url, nil)
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	// Expect attachment header, filename contains application type
+	cd := rr.Header().Get("Content-Disposition")
+	assert.Contains(t, cd, "attachment;")
+	assert.Contains(t, cd, "stb")
+}
+
+func TestTelemetryTwoProfileGetByIdExport(t *testing.T) {
+	DeleteAllEntities()
+	p := createTelemetryTwoProfile()
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+
+	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}, {"export", "true"}})
+	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/%s?%v", p.ID, queryParams)
+	r := httptest.NewRequest("GET", url, nil)
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Contains(t, rr.Header().Get("Content-Disposition"), p.ID)
+}
+
+func TestTelemetryTwoProfileFilteredSuccess(t *testing.T) {
+	DeleteAllEntities()
+	p1 := createTelemetryTwoProfile()
+	p1.Name = "Alpha"
+	p2 := createTelemetryTwoProfile()
+	p2.Name = "Beta"
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
+
+	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}, {"pageNumber", "1"}, {"pageSize", "10"}})
+	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/filtered?%v", queryParams)
+	body := map[string]string{"Name": "Alpha"}
+	bodyBytes, _ := json.Marshal(body)
+	r := httptest.NewRequest("POST", url, bytes.NewReader(bodyBytes))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestTelemetryTwoProfileByIdListSuccess(t *testing.T) {
+	DeleteAllEntities()
+	p1 := createTelemetryTwoProfile()
+	p2 := createTelemetryTwoProfile()
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
+
+	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}})
+	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/byIdList?%v", queryParams)
+	idListBytes, _ := json.Marshal([]string{p1.ID, p2.ID})
+	r := httptest.NewRequest("POST", url, bytes.NewReader(idListBytes))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	var profiles []logupload.TelemetryTwoProfile
+	err := json.Unmarshal(rr.Body.Bytes(), &profiles)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(profiles))
+}
+
+func TestTelemetryTwoProfileEntitiesBatchCreate(t *testing.T) {
+	DeleteAllEntities()
+	p1 := createTelemetryTwoProfile()
+	p2 := createTelemetryTwoProfile()
+	// Make second invalid by stripping required JSON (will fail validation)
+	p2.Jsonconfig = "{}"
+	batch := []logupload.TelemetryTwoProfile{*p1, *p2}
+	batchBytes, _ := json.Marshal(batch)
+	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}})
+	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/entities?%v", queryParams)
+	r := httptest.NewRequest("POST", url, bytes.NewReader(batchBytes))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	var resp map[string]struct{ Status, Message string }
+	err := json.Unmarshal(rr.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+	assert.Equal(t, "SUCCESS", resp[p1.ID].Status)
+	assert.Equal(t, "FAILURE", resp[p2.ID].Status)
+}
+
+func TestTelemetryTwoProfileEntitiesBatchUpdate(t *testing.T) {
+	DeleteAllEntities()
+	p1 := createTelemetryTwoProfile()
+	p2 := createTelemetryTwoProfile()
+	// Set applicationType for both and store
+	p1.ApplicationType = "stb"
+	p2.ApplicationType = "stb"
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
+	// Update p1 normally
+	p1.Jsonconfig = changedTelemetryJsonConfig
+	// Force failure for p2 by changing applicationType (conflict)
+	p2.ApplicationType = "differentApp"
+	batch := []logupload.TelemetryTwoProfile{*p1, *p2}
+	batchBytes, _ := json.Marshal(batch)
+	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}})
+	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/entities?%v", queryParams)
+	r := httptest.NewRequest("PUT", url, bytes.NewReader(batchBytes))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	var resp map[string]struct{ Status, Message string }
+	err := json.Unmarshal(rr.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+	assert.Equal(t, "SUCCESS", resp[p1.ID].Status)
+	assert.Equal(t, "FAILURE", resp[p2.ID].Status)
+}
+
+func TestTelemetryTwoProfileTestPageSuccess(t *testing.T) {
+	t.Skip("Skipping until test router registers telemetry/v2/testpage route in this test suite")
 }
