@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -159,7 +160,6 @@ func featureSetup(server *oshttp.WebconfigServer, r *mux.Router) {
 }
 
 func SetupRFCRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
-	paths := []*mux.Router{}
 	// rfc/feature
 	rfcFeaturePath := r.PathPrefix("/xconfAdminService/rfc/feature").Subrouter()
 	rfcFeaturePath.HandleFunc("", PostFeatureHandler).Methods("POST").Name("RFC-Feature")
@@ -171,7 +171,7 @@ func SetupRFCRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	rfcFeaturePath.HandleFunc("/{id}", DeleteFeatureByIdHandler).Methods("DELETE").Name("RFC-Feature")
 	rfcFeaturePath.HandleFunc("/filtered", GetFeaturesFilteredHandler).Methods("POST").Name("RFC-Feature")
 	rfcFeaturePath.HandleFunc("/byIdList", GetFeaturesByIdListHandler).Methods("POST").Name("RFC-Feature")
-	paths = append(paths, rfcFeaturePath)
+	// paths variable removed (not needed)
 
 }
 func buildFeatureEntity(appType string) *xwrfc.FeatureEntity {
@@ -346,9 +346,18 @@ func TestGetFeaturesByIdList(t *testing.T) {
 
 // helpers
 func executeRequest(r *http.Request) *httptest.ResponseRecorder {
-	rr := httptest.NewRecorder()
-	router.ServeHTTP(rr, r)
-	return rr
+	// Wrap with XResponseWriter so handlers that cast can read drained body
+	baseRR := httptest.NewRecorder()
+	xw := xwhttp.NewXResponseWriter(baseRR)
+	if r.Body != nil {
+		// read body bytes to set into XResponseWriter for JSON extract handlers
+		buf := new(bytes.Buffer)
+		_, _ = buf.ReadFrom(r.Body)
+		r.Body = io.NopCloser(bytes.NewReader(buf.Bytes()))
+		xw.SetBody(buf.String())
+	}
+	router.ServeHTTP(xw, r)
+	return baseRR
 }
 
 func cleanDB() {

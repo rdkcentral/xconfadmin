@@ -141,10 +141,10 @@ func (aut *apiUnitTest) run(testCases []apiUnitTestCase) {
 			ipval = fmt.Sprintf("--data-binary \"@%s.json\"", tcase.inputs)
 		}
 		fmt.Printf("\ncurl -i -H \"Accept: application/json\" -H  \"Content-Type: application/json\" --request %s \"http://localhost:9000%s%s\" %s\n", tcase.method, tcase.api, tcase.endpoint, ipval)
-		_, present := os.LookupEnv("RUN_IN_LOCAL")
-		if !present {
-			aut.t.Skip("Running this test only on local till we figure out why getting deleted object succeeds on Jenkins")
-		}
+		// _, present := os.LookupEnv("RUN_IN_LOCAL")
+		// if !present {
+		// 	aut.t.Skip("Running this test only on local till we figure out why getting deleted object succeeds on Jenkins")
+		// }
 		if tcase.postTerms != "" {
 			assert.Equal(aut.t, tcase.postP != nil, true)
 		}
