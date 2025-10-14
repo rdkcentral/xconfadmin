@@ -273,31 +273,62 @@ func TestGetFeaturesFilteredPagingAndInvalid(t *testing.T) {
 		fe := buildFeatureEntity("stb")
 		_, _ = FeaturePost(fe.CreateFeature())
 	}
+	// valid filtered paging request requires pageNumber & pageSize query params
 	body := map[string]string{}
 	b, _ := json.Marshal(body)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature/filtered?pageNumber=2&pageSize=5&applicationType=stb", bytes.NewReader(b))
-	rr := executeRequest(r)
+	url := "/xconfAdminService/rfc/feature/filtered?pageNumber=2&pageSize=5&applicationType=stb"
+	req := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(b))
+	rr := httptest.NewRecorder()
+	xw := xwhttp.NewXResponseWriter(rr)
+	xw.SetBody(string(b))
+	GetFeaturesFilteredHandler(xw, req)
 	assert.Equal(t, http.StatusOK, rr.Code)
-	// invalid params missing query
-	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature/filtered?applicationType=stb", bytes.NewReader(b))
-	rr = executeRequest(r)
+	// header numberOfItems should equal total features (12)
+	var numberHeader string
+	for k, v := range rr.Header() {
+		if strings.EqualFold(k, "numberOfItems") && len(v) > 0 {
+			numberHeader = v[0]
+			break
+		}
+	}
+	assert.Equal(t, "12", numberHeader)
+	// invalid params: omit pageNumber/pageSize to trigger 400
+	url = "/xconfAdminService/rfc/feature/filtered?applicationType=stb"
+	req = httptest.NewRequest(http.MethodPost, url, bytes.NewReader(b))
+	rr = httptest.NewRecorder()
+	xw = xwhttp.NewXResponseWriter(rr)
+	xw.SetBody(string(b))
+	GetFeaturesFilteredHandler(xw, req)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestPostAndPutFeatureEntities(t *testing.T) {
 	cleanDB()
-	// prepare list
-	list := []*xwrfc.FeatureEntity{buildFeatureEntity("stb"), buildFeatureEntity("stb")}
+	// prepare list ensuring unique FeatureName/FeatureInstance across entities
+	fe1 := buildFeatureEntity("stb")
+	fe2 := buildFeatureEntity("stb")
+	fe2.FeatureName = fe2.FeatureName + "_X"
+	fe2.FeatureInstance = fe2.FeatureInstance + "_Y"
+	list := []*xwrfc.FeatureEntity{fe1, fe2}
 	b, _ := json.Marshal(list)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature/entities?applicationType=stb", bytes.NewReader(b))
-	rr := executeRequest(r)
-	assert.Equal(t, http.StatusOK, rr.Code)
-	// update second entity config
-	list[1].ConfigData["k2"] = "v2"
+	// direct handler invocation with XResponseWriter to ensure body extraction
+	postUrl := "/xconfAdminService/rfc/feature/entities?applicationType=stb"
+	postReq := httptest.NewRequest(http.MethodPost, postUrl, bytes.NewReader(b))
+	postRR := httptest.NewRecorder()
+	postXW := xwhttp.NewXResponseWriter(postRR)
+	postXW.SetBody(string(b))
+	PostFeatureEntitiesHandler(postXW, postReq)
+	assert.Equal(t, http.StatusOK, postRR.Code)
+	// update second entity config retains uniqueness
+	fe2.ConfigData["k2"] = "v2"
 	b, _ = json.Marshal(list)
-	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature/entities?applicationType=stb", bytes.NewReader(b))
-	rr = executeRequest(r)
-	assert.Equal(t, http.StatusOK, rr.Code)
+	putUrl := "/xconfAdminService/rfc/feature/entities?applicationType=stb"
+	putReq := httptest.NewRequest(http.MethodPut, putUrl, bytes.NewReader(b))
+	putRR := httptest.NewRecorder()
+	putXW := xwhttp.NewXResponseWriter(putRR)
+	putXW.SetBody(string(b))
+	PutFeatureEntitiesHandler(putXW, putReq)
+	assert.Equal(t, http.StatusOK, putRR.Code)
 }
 
 func TestGetFeaturesByIdList(t *testing.T) {

@@ -570,6 +570,19 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	deletePath.HandleFunc("/filters/ri/{name}", DeleteRebootImmediatelyHandler).Methods("DELETE").Name("Delete")
 	paths = append(paths, deletePath)
 
+	// environment
+	environmentPath := r.PathPrefix("/xconfAdminService/environment").Subrouter()
+	environmentPath.HandleFunc("", GetQueriesEnvironments).Methods("GET").Name("Environments")
+	environmentPath.HandleFunc("", CreateEnvironmentHandler).Methods("POST").Name("Environments")
+	environmentPath.HandleFunc("", UpdateEnvironmentHandler).Methods("PUT").Name("Environments")
+	environmentPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Environments")
+	environmentPath.HandleFunc("/filtered", PostEnvironmentFilteredHandler).Methods("POST").Name("Environments")
+	environmentPath.HandleFunc("/entities", PostEnvironmentEntitiesHandler).Methods("POST").Name("Environments")
+	environmentPath.HandleFunc("/entities", PutEnvironmentEntitiesHandler).Methods("PUT").Name("Environments")
+	environmentPath.HandleFunc("/{id}", GetQueriesEnvironmentsById).Methods("GET").Name("Environments")
+	environmentPath.HandleFunc("/{id}", DeleteEnvironmentHandler).Methods("DELETE").Name("Environments")
+	paths = append(paths, environmentPath)
+
 	c := cors.New(cors.Options{
 		AllowCredentials: true,
 		AllowedOrigins:   []string{"*"},
