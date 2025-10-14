@@ -62,18 +62,8 @@ func main() {
 		panic(err)
 	}
 
-	// if SAT is off and database password is not encrypted, set the key to a test value
-	if !sc.Config.GetBoolean("xconfwebconfig.sat.SAT_ON") && sc.Config.GetString("xconfwebconfig.database.encrypted_password") == "" {
-		os.Setenv("SAT_KEY", "testKey")
-		os.Setenv("SAT_CLIENT_ID", "testXconfClientId")
-		os.Setenv("SAT_CLIENT_SECRET", "testsecret")
-	}
-
-	server := xhttp.NewWebconfigServer(sc, false, nil, nil)
-	defer server.XW_XconfServer.StopXpcTracer()
-
 	// setup logging
-	logFile := server.XW_XconfServer.GetString("xconfwebconfig.log.file")
+	logFile := sc.GetString("xconfwebconfig.log.file")
 	if len(logFile) > 0 {
 		f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 		if err != nil {
@@ -86,7 +76,7 @@ func main() {
 		log.SetOutput(os.Stdout)
 	}
 
-	logFormat := server.XW_XconfServer.GetString("xconfwebconfig.log.format")
+	logFormat := sc.GetString("xconfwebconfig.log.format")
 	if logFormat == "text" {
 		log.SetFormatter(&log.TextFormatter{
 			FullTimestamp:   true,
@@ -103,14 +93,23 @@ func main() {
 
 	// default log level info
 	logLevel := log.InfoLevel
-	if parsed, err := log.ParseLevel(server.XW_XconfServer.GetString("xconfwebconfig.log.level")); err == nil {
+	if parsed, err := log.ParseLevel(sc.GetString("xconfwebconfig.log.level")); err == nil {
 		logLevel = parsed
 	}
 	log.SetLevel(logLevel)
-	if server.XW_XconfServer.GetBoolean("xconfwebconfig.log.set_report_caller") {
+	if sc.GetBoolean("xconfwebconfig.log.set_report_caller") {
 		log.SetReportCaller(true)
 	}
 
+	// if SAT is off and database password is not encrypted, set the key to a test value
+	if !sc.Config.GetBoolean("xconfwebconfig.sat.SAT_ON") && sc.Config.GetString("xconfwebconfig.database.encrypted_password") == "" {
+		os.Setenv("SAT_KEY", "testKey")
+		os.Setenv("SAT_CLIENT_ID", "testXconfClientId")
+		os.Setenv("SAT_CLIENT_SECRET", "testsecret")
+	}
+
+	server := xhttp.NewWebconfigServer(sc, false, nil, nil)
+	defer server.XW_XconfServer.StopXpcTracer()
 	// SAT token INIT
 	xwhttp.InitSatTokenManager(server.XW_XconfServer)
 	xwhttp.SetLocalSatToken(log.Fields{})
