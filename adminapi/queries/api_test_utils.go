@@ -25,6 +25,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -86,13 +87,28 @@ func buildBytesFromOneJsonFile(t *testing.T, tcase apiUnitTestCase, locn string,
 	if util.IsBlank(baseName) {
 		return jsonBytes
 	}
-	var err error
-	jsonBytes, err = os.ReadFile(locn + baseName + JSON_SUFFIX)
-	assert.NilError(t, err)
+	locn = strings.TrimPrefix(locn, string(filepath.Separator))
+	var firstErr error
+	candidatePaths := []string{
+		filepath.Join("queries", locn, baseName+JSON_SUFFIX),             // when CWD is repo root and code expects adminapi prefix removal
+		filepath.Join(locn, baseName+JSON_SUFFIX),                        // when CWD is package dir (adminapi/queries)
+		filepath.Join("adminapi", "queries", locn, baseName+JSON_SUFFIX), // when running from repo root but original prefix retained
+	}
+	for _, p := range candidatePaths {
+		b, err := os.ReadFile(p)
+		if err == nil {
+			jsonBytes = b
+			firstErr = nil
+			break
+		}
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
+	assert.NilError(t, firstErr)
 	if tcase.preP != nil {
 		tcase.preP(tcase, &jsonBytes)
 	}
-
 	return jsonBytes
 }
 

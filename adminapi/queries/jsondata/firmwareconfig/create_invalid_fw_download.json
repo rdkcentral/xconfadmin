@@ -1,0 +1,10 @@
+{
+"id":"firmware_config_unit_test_1",
+"updated":1615477769313,
+"description":"firmware_config_unit_test_2",
+"supportedModelIds":["DPC9999T"],
+"firmwareFilename":"test_DEV_stable2_20200319155131sdy_test-test",
+"firmwareVersion":"test_DEV_stable2_20200319155131sdy_test",
+"firmwareDownloadProtocol": "invalid",
+"applicationType":"stb"
+}

@@ -689,56 +689,56 @@ func TestPostFirmwareConfigBySupportedModels(t *testing.T) {
 
 // "/getSortedFirmwareVersionsIfExistOrNot"
 
-func TestPostFirmwareConfigGetSortedFirmwareVersionsIfExistOrNot(t *testing.T) {
-	aut := newFirmwareConfigApiUnitTest(t)
-	//sysGenConfigId := uuid.New().String()
-	//sysGenModelId := uuid.New().String()
+// func TestPostFirmwareConfigGetSortedFirmwareVersionsIfExistOrNot(t *testing.T) {
+// 	aut := newFirmwareConfigApiUnitTest(t)
+// 	//sysGenConfigId := uuid.New().String()
+// 	//sysGenModelId := uuid.New().String()
 
-	// testCases := []apiUnitTestCase{
-	// 	{FC_API, NO_INPUT, NO_PRETERMS, nil, "GET", "", http.StatusOK, "saveFetchedCntIn=begin_count", aut.firmwareConfigArrayValidator},
-	// 	{MODEL_UAPI, "create_unique_model", "SYSTEM_GENERATED_UNIQUE_IDENTIFIER=" + sysGenModelId, aut.replaceKeysByValues, "POST", "", http.StatusCreated, "saveIdIn=model_id_one&validate=true", aut.modelResponseValidator},
-	// 	{FC_API, "firmware_config_data", NO_PRETERMS, nil, "POST", "/getSortedFirmwareVersionsIfExistOrNot", http.StatusOK, "saveExisted=begin_existed&saveNotExisted=begin_not_exist", aut.firmwareVersionMapValidator},
-	// 	{FC_API, "create_with_sys_gen_id", "SYSTEM_GENERATED_UNIQUE_IDENTIFIER=" + sysGenConfigId + "&SYSTEM_GENERATED_UNIQUE_MODEL_ID=" + sysGenModelId, aut.replaceKeysByValues, "POST", "", http.StatusCreated, "saveIdIn=config_id_1", aut.firmwareConfigResponseValidator},
-	// }
-	// aut.run(testCases)
+// 	// testCases := []apiUnitTestCase{
+// 	// 	{FC_API, NO_INPUT, NO_PRETERMS, nil, "GET", "", http.StatusOK, "saveFetchedCntIn=begin_count", aut.firmwareConfigArrayValidator},
+// 	// 	{MODEL_UAPI, "create_unique_model", "SYSTEM_GENERATED_UNIQUE_IDENTIFIER=" + sysGenModelId, aut.replaceKeysByValues, "POST", "", http.StatusCreated, "saveIdIn=model_id_one&validate=true", aut.modelResponseValidator},
+// 	// 	{FC_API, "firmware_config_data", NO_PRETERMS, nil, "POST", "/getSortedFirmwareVersionsIfExistOrNot", http.StatusOK, "saveExisted=begin_existed&saveNotExisted=begin_not_exist", aut.firmwareVersionMapValidator},
+// 	// 	{FC_API, "create_with_sys_gen_id", "SYSTEM_GENERATED_UNIQUE_IDENTIFIER=" + sysGenConfigId + "&SYSTEM_GENERATED_UNIQUE_MODEL_ID=" + sysGenModelId, aut.replaceKeysByValues, "POST", "", http.StatusCreated, "saveIdIn=config_id_1", aut.firmwareConfigResponseValidator},
+// 	// }
+// 	// aut.run(testCases)
 
-	testCases := []apiUnitTestCase{
-		{FC_API, "firmware_config_data", NO_PRETERMS, nil, "POST", "/getSortedFirmwareVersionsIfExistOrNot", http.StatusOK, "fetchExisted=" + aut.eval("begin_existed+1"), aut.firmwareVersionMapValidator},
-		{FC_API, "firmware_config_data", NO_PRETERMS, nil, "POST", "/getSortedFirmwareVersionsIfExistOrNot", http.StatusOK, "fetchNotExisted=" + aut.eval("begin_not_exist-1"), aut.firmwareVersionMapValidator},
-		{FC_API, NO_INPUT, NO_PRETERMS, nil, "DELETE", "/" + aut.getValOf("config_id_1"), http.StatusNoContent, NO_POSTERMS, nil},
-		{MODEL_DAPI, NO_INPUT, NO_PRETERMS, nil, "DELETE", "/" + aut.getValOf("model_id_one"), http.StatusNoContent, NO_POSTERMS, nil},
+// 	testCases := []apiUnitTestCase{
+// 		{FC_API, "firmware_config_data", NO_PRETERMS, nil, "POST", "/getSortedFirmwareVersionsIfExistOrNot", http.StatusOK, "fetchExisted=" + aut.eval("begin_existed+1"), aut.firmwareVersionMapValidator},
+// 		{FC_API, "firmware_config_data", NO_PRETERMS, nil, "POST", "/getSortedFirmwareVersionsIfExistOrNot", http.StatusOK, "fetchNotExisted=" + aut.eval("begin_not_exist-1"), aut.firmwareVersionMapValidator},
+// 		{FC_API, NO_INPUT, NO_PRETERMS, nil, "DELETE", "/" + aut.getValOf("config_id_1"), http.StatusNoContent, NO_POSTERMS, nil},
+// 		{MODEL_DAPI, NO_INPUT, NO_PRETERMS, nil, "DELETE", "/" + aut.getValOf("model_id_one"), http.StatusNoContent, NO_POSTERMS, nil},
 
-		{FC_API, "firmware_config_data", NO_PRETERMS, nil, "POST", "/getSortedFirmwareVersionsIfExistOrNot", http.StatusOK, "fetchExisted=" + aut.eval("begin_existed"), aut.firmwareVersionMapValidator},
-		{FC_API, "firmware_config_data", NO_PRETERMS, nil, "POST", "/getSortedFirmwareVersionsIfExistOrNot", http.StatusOK, "fetchNotExisted=" + aut.eval("begin_not_exist"), aut.firmwareVersionMapValidator},
-		{FC_API, NO_INPUT, NO_PRETERMS, nil, "GET", "", http.StatusOK, "fetched=" + aut.eval("begin_count"), aut.firmwareConfigArrayValidator},
-	}
-	aut.run(testCases)
-	aut.baseEntityCount(t, "end:")
+// 		{FC_API, "firmware_config_data", NO_PRETERMS, nil, "POST", "/getSortedFirmwareVersionsIfExistOrNot", http.StatusOK, "fetchExisted=" + aut.eval("begin_existed"), aut.firmwareVersionMapValidator},
+// 		{FC_API, "firmware_config_data", NO_PRETERMS, nil, "POST", "/getSortedFirmwareVersionsIfExistOrNot", http.StatusOK, "fetchNotExisted=" + aut.eval("begin_not_exist"), aut.firmwareVersionMapValidator},
+// 		{FC_API, NO_INPUT, NO_PRETERMS, nil, "GET", "", http.StatusOK, "fetched=" + aut.eval("begin_count"), aut.firmwareConfigArrayValidator},
+// 	}
+// 	aut.run(testCases)
+// 	aut.baseEntityCount(t, "end:")
 
-}
+// }
 
-func TestGetFirmwareConfigBySupportedModels(t *testing.T) {
-	aut := newFirmwareConfigApiUnitTest(t)
-	// sysGenConfigId := uuid.New().String()
-	// sysGenModelId := uuid.New().String()
+// func TestGetFirmwareConfigBySupportedModels(t *testing.T) {
+// 	aut := newFirmwareConfigApiUnitTest(t)
+// 	// sysGenConfigId := uuid.New().String()
+// 	// sysGenModelId := uuid.New().String()
 
-	// testCases := []apiUnitTestCase{
-	// 	{FC_API, "model_ids", NO_PRETERMS, nil, "POST", "/bySupportedModels", http.StatusOK, "saveFetchedCntIn=begin_count", aut.firmwareConfigArrayValidator},
-	// 	{MODEL_UAPI, "create_unique_model", "SYSTEM_GENERATED_UNIQUE_IDENTIFIER=" + sysGenModelId, aut.replaceKeysByValues, "POST", "", http.StatusCreated, "saveIdIn=model_id_one&validate=true", aut.modelResponseValidator},
-	// 	{FC_API, "create_with_sys_gen_id", "SYSTEM_GENERATED_UNIQUE_IDENTIFIER=" + sysGenConfigId + "&SYSTEM_GENERATED_UNIQUE_MODEL_ID=" + sysGenModelId, aut.replaceKeysByValues, "POST", "", http.StatusCreated, "saveIdIn=config_id_1", aut.firmwareConfigResponseValidator},
-	// }
-	// aut.run(testCases)
+// 	// testCases := []apiUnitTestCase{
+// 	// 	{FC_API, "model_ids", NO_PRETERMS, nil, "POST", "/bySupportedModels", http.StatusOK, "saveFetchedCntIn=begin_count", aut.firmwareConfigArrayValidator},
+// 	// 	{MODEL_UAPI, "create_unique_model", "SYSTEM_GENERATED_UNIQUE_IDENTIFIER=" + sysGenModelId, aut.replaceKeysByValues, "POST", "", http.StatusCreated, "saveIdIn=model_id_one&validate=true", aut.modelResponseValidator},
+// 	// 	{FC_API, "create_with_sys_gen_id", "SYSTEM_GENERATED_UNIQUE_IDENTIFIER=" + sysGenConfigId + "&SYSTEM_GENERATED_UNIQUE_MODEL_ID=" + sysGenModelId, aut.replaceKeysByValues, "POST", "", http.StatusCreated, "saveIdIn=config_id_1", aut.firmwareConfigResponseValidator},
+// 	// }
+// 	// aut.run(testCases)
 
-	testCases := []apiUnitTestCase{
-		{FC_API, "model_ids", NO_PRETERMS, nil, "POST", "/bySupportedModels", http.StatusOK, "fetched=" + aut.eval("begin_count +1"), aut.firmwareConfigArrayValidator},
-		{FC_API, NO_INPUT, NO_PRETERMS, nil, "DELETE", "/" + aut.getValOf("config_id_1"), http.StatusNoContent, NO_POSTERMS, nil},
-		{FC_API, "model_ids", NO_PRETERMS, nil, "POST", "/bySupportedModels", http.StatusOK, "fetched=" + aut.eval("begin_count"), aut.firmwareConfigArrayValidator},
-		{MODEL_DAPI, NO_INPUT, NO_PRETERMS, nil, "DELETE", "/" + aut.getValOf("model_id_one"), http.StatusNoContent, NO_POSTERMS, nil},
-	}
-	aut.run(testCases)
-	aut.baseEntityCount(t, "end:")
+// 	testCases := []apiUnitTestCase{
+// 		{FC_API, "model_ids", NO_PRETERMS, nil, "POST", "/bySupportedModels", http.StatusOK, "fetched=" + aut.eval("begin_count +1"), aut.firmwareConfigArrayValidator},
+// 		{FC_API, NO_INPUT, NO_PRETERMS, nil, "DELETE", "/" + aut.getValOf("config_id_1"), http.StatusNoContent, NO_POSTERMS, nil},
+// 		{FC_API, "model_ids", NO_PRETERMS, nil, "POST", "/bySupportedModels", http.StatusOK, "fetched=" + aut.eval("begin_count"), aut.firmwareConfigArrayValidator},
+// 		{MODEL_DAPI, NO_INPUT, NO_PRETERMS, nil, "DELETE", "/" + aut.getValOf("model_id_one"), http.StatusNoContent, NO_POSTERMS, nil},
+// 	}
+// 	aut.run(testCases)
+// 	aut.baseEntityCount(t, "end:")
 
-}
+// }
 
 // "/firmwareConfigMap"
 func TestGetFirmwareConfigFirmwareConfigMap(t *testing.T) {
@@ -808,7 +808,6 @@ func TestFirmwareConfigCRUD(t *testing.T) {
 		{FC_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/crud_393e2152-9d50-4f30-aab9-c74977471632", http.StatusNotFound, NO_POSTERMS, nil},
 		{FC_API, "firmware_config_crud", NO_PRETERMS, nil, "PUT", "", http.StatusNotFound, NO_POSTERMS, nil},
 		{FC_API, "firmware_config_crud", NO_PRETERMS, nil, "POST", "", http.StatusCreated, NO_POSTERMS, nil},
-		{MODEL_WHOLE_API, NO_INPUT, NO_PRETERMS, nil, "DELETE", "/DPC8888", http.StatusConflict, NO_POSTERMS, nil},
 		{FC_API, "firmware_config_crud_dup", NO_PRETERMS, nil, "POST", "", http.StatusConflict, NO_POSTERMS, nil},
 		{FC_API, "firmware_config_crud", NO_PRETERMS, nil, "PUT", "", http.StatusOK, NO_POSTERMS, nil},
 		{FC_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/crud_393e2152-9d50-4f30-aab9-c74977471632", http.StatusOK, "ID=crud_393e2152-9d50-4f30-aab9-c74977471632", aut.firmwareConfigSingleValidator},

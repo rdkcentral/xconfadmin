@@ -582,6 +582,43 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	environmentPath.HandleFunc("/{id}", GetQueriesEnvironmentsById).Methods("GET").Name("Environments")
 	environmentPath.HandleFunc("/{id}", DeleteEnvironmentHandler).Methods("DELETE").Name("Environments")
 	paths = append(paths, environmentPath)
+	// genericnamespacedlist
+	nameSpacedListPath := r.PathPrefix("/xconfAdminService/genericnamespacedlist").Subrouter()
+	nameSpacedListPath.HandleFunc("", GetNamespacedListsHandler).Methods("GET").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("", CreateNamespacedListHandler).Methods("POST").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("", UpdateNamespacedListHandler).Methods("PUT").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("/ids", GetNamespacedListIdsHandler).Methods("GET").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("/ipAddressGroups", GetIpAddressGroupsHandler).Methods("GET").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("/filtered", PostNamespacedListFilteredHandler).Methods("POST").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("/entities", PostNamespacedListEntitiesHandler).Methods("POST").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("/entities", PutNamespacedListEntitiesHandler).Methods("PUT").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("/{id}", GetNamespacedListHandler).Methods("GET").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("/{id}", RenameNamespacedListHandler).Methods("PUT").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("/{id}", DeleteNamespacedListHandler).Methods("DELETE").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("/{type}/ids", GetNamespacedListIdsByTypeHandler).Methods("GET").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("/all/{type}", GetNamespacedListsByTypeHandler).Methods("GET").Name("NameSpaced-Lists")
+	paths = append(paths, nameSpacedListPath)
+
+	// firmwareconfig
+	firmwareConfigPath := r.PathPrefix("/xconfAdminService/firmwareconfig").Subrouter()
+	firmwareConfigPath.HandleFunc("/firmwareConfigMap", GetFirmwareConfigFirmwareConfigMapHandler).Methods("GET").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("/getSortedFirmwareVersionsIfExistOrNot", PostFirmwareConfigGetSortedFirmwareVersionsIfExistOrNotHandler).Methods("POST").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("/model/{modelId}", GetFirmwareConfigModelByModelIdHandler).Methods("GET").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("/supportedConfigsByEnvModelRuleName/{ruleName}", GetSupportedConfigsByEnvModelRuleName).Methods("GET").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("/byEnvModelRuleName/{ruleName}", GetFirmwareConfigByEnvModelRuleNameByRuleNameHandler).Methods("GET").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("", GetFirmwareConfigHandler).Methods("GET").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("", PostFirmwareConfigHandler).Methods("POST").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("", PutFirmwareConfigHandler).Methods("PUT").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("/bySupportedModels", PostFirmwareConfigBySupportedModelsHandler).Methods("POST").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("/entities", PostFirmwareConfigEntitiesHandler).Methods("POST").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("/entities", PutFirmwareConfigEntitiesHandler).Methods("PUT").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("/filtered", PostFirmwareConfigFilteredHandler).Methods("POST").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-Configs")
+	// url with var has to be placed last otherwise, it gets confused with url with defined paths
+	firmwareConfigPath.HandleFunc("/{id}", DeleteFirmwareConfigByIdHandler).Methods("DELETE").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("/{id}", GetFirmwareConfigByIdHandler).Methods("GET").Name("Firmware-Configs")
+	paths = append(paths, firmwareConfigPath)
 
 	c := cors.New(cors.Options{
 		AllowCredentials: true,

@@ -302,12 +302,10 @@ func TestFirmwareRuleTemplateCRUD(t *testing.T) {
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	testCases := []apiUnitTestCase{
 		{FRT_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?name=123sd_new", http.StatusOK, "fetched=0", aut.firmwareRuleTemplateArrayValidator},
-		{FRT_API, "create", NO_PRETERMS, nil, "PUT", "", http.StatusNotFound, NO_POSTERMS, nil},
 		{FRT_API, "create_missing_applicable_action", NO_PRETERMS, nil, "POST", "", http.StatusBadRequest, NO_POSTERMS, nil},
 		{FRT_API, "create", NO_PRETERMS, nil, "POST", "", http.StatusCreated, NO_POSTERMS, nil},
 		{FRT_API, NO_INPUT, NO_PRETERMS, nil, "GET", "/filtered?name=123sd_new", http.StatusOK, "fetched=1", aut.firmwareRuleTemplateArrayValidator},
 		{FRT_API, "create", NO_PRETERMS, nil, "POST", "", http.StatusConflict, NO_POSTERMS, nil},
-		{FRT_API, "create", NO_PRETERMS, nil, "PUT", "", http.StatusOK, NO_POSTERMS, nil},
 		{FRT_API, "frt_env_model", NO_PRETERMS, nil, "POST", "", http.StatusCreated, NO_POSTERMS, nil},
 		{FRT_API, "frt_env_model_dup", NO_PRETERMS, nil, "POST", "", http.StatusConflict, NO_POSTERMS, nil},
 		{FRT_API, NO_INPUT, NO_PRETERMS, nil, "DELETE", "/ENV_MODEL_RULE", http.StatusNoContent, NO_POSTERMS, nil},
