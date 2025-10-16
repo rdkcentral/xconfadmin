@@ -21,8 +21,6 @@ go 1.23.0
 
 toolchain go1.24.0
 
-replace github.com/rdkcentral/xconfwebconfig => /Users/mdolina/Development/rdkcentral/xconfwebconfig
-
 require (
 	github.com/360EntSecGroup-Skylar/excelize v1.4.1
 	github.com/dchest/siphash v1.2.3
