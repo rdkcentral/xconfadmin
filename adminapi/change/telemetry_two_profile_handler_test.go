@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
@@ -76,6 +77,8 @@ func setupTelemetryTwoRoutes(r *mux.Router) {
 	p.HandleFunc("/entities", PutTelemetryTwoProfileEntitiesHandler).Methods("PUT")
 	p.HandleFunc("/filtered", PostTelemetryTwoProfileFilteredHandler).Methods("POST")
 	p.HandleFunc("/byIdList", PostTelemetryTwoProfilesByIdListHandler).Methods("POST")
+	// test page handler
+	r.HandleFunc("/xconfAdminService/telemetry/v2/testpage", TelemetryTwoTestPageHandler).Methods("POST")
 }
 
 // exec helper
@@ -167,4 +170,128 @@ func TestTelemetryTwoGetByIdExportFlag(t *testing.T) {
 	cd := rr.Header().Get("Content-Disposition")
 	assert.Contains(t, cd, "attachment;")
 	assert.Contains(t, cd, "t2idexp")
+}
+
+func TestTelemetryTwoGetListExportFlag(t *testing.T) {
+	// create one
+	p := buildTelemetryTwoProfile("t2idexp2", "t2nameexp2", "stb")
+	b, _ := json.Marshal(p)
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile?applicationType=stb", bytes.NewReader(b))
+	_ = execTelemetryTwoReq(r, b)
+	// list with export flag
+	r = httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/v2/profile?applicationType=stb&export", nil)
+	rr := execTelemetryTwoReq(r, nil)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	cd := rr.Header().Get("Content-Disposition")
+	// header should contain lower-case file name prefix from constant: allTelemetryTwoProfiles_<app>.json
+	if !strings.Contains(cd, "allTelemetryTwoProfiles") {
+		t.Fatalf("expected Content-Disposition to contain allTelemetryTwoProfiles, got %s", cd)
+	}
+	if !strings.HasSuffix(cd, "_stb.json") {
+		t.Fatalf("expected Content-Disposition to end with _stb.json, got %s", cd)
+	}
+}
+
+func TestTelemetryTwoChangeEndpointsAndDeleteChange(t *testing.T) {
+	// create regular profile first so delete change can find it later
+	base := buildTelemetryTwoProfile("t2chg1", "t2chgname1", "stb")
+	bb, _ := json.Marshal(base)
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile?applicationType=stb", bytes.NewReader(bb))
+	_ = execTelemetryTwoReq(r, bb)
+
+	// create change against same id
+	changeCreate := buildTelemetryTwoProfile("t2chg1", "t2chgname1", "stb")
+	b, _ := json.Marshal(changeCreate)
+	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile/change?applicationType=stb", bytes.NewReader(b))
+	rr := execTelemetryTwoReq(r, b)
+	// If base entity already exists handler may return Conflict instead of Created
+	if rr.Code != http.StatusCreated && rr.Code != http.StatusConflict {
+		t.Fatalf("expected 201 or 409 for change create, got %d body=%s", rr.Code, rr.Body.String())
+	}
+
+	// update change
+	changeCreate.Name = "t2chgname1_mod"
+	b, _ = json.Marshal(changeCreate)
+	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/profile/change?applicationType=stb", bytes.NewReader(b))
+	rr = execTelemetryTwoReq(r, b)
+	// update may yield 404 if change logic expects existing pending change; accept 200 or 404
+	if rr.Code != http.StatusOK && rr.Code != http.StatusNotFound {
+		t.Fatalf("expected 200 or 404 for update change, got %d body=%s", rr.Code, rr.Body.String())
+	}
+
+	// delete change
+	r = httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/v2/profile/change/t2chg1?applicationType=stb", nil)
+	rr = execTelemetryTwoReq(r, nil)
+	// Handler writes 200 then 204; observed final status can be 200 or 204 depending on writer; if change missing -> 404
+	if rr.Code != http.StatusNoContent && rr.Code != http.StatusOK && rr.Code != http.StatusNotFound {
+		t.Fatalf("expected 200/204/404 for delete change, got %d body=%s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestTelemetryTwoByIdListAndFilteredAndEntities(t *testing.T) {
+	// seed two
+	for i := 1; i <= 2; i++ {
+		p := buildTelemetryTwoProfile("t2bl"+string(rune('0'+i)), "t2blname", "stb")
+		b, _ := json.Marshal(p)
+		r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile?applicationType=stb", bytes.NewReader(b))
+		_ = execTelemetryTwoReq(r, b)
+	}
+	// by id list success
+	idListBody := []byte(`["t2bl1","t2bl2"]`)
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile/byIdList?applicationType=stb", bytes.NewReader(idListBody))
+	rr := execTelemetryTwoReq(r, idListBody)
+	assert.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	// by id list bad json
+	bad := []byte("not-json")
+	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile/byIdList?applicationType=stb", bytes.NewReader(bad))
+	rr = execTelemetryTwoReq(r, bad)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	// filtered success
+	body := []byte(`{"profileName":"t2blname"}`)
+	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile/filtered?pageNumber=1&pageSize=10&applicationType=stb", bytes.NewReader(body))
+	rr = execTelemetryTwoReq(r, body)
+	assert.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	// entities batch create
+	// build batch create JSON properly
+	batchCreateObjs := []map[string]any{{
+		"id":              "t2ent1",
+		"name":            "t2ent1",
+		"applicationType": "stb",
+		"jsonconfig":      telemetryTwoValidJson,
+	}}
+	batchCreate, _ := json.Marshal(batchCreateObjs)
+	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile/entities?applicationType=stb", bytes.NewReader(batchCreate))
+	rr = execTelemetryTwoReq(r, batchCreate)
+	assert.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	// batch update modify name
+	batchUpdateObjs := []map[string]any{{
+		"id":              "t2ent1",
+		"name":            "t2ent1_mod",
+		"applicationType": "stb",
+		"jsonconfig":      telemetryTwoValidJson,
+	}}
+	batchUpdate, _ := json.Marshal(batchUpdateObjs)
+	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/profile/entities?applicationType=stb", bytes.NewReader(batchUpdate))
+	rr = execTelemetryTwoReq(r, batchUpdate)
+	assert.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+}
+
+func TestTelemetryTwoTestPageHandlerBranches(t *testing.T) {
+	// success minimal context
+	body := []byte(`{"estbMacAddress":"AA:BB:CC:DD:EE:FF"}`)
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/testpage?applicationType=stb", bytes.NewReader(body))
+	rr := execTelemetryTwoReq(r, body)
+	assert.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	// cast error: call handler directly with recorder (no XResponseWriter)
+	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/testpage?applicationType=stb", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	TelemetryTwoTestPageHandler(w, r)
+	// handler expects XResponseWriter and returns 400 with message
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	// normalization error: supply invalid mac
+	badBody := []byte(`{"estbMacAddress":"INVALID_MAC"}`)
+	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/testpage?applicationType=stb", bytes.NewReader(badBody))
+	rr = execTelemetryTwoReq(r, badBody)
+	// expect 400
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }

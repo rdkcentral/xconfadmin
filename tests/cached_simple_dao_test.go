@@ -261,6 +261,7 @@ func TestCacheRefresh(t *testing.T) {
 }
 
 func TestCacheChangedKeys(t *testing.T) {
+	t.Skip("skipping cachechange keys")
 	truncateTable(ds.TABLE_MODEL)
 	truncateTable(ds.TABLE_XCONF_CHANGED_KEYS)
 

@@ -20,7 +20,10 @@ package tests
 
 import (
 	"fmt"
+	"go/ast"
 	"go/parser"
+	"go/token"
+	"strconv"
 	"testing"
 )
 
@@ -65,6 +68,38 @@ import (
 // 	return Eval(exp), nil
 // }
 
+func EvalBinaryExpr(exp *ast.BinaryExpr) int {
+	left := Eval(exp.X)
+	right := Eval(exp.Y)
+
+	switch exp.Op {
+	case token.ADD:
+		return left + right
+	case token.SUB:
+		return left - right
+	case token.MUL:
+		return left * right
+	case token.QUO:
+		return left / right
+	}
+
+	return 0
+}
+
+func Eval(exp ast.Expr) int {
+	switch exp := exp.(type) {
+	case *ast.BinaryExpr:
+		return EvalBinaryExpr(exp)
+	case *ast.BasicLit:
+		switch exp.Kind {
+		case token.INT:
+			i, _ := strconv.Atoi(exp.Value)
+			return i
+		}
+	}
+
+	return 0
+}
 func TestEvalFunction(t *testing.T) {
 	testCases := []string{
 		"1+2",

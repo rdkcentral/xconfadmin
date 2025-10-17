@@ -33,7 +33,6 @@ import (
 	"github.com/rdkcentral/xconfadmin/adminapi"
 
 	oshttp "github.com/rdkcentral/xconfadmin/http"
-
 	"github.com/rdkcentral/xconfadmin/taggingapi"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
@@ -180,6 +179,12 @@ func TestMain(m *testing.M) {
 	server.XW_XconfServer.TearDown()
 
 	os.Exit(returnCode)
+}
+
+type apiUnitTest struct {
+	t        *testing.T
+	router   *mux.Router
+	savedMap map[string]string
 }
 
 func newApiUnitTest(t *testing.T) *apiUnitTest {
