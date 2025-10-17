@@ -39,6 +39,7 @@ func (t *Tag) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// UnmarshalJSON handles unmarshaling for backward compatibility
 func (t *Tag) UnmarshalJSON(bbytes []byte) error {
 	var tagResp tagResp
 	err := json.Unmarshal(bbytes, &tagResp)
