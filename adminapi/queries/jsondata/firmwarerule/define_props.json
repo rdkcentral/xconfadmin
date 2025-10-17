@@ -1,0 +1,77 @@
+{
+  "id": "36be74c7-f3fc-4fb9-ac98-980810033372",
+  "name": "somenewname",
+  "rule": {
+    "negated": false,
+    "compoundParts": [
+      {
+        "negated": false,
+        "condition": {
+          "freeArg": {
+            "type": "STRING",
+            "name": "eStbMac"
+          },
+          "operation": "IN_LIST",
+          "fixedArg": {
+            "bean": {
+              "value": {
+                "java.lang.String": "1717_LED_ABC23"
+              }
+            }
+          }
+        }
+      },
+      {
+        "negated": false,
+        "relation": "OR",
+        "condition": {
+          "freeArg": {
+            "type": "STRING",
+            "name": "eStbMac1"
+          },
+          "operation": "IS",
+          "fixedArg": {
+            "bean": {
+              "value": {
+                "java.lang.String": "SKXI11ANS_2"
+              }
+            }
+          }
+        },
+        "compoundParts": []
+      },
+      {
+        "negated": false,
+        "relation": "OR",
+        "condition": {
+          "freeArg": {
+            "type": "STRING",
+            "name": "eStbMac2"
+          },
+          "operation": "IN",
+          "fixedArg": {
+            "collection": {
+              "value": [
+                "SKXI11AIS"
+              ]
+            }
+          }
+        },
+        "compoundParts": []
+      }
+    ]
+  },
+  "applicableAction": {
+    "type": ".DefinePropertiesAction",
+    "configId": "442487bf-909c-4288-b684-69d4cf6387c3",
+    "actionType": "DEFINE_PROPERTIES",
+    "properties": {
+      "rebootImmediately": "true"
+    },
+    "byPassFilters": [],
+    "activationFirmwareVersions": {}
+  },
+  "type": "MAC_RULE",
+  "active": true,
+  "applicationType": "rdkcloud"
+}

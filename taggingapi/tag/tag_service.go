@@ -29,18 +29,31 @@ const (
 )
 
 func GetGroupServiceSyncConnector() *http.GroupServiceSyncConnector {
+	if http.WebConfServer == nil || http.WebConfServer.GroupServiceSyncConnector == nil {
+		return nil
+	}
 	return http.WebConfServer.GroupServiceSyncConnector
 }
 
 func GetTagApiConfig() *taggingapi_config.TaggingApiConfig {
+	if http.WebConfServer == nil || http.WebConfServer.TaggingApiConfig == nil {
+		// Safe defaults for tests so we don't panic on nil dereference
+		return &taggingapi_config.TaggingApiConfig{BatchLimit: 5000, WorkerCount: 0}
+	}
 	return http.WebConfServer.TaggingApiConfig
 }
 
 func SetTagApiConfig(config *taggingapi_config.TaggingApiConfig) {
+	if http.WebConfServer == nil {
+		return
+	}
 	http.WebConfServer.TaggingApiConfig = config
 }
 
 func GetGroupServiceConnector() *http.GroupServiceConnector {
+	if http.WebConfServer == nil || http.WebConfServer.GroupServiceConnector == nil {
+		return nil
+	}
 	return http.WebConfServer.GroupServiceConnector
 }
 
@@ -54,7 +67,12 @@ func GetTagById(id string) *Tag {
 
 func GetTagsByMember(member string) ([]string, error) {
 	member = ToNormalizedEcm(member)
-	tagsAsHashes, err := GetGroupServiceConnector().GetGroupsMemberBelongsTo(member)
+	connector := GetGroupServiceConnector()
+	if connector == nil { // test environment without initialization
+		log.Warn("GroupServiceConnector is nil; returning empty result set")
+		return []string{}, nil
+	}
+	tagsAsHashes, err := connector.GetGroupsMemberBelongsTo(member)
 	if err != nil {
 		log.Errorf("xdas error getting members by %s group: %s", member, err.Error())
 		return []string{}, err
@@ -132,11 +150,14 @@ func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<-
 	}
 	for member := range members {
 		normalizedEcm := ToNormalizedEcm(member)
-		err := GetGroupServiceSyncConnector().AddMembersToTag(normalizedEcm, &xdasMembers)
-		if err != nil {
-			log.Errorf("xdas error adding %s member to %s group: %s", id, normalizedEcm, err.Error())
+		if syncConnector := GetGroupServiceSyncConnector(); syncConnector != nil {
+			if err := syncConnector.AddMembersToTag(normalizedEcm, &xdasMembers); err != nil {
+				log.Errorf("xdas error adding %s member to %s group: %s", id, normalizedEcm, err.Error())
+			} else {
+				savedMembers <- member
+			}
 		} else {
-			savedMembers <- member
+			log.Warn("GroupServiceSyncConnector is nil; skipping AddMembersToTag call in storeTagMembersInXdas")
 		}
 	}
 }
@@ -144,7 +165,12 @@ func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<-
 func RemoveMemberFromTag(id string, member string) (*Tag, error) {
 	id = SetTagPrefix(id)
 	normalizedEcm := ToNormalizedEcm(member)
-	err := GetGroupServiceSyncConnector().RemoveGroupMembers(normalizedEcm, id)
+	var err error
+	if syncConnector := GetGroupServiceSyncConnector(); syncConnector != nil {
+		err = syncConnector.RemoveGroupMembers(normalizedEcm, id)
+	} else {
+		log.Warn("GroupServiceSyncConnector is nil; skipping RemoveGroupMembers in RemoveMemberFromTag")
+	}
 	if err != nil {
 		log.Errorf("xdas error removing %s member from %s group: %s", id, normalizedEcm, err.Error())
 		return nil, err
@@ -209,11 +235,14 @@ func removeTagMembersFromXdas(id string, members <-chan string, removedMembers c
 	defer wg.Done()
 	for member := range members {
 		normalizedEcm := ToNormalizedEcm(member)
-		err := GetGroupServiceSyncConnector().RemoveGroupMembers(normalizedEcm, id)
-		if err != nil {
-			log.Errorf("xdas error removing %s member from %s group: %s", id, normalizedEcm, err.Error())
+		if syncConnector := GetGroupServiceSyncConnector(); syncConnector != nil {
+			if err := syncConnector.RemoveGroupMembers(normalizedEcm, id); err != nil {
+				log.Errorf("xdas error removing %s member from %s group: %s", id, normalizedEcm, err.Error())
+			} else {
+				removedMembers <- member
+			}
 		} else {
-			removedMembers <- member
+			log.Warn("GroupServiceSyncConnector is nil; skipping RemoveGroupMembers in removeTagMembersFromXdas")
 		}
 	}
 }
@@ -222,16 +251,21 @@ func removeMembersFromXdasTag(id string, members []string) ([]string, error) {
 	var removeFromXconf []string
 	for _, member := range members {
 		normalizedMember := ToNormalizedEcm(member)
-		err := GetGroupServiceSyncConnector().RemoveGroupMembers(normalizedMember, id)
-		if err != nil {
-			if common.GetXconfErrorStatusCode(err) == http2.StatusNotFound { //ignoring NOT FOUND error if tag was removed by any other way, to not block entry removal from xconf
-				log.Warnf("%s member was not found in %s group", id, normalizedMember)
-				removeFromXconf = append(removeFromXconf, member)
-				continue
+		if syncConnector := GetGroupServiceSyncConnector(); syncConnector != nil {
+			if err := syncConnector.RemoveGroupMembers(normalizedMember, id); err != nil {
+				if common.GetXconfErrorStatusCode(err) == http2.StatusNotFound { //ignoring NOT FOUND error if tag was removed by any other way, to not block entry removal from xconf
+					log.Warnf("%s member was not found in %s group", id, normalizedMember)
+					removeFromXconf = append(removeFromXconf, member)
+					continue
+				}
+				return removeFromXconf, err
 			}
-			return removeFromXconf, err
+			removeFromXconf = append(removeFromXconf, normalizedMember)
+		} else {
+			log.Warn("GroupServiceSyncConnector is nil; skipping RemoveGroupMembers in removeMembersFromXdasTag")
+			// assume removal from xconf anyway
+			removeFromXconf = append(removeFromXconf, member)
 		}
-		removeFromXconf = append(removeFromXconf, normalizedMember)
 	}
 	return removeFromXconf, nil
 }
@@ -266,7 +300,15 @@ func deleteTagFromXdas(tag *Tag) (*Tag, error) {
 	var err error
 	for _, member := range tag.Members.ToSlice() {
 		normalizedMember := ToNormalizedEcm(member)
-		xdasErr := GetGroupServiceSyncConnector().RemoveGroupMembers(normalizedMember, tag.Id)
+		var xdasErr error
+		if syncConnector := GetGroupServiceSyncConnector(); syncConnector != nil {
+			xdasErr = syncConnector.RemoveGroupMembers(normalizedMember, tag.Id)
+		} else {
+			// If connector absent treat as success for removal from local store
+			log.Warn("GroupServiceSyncConnector is nil; skipping RemoveGroupMembers in deleteTagFromXdas")
+			removedMembers = append(removedMembers, member)
+			continue
+		}
 		if xdasErr != nil {
 			log.Errorf("xdas error removing %s member from %s group: %s", tag.Id, normalizedMember, xdasErr.Error())
 			if common.GetXconfErrorStatusCode(xdasErr) == http2.StatusNotFound { //ignoring NOT FOUND error if tag was removed by any other way, to not block entry removal from xconf

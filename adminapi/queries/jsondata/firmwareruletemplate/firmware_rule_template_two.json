@@ -1,0 +1,77 @@
+{ 
+    "id":"MAC_RULE",
+  "rule": {
+    "negated": false,
+    "compoundParts": [
+      {
+        "negated": false,
+        "condition": {
+          "freeArg": {
+            "type": "STRING",
+            "name": "eStbMac"
+          },
+          "operation": "IN_LIST",
+          "fixedArg": {
+            "bean": {
+              "value": {
+                "java.lang.String": "1717_LED_ABCD"
+              }
+            }
+          }
+        }
+      },
+      {
+        "negated": false,
+        "relation": "OR",
+        "condition": {
+          "freeArg": {
+            "type": "STRING",
+            "name": "eStbMac1"
+          },
+          "operation": "IS",
+          "fixedArg": {
+            "bean": {
+              "value": {
+                "java.lang.String": "SKXI11ANS"
+              }
+            }
+          }
+        },
+        "compoundParts": []
+      },
+      {
+        "negated": false,
+        "relation": "OR",
+        "condition": {
+          "freeArg": {
+            "type": "STRING",
+            "name": "eStbMac2"
+          },
+          "operation": "IN",
+          "fixedArg": {
+            "collection": {
+              "value": [
+                "SKXI11AIS"
+              ]
+            }
+          }
+        },
+        "compoundParts": []
+      }
+    ]
+  },
+    "applicableAction":
+    {
+        "type":".RuleAction",
+        "actionType":"RULE_TEMPLATE",
+        "active":true,
+        "useAccountPercentage":false,
+        "firmwareCheckRequired":false,
+        "rebootImmediately":false
+    },
+    "priority":1,
+    "requiredFields":[],
+    "byPassFilters":[],
+    "editable":true
+}
+
