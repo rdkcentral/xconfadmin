@@ -620,6 +620,20 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	firmwareConfigPath.HandleFunc("/{id}", GetFirmwareConfigByIdHandler).Methods("GET").Name("Firmware-Configs")
 	paths = append(paths, firmwareConfigPath)
 
+	// activationMinimumVersion routes (needed for POST filtered and batch entities tests)
+	actMinVerPath := r.PathPrefix("/xconfAdminService/activationMinimumVersion").Subrouter()
+	actMinVerPath.HandleFunc("", GetAmvHandler).Methods("GET").Name("Firmware-ActivationVersion")
+	actMinVerPath.HandleFunc("", CreateAmvHandler).Methods("POST").Name("Firmware-ActivationVersion")
+	actMinVerPath.HandleFunc("", UpdateAmvHandler).Methods("PUT").Name("Firmware-ActivationVersion")
+	actMinVerPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-ActivationVersion")
+	actMinVerPath.HandleFunc("/filtered", PostAmvFilteredHandler).Methods("POST").Name("Firmware-ActivationVersion")
+	actMinVerPath.HandleFunc("/entities", PostAmvEntitiesHandler).Methods("POST").Name("Firmware-ActivationVersion")
+	actMinVerPath.HandleFunc("/entities", PutAmvEntitiesHandler).Methods("PUT").Name("Firmware-ActivationVersion")
+	actMinVerPath.HandleFunc("/importAll", ImportAllAmvHandler).Methods("POST").Name("Firmware-ActivationVersion")
+	actMinVerPath.HandleFunc("/{id}", DeleteAmvByIdHandler).Methods("DELETE").Name("Firmware-ActivationVersion")
+	actMinVerPath.HandleFunc("/{id}", GetAmvByIdHandler).Methods("GET").Name("Firmware-ActivationVersion")
+	paths = append(paths, actMinVerPath)
+
 	c := cors.New(cors.Options{
 		AllowCredentials: true,
 		AllowedOrigins:   []string{"*"},

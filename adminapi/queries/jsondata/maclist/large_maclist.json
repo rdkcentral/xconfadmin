@@ -1,6 +1,7 @@
 {
     "id": "UnitTest_Expansion_Contraction_Experiment",
     "updated": 1700161878719,
+    "typeName": "MAC_LIST",
     "data": [
         "AA:AA:AA:AA:AA:AA",
         "AA:AA:AA:AA:AA:AA",

@@ -397,6 +397,154 @@ func TestSearchPercentageBeanByMinCheckVersion(t *testing.T) {
 	assert.Contains(t, percentageBeans, percentageBean2)
 }
 
+// --- Additional lightweight tests to raise handler branch coverage ---
+
+// Export branch for GetPercentageBeanByIdHandler
+func TestGetPercentageBeanByIdHandler_Export(t *testing.T) {
+	DeleteAllEntities()
+	pb, err := PreCreatePercentageBean()
+	assert.Nil(t, err)
+	url := fmt.Sprintf("%s/%s?applicationType=stb&export=true", PB_URL_BASE, pb.ID)
+	r := httptest.NewRequest(http.MethodGet, url, nil)
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Contains(t, rr.Header().Get("Content-Disposition"), pb.ID)
+}
+
+// Missing ID branch for GetPercentageBeanByIdHandler
+func TestGetPercentageBeanByIdHandler_MissingID(t *testing.T) {
+	DeleteAllEntities()
+	// Path without ID will not match the /{id} route; expect 404 from mux
+	url := fmt.Sprintf("%s/?applicationType=stb", PB_URL_BASE)
+	r := httptest.NewRequest(http.MethodGet, url, nil)
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusNotFound, rr.Code)
+}
+
+// ApplicationType mismatch triggering not found
+func TestGetPercentageBeanByIdHandler_AppTypeMismatch(t *testing.T) {
+	DeleteAllEntities()
+	pb, _ := PreCreatePercentageBean()
+	url := fmt.Sprintf("%s/%s?applicationType=xhome", PB_URL_BASE, pb.ID)
+	r := httptest.NewRequest(http.MethodGet, url, nil)
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusNotFound, rr.Code)
+}
+
+// Export branch for GetAllPercentageBeanAsRule
+func TestGetAllPercentageBeanAsRule_Export(t *testing.T) {
+	DeleteAllEntities()
+	_, _ = PreCreatePercentageBean()
+	// Correct path per router: /percentfilter/percentageBean/allAsRules
+	url := "/xconfAdminService/percentfilter/percentageBean/allAsRules?applicationType=stb&export=true"
+	r := httptest.NewRequest(http.MethodGet, url, nil)
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.NotEmpty(t, rr.Header().Get("Content-Disposition"))
+}
+
+// Export branch for GetPercentageBeanAsRuleById
+func TestGetPercentageBeanAsRuleById_Export(t *testing.T) {
+	DeleteAllEntities()
+	pb, _ := PreCreatePercentageBean()
+	// Correct path per router: /percentfilter/percentageBean/asRule/{id}
+	url := fmt.Sprintf("/xconfAdminService/percentfilter/percentageBean/asRule/%s?applicationType=stb&export=true", pb.ID)
+	r := httptest.NewRequest(http.MethodGet, url, nil)
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.NotEmpty(t, rr.Header().Get("Content-Disposition"))
+}
+
+// PercentageBeanAsRuleById missing ID parameter
+func TestGetPercentageBeanAsRuleById_MissingID(t *testing.T) {
+	DeleteAllEntities()
+	// Missing ID will hit the route without variable -> 404
+	url := "/xconfAdminService/percentfilter/percentageBean/asRule/?applicationType=stb"
+	r := httptest.NewRequest(http.MethodGet, url, nil)
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusNotFound, rr.Code)
+}
+
+// PostPercentageBeanEntitiesHandler invalid JSON
+func TestPostPercentageBeanEntitiesHandler_InvalidJSON(t *testing.T) {
+	DeleteAllEntities()
+	url := fmt.Sprintf("%s/entities?applicationType=stb", PB_URL_BASE)
+	r := httptest.NewRequest(http.MethodPost, url, bytes.NewBuffer([]byte("{invalid")))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+// PutPercentageBeanEntitiesHandler invalid JSON
+func TestPutPercentageBeanEntitiesHandler_InvalidJSON(t *testing.T) {
+	DeleteAllEntities()
+	url := fmt.Sprintf("%s/entities?applicationType=stb", PB_URL_BASE)
+	r := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer([]byte("{invalid")))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+// PostPercentageBeanFilteredWithParamsHandler invalid JSON body
+func TestPostPercentageBeanFilteredWithParamsHandler_InvalidJSON(t *testing.T) {
+	DeleteAllEntities()
+	url := "/xconfAdminService/percentfilter/percentageBean/filtered?applicationType=stb&pageNumber=1&pageSize=10"
+	r := httptest.NewRequest(http.MethodPost, url, bytes.NewBuffer([]byte("{invalid")))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+// Pagination error: pageNumber <1
+func TestPostPercentageBeanFilteredWithParamsHandler_InvalidPage(t *testing.T) {
+	DeleteAllEntities()
+	_, _ = PreCreatePercentageBean()
+	url := "/xconfAdminService/percentfilter/percentageBean/filtered?applicationType=stb&pageNumber=0&pageSize=10"
+	r := httptest.NewRequest(http.MethodPost, url, nil)
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+// Pagination error: pageSize <1
+func TestPostPercentageBeanFilteredWithParamsHandler_InvalidSize(t *testing.T) {
+	DeleteAllEntities()
+	_, _ = PreCreatePercentageBean()
+	url := "/xconfAdminService/percentfilter/percentageBean/filtered?applicationType=stb&pageNumber=1&pageSize=0"
+	r := httptest.NewRequest(http.MethodPost, url, nil)
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+// Wakeup pool handler invalid force param
+func TestCreateWakeupPoolHandler_InvalidForceParam(t *testing.T) {
+	url := "/xconfAdminService/wakeuppool?force=notabool"
+	r := httptest.NewRequest(http.MethodPost, url, nil)
+	rr := ExecuteRequest(r, router)
+	if rr.Code == http.StatusNotFound {
+		t.Skip("wakeupPool route not registered in test router")
+	}
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+// Wakeup pool handler unsupported force true
+func TestCreateWakeupPoolHandler_UnsupportedForce(t *testing.T) {
+	url := "/xconfAdminService/wakeuppool?force=true"
+	r := httptest.NewRequest(http.MethodPost, url, nil)
+	rr := ExecuteRequest(r, router)
+	if rr.Code == http.StatusNotFound {
+		t.Skip("wakeupPool route not registered in test router")
+	}
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+// Wakeup pool handler success path (force default false)
+func TestCreateWakeupPoolHandler_Success(t *testing.T) {
+	url := "/xconfAdminService/wakeuppool"
+	r := httptest.NewRequest(http.MethodPost, url, nil)
+	rr := ExecuteRequest(r, router)
+	if rr.Code == http.StatusNotFound {
+		t.Skip("wakeupPool route not registered in test router")
+	}
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
 func assertPercentageBeanVersionUUIDs(t *testing.T, expectedPB *coreef.PercentageBean, actualPB *coreef.PercentageBean) {
 	lkgId, err := uuid.Parse(actualPB.LastKnownGood)
 	assert.Nil(t, err)

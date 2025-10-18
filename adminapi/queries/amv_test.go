@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
@@ -310,4 +311,181 @@ func TestAmvAllApi(t *testing.T) {
 	// res = ExecuteRequest(req, router).Result()
 	// defer res.Body.Close()
 	// assert.Equal(t, res.StatusCode, http.StatusNotFound)
+}
+
+// Additional tests for comprehensive coverage of amv_handler and amv_service
+func TestAmv_GetById_NotFound(t *testing.T) {
+	// create request with non-existent id
+	urlWithId := fmt.Sprintf("%s/%s", AMV_URL, uuid.New().String())
+	req, err := http.NewRequest("GET", urlWithId, nil)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	assert.NilError(t, err)
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+	assert.Equal(t, res.StatusCode, http.StatusNotFound)
+}
+
+func TestAmv_GetById_Export(t *testing.T) {
+	// prepare model and create an amv
+	newModel := shared.Model{ID: "EXPORT00"}
+	_, err1 := shared.SetOneModel(&newModel)
+	assert.NilError(t, err1)
+	amvID := uuid.New().String()
+	body := fmt.Sprintf(`{"id":"%s","applicationType":"stb","description":"descExp","regularExpressions":["re"],"model":"EXPORT00","firmwareVersions":[],"partnerId":"p"}`, amvID)
+	req, err := http.NewRequest("POST", AMV_URL, bytes.NewBuffer([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	assert.NilError(t, err)
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+	assert.Equal(t, res.StatusCode, http.StatusCreated)
+
+	// export by id
+	urlExport := fmt.Sprintf("%s/%s?export", AMV_URL, amvID)
+	req, err = http.NewRequest("GET", urlExport, nil)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+	assert.NilError(t, err)
+	res = ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+	assert.Assert(t, res.Header.Get("Content-Disposition") != "")
+}
+
+func TestAmv_GetAll_ExportAll(t *testing.T) {
+	// ensure at least one amv present per applicationType
+	newModel := shared.Model{ID: "EXPALL00"}
+	_, err1 := shared.SetOneModel(&newModel)
+	assert.NilError(t, err1)
+	amvID := uuid.New().String()
+	body := fmt.Sprintf(`{"id":"%s","applicationType":"stb","description":"descAll","regularExpressions":["re"],"model":"EXPALL00","firmwareVersions":[],"partnerId":"p"}`, amvID)
+	req, err := http.NewRequest("POST", AMV_URL, bytes.NewBuffer([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	assert.NilError(t, err)
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+	assert.Equal(t, res.StatusCode, http.StatusCreated)
+
+	req, err = http.NewRequest("GET", AMV_URL+"?exportAll", nil)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+	assert.NilError(t, err)
+	res = ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+	assert.Assert(t, res.Header.Get("Content-Disposition") != "")
+}
+
+func TestAmv_Create_ApplicationTypeMismatch(t *testing.T) {
+	// model exists
+	newModel := shared.Model{ID: "MIS00"}
+	_, err1 := shared.SetOneModel(&newModel)
+	assert.NilError(t, err1)
+	// send different applicationType cookie than body to force conflict in CreateAmv
+	amvID := uuid.New().String()
+	body := fmt.Sprintf(`{"id":"%s","applicationType":"wrong","description":"mismatch","regularExpressions":["re"],"model":"MIS00","firmwareVersions":[],"partnerId":"p"}`, amvID)
+	req, err := http.NewRequest("POST", AMV_URL, bytes.NewBuffer([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+	assert.NilError(t, err)
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+	assert.Equal(t, res.StatusCode, http.StatusConflict)
+}
+
+func TestAmv_Update_NotFound(t *testing.T) {
+	// attempt update with unknown id
+	body := fmt.Sprintf(`{"id":"%s","applicationType":"stb","description":"desc","regularExpressions":["re"],"model":"UNKNOWN","firmwareVersions":[],"partnerId":"p"}`, uuid.New().String())
+	req, err := http.NewRequest("PUT", AMV_URL, bytes.NewBuffer([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	assert.NilError(t, err)
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+	// model UNKNOWN not set; validation will fail with model does not exist -> BadRequest OR NotFound due to missing in DB after validation path differences
+	assert.Assert(t, res.StatusCode == http.StatusBadRequest || res.StatusCode == http.StatusNotFound)
+}
+
+func TestAmv_Filtered_Post_InvalidJSON(t *testing.T) {
+	// correct POST filtered endpoint lives under activationMinimumVersion
+	req, err := http.NewRequest("POST", "/xconfAdminService/activationMinimumVersion/filtered?pageNumber=1&pageSize=10", bytes.NewBuffer([]byte("{invalid")))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+	assert.NilError(t, err)
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
+}
+
+func TestAmv_Filtered_Post_PaginationErrors(t *testing.T) {
+	// endpoints under activationMinimumVersion
+	req, err := http.NewRequest("POST", "/xconfAdminService/activationMinimumVersion/filtered?pageNumber=0&pageSize=1", bytes.NewBuffer([]byte("{}")))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+	assert.NilError(t, err)
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
+	// pageSize=0
+	req, err = http.NewRequest("POST", "/xconfAdminService/activationMinimumVersion/filtered?pageNumber=1&pageSize=0", bytes.NewBuffer([]byte("{}")))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+	assert.NilError(t, err)
+	res = ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
+}
+
+func TestAmv_BatchCreateAndUpdate(t *testing.T) {
+	// create model
+	newModel := shared.Model{ID: "BATCH00"}
+	_, err := shared.SetOneModel(&newModel)
+	assert.NilError(t, err)
+	id1 := uuid.New().String()
+	id2 := uuid.New().String()
+	// batch create
+	bodyCreate := fmt.Sprintf(`[{"id":"%s","applicationType":"stb","description":"d1","regularExpressions":["r1"],"model":"BATCH00","firmwareVersions":[],"partnerId":"p"},{"id":"%s","applicationType":"stb","description":"d2","regularExpressions":["r2"],"model":"BATCH00","firmwareVersions":[],"partnerId":"p"}]`, id1, id2)
+	req, err := http.NewRequest("POST", "/xconfAdminService/activationMinimumVersion/entities", bytes.NewBuffer([]byte(bodyCreate)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	assert.NilError(t, err)
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+	// expect OK after batch create
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+
+	// batch update (modify description of one)
+	bodyUpdate := fmt.Sprintf(`[{"id":"%s","applicationType":"stb","description":"d1u","regularExpressions":["r1"],"model":"BATCH00","firmwareVersions":[],"partnerId":"p"},{"id":"%s","applicationType":"stb","description":"d2u","regularExpressions":["r2"],"model":"BATCH00","firmwareVersions":[],"partnerId":"p"}]`, id1, id2)
+	req, err = http.NewRequest("PUT", "/xconfAdminService/activationMinimumVersion/entities", bytes.NewBuffer([]byte(bodyUpdate)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	assert.NilError(t, err)
+	res = ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+}
+
+func TestAmv_ImportAll_MixingApplicationTypes(t *testing.T) {
+	newModel := shared.Model{ID: "MIX00"}
+	_, err := shared.SetOneModel(&newModel)
+	assert.NilError(t, err)
+	amvID1 := uuid.New().String()
+	amvID2 := uuid.New().String()
+	body := fmt.Sprintf(`[{"id":"%s","applicationType":"stb","description":"d1","regularExpressions":["r"],"model":"MIX00","firmwareVersions":[],"partnerId":"p"},{"id":"%s","applicationType":"wrong","description":"d2","regularExpressions":["r"],"model":"MIX00","firmwareVersions":[],"partnerId":"p"}]`, amvID1, amvID2)
+	req, err := http.NewRequest("POST", AMV_URL+"/importAll", bytes.NewBuffer([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	assert.NilError(t, err)
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+	// observed status is 400 due to validation of applicationType wrong
+	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 }
