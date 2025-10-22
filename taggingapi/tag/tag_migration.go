@@ -517,7 +517,15 @@ func runMigrationJob() {
 			p.CurrentTagMembersMissingInXdas = 0
 		})
 
-		stats, err := migrateTagWithContext(ctx, tagId)
+		stats, err := func() (stats *TagMemberStats, err error) {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Errorf("Tag migration panicked for tag '%s': %v", tagId, r)
+					err = fmt.Errorf("tag migration panicked: %v", r)
+				}
+			}()
+			return migrateTagWithContext(ctx, tagId)
+		}()
 
 		// Update progress with stats if available
 		if stats != nil {
@@ -732,20 +740,31 @@ func writeMembersToV2InBatchesWithContext(ctx context.Context, tagId string, mem
 		}
 
 		batch := members[i:end]
-		log.Debugf("[Tag: %s] Writing batch %d-%d of %d members", tagId, i, end, totalMembers)
 
-		if err := AddMembersV2(tagId, batch); err != nil {
-			// Log the batch failure but continue with remaining batches
-			log.Errorf("[Tag: %s] Failed to write batch %d-%d: %v", tagId, i, end, err)
-			allErrors = append(allErrors, fmt.Sprintf("batch %d-%d: %v", i, end, err))
-			// Note: AddMembersV2 already logs individual member failures at the bucket level
-		} else {
-			successCount += len(batch)
-			// Update progress for current tag after each successful batch
-			globalJobManager.UpdateProgress(func(p *MigrationProgress) {
-				p.CurrentTagMembersWritten += len(batch)
-			})
-		}
+		// Protect each batch write with panic recovery
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Errorf("[Tag: %s] Batch write panicked at %d-%d: %v", tagId, i, end, r)
+					allErrors = append(allErrors, fmt.Sprintf("batch %d-%d: panicked: %v", i, end, r))
+				}
+			}()
+
+			log.Debugf("[Tag: %s] Writing batch %d-%d of %d members", tagId, i, end, totalMembers)
+
+			if err := AddMembersV2(tagId, batch); err != nil {
+				// Log the batch failure but continue with remaining batches
+				log.Errorf("[Tag: %s] Failed to write batch %d-%d: %v", tagId, i, end, err)
+				allErrors = append(allErrors, fmt.Sprintf("batch %d-%d: %v", i, end, err))
+				// Note: AddMembersV2 already logs individual member failures at the bucket level
+			} else {
+				successCount += len(batch)
+				// Update progress for current tag after each successful batch
+				globalJobManager.UpdateProgress(func(p *MigrationProgress) {
+					p.CurrentTagMembersWritten += len(batch)
+				})
+			}
+		}()
 	}
 
 	if successCount == 0 {
@@ -814,6 +833,11 @@ func verifyMembersInXdasWithContext(ctx context.Context, tagId string, members [
 
 func verifyMemberInXdasWorkerWithContext(ctx context.Context, tagId string, members <-chan string, verifiedMembers chan<- string, wg *sync.WaitGroup) {
 	defer wg.Done()
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorf("XDAS verification worker panicked for tag '%s': %v", tagId, r)
+		}
+	}()
 
 	for member := range members {
 		// Check for cancellation
