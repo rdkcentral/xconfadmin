@@ -25,21 +25,20 @@ func routeTaggingServiceApis(r *mux.Router, s *xhttp.WebconfigServer) {
 
 	taggingPath := r.PathPrefix("/taggingService/tags").Subrouter()
 
-	// New V2 endpoints with improved scalability and pagination
-	taggingPath.HandleFunc("/", tag.GetAllTagsV2Handler).Methods("GET").Name("Get-all-tags-v2")
-	taggingPath.HandleFunc("/{tag}", tag.GetTagByIdV2Handler).Methods("GET").Name("Get-tag-by-id-v2")
-	taggingPath.HandleFunc("/{tag}/members", tag.AddMembersToTagV2Handler).Methods("PUT").Name("Add-members-to-tag-v2")
+	taggingPath.HandleFunc("", tag.GetAllTagsV2Handler).Methods("GET").Name("Get-all-tags")
+	taggingPath.HandleFunc("/{tag}", tag.GetTagByIdV2Handler).Methods("GET").Name("Get-tag-by-id")
+	taggingPath.HandleFunc("/{tag}/members", tag.AddMembersToTagV2Handler).Methods("PUT").Name("Add-members-to-tag")
 	taggingPath.HandleFunc("/{tag}", tag.DeleteTagV2Handler).Methods("DELETE").Name("Delete-tag-v2")
-	taggingPath.HandleFunc("/{tag}/members", tag.RemoveMembersFromTagV2Handler).Methods("DELETE").Name("Remove-members-from-tag-v2")
-	taggingPath.HandleFunc("/{tag}/members/{member}", tag.RemoveMemberFromTagV2Handler).Methods("DELETE").Name("Remove-member-from-tag-v2")
+	taggingPath.HandleFunc("/{tag}/members", tag.RemoveMembersFromTagV2Handler).Methods("DELETE").Name("Remove-members-from-tag")
+	taggingPath.HandleFunc("/{tag}/members/{member}", tag.RemoveMemberFromTagV2Handler).Methods("DELETE").Name("Remove-member-from-tag")
 
 	taggingPath.HandleFunc("/{tag}/members", tag.GetTagMembersV2Handler).Methods("GET").Name("Get-tag-members")
 
-	//will remain the same
 	taggingPath.HandleFunc("/members/{member}", tag.GetTagsByMemberHandler).Methods("GET").Name("Get-tags-by-member")
 
-	// Migration endpoint
-	taggingPath.HandleFunc("/migrate/v1-to-v2", tag.MigrateV1ToV2Handler).Methods("POST").Name("Migrate-v1-to-v2")
+	// Migration endpoints
+	taggingPath.HandleFunc("/migrate", tag.MigrateV1ToV2Handler).Methods("POST").Name("Migrate-v1-to-v2")
+	taggingPath.HandleFunc("/migrate/status", tag.MigrationStatusHandler).Methods("GET").Name("Migration-status")
 
 	paths = append(paths, taggingPath)
 
