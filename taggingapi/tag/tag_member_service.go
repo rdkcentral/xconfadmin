@@ -436,7 +436,6 @@ func addMembersToXdas(tagId string, members []string) ([]string, error) {
 
 	config := GetTagApiConfig()
 	numOfWorkers := 1
-	//TODO: do not spin up more that needed workers
 	if config != nil {
 		baseWorkers := config.WorkerCount
 		scaledWorkers := min(max(len(members)/100, baseWorkers), MaxWorkersV2)
