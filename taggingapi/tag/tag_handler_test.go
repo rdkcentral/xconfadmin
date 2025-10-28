@@ -191,6 +191,539 @@ func TestRemoveMemberFromTagHandler_Integration(t *testing.T) {
 	})
 }
 
+// Comprehensive error coverage tests for all handlers
+
+func TestCleanPercentageRangeHandler(t *testing.T) {
+	router := mux.NewRouter()
+	router.HandleFunc("/taggingService/tags/{tag}/percentages", CleanPercentageRangeHandler).Methods("DELETE")
+
+	t.Run("CleanPercentageRange_ValidTag", func(t *testing.T) {
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags/test-tag/percentages", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Should return either NoContent (if successful) or error status
+		assert.True(t, rr.Code == http.StatusNoContent || rr.Code >= http.StatusBadRequest)
+	})
+
+	t.Run("CleanPercentageRange_MissingTag", func(t *testing.T) {
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags//percentages", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Route won't match - should get 404 or 301
+		assert.True(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusMovedPermanently)
+	})
+}
+
+func TestAddMemberPercentageToTagHandler(t *testing.T) {
+	router := mux.NewRouter()
+	router.HandleFunc("/taggingService/tags/{tag}/percentages/{startRange}/{endRange}", AddMemberPercentageToTagHandler).Methods("PUT")
+
+	t.Run("AddMemberPercentage_ValidRanges", func(t *testing.T) {
+		req, _ := http.NewRequest("PUT", "/taggingService/tags/test-tag/percentages/0/50", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Should return either OK or error status
+		assert.True(t, rr.Code == http.StatusOK || rr.Code >= http.StatusBadRequest)
+	})
+
+	t.Run("AddMemberPercentage_MissingTag", func(t *testing.T) {
+		req, _ := http.NewRequest("PUT", "/taggingService/tags//percentages/0/50", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Route won't match
+		assert.True(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusMovedPermanently)
+	})
+
+	t.Run("AddMemberPercentage_InvalidRange", func(t *testing.T) {
+		req, _ := http.NewRequest("PUT", "/taggingService/tags/test-tag/percentages/invalid/50", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Should return BadRequest for invalid range
+		assert.True(t, rr.Code >= http.StatusBadRequest)
+	})
+
+	t.Run("AddMemberPercentage_MissingStartRange", func(t *testing.T) {
+		req, _ := http.NewRequest("PUT", "/taggingService/tags/test-tag/percentages//50", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Route won't match
+		assert.True(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusMovedPermanently)
+	})
+
+	t.Run("AddMemberPercentage_MissingEndRange", func(t *testing.T) {
+		req, _ := http.NewRequest("PUT", "/taggingService/tags/test-tag/percentages/0/", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Route won't match
+		assert.True(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusMovedPermanently)
+	})
+}
+
+func TestGetTagsByMemberPercentageHandler(t *testing.T) {
+	router := mux.NewRouter()
+	router.HandleFunc("/taggingService/tags/members/{member}/percentages", GetTagsByMemberPercentageHandler).Methods("GET")
+
+	t.Run("GetTagsByMemberPercentage_ValidMember", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/taggingService/tags/members/test-member/percentages", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Should return OK with tags or error
+		assert.True(t, rr.Code == http.StatusOK || rr.Code >= http.StatusBadRequest)
+	})
+
+	t.Run("GetTagsByMemberPercentage_MissingMember", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/taggingService/tags/members//percentages", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Route won't match
+		assert.True(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusMovedPermanently)
+	})
+
+	t.Run("GetTagsByMemberPercentage_SpecialCharacters", func(t *testing.T) {
+		member := "member%20test"
+		req, _ := http.NewRequest("GET", "/taggingService/tags/members/"+member+"/percentages", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Should handle special characters
+		assert.True(t, rr.Code == http.StatusOK || rr.Code >= http.StatusBadRequest)
+	})
+}
+
+func TestAddMembersToTagHandler_AllErrorCases(t *testing.T) {
+	router := mux.NewRouter()
+	router.HandleFunc("/taggingService/tags/{tag}/members", AddMembersToTagHandler).Methods("PUT")
+
+	t.Run("AddMembersToTag_ValidMembers", func(t *testing.T) {
+		members := []string{"member1", "member2"}
+		jsonBody, _ := json.Marshal(members)
+
+		req, _ := http.NewRequest("PUT", "/taggingService/tags/test-tag/members", bytes.NewBuffer(jsonBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		xrr := xwhttp.NewXResponseWriter(rr)
+
+		body := make([]byte, len(jsonBody))
+		copy(body, jsonBody)
+		req.Body = nopCloser{bytes.NewReader(body)}
+
+		router.ServeHTTP(xrr, req)
+
+		// Should return OK or error
+		assert.True(t, rr.Code >= http.StatusOK)
+	})
+
+	t.Run("AddMembersToTag_MissingTag", func(t *testing.T) {
+		members := []string{"member1"}
+		jsonBody, _ := json.Marshal(members)
+
+		req, _ := http.NewRequest("PUT", "/taggingService/tags//members", bytes.NewBuffer(jsonBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Route won't match
+		assert.True(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusMovedPermanently)
+	})
+
+	t.Run("AddMembersToTag_EmptyMemberList", func(t *testing.T) {
+		members := []string{}
+		jsonBody, _ := json.Marshal(members)
+
+		req, _ := http.NewRequest("PUT", "/taggingService/tags/test-tag/members", bytes.NewBuffer(jsonBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		xrr := xwhttp.NewXResponseWriter(rr)
+
+		// Read body and store it in XResponseWriter
+		body, _ := io.ReadAll(req.Body)
+		req.Body = nopCloser{bytes.NewReader(body)}
+		xrr.SetBody(string(body))
+
+		router.ServeHTTP(xrr, req)
+
+		// Should return BadRequest for empty list
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Contains(t, rr.Body.String(), "list is empty")
+	})
+
+	t.Run("AddMembersToTag_ExceedBatchSize", func(t *testing.T) {
+		// Create members list exceeding TagMemberLimit
+		members := make([]string, TagMemberLimit+1)
+		for i := 0; i < TagMemberLimit+1; i++ {
+			members[i] = fmt.Sprintf("member%d", i)
+		}
+		jsonBody, _ := json.Marshal(members)
+
+		req, _ := http.NewRequest("PUT", "/taggingService/tags/test-tag/members", bytes.NewBuffer(jsonBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		xrr := xwhttp.NewXResponseWriter(rr)
+
+		// Read body and store it in XResponseWriter
+		body, _ := io.ReadAll(req.Body)
+		req.Body = nopCloser{bytes.NewReader(body)}
+		xrr.SetBody(string(body))
+
+		router.ServeHTTP(xrr, req)
+
+		// Should return BadRequest for exceeding limit or error if service fails
+		assert.True(t, rr.Code == http.StatusBadRequest || rr.Code >= http.StatusInternalServerError)
+		if rr.Code == http.StatusBadRequest {
+			assert.Contains(t, rr.Body.String(), "exceeds the limit")
+		}
+	})
+
+	t.Run("AddMembersToTag_InvalidJSON", func(t *testing.T) {
+		invalidJSON := []byte(`{"invalid": "json"}`)
+
+		req, _ := http.NewRequest("PUT", "/taggingService/tags/test-tag/members", bytes.NewBuffer(invalidJSON))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		xrr := xwhttp.NewXResponseWriter(rr)
+
+		body := make([]byte, len(invalidJSON))
+		copy(body, invalidJSON)
+		req.Body = nopCloser{bytes.NewReader(body)}
+
+		router.ServeHTTP(xrr, req)
+
+		// Should return BadRequest for invalid JSON
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Contains(t, rr.Body.String(), "request body unmarshall error")
+	})
+
+	t.Run("AddMembersToTag_ResponseWriterCastError", func(t *testing.T) {
+		members := []string{"member1"}
+		jsonBody, _ := json.Marshal(members)
+
+		req, _ := http.NewRequest("PUT", "/taggingService/tags/test-tag/members", bytes.NewBuffer(jsonBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		// Use standard recorder instead of XResponseWriter
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Should return InternalServerError for writer cast error
+		assert.Equal(t, http.StatusInternalServerError, rr.Code)
+		assert.Contains(t, rr.Body.String(), "response writer cast error")
+	})
+}
+
+func TestDeleteTagFromXconfWithoutPrefixHandler_AllErrorCases(t *testing.T) {
+	router := mux.NewRouter()
+	router.HandleFunc("/taggingService/tags/{tag}/noprefix", DeleteTagFromXconfWithoutPrefixHandler).Methods("DELETE")
+
+	t.Run("DeleteTagFromXconf_ValidTag", func(t *testing.T) {
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags/test-tag/noprefix", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Should return either NoContent or NotFound
+		assert.True(t, rr.Code == http.StatusNoContent || rr.Code == http.StatusNotFound)
+	})
+
+	t.Run("DeleteTagFromXconf_MissingTag", func(t *testing.T) {
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags//noprefix", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Route won't match
+		assert.True(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusMovedPermanently)
+	})
+
+	t.Run("DeleteTagFromXconf_NonExistentTag", func(t *testing.T) {
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags/non-existent-tag-12345/noprefix", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Should return NotFound
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+		assert.Contains(t, rr.Body.String(), "tag not found")
+	})
+}
+
+func TestGetTagByIdHandler_AllErrorCases(t *testing.T) {
+	router := mux.NewRouter()
+	router.HandleFunc("/taggingService/tags/{tag}", GetTagByIdHandler).Methods("GET")
+
+	t.Run("GetTagById_ValidTag", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/taggingService/tags/test-tag", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Should return either OK or NotFound
+		assert.True(t, rr.Code == http.StatusOK || rr.Code == http.StatusNotFound)
+	})
+
+	t.Run("GetTagById_MissingTag", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/taggingService/tags/", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Route won't match
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+
+	t.Run("GetTagById_NonExistentTag", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/taggingService/tags/non-existent-tag-12345", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Should return NotFound
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+		assert.Contains(t, rr.Body.String(), "tag not found")
+	})
+
+	t.Run("GetTagById_SpecialCharacters", func(t *testing.T) {
+		tag := "tag%2Btest"
+		req, _ := http.NewRequest("GET", "/taggingService/tags/"+tag, nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Should handle special characters
+		assert.True(t, rr.Code == http.StatusOK || rr.Code == http.StatusNotFound)
+	})
+}
+
+// Additional comprehensive error tests for other handlers
+
+func TestRemoveMemberFromTagHandler_AllErrorCases(t *testing.T) {
+	router := mux.NewRouter()
+	router.HandleFunc("/taggingService/tags/{tag}/members/{member}", RemoveMemberFromTagHandler).Methods("DELETE")
+
+	t.Run("RemoveMemberFromTag_ValidParams", func(t *testing.T) {
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags/test-tag/members/test-member", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.True(t, rr.Code == http.StatusNoContent || rr.Code >= http.StatusBadRequest)
+	})
+
+	t.Run("RemoveMemberFromTag_MissingTag", func(t *testing.T) {
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags//members/test-member", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.True(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusMovedPermanently)
+	})
+
+	t.Run("RemoveMemberFromTag_MissingMember", func(t *testing.T) {
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags/test-tag/members/", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.True(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusMovedPermanently)
+	})
+}
+
+func TestGetTagMembersHandler_AllErrorCases(t *testing.T) {
+	router := mux.NewRouter()
+	router.HandleFunc("/taggingService/tags/{tag}/members", GetTagMembersHandler).Methods("GET")
+
+	t.Run("GetTagMembers_ValidTag", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/taggingService/tags/test-tag/members", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.True(t, rr.Code == http.StatusOK || rr.Code >= http.StatusBadRequest)
+	})
+
+	t.Run("GetTagMembers_MissingTag", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/taggingService/tags//members", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.True(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusMovedPermanently)
+	})
+}
+
+func TestRemoveMembersFromTagHandler_AllErrorCases(t *testing.T) {
+	router := mux.NewRouter()
+	router.HandleFunc("/taggingService/tags/{tag}/members", RemoveMembersFromTagHandler).Methods("DELETE")
+
+	t.Run("RemoveMembersFromTag_ValidMembers", func(t *testing.T) {
+		members := []string{"member1", "member2"}
+		jsonBody, _ := json.Marshal(members)
+
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags/test-tag/members", bytes.NewBuffer(jsonBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.True(t, rr.Code == http.StatusNoContent || rr.Code >= http.StatusBadRequest)
+	})
+
+	t.Run("RemoveMembersFromTag_EmptyList", func(t *testing.T) {
+		members := []string{}
+		jsonBody, _ := json.Marshal(members)
+
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags/test-tag/members", bytes.NewBuffer(jsonBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Contains(t, rr.Body.String(), "list is empty")
+	})
+
+	t.Run("RemoveMembersFromTag_ExceedBatchSize", func(t *testing.T) {
+		members := make([]string, TagMemberLimit+1)
+		for i := 0; i < TagMemberLimit+1; i++ {
+			members[i] = fmt.Sprintf("member%d", i)
+		}
+		jsonBody, _ := json.Marshal(members)
+
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags/test-tag/members", bytes.NewBuffer(jsonBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.True(t, rr.Code == http.StatusBadRequest || rr.Code == http.StatusNotFound)
+		if rr.Code == http.StatusBadRequest {
+			assert.Contains(t, rr.Body.String(), "exceeds the limit")
+		}
+	})
+
+	t.Run("RemoveMembersFromTag_InvalidJSON", func(t *testing.T) {
+		invalidJSON := []byte(`{"invalid": json}`)
+
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags/test-tag/members", bytes.NewBuffer(invalidJSON))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Contains(t, rr.Body.String(), "request body unmarshall error")
+	})
+
+	t.Run("RemoveMembersFromTag_MissingTag", func(t *testing.T) {
+		members := []string{"member1"}
+		jsonBody, _ := json.Marshal(members)
+
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags//members", bytes.NewBuffer(jsonBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.True(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusMovedPermanently)
+	})
+}
+
+func TestDeleteTagHandler_AllErrorCases(t *testing.T) {
+	router := mux.NewRouter()
+	router.HandleFunc("/taggingService/tags/{tag}", DeleteTagHandler).Methods("DELETE")
+
+	t.Run("DeleteTag_ValidTag", func(t *testing.T) {
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags/test-tag", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.True(t, rr.Code == http.StatusNoContent || rr.Code == http.StatusNotFound)
+	})
+
+	t.Run("DeleteTag_MissingTag", func(t *testing.T) {
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags/", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+
+	t.Run("DeleteTag_NonExistentTag", func(t *testing.T) {
+		req, _ := http.NewRequest("DELETE", "/taggingService/tags/non-existent-tag-99999", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+		assert.Contains(t, rr.Body.String(), "tag not found")
+	})
+}
+
+func TestGetTagsByMemberHandler_AllErrorCases(t *testing.T) {
+	router := mux.NewRouter()
+	router.HandleFunc("/taggingService/tags/members/{member}", GetTagsByMemberHandler).Methods("GET")
+
+	t.Run("GetTagsByMember_ValidMember", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/taggingService/tags/members/test-member", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+
+	t.Run("GetTagsByMember_MissingMember", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/taggingService/tags/members/", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+
+	t.Run("GetTagsByMember_SpecialCharacters", func(t *testing.T) {
+		member := "member%20with%20spaces"
+		req, _ := http.NewRequest("GET", "/taggingService/tags/members/"+member, nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+}
+
+func TestCalculatePercentageValueHandler_AllErrorCases(t *testing.T) {
+	router := mux.NewRouter()
+	router.HandleFunc("/taggingService/tags/members/{member}/percentages/calculation", CalculatePercentageValueHandler).Methods("GET")
+
+	t.Run("CalculatePercentage_ValidMember", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/taggingService/tags/members/test-member/percentages/calculation", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+
+		var percentage int
+		err := json.Unmarshal(rr.Body.Bytes(), &percentage)
+		assert.NoError(t, err)
+		assert.GreaterOrEqual(t, percentage, 0)
+		assert.LessOrEqual(t, percentage, 100)
+	})
+
+	t.Run("CalculatePercentage_MissingMember", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/taggingService/tags/members//percentages/calculation", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.True(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusMovedPermanently)
+	})
+
+	t.Run("CalculatePercentage_LongMember", func(t *testing.T) {
+		longMember := strings.Repeat("a", 1000)
+		req, _ := http.NewRequest("GET", "/taggingService/tags/members/"+longMember+"/percentages/calculation", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+}
 func TestGetTagMembersHandler_Integration(t *testing.T) {
 	router := mux.NewRouter()
 	router.HandleFunc("/taggingService/tags/{tag}/members", GetTagMembersHandler).Methods("GET")

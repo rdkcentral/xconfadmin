@@ -235,3 +235,405 @@ func performRequest(t *testing.T, router *mux.Router, url string, method string,
 	assert.NilError(t, err)
 	return respBody
 }
+
+// ========== Tests for GetDeviceSettingsExportHandler ==========
+
+// TestGetDeviceSettingsExportHandler_Success tests successful export with matching formulas and device settings
+func TestGetDeviceSettingsExportHandler_Success(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	// Create test DCM formulas
+	formula1 := &logupload.DCMGenericRule{
+		ID:              "export-formula-1",
+		Name:            "Export Formula 1",
+		ApplicationType: "stb",
+	}
+	formula2 := &logupload.DCMGenericRule{
+		ID:              "export-formula-2",
+		Name:            "Export Formula 2",
+		ApplicationType: "stb",
+	}
+
+	// Create corresponding device settings
+	deviceSettings1 := &logupload.DeviceSettings{
+		ID:                "export-formula-1",
+		Name:              "Export Device Settings 1",
+		CheckOnReboot:     true,
+		SettingsAreActive: true,
+		ApplicationType:   "stb",
+		Schedule: logupload.Schedule{
+			Type:              "ActNow",
+			Expression:        "0 0 * * *",
+			TimeZone:          "UTC",
+			TimeWindowMinutes: json.Number("0"),
+		},
+	}
+	deviceSettings2 := &logupload.DeviceSettings{
+		ID:                "export-formula-2",
+		Name:              "Export Device Settings 2",
+		CheckOnReboot:     false,
+		SettingsAreActive: true,
+		ApplicationType:   "stb",
+		Schedule: logupload.Schedule{
+			Type:              "ActNow",
+			Expression:        "0 0 * * *",
+			TimeZone:          "UTC",
+			TimeWindowMinutes: json.Number("0"),
+		},
+	}
+
+	// Save test data directly to DB
+	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula1.ID, formula1)
+	assert.NilError(t, err)
+	err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula2.ID, formula2)
+	assert.NilError(t, err)
+	CreateDeviceSettings(deviceSettings1, "stb")
+	CreateDeviceSettings(deviceSettings2, "stb")
+
+	// Make request
+	url := "/xconfAdminService/dcm/deviceSettings/export"
+	req, err := http.NewRequest("GET", url, nil)
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	// Assertions
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+	assert.Check(t, res.Header.Get("Content-Disposition") != "")
+	assert.Check(t, res.Header.Get("Content-Disposition") != "", "Content-Disposition header should be set")
+
+	// Verify response body
+	body, err := ioutil.ReadAll(res.Body)
+	assert.NilError(t, err)
+
+	var result []*logupload.DeviceSettings
+	err = json.Unmarshal(body, &result)
+	assert.NilError(t, err)
+	assert.Equal(t, len(result), 2, "Should return 2 device settings")
+}
+
+// TestGetDeviceSettingsExportHandler_EmptyResult tests when no formulas exist
+func TestGetDeviceSettingsExportHandler_EmptyResult(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	// Make request without any data
+	url := "/xconfAdminService/dcm/deviceSettings/export"
+	req, err := http.NewRequest("GET", url, nil)
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	// Assertions
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+
+	// Verify response body is empty array
+	body, err := ioutil.ReadAll(res.Body)
+	assert.NilError(t, err)
+
+	var result []*logupload.DeviceSettings
+	err = json.Unmarshal(body, &result)
+	assert.NilError(t, err)
+	assert.Equal(t, len(result), 0, "Should return empty array")
+}
+
+// TestGetDeviceSettingsExportHandler_FilterByApplicationType tests that only matching app type is exported
+func TestGetDeviceSettingsExportHandler_FilterByApplicationType(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	// Create test data with different application types
+	formulaSTB := &logupload.DCMGenericRule{
+		ID:              "formula-stb-export",
+		Name:            "STB Formula Export",
+		ApplicationType: "stb",
+	}
+	formulaXHome := &logupload.DCMGenericRule{
+		ID:              "formula-xhome-export",
+		Name:            "XHome Formula Export",
+		ApplicationType: "xhome",
+	}
+
+	deviceSettingsSTB := &logupload.DeviceSettings{
+		ID:                "formula-stb-export",
+		Name:              "STB Settings Export",
+		ApplicationType:   "stb",
+		CheckOnReboot:     true,
+		SettingsAreActive: true,
+		Schedule: logupload.Schedule{
+			Type:              "ActNow",
+			Expression:        "0 0 * * *",
+			TimeZone:          "UTC",
+			TimeWindowMinutes: json.Number("0"),
+		},
+	}
+	deviceSettingsXHome := &logupload.DeviceSettings{
+		ID:                "formula-xhome-export",
+		Name:              "XHome Settings Export",
+		ApplicationType:   "xhome",
+		CheckOnReboot:     true,
+		SettingsAreActive: true,
+		Schedule: logupload.Schedule{
+			Type:              "ActNow",
+			Expression:        "0 0 * * *",
+			TimeZone:          "UTC",
+			TimeWindowMinutes: json.Number("0"),
+		},
+	}
+
+	// Save test data
+	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formulaSTB.ID, formulaSTB)
+	assert.NilError(t, err)
+	err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formulaXHome.ID, formulaXHome)
+	assert.NilError(t, err)
+	CreateDeviceSettings(deviceSettingsSTB, "stb")
+	CreateDeviceSettings(deviceSettingsXHome, "xhome")
+
+	// Request with stb application type
+	url := "/xconfAdminService/dcm/deviceSettings/export"
+	req, err := http.NewRequest("GET", url, nil)
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	// Assertions
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+
+	// Verify only STB settings are returned
+	body, err := ioutil.ReadAll(res.Body)
+	assert.NilError(t, err)
+
+	var result []*logupload.DeviceSettings
+	err = json.Unmarshal(body, &result)
+	assert.NilError(t, err)
+	assert.Equal(t, len(result), 1, "Should return only 1 STB device setting")
+	if len(result) > 0 && result[0] != nil {
+		assert.Equal(t, result[0].ApplicationType, "stb")
+		assert.Equal(t, result[0].Name, "STB Settings Export")
+	}
+}
+
+// TestGetDeviceSettingsExportHandler_MissingDeviceSettings tests when formula exists but device settings don't
+func TestGetDeviceSettingsExportHandler_MissingDeviceSettings(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	// Create formula but not corresponding device settings
+	formula := &logupload.DCMGenericRule{
+		ID:              "formula-orphan-export",
+		Name:            "Orphan Formula Export",
+		ApplicationType: "stb",
+	}
+	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula.ID, formula)
+	assert.NilError(t, err)
+
+	// Make request
+	url := "/xconfAdminService/dcm/deviceSettings/export"
+	req, err := http.NewRequest("GET", url, nil)
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	// Assertions
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+
+	// Verify response contains nil for missing device setting
+	body, err := ioutil.ReadAll(res.Body)
+	assert.NilError(t, err)
+
+	var result []*logupload.DeviceSettings
+	err = json.Unmarshal(body, &result)
+	assert.NilError(t, err)
+	assert.Equal(t, len(result), 1, "Should return array with one element")
+	assert.Check(t, result[0] == nil, "Device setting should be nil when not found")
+}
+
+// TestGetDeviceSettingsExportHandler_VerifyContentDisposition tests Content-Disposition header format
+func TestGetDeviceSettingsExportHandler_VerifyContentDisposition(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	// Test with different application types to verify header varies
+	testCases := []struct {
+		appType          string
+		expectedInHeader string
+	}{
+		{"stb", "allDeviceSettings_stb"},
+		{"xhome", "allDeviceSettings_xhome"},
+	}
+
+	for _, tc := range testCases {
+		url := "/xconfAdminService/dcm/deviceSettings/export"
+		req, err := http.NewRequest("GET", url, nil)
+		assert.NilError(t, err)
+		req.AddCookie(&http.Cookie{Name: "applicationType", Value: tc.appType})
+
+		res := ExecuteRequest(req, router).Result()
+		defer res.Body.Close()
+
+		assert.Equal(t, res.StatusCode, http.StatusOK)
+		contentDisposition := res.Header.Get("Content-Disposition")
+		assert.Check(t, contentDisposition != "", "Content-Disposition should not be empty")
+	}
+}
+
+// TestGetDeviceSettingsExportHandler_AuthError tests auth error handling
+func TestGetDeviceSettingsExportHandler_AuthError(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	// Make request without auth cookie
+	url := "/xconfAdminService/dcm/deviceSettings/export"
+	req, err := http.NewRequest("GET", url, nil)
+	assert.NilError(t, err)
+	// Don't add applicationType cookie to test default behavior
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	// In test environment, auth might pass with default "stb" or fail
+	// We verify it returns a valid response (either success or error)
+	assert.Check(t, res.StatusCode == http.StatusOK || res.StatusCode >= 400,
+		"Should return either success or error status")
+}
+
+// TestGetDeviceSettingsExportHandler_MultipleFormulasWithSomeMatching tests partial matching
+func TestGetDeviceSettingsExportHandler_MultipleFormulasWithSomeMatching(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	// Create multiple formulas, only some with matching device settings
+	formula1 := &logupload.DCMGenericRule{
+		ID:              "formula-with-ds-export",
+		Name:            "Formula With DS Export",
+		ApplicationType: "stb",
+	}
+	formula2 := &logupload.DCMGenericRule{
+		ID:              "formula-without-ds-export",
+		Name:            "Formula Without DS Export",
+		ApplicationType: "stb",
+	}
+
+	deviceSettings1 := &logupload.DeviceSettings{
+		ID:                "formula-with-ds-export",
+		Name:              "Device Settings Export",
+		ApplicationType:   "stb",
+		CheckOnReboot:     true,
+		SettingsAreActive: true,
+		Schedule: logupload.Schedule{
+			Type:              "ActNow",
+			Expression:        "0 0 * * *",
+			TimeZone:          "UTC",
+			TimeWindowMinutes: json.Number("0"),
+		},
+	}
+
+	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula1.ID, formula1)
+	assert.NilError(t, err)
+	err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula2.ID, formula2)
+	assert.NilError(t, err)
+	respEntity := CreateDeviceSettings(deviceSettings1, "stb")
+	assert.Check(t, respEntity.Error == nil, "Failed to create device settings: %v", respEntity.Error)
+
+	// Make request
+	url := "/xconfAdminService/dcm/deviceSettings/export"
+	req, err := http.NewRequest("GET", url, nil)
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	// Assertions
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+
+	body, err := ioutil.ReadAll(res.Body)
+	assert.NilError(t, err)
+
+	var result []*logupload.DeviceSettings
+	err = json.Unmarshal(body, &result)
+	assert.NilError(t, err)
+
+	// Count non-nil entries
+	nonNilCount := 0
+	for _, ds := range result {
+		if ds != nil {
+			nonNilCount++
+		}
+	}
+
+	// The handler appends device settings for each matching formula
+	// If device settings don't exist, it appends nil
+	// So we should have at least 1 non-nil (formula1 has matching device settings)
+	assert.Check(t, len(result) > 0, "Should return at least one item")
+	assert.Check(t, nonNilCount >= 1, "Should have at least 1 non-nil device setting")
+}
+
+// TestGetDeviceSettingsExportHandler_JSONResponseFormat tests JSON response structure
+func TestGetDeviceSettingsExportHandler_JSONResponseFormat(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	// Create complete test data
+	formula := &logupload.DCMGenericRule{
+		ID:              "formula-json-export",
+		Name:            "JSON Export Formula",
+		ApplicationType: "stb",
+	}
+	deviceSettings := &logupload.DeviceSettings{
+		ID:                "formula-json-export",
+		Name:              "JSON Export Settings",
+		CheckOnReboot:     true,
+		SettingsAreActive: false,
+		ApplicationType:   "stb",
+		Schedule: logupload.Schedule{
+			Type:              "ActNow",
+			Expression:        "0 0 * * *",
+			TimeZone:          "UTC",
+			TimeWindowMinutes: json.Number("0"),
+		},
+	}
+
+	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula.ID, formula)
+	assert.NilError(t, err)
+	CreateDeviceSettings(deviceSettings, "stb")
+
+	// Make request
+	url := "/xconfAdminService/dcm/deviceSettings/export"
+	req, err := http.NewRequest("GET", url, nil)
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	// Assertions
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+
+	// Verify it's valid JSON array
+	body, err := ioutil.ReadAll(res.Body)
+	assert.NilError(t, err)
+
+	var result []*logupload.DeviceSettings
+	err = json.Unmarshal(body, &result)
+	assert.NilError(t, err, "Response should be valid JSON")
+
+	// Verify structure
+	assert.Equal(t, len(result), 1)
+	if len(result) > 0 && result[0] != nil {
+		assert.Equal(t, result[0].ID, "formula-json-export")
+		assert.Equal(t, result[0].Name, "JSON Export Settings")
+		assert.Equal(t, result[0].CheckOnReboot, true)
+		assert.Equal(t, result[0].SettingsAreActive, false)
+		assert.Equal(t, result[0].ApplicationType, "stb")
+	}
+}

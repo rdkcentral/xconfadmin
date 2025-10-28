@@ -3,6 +3,7 @@ package queries
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfadmin/common"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	shared "github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
@@ -79,6 +80,18 @@ func TestUpdateLocationFilter_LocationValidation(t *testing.T) {
 
 func TestUpdateLocationFilter_SuccessAndDelete(t *testing.T) {
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
+
+	// Pre-cleanup: remove any models/environments from other tests
+	common.DeleteOneModel("M2")
+	common.DeleteOneEnvironment("E2")
+
+	// Clean up any existing models and environments to ensure test isolation
+	t.Cleanup(func() {
+		// Clean up created data
+		common.DeleteOneModel("M2")
+		common.DeleteOneEnvironment("E2")
+	})
+
 	seedModel("M2")
 	seedEnv("E2")
 	lf := newLocationFilter("LFSUCC")
@@ -87,13 +100,15 @@ func TestUpdateLocationFilter_SuccessAndDelete(t *testing.T) {
 	lf.HttpLocation = "http://example.com/firmware.bin"
 	resp := UpdateLocationFilter("stb", lf)
 	if resp.Status != 200 {
-		t.Fatalf("expected 200 got %d", resp.Status)
+		t.Fatalf("expected 200 got %d, error: %v", resp.Status, resp.Error)
 	}
 	assert.NotEmpty(t, lf.Id)
 	// delete existing
-	assert.Equal(t, 204, DeleteLocationFilter("LFSUCC", "stb").Status)
+	delResp := DeleteLocationFilter("LFSUCC", "stb")
+	assert.Equal(t, 204, delResp.Status, "First delete should return 204, error: %v", delResp.Error)
 	// delete again (noop)
-	assert.Equal(t, 204, DeleteLocationFilter("LFSUCC", "stb").Status)
+	delResp2 := DeleteLocationFilter("LFSUCC", "stb")
+	assert.Equal(t, 204, delResp2.Status, "Second delete should return 204, error: %v", delResp2.Error)
 }
 
 func TestUpdateDownloadLocationRoundRobinFilter(t *testing.T) {

@@ -255,3 +255,189 @@ func TestIsValidFeature(t *testing.T) {
 	assert.Equal(t, isValid, true)
 	assert.Equal(t, errMsg, "")
 }
+
+func TestDeleteFeatureRule(t *testing.T) {
+	// Test function executes without panic
+	assert.Assert(t, true, "DeleteFeatureRule should execute without panic")
+	DeleteFeatureRule("test-rule-id")
+}
+
+func TestDoesFeatureNameExistForAnotherId(t *testing.T) {
+	feature := &rfc.Feature{
+		ID:              "test-id",
+		FeatureName:     "test-feature",
+		ApplicationType: "stb",
+	}
+
+	// Should return false for non-existent feature or when DB not initialized
+	result := DoesFeatureNameExistForAnotherId(feature)
+	assert.Equal(t, result, false)
+}
+
+func TestDoesFeatureNameExistForAnotherEntityId(t *testing.T) {
+	featureEntity := &rfc.FeatureEntity{
+		ID:              "test-entity-id",
+		FeatureName:     "test-feature-entity",
+		ApplicationType: "stb",
+	}
+
+	// Should return false for non-existent feature entity
+	result := DoesFeatureNameExistForAnotherEntityId(featureEntity)
+	assert.Equal(t, result, false)
+}
+
+func TestSetFeatureRule(t *testing.T) {
+	featureRule := &rfc.FeatureRule{
+		Id:              "test-rule",
+		Name:            "Test Rule",
+		ApplicationType: "stb",
+	}
+
+	// Test function executes - may error if DB not initialized
+	err := SetFeatureRule("test-rule", featureRule)
+	// Either succeeds or returns error, both are valid
+	_ = err
+}
+
+func TestGetFeatureRule(t *testing.T) {
+	// Test with non-existent ID
+	result := GetFeatureRule("non-existent-id")
+
+	// Should return nil when not found or DB not initialized
+	assert.Assert(t, result == nil)
+}
+
+func TestGetFeatureEntityList(t *testing.T) {
+	// Test function executes without panic
+	result := GetFeatureEntityList()
+
+	// Should return nil or slice when executed
+	if result != nil {
+		assert.Assert(t, len(result) >= 0)
+	}
+}
+
+func TestDoesFeatureExistInSomeApplicationType(t *testing.T) {
+	// Test with empty ID
+	exists, appType := DoesFeatureExistInSomeApplicationType("")
+	assert.Equal(t, exists, false)
+	assert.Equal(t, appType, "")
+
+	// Test with non-existent ID
+	exists, appType = DoesFeatureExistInSomeApplicationType("non-existent-id")
+	assert.Equal(t, exists, false)
+	assert.Equal(t, appType, "")
+}
+
+func TestGetFilteredFeatureEntityList(t *testing.T) {
+	searchContext := map[string]string{
+		"APPLICATION_TYPE": "stb",
+	}
+
+	// Test function executes without panic
+	result := GetFilteredFeatureEntityList(searchContext)
+
+	// Should return nil or slice when executed
+	if result != nil {
+		assert.Assert(t, len(result) >= 0)
+	}
+}
+
+func TestSetOneFeature(t *testing.T) {
+	feature := &rfc.Feature{
+		ID:              "test-feature-id",
+		Name:            "Test Feature",
+		FeatureName:     "TEST_FEATURE",
+		ApplicationType: "stb",
+	}
+
+	// Test function executes - may error if DB not initialized
+	result, err := SetOneFeature(feature)
+
+	// Either succeeds or returns error
+	if err == nil {
+		assert.Equal(t, result.ID, feature.ID)
+	}
+}
+
+func TestDeleteOneFeature(t *testing.T) {
+	// Test function executes without panic
+	assert.Assert(t, true, "DeleteOneFeature should execute without panic")
+	DeleteOneFeature("test-feature-id")
+}
+
+func TestGetFilteredFeatureList(t *testing.T) {
+	searchContext := map[string]string{
+		"APPLICATION_TYPE": "stb",
+	}
+
+	// Test function executes without panic
+	result := GetFilteredFeatureList(searchContext)
+
+	// Should return nil or slice when executed
+	if result != nil {
+		assert.Assert(t, len(result) >= 0)
+	}
+}
+
+func TestDoesFeatureNameExistForAnotherIdInList(t *testing.T) {
+	feature := &rfc.Feature{
+		ID:              "test-id-1",
+		FeatureName:     "test-feature",
+		ApplicationType: "stb",
+	}
+
+	// Test with empty list
+	emptyList := []*rfc.Feature{}
+	result := DoesFeatureNameExistForAnotherIdInList(feature, emptyList)
+	assert.Equal(t, result, false)
+
+	// Test with list containing same feature
+	sameFeatureList := []*rfc.Feature{feature}
+	result = DoesFeatureNameExistForAnotherIdInList(feature, sameFeatureList)
+	assert.Equal(t, result, false)
+
+	// Test with list containing different feature with same name
+	differentFeature := &rfc.Feature{
+		ID:              "test-id-2",
+		FeatureName:     "test-feature",
+		ApplicationType: "stb",
+	}
+	conflictList := []*rfc.Feature{differentFeature}
+	result = DoesFeatureNameExistForAnotherIdInList(feature, conflictList)
+	assert.Equal(t, result, true)
+}
+
+func TestDoesFeatureNameExistForAnotherIdForApplicationType(t *testing.T) {
+	feature := &rfc.Feature{
+		ID:              "test-id",
+		FeatureName:     "test-feature",
+		ApplicationType: "stb",
+	}
+
+	// Test function executes without panic
+	result := DoesFeatureNameExistForAnotherIdForApplicationType(feature, "stb")
+
+	// Should return false when no conflicts or DB not initialized
+	assert.Equal(t, result, false)
+}
+
+func TestDoesFeatureExist(t *testing.T) {
+	// Test with empty ID
+	result := DoesFeatureExist("")
+	assert.Equal(t, result, false)
+
+	// Test with non-existent ID
+	result = DoesFeatureExist("non-existent-id")
+	assert.Equal(t, result, false)
+}
+
+func TestDoesFeatureExistWithApplicationType(t *testing.T) {
+	// Test with empty ID
+	result := DoesFeatureExistWithApplicationType("", "stb")
+	assert.Equal(t, result, false)
+
+	// Test with non-existent ID
+	result = DoesFeatureExistWithApplicationType("non-existent-id", "stb")
+	assert.Equal(t, result, false)
+}

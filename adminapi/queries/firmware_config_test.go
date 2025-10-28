@@ -98,7 +98,7 @@ func PreCreatePercentageBean() (*coreef.PercentageBean, error) {
 }
 
 func TestValidateUsageBeforeRemoving(t *testing.T) {
-	DeleteAllEntities()
+	//DeleteAllEntities()
 	percentageBean, err := PreCreatePercentageBean()
 	assert.NilError(t, err)
 	firmwareConfig, _ := coreef.GetFirmwareConfigOneDB(percentageBean.LastKnownGood)

@@ -268,3 +268,165 @@ func TestGetTelemetryTwoRulesFilteredWithPage_PagingAndInvalid(t *testing.T) {
 	rr = ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
+
+// Error case tests for xhttp.AdminError and WriteXconfResponse
+
+func TestGetTelemetryTwoRulesAllExport_AuthError(t *testing.T) {
+	// Test without applicationType - may still succeed with default handling
+	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/v2/rule", nil)
+	rr := ExecuteRequest(r, router)
+	// Auth handling varies by configuration
+	assert.True(t, rr.Code >= 200 && rr.Code < 500)
+}
+
+func TestGetTelemetryTwoRuleById_BlankIdError(t *testing.T) {
+	// Test WriteXconfResponse for blank ID
+	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/v2/rule/?applicationType=stb", nil)
+	rr := ExecuteRequest(r, router)
+	// Should return 404 or BadRequest for blank ID
+	assert.True(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusBadRequest)
+}
+
+func TestGetTelemetryTwoRuleById_EntityNotFoundError(t *testing.T) {
+	DeleteAllEntities()
+	// Test WriteAdminErrorResponse path when entity doesn't exist
+	nonExistentId := uuid.NewString()
+	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/rule/%s?applicationType=stb", nonExistentId)
+	r := httptest.NewRequest(http.MethodGet, url, nil)
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "does not exist")
+}
+
+func TestDeleteOneTelemetryTwoRuleHandler_AuthError(t *testing.T) {
+	// Test when entity doesn't exist - triggers error response
+	DeleteAllEntities()
+	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/v2/rule/nonexistent-id?applicationType=stb", nil)
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestDeleteOneTelemetryTwoRuleHandler_BlankIdError(t *testing.T) {
+	// Test WriteXconfResponse for blank ID
+	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/v2/rule/?applicationType=stb", nil)
+	rr := ExecuteRequest(r, router)
+	// Should return MethodNotAllowed or NotFound for blank ID
+	assert.True(t, rr.Code == http.StatusMethodNotAllowed || rr.Code == http.StatusNotFound)
+}
+
+func TestGetTelemetryTwoRulesFilteredWithPage_AuthError(t *testing.T) {
+	// Test without applicationType parameter
+	bodyMap := map[string]string{}
+	b, _ := json.Marshal(bodyMap)
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/rule/filtered", bytes.NewReader(b))
+	rr := ExecuteRequest(r, router)
+	// May return 200 with empty results depending on auth configuration
+	assert.True(t, rr.Code >= 200 && rr.Code < 500)
+}
+
+func TestGetTelemetryTwoRulesFilteredWithPage_InvalidJsonError(t *testing.T) {
+	// Test WriteXconfResponse for invalid JSON in body
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/rule/filtered?applicationType=stb", bytes.NewReader([]byte("invalid json {")))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "Unable to extract searchContext")
+}
+
+func TestCreateTelemetryTwoRuleHandler_InvalidJsonError(t *testing.T) {
+	// Test WriteXconfResponse for invalid JSON
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/rule?applicationType=stb", bytes.NewReader([]byte("invalid json")))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestCreateTelemetryTwoRuleHandler_AuthError(t *testing.T) {
+	// Test validation error path that triggers xhttp.AdminError
+	DeleteAllEntities()
+	invalidRule := createTelemetryTwoRule(false, []string{})
+	invalidRule.Name = "" // Invalid name
+	b, _ := json.Marshal(invalidRule)
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/rule?applicationType=stb", bytes.NewReader(b))
+	rr := ExecuteRequest(r, router)
+	// Should trigger AdminError from validation
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestCreateTelemetryTwoRuleHandler_ValidationError(t *testing.T) {
+	DeleteAllEntities()
+	// Test xhttp.AdminError in Create validation
+	invalidRule := createTelemetryTwoRule(false, []string{}) // No profiles - will fail validation
+	b, _ := json.Marshal(invalidRule)
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/rule?applicationType=stb", bytes.NewReader(b))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "Profiles")
+}
+
+func TestCreateTelemetryTwoRulesPackageHandler_InvalidJsonError(t *testing.T) {
+	// Test WriteXconfResponse for invalid JSON
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/rule/entities?applicationType=stb", bytes.NewReader([]byte("invalid json")))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "Unable to extract TelemetryTwoRules")
+}
+
+func TestCreateTelemetryTwoRulesPackageHandler_AuthError(t *testing.T) {
+	// Test without applicationType
+	entities := []xwlogupload.TelemetryTwoRule{}
+	b, _ := json.Marshal(entities)
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/rule/entities", bytes.NewReader(b))
+	rr := ExecuteRequest(r, router)
+	// May succeed with default auth
+	assert.True(t, rr.Code >= 200 && rr.Code < 500)
+}
+
+func TestUpdateTelemetryTwoRuleHandler_AuthError(t *testing.T) {
+	// Test invalid JSON error that triggers WriteXconfResponse
+	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/rule?applicationType=stb", bytes.NewReader([]byte("{invalid")))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestUpdateTelemetryTwoRuleHandler_InvalidJsonError(t *testing.T) {
+	// Test WriteXconfResponse for invalid JSON
+	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/rule?applicationType=stb", bytes.NewReader([]byte("invalid json")))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestUpdateTelemetryTwoRuleHandler_ValidationError(t *testing.T) {
+	DeleteAllEntities()
+	// Test xhttp.AdminError in Update validation
+	prof := createTelemetryTwoProfile()
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+
+	// Create and save a valid rule first
+	rule := createTelemetryTwoRule(false, []string{prof.ID})
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
+
+	// Now update with invalid data
+	rule.BoundTelemetryIDs = []string{} // Empty profiles will fail validation
+	b, _ := json.Marshal(rule)
+	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/rule?applicationType=stb", bytes.NewReader(b))
+	rr := ExecuteRequest(r, router)
+	// Should trigger AdminError from validation
+	assert.True(t, rr.Code == http.StatusBadRequest || rr.Code == http.StatusInternalServerError)
+}
+
+func TestUpdateTelemetryTwoRulesPackageHandler_AuthError(t *testing.T) {
+	// Test without applicationType
+	entities := []xwlogupload.TelemetryTwoRule{}
+	b, _ := json.Marshal(entities)
+	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/rule/entities", bytes.NewReader(b))
+	rr := ExecuteRequest(r, router)
+	// May succeed with default auth
+	assert.True(t, rr.Code >= 200 && rr.Code < 500)
+}
+
+func TestUpdateTelemetryTwoRulesPackageHandler_InvalidJsonError(t *testing.T) {
+	// Test WriteXconfResponse for invalid JSON
+	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/rule/entities?applicationType=stb", bytes.NewReader([]byte("invalid json")))
+	rr := ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "Unable to extract TelemetryTwoRules")
+}

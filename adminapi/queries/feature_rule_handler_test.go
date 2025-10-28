@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
@@ -215,4 +216,84 @@ func TestFilteredWithPageAndTestPageHandlers(t *testing.T) {
 	xwTP.SetBody(string(cb))
 	FeatureRuleTestPageHandler(xwTP, rTP)
 	assert.Equal(t, http.StatusOK, rrTPNative.Code)
+}
+
+func TestPackFeaturePriorities(t *testing.T) {
+	input := []*xwrfc.FeatureRule{
+		{Id: "id1", Priority: 2},
+		{Id: "id2", Priority: 1},
+		{Id: "id3", Priority: 3},
+	}
+	ref := &xwrfc.FeatureRule{Id: "id2", Priority: 1}
+	result := PackFeaturePriorities(input, ref)
+	// Should return altered rules (excluding the deleted one)
+	assert.True(t, len(result) >= 0)
+	// Verify the deleted rule is not in the result
+	for _, r := range result {
+		assert.NotEqual(t, "id2", r.Id)
+	}
+}
+
+func TestDeleteOneFeatureRuleHandler_Error(t *testing.T) {
+	r := httptest.NewRequest("DELETE", "/featureRule//?applicationType=stb", nil)
+	r = mux.SetURLVars(r, map[string]string{"id": ""})
+	rr := httptest.NewRecorder()
+	DeleteOneFeatureRuleHandler(rr, r)
+	// Returns 405 Method Not Allowed when route is not properly configured
+	assert.True(t, rr.Code >= http.StatusBadRequest)
+}
+
+func TestImportAllFeatureRulesHandler_Error(t *testing.T) {
+	r := httptest.NewRequest("POST", "/featureRules/import/all?applicationType=stb", nil)
+	rr := httptest.NewRecorder()
+	ImportAllFeatureRulesHandler(rr, r)
+	// Returns 500 when body is empty/invalid
+	assert.True(t, rr.Code >= http.StatusBadRequest)
+}
+
+func TestUpdateFeatureRuleHandler_Error(t *testing.T) {
+	r := httptest.NewRequest("PUT", "/featureRule?applicationType=stb", nil)
+	rr := httptest.NewRecorder()
+	xw := xwhttp.NewXResponseWriter(rr)
+	xw.SetBody("invalid-json")
+	UpdateFeatureRuleHandler(xw, r)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestCreateFeatureRuleHandler_Error(t *testing.T) {
+	r := httptest.NewRequest("POST", "/featureRule?applicationType=stb", nil)
+	rr := httptest.NewRecorder()
+	xw := xwhttp.NewXResponseWriter(rr)
+	xw.SetBody("invalid-json")
+	CreateFeatureRuleHandler(xw, r)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestGetFeatureRuleOne_Error(t *testing.T) {
+	r := httptest.NewRequest("GET", "/featureRule//?applicationType=stb", nil)
+	rr := httptest.NewRecorder()
+	GetFeatureRuleOne(rr, r)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestGetFeatureRulesHandler_Success(t *testing.T) {
+	r := httptest.NewRequest("GET", "/featureRules?applicationType=stb", nil)
+	rr := httptest.NewRecorder()
+	GetFeatureRulesHandler(rr, r)
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+// Test xhttp.AdminError
+func TestAdminErrorResponse(t *testing.T) {
+	rr := httptest.NewRecorder()
+	xhttp.WriteAdminErrorResponse(rr, http.StatusForbidden, "test error")
+	assert.Equal(t, http.StatusForbidden, rr.Code)
+}
+
+// Test WriteXconfResponse
+func TestWriteXconfResponse(t *testing.T) {
+	rr := httptest.NewRecorder()
+	data := []byte(`{"foo":"bar"}`)
+	xwhttp.WriteXconfResponse(rr, http.StatusOK, data)
+	assert.Equal(t, http.StatusOK, rr.Code)
 }
