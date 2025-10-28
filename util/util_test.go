@@ -109,6 +109,76 @@ func TestUtcTimeInNano(t *testing.T) {
 	assert.Assert(t, nano > 0)
 }
 
+func TestGetTimestamp(t *testing.T) {
+	// Test without arguments (current time)
+	ts1 := GetTimestamp()
+	assert.Assert(t, ts1 > 0)
+
+	// Test with specific time argument
+	specificTime := UtcCurrentTimestamp()
+	ts2 := GetTimestamp(specificTime)
+	assert.Assert(t, ts2 > 0)
+	assert.Equal(t, ts2, specificTime.UnixNano()/int64(1000000))
+}
+
+func TestUtcOffsetTimestamp(t *testing.T) {
+	// Test with positive offset (future)
+	future := UtcOffsetTimestamp(60)
+	now := UtcCurrentTimestamp()
+	assert.Assert(t, future.After(now))
+
+	// Test with negative offset (past)
+	past := UtcOffsetTimestamp(-60)
+	assert.Assert(t, past.Before(now))
+
+	// Test with zero offset
+	zero := UtcOffsetTimestamp(0)
+	assert.Assert(t, !zero.IsZero())
+}
+
+func TestUtcOffsetPriorMinTimestamp(t *testing.T) {
+	// Test with positive minutes (past)
+	ts1 := UtcOffsetPriorMinTimestamp(5)
+	assert.Assert(t, ts1 > 0)
+
+	// Test with zero minutes
+	ts2 := UtcOffsetPriorMinTimestamp(0)
+	assert.Assert(t, ts2 > 0)
+
+	// Verify it returns milliseconds
+	currentMs := GetTimestamp()
+	pastMs := UtcOffsetPriorMinTimestamp(1)
+	assert.Assert(t, pastMs < currentMs)
+}
+
+func TestCopy(t *testing.T) {
+	// Test with struct
+	original := TestStruct{
+		TestVar1: "test string",
+		TestVar2: true,
+	}
+	copied, err := Copy(original)
+	assert.NilError(t, err)
+	assert.Assert(t, copied != nil)
+
+	copiedStruct, ok := copied.(TestStruct)
+	assert.Assert(t, ok)
+	assert.Equal(t, copiedStruct.TestVar1, original.TestVar1)
+	assert.Equal(t, copiedStruct.TestVar2, original.TestVar2)
+
+	// Test with map
+	originalMap := map[string]string{"key": "value"}
+	copiedMap, err := Copy(originalMap)
+	assert.NilError(t, err)
+	assert.Assert(t, copiedMap != nil)
+
+	// Test with slice
+	originalSlice := []string{"a", "b", "c"}
+	copiedSlice, err := Copy(originalSlice)
+	assert.NilError(t, err)
+	assert.Assert(t, copiedSlice != nil)
+}
+
 func TestUUIDFromTime(t *testing.T) {
 	timestamp := int64(1698400000000) // Some timestamp in milliseconds
 	node := int64(123456)

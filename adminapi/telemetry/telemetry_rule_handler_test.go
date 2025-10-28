@@ -198,3 +198,265 @@ func TestPostTelemetryRuleFilteredWithParamsHandler_PagingAndFilters(t *testing.
 	rr = ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
+
+// ===== Error Condition Tests for All Handlers =====
+
+func TestGetTelemetryRuleByIdHandler_AllErrorCases(t *testing.T) {
+	DeleteAllEntities()
+
+	t.Run("MissingRuleID_WriteAdminErrorResponse", func(t *testing.T) {
+		// Empty ruleId in path triggers 404 from router
+		url := "/xconfAdminService/telemetry/rule/?applicationType=stb"
+		r := httptest.NewRequest(http.MethodGet, url, nil)
+		rr := ExecuteRequest(r, router)
+		// Router returns 404 for missing path param
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+
+	t.Run("RuleNotFound_WriteAdminErrorResponse_404", func(t *testing.T) {
+		nonexistentID := uuid.New().String()
+		url := fmt.Sprintf("/xconfAdminService/telemetry/rule/%s?applicationType=stb", nonexistentID)
+		r := httptest.NewRequest(http.MethodGet, url, nil)
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte("not found")))
+	})
+
+	t.Run("WrongApplicationType_WriteAdminErrorResponse_404", func(t *testing.T) {
+		perm := buildPermanentTelemetryProfile()
+		rule := buildTelemetryRule("test-rule", "stb", perm.ID)
+		_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_RULES, rule.ID, rule)
+
+		// Query with different applicationType triggers 404
+		url := fmt.Sprintf("/xconfAdminService/telemetry/rule/%s?applicationType=xhome", rule.ID)
+		r := httptest.NewRequest(http.MethodGet, url, nil)
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+}
+
+func TestDeleteTelemetryRuleByIdHandler_AllErrorCases(t *testing.T) {
+	DeleteAllEntities()
+
+	t.Run("MissingRuleID_WriteAdminErrorResponse_404", func(t *testing.T) {
+		url := "/xconfAdminService/telemetry/rule/?applicationType=stb"
+		r := httptest.NewRequest(http.MethodDelete, url, nil)
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+
+	t.Run("DeleteServiceError_WriteAdminErrorResponse", func(t *testing.T) {
+		nonexistentID := uuid.New().String()
+		url := fmt.Sprintf("/xconfAdminService/telemetry/rule/%s?applicationType=stb", nonexistentID)
+		r := httptest.NewRequest(http.MethodDelete, url, nil)
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte("does not exist")))
+	})
+}
+
+func TestCreateTelemetryRuleHandler_AllErrorCases(t *testing.T) {
+	DeleteAllEntities()
+
+	t.Run("InvalidJSON_WriteAdminErrorResponse_400", func(t *testing.T) {
+		url := "/xconfAdminService/telemetry/rule?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPost, url, bytes.NewReader([]byte("{invalid json")))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte("invalid character")))
+	})
+
+	t.Run("CreateServiceError_ApplicationTypeMismatch_WriteAdminErrorResponse", func(t *testing.T) {
+		perm := buildPermanentTelemetryProfile()
+		rule := buildTelemetryRule("conflict-rule", "stb", perm.ID)
+		// Store with stb
+		_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_RULES, rule.ID, rule)
+
+		// Try to create with different applicationType in body
+		rule.ApplicationType = "xhome"
+		b, _ := json.Marshal(rule)
+		url := "/xconfAdminService/telemetry/rule?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(b))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusConflict, rr.Code)
+		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte("already exists")))
+	})
+
+	t.Run("EmptyRuleName_WriteAdminErrorResponse", func(t *testing.T) {
+		perm := buildPermanentTelemetryProfile()
+		rule := buildTelemetryRule("", "stb", perm.ID)
+		b, _ := json.Marshal(rule)
+		url := "/xconfAdminService/telemetry/rule?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(b))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte("Name is empty")))
+	})
+}
+
+func TestUpdateTelemetryRuleHandler_AllErrorCases(t *testing.T) {
+	DeleteAllEntities()
+
+	t.Run("InvalidJSON_WriteAdminErrorResponse_400", func(t *testing.T) {
+		url := "/xconfAdminService/telemetry/rule?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPut, url, bytes.NewReader([]byte("{invalid json")))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte("invalid character")))
+	})
+
+	t.Run("UpdateServiceError_ApplicationTypeMismatch_WriteAdminErrorResponse", func(t *testing.T) {
+		perm := buildPermanentTelemetryProfile()
+		rule := buildTelemetryRule("existing-rule", "stb", perm.ID)
+		_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_RULES, rule.ID, rule)
+
+		// Try to update with different applicationType
+		rule.ApplicationType = "xhome"
+		b, _ := json.Marshal(rule)
+		url := "/xconfAdminService/telemetry/rule?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPut, url, bytes.NewReader(b))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusConflict, rr.Code)
+		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte("ApplicationType doesn't match")))
+	})
+
+	t.Run("RuleNotFound_WriteAdminErrorResponse", func(t *testing.T) {
+		perm := buildPermanentTelemetryProfile()
+		rule := buildTelemetryRule("nonexistent-rule", "stb", perm.ID)
+		rule.ID = uuid.New().String() // New ID that doesn't exist
+		b, _ := json.Marshal(rule)
+		url := "/xconfAdminService/telemetry/rule?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPut, url, bytes.NewReader(b))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusConflict, rr.Code)
+		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte("does not exist")))
+	})
+}
+
+func TestPostTelemetryRuleEntitiesHandler_AllErrorCases(t *testing.T) {
+	DeleteAllEntities()
+
+	t.Run("InvalidJSON_WriteAdminErrorResponse_400", func(t *testing.T) {
+		url := "/xconfAdminService/telemetry/rule/entities?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPost, url, bytes.NewReader([]byte("{invalid json")))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte("Unable to extract entity from json file")))
+	})
+
+	t.Run("EmptyEntitiesList_ReturnsEmptyResult", func(t *testing.T) {
+		entities := []*xwlogupload.TelemetryRule{}
+		b, _ := json.Marshal(entities)
+		url := "/xconfAdminService/telemetry/rule/entities?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(b))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+
+	t.Run("PartialFailure_MixedResults", func(t *testing.T) {
+		perm := buildPermanentTelemetryProfile()
+		validRule := buildTelemetryRule("valid-entity", "stb", perm.ID)
+
+		// Create a conflicting rule by pre-storing it
+		conflictRule := buildTelemetryRule("conflict-entity", "stb", perm.ID)
+		_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_RULES, conflictRule.ID, conflictRule)
+
+		entities := []*xwlogupload.TelemetryRule{validRule, conflictRule}
+		b, _ := json.Marshal(entities)
+		url := "/xconfAdminService/telemetry/rule/entities?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(b))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusOK, rr.Code)
+		// Response contains both success and error entries
+		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte(validRule.ID)))
+	})
+}
+
+func TestPutTelemetryRuleEntitiesHandler_AllErrorCases(t *testing.T) {
+	DeleteAllEntities()
+
+	t.Run("InvalidJSON_WriteAdminErrorResponse_400", func(t *testing.T) {
+		url := "/xconfAdminService/telemetry/rule/entities?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPut, url, bytes.NewReader([]byte("{invalid json")))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte("Unable to extract entity from json file")))
+	})
+
+	t.Run("EmptyEntitiesList_ReturnsEmptyResult", func(t *testing.T) {
+		entities := []*xwlogupload.TelemetryRule{}
+		b, _ := json.Marshal(entities)
+		url := "/xconfAdminService/telemetry/rule/entities?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPut, url, bytes.NewReader(b))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+
+	t.Run("ApplicationTypeMismatch_PartialFailure", func(t *testing.T) {
+		perm := buildPermanentTelemetryProfile()
+
+		// Create and store a rule with stb
+		existingRule := buildTelemetryRule("existing-update", "stb", perm.ID)
+		_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_RULES, existingRule.ID, existingRule)
+		existingRule.Name = "existing-update-modified"
+
+		// Create a rule with wrong applicationType to trigger conflict
+		conflictRule := buildTelemetryRule("conflict-update", "xhome", perm.ID)
+		_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_RULES, conflictRule.ID, conflictRule)
+		conflictRule.ApplicationType = "stb" // Change to trigger mismatch
+
+		entities := []*xwlogupload.TelemetryRule{existingRule, conflictRule}
+		b, _ := json.Marshal(entities)
+		url := "/xconfAdminService/telemetry/rule/entities?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPut, url, bytes.NewReader(b))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusOK, rr.Code)
+		// Response contains mixed results
+		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte(existingRule.ID)))
+	})
+}
+
+func TestPostTelemetryRuleFilteredWithParamsHandler_AllErrorCases(t *testing.T) {
+	DeleteAllEntities()
+
+	t.Run("InvalidJSON_WriteAdminErrorResponse_400", func(t *testing.T) {
+		url := "/xconfAdminService/telemetry/rule/filtered?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPost, url, bytes.NewReader([]byte("{invalid json")))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte("Invalid Json contents")))
+	})
+
+	t.Run("InvalidPageNumber_WriteAdminErrorResponse_400", func(t *testing.T) {
+		body := map[string]string{"pageNumber": "0", "pageSize": "10"}
+		b, _ := json.Marshal(body)
+		url := "/xconfAdminService/telemetry/rule/filtered?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(b))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte("pageNumber and pageSize should both be greater than zero")))
+	})
+
+	t.Run("InvalidPageSize_WriteAdminErrorResponse_400", func(t *testing.T) {
+		body := map[string]string{"pageNumber": "1", "pageSize": "-5"}
+		b, _ := json.Marshal(body)
+		url := "/xconfAdminService/telemetry/rule/filtered?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(b))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte("pageNumber and pageSize should both be greater than zero")))
+	})
+
+	t.Run("MissingPaginationParams_UsesDefaults", func(t *testing.T) {
+		perm := buildPermanentTelemetryProfile()
+		rule := buildTelemetryRule("filter-rule", "stb", perm.ID)
+		_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_RULES, rule.ID, rule)
+
+		body := map[string]string{} // Empty body should use defaults
+		b, _ := json.Marshal(body)
+		url := "/xconfAdminService/telemetry/rule/filtered?applicationType=stb"
+		r := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(b))
+		rr := ExecuteRequest(r, router)
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+}
