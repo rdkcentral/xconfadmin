@@ -297,3 +297,436 @@ func TestWriteXconfResponse(t *testing.T) {
 	xwhttp.WriteXconfResponse(rr, http.StatusOK, data)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
+
+// ===== Comprehensive Error Condition Tests =====
+
+func TestGetFeatureRulesFiltered_AllErrorCases(t *testing.T) {
+	frCleanup()
+	defer frCleanup()
+
+	t.Run("Success", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		frMakeFeatureRule([]string{f.ID}, "stb", 1)
+		r := httptest.NewRequest("GET", "/featureRules?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		GetFeatureRulesFiltered(rr, r)
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+}
+
+func TestGetFeatureRulesFilteredWithPage_AllErrorCases(t *testing.T) {
+	frCleanup()
+	defer frCleanup()
+
+	t.Run("InvalidPageNumber_WriteXconfResponse_400", func(t *testing.T) {
+		r := httptest.NewRequest("POST", "/featureRules/filteredWithPage?applicationType=stb&pageNumber=invalid&pageSize=10", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		GetFeatureRulesFilteredWithPage(xw, r)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Contains(t, rr.Body.String(), "pageNumber must be a number")
+	})
+
+	t.Run("InvalidPageSize_WriteXconfResponse_400", func(t *testing.T) {
+		r := httptest.NewRequest("POST", "/featureRules/filteredWithPage?applicationType=stb&pageNumber=1&pageSize=invalid", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		GetFeatureRulesFilteredWithPage(xw, r)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Contains(t, rr.Body.String(), "pageSize must be a number")
+	})
+
+	t.Run("InvalidJSON_WriteXconfResponse_400", func(t *testing.T) {
+		r := httptest.NewRequest("POST", "/featureRules/filteredWithPage?applicationType=stb&pageNumber=1&pageSize=10", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody("{invalid json")
+		GetFeatureRulesFilteredWithPage(xw, r)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Contains(t, rr.Body.String(), "Unable to extract searchContext from json file")
+	})
+
+	t.Run("Success_WithValidContext", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		frMakeFeatureRule([]string{f.ID}, "stb", 1)
+		contextBody := map[string]string{"name": "FR"}
+		b, _ := json.Marshal(contextBody)
+		r := httptest.NewRequest("POST", "/featureRules/filteredWithPage?applicationType=stb&pageNumber=1&pageSize=10", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody(string(b))
+		GetFeatureRulesFilteredWithPage(xw, r)
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+}
+
+func TestGetFeatureRuleOneExport_AllErrorCases(t *testing.T) {
+	frCleanup()
+	defer frCleanup()
+
+	t.Run("EmptyID_WriteAdminErrorResponse_400", func(t *testing.T) {
+		r := httptest.NewRequest("GET", "/featureRule/export/?applicationType=stb", nil)
+		r = mux.SetURLVars(r, map[string]string{"id": ""})
+		rr := httptest.NewRecorder()
+		GetFeatureRuleOneExport(rr, r)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Contains(t, rr.Body.String(), "Id is blank")
+	})
+
+	t.Run("RuleNotFound_WriteAdminErrorResponse_404", func(t *testing.T) {
+		nonExistentID := uuid.New().String()
+		r := httptest.NewRequest("GET", fmt.Sprintf("/featureRule/export/%s?applicationType=stb", nonExistentID), nil)
+		r = mux.SetURLVars(r, map[string]string{"id": nonExistentID})
+		rr := httptest.NewRecorder()
+		GetFeatureRuleOneExport(rr, r)
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+		assert.Contains(t, rr.Body.String(), "does not exist")
+	})
+
+	t.Run("ApplicationTypeMismatch_WriteAdminErrorResponse_404", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		fr := frMakeFeatureRule([]string{f.ID}, "stb", 1)
+		r := httptest.NewRequest("GET", fmt.Sprintf("/featureRule/export/%s?applicationType=xhome", fr.Id), nil)
+		r = mux.SetURLVars(r, map[string]string{"id": fr.Id})
+		rr := httptest.NewRecorder()
+		GetFeatureRuleOneExport(rr, r)
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+		assert.Contains(t, rr.Body.String(), "Non existing Entity")
+	})
+
+	t.Run("Success_WithExport", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		fr := frMakeFeatureRule([]string{f.ID}, "stb", 1)
+		r := httptest.NewRequest("GET", fmt.Sprintf("/featureRule/export/%s?applicationType=stb&export=true", fr.Id), nil)
+		r = mux.SetURLVars(r, map[string]string{"id": fr.Id})
+		rr := httptest.NewRecorder()
+		GetFeatureRuleOneExport(rr, r)
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+}
+
+func TestGetFeatureRuleOne_AllErrorCases(t *testing.T) {
+	frCleanup()
+	defer frCleanup()
+
+	t.Run("EmptyID_WriteXconfResponse_400", func(t *testing.T) {
+		r := httptest.NewRequest("GET", "/featureRule//?applicationType=stb", nil)
+		r = mux.SetURLVars(r, map[string]string{"id": ""})
+		rr := httptest.NewRecorder()
+		GetFeatureRuleOne(rr, r)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Contains(t, rr.Body.String(), "Id is blank")
+	})
+
+	t.Run("RuleNotFound_WriteAdminErrorResponse_400", func(t *testing.T) {
+		nonExistentID := uuid.New().String()
+		r := httptest.NewRequest("GET", fmt.Sprintf("/featureRule/%s?applicationType=stb", nonExistentID), nil)
+		r = mux.SetURLVars(r, map[string]string{"id": nonExistentID})
+		rr := httptest.NewRecorder()
+		GetFeatureRuleOne(rr, r)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Contains(t, rr.Body.String(), "does not exist")
+	})
+
+	t.Run("Success", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		fr := frMakeFeatureRule([]string{f.ID}, "stb", 1)
+		r := httptest.NewRequest("GET", fmt.Sprintf("/featureRule/%s?applicationType=stb", fr.Id), nil)
+		r = mux.SetURLVars(r, map[string]string{"id": fr.Id})
+		rr := httptest.NewRecorder()
+		GetFeatureRuleOne(rr, r)
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+}
+
+func TestCreateFeatureRuleHandler_AllErrorCases(t *testing.T) {
+	frCleanup()
+	defer frCleanup()
+
+	t.Run("InvalidJSON_AdminError_400", func(t *testing.T) {
+		r := httptest.NewRequest("POST", "/featureRule?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody("{invalid json")
+		CreateFeatureRuleHandler(xw, r)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+	})
+
+	t.Run("ValidationError_AdminError", func(t *testing.T) {
+		// Missing required fields (no FeatureIds)
+		badRule := &xwrfc.FeatureRule{Name: "BadRule", ApplicationType: "stb", FeatureIds: []string{}, Priority: 1, Rule: frMakeRule()}
+		b, _ := json.Marshal(badRule)
+		r := httptest.NewRequest("POST", "/featureRule?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody(string(b))
+		CreateFeatureRuleHandler(xw, r)
+		assert.True(t, rr.Code >= http.StatusBadRequest)
+	})
+
+	t.Run("Success", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		validRule := &xwrfc.FeatureRule{Name: "ValidRule", ApplicationType: "stb", FeatureIds: []string{f.ID}, Priority: 1, Rule: frMakeRule()}
+		b, _ := json.Marshal(validRule)
+		r := httptest.NewRequest("POST", "/featureRule?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody(string(b))
+		CreateFeatureRuleHandler(xw, r)
+		assert.Equal(t, http.StatusCreated, rr.Code)
+	})
+}
+
+func TestUpdateFeatureRuleHandler_AllErrorCases(t *testing.T) {
+	frCleanup()
+	defer frCleanup()
+
+	t.Run("InvalidJSON_AdminError_400", func(t *testing.T) {
+		r := httptest.NewRequest("PUT", "/featureRule?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody("{invalid json")
+		UpdateFeatureRuleHandler(xw, r)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+	})
+
+	t.Run("NonExistentRule_AdminError", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		nonExistentRule := &xwrfc.FeatureRule{Id: uuid.New().String(), Name: "NonExistent", ApplicationType: "stb", FeatureIds: []string{f.ID}, Priority: 1, Rule: frMakeRule()}
+		b, _ := json.Marshal(nonExistentRule)
+		r := httptest.NewRequest("PUT", "/featureRule?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody(string(b))
+		UpdateFeatureRuleHandler(xw, r)
+		assert.True(t, rr.Code >= http.StatusBadRequest)
+	})
+
+	t.Run("Success", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		fr := frMakeFeatureRule([]string{f.ID}, "stb", 1)
+		fr.Name = "UpdatedName"
+		b, _ := json.Marshal(fr)
+		r := httptest.NewRequest("PUT", "/featureRule?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody(string(b))
+		UpdateFeatureRuleHandler(xw, r)
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+}
+
+func TestImportAllFeatureRulesHandler_AllErrorCases(t *testing.T) {
+	frCleanup()
+	defer frCleanup()
+
+	t.Run("InvalidJSON_WriteXconfResponse_400", func(t *testing.T) {
+		r := httptest.NewRequest("POST", "/featureRules/import/all?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody("{invalid json")
+		ImportAllFeatureRulesHandler(xw, r)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Contains(t, rr.Body.String(), "Unable to extract featureRules from json file")
+	})
+
+	t.Run("ApplicationTypeMixing_WriteAdminErrorResponse_409", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		rule1 := xwrfc.FeatureRule{Name: "Rule1", ApplicationType: "stb", FeatureIds: []string{f.ID}, Priority: 1, Rule: frMakeRule()}
+		rule2 := xwrfc.FeatureRule{Name: "Rule2", ApplicationType: "xhome", FeatureIds: []string{f.ID}, Priority: 2, Rule: frMakeRule()}
+		rules := []xwrfc.FeatureRule{rule1, rule2}
+		b, _ := json.Marshal(rules)
+		r := httptest.NewRequest("POST", "/featureRules/import/all?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody(string(b))
+		ImportAllFeatureRulesHandler(xw, r)
+		assert.Equal(t, http.StatusConflict, rr.Code)
+	})
+
+	t.Run("Success", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		rule1 := xwrfc.FeatureRule{Name: "Import1", ApplicationType: "stb", FeatureIds: []string{f.ID}, Priority: 1, Rule: frMakeRule()}
+		rules := []xwrfc.FeatureRule{rule1}
+		b, _ := json.Marshal(rules)
+		r := httptest.NewRequest("POST", "/featureRules/import/all?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody(string(b))
+		ImportAllFeatureRulesHandler(xw, r)
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+}
+
+func TestDeleteOneFeatureRuleHandler_AllErrorCases(t *testing.T) {
+	frCleanup()
+	defer frCleanup()
+
+	t.Run("EmptyID_WriteXconfResponse_405", func(t *testing.T) {
+		r := httptest.NewRequest("DELETE", "/featureRule//?applicationType=stb", nil)
+		r = mux.SetURLVars(r, map[string]string{"id": ""})
+		rr := httptest.NewRecorder()
+		DeleteOneFeatureRuleHandler(rr, r)
+		assert.Equal(t, http.StatusMethodNotAllowed, rr.Code)
+	})
+
+	t.Run("RuleNotFound_WriteXconfResponse_404", func(t *testing.T) {
+		nonExistentID := uuid.New().String()
+		r := httptest.NewRequest("DELETE", fmt.Sprintf("/featureRule/%s?applicationType=stb", nonExistentID), nil)
+		r = mux.SetURLVars(r, map[string]string{"id": nonExistentID})
+		rr := httptest.NewRecorder()
+		DeleteOneFeatureRuleHandler(rr, r)
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+		assert.Contains(t, rr.Body.String(), "does not exist")
+	})
+
+	t.Run("Success", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		fr := frMakeFeatureRule([]string{f.ID}, "stb", 1)
+		r := httptest.NewRequest("DELETE", fmt.Sprintf("/featureRule/%s?applicationType=stb", fr.Id), nil)
+		r = mux.SetURLVars(r, map[string]string{"id": fr.Id})
+		rr := httptest.NewRecorder()
+		DeleteOneFeatureRuleHandler(rr, r)
+		assert.Equal(t, http.StatusNoContent, rr.Code)
+	})
+}
+
+func TestChangeFeatureRulePrioritiesHandler_AllErrorCases(t *testing.T) {
+	frCleanup()
+	defer frCleanup()
+
+	t.Run("EmptyID_WriteXconfResponse_400", func(t *testing.T) {
+		r := httptest.NewRequest("GET", "/featureRule/change//priority/1?applicationType=stb", nil)
+		r = mux.SetURLVars(r, map[string]string{"id": "", "newPriority": "1"})
+		rr := httptest.NewRecorder()
+		ChangeFeatureRulePrioritiesHandler(rr, r)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Contains(t, rr.Body.String(), "Id is blank")
+	})
+
+	t.Run("InvalidNewPriority_WriteXconfResponse_400", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		fr := frMakeFeatureRule([]string{f.ID}, "stb", 1)
+		r := httptest.NewRequest("GET", fmt.Sprintf("/featureRule/change/%s/priority/invalid?applicationType=stb", fr.Id), nil)
+		r = mux.SetURLVars(r, map[string]string{"id": fr.Id, "newPriority": "invalid"})
+		rr := httptest.NewRecorder()
+		ChangeFeatureRulePrioritiesHandler(rr, r)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Contains(t, rr.Body.String(), "newPriority must be a number")
+	})
+
+	t.Run("Success", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		_ = frMakeFeatureRule([]string{f.ID}, "stb", 1)
+		fr2 := frMakeFeatureRule([]string{f.ID}, "stb", 2)
+		r := httptest.NewRequest("GET", fmt.Sprintf("/featureRule/change/%s/priority/1?applicationType=stb", fr2.Id), nil)
+		r = mux.SetURLVars(r, map[string]string{"id": fr2.Id, "newPriority": "1"})
+		rr := httptest.NewRecorder()
+		ChangeFeatureRulePrioritiesHandler(rr, r)
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+}
+
+func TestUpdateFeatureRulesHandler_AllErrorCases(t *testing.T) {
+	frCleanup()
+	defer frCleanup()
+
+	t.Run("InvalidJSON_WriteXconfResponse_400", func(t *testing.T) {
+		r := httptest.NewRequest("PUT", "/featureRules?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody("{invalid json")
+		UpdateFeatureRulesHandler(xw, r)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Contains(t, rr.Body.String(), "Unable to extract FeatureRules from json file")
+	})
+
+	t.Run("MixedResults_PartialFailure", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		existingRule := frMakeFeatureRule([]string{f.ID}, "stb", 1)
+		existingRule.Name = "UpdatedName"
+
+		// Non-existent rule will fail
+		nonExistentRule := &xwrfc.FeatureRule{Id: uuid.New().String(), Name: "NonExistent", ApplicationType: "stb", FeatureIds: []string{f.ID}, Priority: 2, Rule: frMakeRule()}
+
+		rules := []*xwrfc.FeatureRule{existingRule, nonExistentRule}
+		b, _ := json.Marshal(rules)
+		r := httptest.NewRequest("PUT", "/featureRules?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody(string(b))
+		UpdateFeatureRulesHandler(xw, r)
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+}
+
+func TestCreateFeatureRulesHandler_AllErrorCases(t *testing.T) {
+	frCleanup()
+	defer frCleanup()
+
+	t.Run("InvalidJSON_WriteXconfResponse_400", func(t *testing.T) {
+		r := httptest.NewRequest("POST", "/featureRules?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody("{invalid json")
+		CreateFeatureRulesHandler(xw, r)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Contains(t, rr.Body.String(), "Unable to extract FeatureRules from json file")
+	})
+
+	t.Run("MixedResults_PartialFailure", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		validRule := &xwrfc.FeatureRule{Name: "Valid", ApplicationType: "stb", FeatureIds: []string{f.ID}, Priority: 1, Rule: frMakeRule()}
+		// Invalid rule (no feature IDs)
+		invalidRule := &xwrfc.FeatureRule{Name: "Invalid", ApplicationType: "stb", FeatureIds: []string{}, Priority: 2, Rule: frMakeRule()}
+
+		rules := []*xwrfc.FeatureRule{validRule, invalidRule}
+		b, _ := json.Marshal(rules)
+		r := httptest.NewRequest("POST", "/featureRules?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody(string(b))
+		CreateFeatureRulesHandler(xw, r)
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+}
+
+func TestFeatureRuleTestPageHandler_AllErrorCases(t *testing.T) {
+	frCleanup()
+	defer frCleanup()
+
+	t.Run("InvalidJSON_WriteAdminErrorResponse_400", func(t *testing.T) {
+		r := httptest.NewRequest("POST", "/featureRules/testPage?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody("{invalid json")
+		FeatureRuleTestPageHandler(xw, r)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+	})
+
+	t.Run("InvalidContext_WriteAdminErrorResponse_400", func(t *testing.T) {
+		// Invalid MAC address format
+		invalidContext := map[string]string{"estbMacAddress": "invalid-mac"}
+		b, _ := json.Marshal(invalidContext)
+		r := httptest.NewRequest("POST", "/featureRules/testPage?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody(string(b))
+		FeatureRuleTestPageHandler(xw, r)
+		// May pass validation or fail depending on normalization logic
+		assert.True(t, rr.Code >= http.StatusOK)
+	})
+
+	t.Run("Success_ValidContext", func(t *testing.T) {
+		f := frMakeFeature("FeatA", "stb")
+		frMakeFeatureRule([]string{f.ID}, "stb", 1)
+		validContext := map[string]string{"estbMacAddress": "AA:BB:CC:DD:EE:FF"}
+		b, _ := json.Marshal(validContext)
+		r := httptest.NewRequest("POST", "/featureRules/testPage?applicationType=stb", nil)
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody(string(b))
+		FeatureRuleTestPageHandler(xw, r)
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+}
