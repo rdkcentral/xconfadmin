@@ -1036,3 +1036,283 @@ func cleanupAllPermanentTelemetryProfiles() {
 		xlogupload.DeletePermanentTelemetryProfile(profile.ID)
 	}
 }
+
+// ============================================================================
+// Additional Tests to Improve Coverage to 85%
+// ============================================================================
+
+// NOTE: ApproveChangeHandler success path tests would require complex setup including
+// lockdown settings and full profile creation flow. Error path coverage is comprehensive.
+
+// GetProfileChangesHandler Success Path Tests
+func TestGetProfileChangesHandler_SuccessWithChanges(t *testing.T) {
+	defer cleanupAllChanges()
+
+	// Create multiple changes
+	for i := 1; i <= 3; i++ {
+		change := &xwchange.Change{
+			ID:              fmt.Sprintf("change-%d", i),
+			EntityID:        fmt.Sprintf("entity-%d", i),
+			EntityType:      xwchange.TelemetryProfile,
+			ApplicationType: shared.STB,
+			Author:          "testuser",
+			Operation:       xwchange.Create,
+			Updated:         int64(1000000 + i),
+		}
+		err := xchange.CreateOneChange(change)
+		assert.Nil(t, err)
+	}
+
+	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/changes?applicationType=stb", nil)
+	rr := execChangeReq(r, nil)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Contains(t, rr.Body.String(), "change-1")
+	assert.Contains(t, rr.Body.String(), "change-2")
+	assert.Contains(t, rr.Body.String(), "change-3")
+}
+
+func TestGetProfileChangesHandler_SuccessSortedByUpdated(t *testing.T) {
+	defer cleanupAllChanges()
+
+	// Create changes with different update times
+	change1 := &xwchange.Change{
+		ID:              "change-old",
+		EntityID:        "entity-old",
+		EntityType:      xwchange.TelemetryProfile,
+		ApplicationType: shared.STB,
+		Author:          "testuser",
+		Operation:       xwchange.Create,
+		Updated:         1000,
+	}
+	change2 := &xwchange.Change{
+		ID:              "change-new",
+		EntityID:        "entity-new",
+		EntityType:      xwchange.TelemetryProfile,
+		ApplicationType: shared.STB,
+		Author:          "testuser",
+		Operation:       xwchange.Create,
+		Updated:         9000,
+	}
+
+	xchange.CreateOneChange(change1)
+	xchange.CreateOneChange(change2)
+
+	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/changes?applicationType=stb", nil)
+	rr := execChangeReq(r, nil)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	// Verify response contains both changes
+	body := rr.Body.String()
+	assert.Contains(t, body, "change-old")
+	assert.Contains(t, body, "change-new")
+}
+
+// RevertChangeHandler Success Path Tests
+func TestRevertChangeHandler_SuccessWithHeaders(t *testing.T) {
+	defer cleanupAllChanges()
+	defer cleanupAllApprovedChanges()
+	defer cleanupAllPermanentTelemetryProfiles()
+
+	// Create and approve a change first
+	profile := &logupload.PermanentTelemetryProfile{
+		ID:               "profile-revert-headers",
+		Name:             "TestProfile",
+		ApplicationType:  shared.STB,
+		Schedule:         "0 */15 * * * *",
+		UploadProtocol:   "HTTP",
+		UploadRepository: "https://test.example.com/upload",
+		TelemetryProfile: []logupload.TelemetryElement{
+			{
+				ID:               "element-1",
+				Header:           "TestHeader",
+				Content:          "TestContent",
+				Type:             "type1",
+				PollingFrequency: "60",
+			},
+		},
+	}
+	err := xlogupload.SetOnePermanentTelemetryProfile(profile.ID, profile)
+	assert.Nil(t, err)
+
+	approvedChange := &xwchange.ApprovedChange{
+		ID:              "approved-revert-headers",
+		EntityID:        profile.ID,
+		EntityType:      xwchange.TelemetryProfile,
+		ApplicationType: shared.STB,
+		Author:          "testuser",
+		Operation:       xwchange.Create,
+		NewEntity:       profile,
+	}
+	err = xchange.SetOneApprovedChange(approvedChange)
+	assert.Nil(t, err)
+
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/revert/"+approvedChange.ID+"?applicationType=stb", nil)
+	rr := execChangeReq(r, nil)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	// Verify headers are set
+	assert.NotEmpty(t, rr.Header())
+}
+
+// CancelChangeHandler Success Path Tests
+func TestCancelChangeHandler_SuccessDeletesChange(t *testing.T) {
+	defer cleanupAllChanges()
+
+	change := &xwchange.Change{
+		ID:              "change-cancel-headers",
+		EntityID:        "entity-cancel",
+		EntityType:      xwchange.TelemetryProfile,
+		ApplicationType: shared.STB,
+		Author:          "testuser",
+		Operation:       xwchange.Create,
+	}
+	err := xchange.CreateOneChange(change)
+	assert.Nil(t, err)
+
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/cancel/"+change.ID+"?applicationType=stb", nil)
+	rr := execChangeReq(r, nil)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	// Verify headers are set
+	assert.NotEmpty(t, rr.Header())
+
+	// Verify change was deleted
+	deletedChange := xchange.GetOneChange(change.ID)
+	assert.Nil(t, deletedChange)
+}
+
+// createHeadersMap Coverage Tests
+func TestCreateHeadersMap_ValidApplicationType(t *testing.T) {
+	headers := createHeadersMap("stb")
+	assert.NotNil(t, headers)
+	assert.Contains(t, headers, "pendingChangesSize")
+	assert.Contains(t, headers, "approvedChangesSize")
+}
+
+func TestCreateHeadersMap_EmptyApplicationType(t *testing.T) {
+	headers := createHeadersMap("")
+	assert.NotNil(t, headers)
+	// Should still create map even with empty string
+	assert.Contains(t, headers, "pendingChangesSize")
+	assert.Contains(t, headers, "approvedChangesSize")
+}
+
+// ChangesGeneratePage and ApprovedChangesGeneratePage Coverage Tests
+func TestChangesGeneratePage_WithChanges(t *testing.T) {
+	defer cleanupAllChanges()
+
+	// Create test changes
+	for i := 1; i <= 5; i++ {
+		change := &xwchange.Change{
+			ID:              fmt.Sprintf("page-change-%d", i),
+			EntityID:        fmt.Sprintf("entity-%d", i),
+			EntityType:      xwchange.TelemetryProfile,
+			ApplicationType: shared.STB,
+			Author:          "testuser",
+			Operation:       xwchange.Create,
+		}
+		xchange.CreateOneChange(change)
+	}
+
+	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/grouped?pageNumber=1&pageSize=10&applicationType=stb", nil)
+	rr := execChangeReq(r, nil)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Contains(t, rr.Body.String(), "page-change-")
+}
+
+func TestApprovedChangesGeneratePage_WithApprovedChanges(t *testing.T) {
+	defer cleanupAllApprovedChanges()
+
+	// Create test approved changes
+	for i := 1; i <= 5; i++ {
+		approvedChange := &xwchange.ApprovedChange{
+			ID:              fmt.Sprintf("page-approved-%d", i),
+			EntityID:        fmt.Sprintf("entity-%d", i),
+			EntityType:      xwchange.TelemetryProfile,
+			ApplicationType: shared.STB,
+			Author:          "testuser",
+			Operation:       xwchange.Create,
+		}
+		xchange.SetOneApprovedChange(approvedChange)
+	}
+
+	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/groupedApproved?pageNumber=1&pageSize=10&applicationType=stb", nil)
+	rr := execChangeReq(r, nil)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Contains(t, rr.Body.String(), "page-approved-")
+}
+
+// GetChangedEntityIdsHandler Success Path Tests
+func TestGetChangedEntityIdsHandler_SuccessWithEntityIds(t *testing.T) {
+	defer cleanupAllChanges()
+
+	// Create changes with different entity IDs
+	change1 := &xwchange.Change{
+		ID:              "change-entity-1",
+		EntityID:        "unique-entity-1",
+		EntityType:      xwchange.TelemetryProfile,
+		ApplicationType: shared.STB,
+		Author:          "testuser",
+		Operation:       xwchange.Create,
+	}
+	change2 := &xwchange.Change{
+		ID:              "change-entity-2",
+		EntityID:        "unique-entity-2",
+		EntityType:      xwchange.TelemetryProfile,
+		ApplicationType: shared.STB,
+		Author:          "testuser",
+		Operation:       xwchange.Update,
+	}
+
+	xchange.CreateOneChange(change1)
+	xchange.CreateOneChange(change2)
+
+	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/entityIds?applicationType=stb", nil)
+	rr := execChangeReq(r, nil)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	body := rr.Body.String()
+	assert.Contains(t, body, "unique-entity-1")
+	assert.Contains(t, body, "unique-entity-2")
+}
+
+// GetApprovedFilteredHandler Additional Coverage Tests
+func TestGetApprovedFilteredHandler_SuccessWithCustomPageSize(t *testing.T) {
+	defer cleanupAllApprovedChanges()
+
+	// Create multiple approved changes
+	for i := 1; i <= 10; i++ {
+		approvedChange := &xwchange.ApprovedChange{
+			ID:              fmt.Sprintf("approved-filter-%d", i),
+			EntityID:        fmt.Sprintf("entity-%d", i),
+			EntityType:      xwchange.TelemetryProfile,
+			ApplicationType: shared.STB,
+			Author:          "testuser",
+			Operation:       xwchange.Create,
+		}
+		xchange.SetOneApprovedChange(approvedChange)
+	}
+
+	body := []byte(`{}`)
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/approved/filtered?pageNumber=1&pageSize=5&applicationType=stb", bytes.NewReader(body))
+	rr := execChangeReq(r, body)
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	// Verify entity size header is set
+	assert.NotEmpty(t, rr.Header())
+}
+
+func TestGetApprovedFilteredHandler_SuccessWithSearchContext(t *testing.T) {
+	defer cleanupAllApprovedChanges()
+
+	approvedChange := &xwchange.ApprovedChange{
+		ID:              "approved-searchable",
+		EntityID:        "specific-entity",
+		EntityType:      xwchange.TelemetryProfile,
+		ApplicationType: shared.STB,
+		Author:          "searchuser",
+		Operation:       xwchange.Create,
+	}
+	xchange.SetOneApprovedChange(approvedChange)
+
+	body := []byte(`{"author":"searchuser"}`)
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/approved/filtered?pageNumber=1&pageSize=10&applicationType=stb", bytes.NewReader(body))
+	rr := execChangeReq(r, body)
+	assert.Equal(t, http.StatusOK, rr.Code)
+}

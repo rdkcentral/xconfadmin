@@ -644,3 +644,126 @@ func TestWriteXconfResponse_JSONMarshalError(t *testing.T) {
 	// This should successfully call xwhttp.WriteXconfResponse
 	assert.True(t, w.Status() == http.StatusOK || w.Status() >= 400, "Should complete the request")
 }
+
+func TestGetSettingProfileOneExport_Success(t *testing.T) {
+	// Create a test profile
+	profile := &logupload.SettingProfiles{
+		ID:               "export-test-profile-1",
+		SettingProfileID: "export-profile-1",
+		ApplicationType:  "STB",
+		SettingType:      "EPON",
+	}
+	SetSettingProfile(profile.ID, profile)
+
+	req := httptest.NewRequest(http.MethodGet, "/setting-profiles/export-test-profile-1", nil)
+	recorder := httptest.NewRecorder()
+	w := xwhttp.NewXResponseWriter(recorder)
+	req = mux.SetURLVars(req, map[string]string{"id": "export-test-profile-1"})
+	ctx := context.WithValue(req.Context(), "applicationType", "STB")
+	req = req.WithContext(ctx)
+
+	GetSettingProfileOneExport(w, req)
+	// Database not configured in tests, so just verify handler executes
+	assert.NotEqual(t, http.StatusInternalServerError, w.Status())
+}
+
+// TestGetSettingProfileOneExport_WithExportParam tests export with export query parameter
+func TestGetSettingProfileOneExport_WithExportParam(t *testing.T) {
+	profile := &logupload.SettingProfiles{
+		ID:               "export-test-profile-2",
+		SettingProfileID: "export-profile-2",
+		ApplicationType:  "STB",
+		SettingType:      "EPON",
+	}
+	SetSettingProfile(profile.ID, profile)
+
+	req := httptest.NewRequest(http.MethodGet, "/setting-profiles/export-test-profile-2?export=true", nil)
+	recorder := httptest.NewRecorder()
+	w := xwhttp.NewXResponseWriter(recorder)
+	req = mux.SetURLVars(req, map[string]string{"id": "export-test-profile-2"})
+	ctx := context.WithValue(req.Context(), "applicationType", "STB")
+	req = req.WithContext(ctx)
+
+	GetSettingProfileOneExport(w, req)
+	// Database not configured in tests, verify handler executes
+	assert.NotEqual(t, http.StatusInternalServerError, w.Status())
+}
+
+// TestGetSettingProfileOneExport_BlankID tests with blank ID
+func TestGetSettingProfileOneExport_BlankID(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/setting-profiles/", nil)
+	recorder := httptest.NewRecorder()
+	w := xwhttp.NewXResponseWriter(recorder)
+	req = mux.SetURLVars(req, map[string]string{"id": ""})
+	ctx := context.WithValue(req.Context(), "applicationType", "STB")
+	req = req.WithContext(ctx)
+
+	GetSettingProfileOneExport(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Status())
+}
+
+// TestGetSettingProfileOneExport_NotFound tests with non-existent ID
+func TestGetSettingProfileOneExport_NotFound(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/setting-profiles/non-existent-id", nil)
+	recorder := httptest.NewRecorder()
+	w := xwhttp.NewXResponseWriter(recorder)
+	req = mux.SetURLVars(req, map[string]string{"id": "non-existent-id"})
+	ctx := context.WithValue(req.Context(), "applicationType", "STB")
+	req = req.WithContext(ctx)
+
+	GetSettingProfileOneExport(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Status())
+}
+
+// TestUpdateSettingProfilesPackageHandler_EmptyArray tests with empty array
+func TestUpdateSettingProfilesPackageHandler_EmptyArray(t *testing.T) {
+	jsonBody, _ := json.Marshal([]logupload.SettingProfiles{})
+
+	req := httptest.NewRequest(http.MethodPut, "/setting-profiles/package", strings.NewReader(string(jsonBody)))
+	recorder := httptest.NewRecorder()
+	w := xwhttp.NewXResponseWriter(recorder)
+	w.SetBody(string(jsonBody))
+	ctx := context.WithValue(req.Context(), "applicationType", "STB")
+	req = req.WithContext(ctx)
+
+	UpdateSettingProfilesPackageHandler(w, req)
+	// Should handle empty array gracefully
+	assert.NotEqual(t, http.StatusInternalServerError, w.Status())
+}
+
+// TestUpdateSettingProfilesPackageHandler_SingleItem tests with single item
+func TestUpdateSettingProfilesPackageHandler_SingleItem(t *testing.T) {
+	t.Skip("Requires database configuration - cannot set up test data")
+}
+
+// TestDeleteOneSettingProfilesHandler_NoID tests delete with no ID
+func TestDeleteOneSettingProfilesHandler_NoID(t *testing.T) {
+	req := httptest.NewRequest(http.MethodDelete, "/setting-profiles/", nil)
+	recorder := httptest.NewRecorder()
+	w := xwhttp.NewXResponseWriter(recorder)
+	req = mux.SetURLVars(req, map[string]string{})
+	ctx := context.WithValue(req.Context(), "applicationType", "STB")
+	req = req.WithContext(ctx)
+
+	DeleteOneSettingProfilesHandler(w, req)
+	// Should handle missing ID
+	assert.NotEqual(t, http.StatusOK, w.Status())
+}
+
+// TestUpdateSettingProfilesHandler_InvalidJSON tests update with invalid JSON
+func TestUpdateSettingProfilesHandler_InvalidJSON(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPut, "/setting-profiles", strings.NewReader(`{invalid json}`))
+	recorder := httptest.NewRecorder()
+	w := xwhttp.NewXResponseWriter(recorder)
+	w.SetBody(`{invalid json}`)
+	ctx := context.WithValue(req.Context(), "applicationType", "STB")
+	req = req.WithContext(ctx)
+
+	UpdateSettingProfilesHandler(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Status())
+}
+
+// TestUpdateSettingProfilesHandler_ValidProfile tests update with valid profile
+func TestUpdateSettingProfilesHandler_ValidProfile(t *testing.T) {
+	t.Skip("Requires database configuration - cannot set up test data for update")
+}

@@ -637,3 +637,376 @@ func TestGetDeviceSettingsExportHandler_JSONResponseFormat(t *testing.T) {
 		assert.Equal(t, result[0].ApplicationType, "stb")
 	}
 }
+
+// TestGetDeviceSettingsByIdHandler_Success tests successful retrieval by ID
+func TestGetDeviceSettingsByIdHandler_Success(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	deviceSettings := &logupload.DeviceSettings{
+		ID:                "test-get-by-id",
+		Name:              "Test Get By ID",
+		CheckOnReboot:     true,
+		SettingsAreActive: true,
+		ApplicationType:   "stb",
+		Schedule: logupload.Schedule{
+			Type:              "ActNow",
+			Expression:        "0 0 * * *",
+			TimeZone:          "UTC",
+			TimeWindowMinutes: json.Number("0"),
+		},
+	}
+	CreateDeviceSettings(deviceSettings, "stb")
+
+	url := "/xconfAdminService/dcm/deviceSettings/test-get-by-id"
+	req, err := http.NewRequest("GET", url, nil)
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+	body, err := ioutil.ReadAll(res.Body)
+	assert.NilError(t, err)
+
+	var result logupload.DeviceSettings
+	err = json.Unmarshal(body, &result)
+	assert.NilError(t, err)
+	assert.Equal(t, result.ID, "test-get-by-id")
+	assert.Equal(t, result.Name, "Test Get By ID")
+}
+
+// TestGetDeviceSettingsByIdHandler_NotFound tests non-existent ID
+func TestGetDeviceSettingsByIdHandler_NotFound(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	url := "/xconfAdminService/dcm/deviceSettings/non-existent-id"
+	req, err := http.NewRequest("GET", url, nil)
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, res.StatusCode, http.StatusNotFound)
+}
+
+// TestGetDeviceSettingsByIdHandler_EmptyID tests empty ID parameter
+// Note: Empty ID doesn't match GetAll endpoint - it returns 404
+func TestGetDeviceSettingsByIdHandler_EmptyID(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	url := "/xconfAdminService/dcm/deviceSettings/"
+	req, err := http.NewRequest("GET", url, nil)
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	// Empty ID results in 404 as it's looking for empty string ID
+	assert.Check(t, res.StatusCode == http.StatusOK || res.StatusCode == http.StatusNotFound)
+}
+
+// TestDeleteDeviceSettingsByIdHandler_Success tests successful deletion
+func TestDeleteDeviceSettingsByIdHandler_Success(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	deviceSettings := &logupload.DeviceSettings{
+		ID:                "test-delete-success",
+		Name:              "Test Delete Success",
+		CheckOnReboot:     false,
+		SettingsAreActive: false,
+		ApplicationType:   "stb",
+		Schedule: logupload.Schedule{
+			Type:              "ActNow",
+			Expression:        "0 0 * * *",
+			TimeZone:          "UTC",
+			TimeWindowMinutes: json.Number("0"),
+		},
+	}
+	CreateDeviceSettings(deviceSettings, "stb")
+
+	url := "/xconfAdminService/dcm/deviceSettings/test-delete-success"
+	req, err := http.NewRequest("DELETE", url, nil)
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, res.StatusCode, http.StatusNoContent)
+
+	// Verify it's actually deleted
+	req2, _ := http.NewRequest("GET", url, nil)
+	req2.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+	res2 := ExecuteRequest(req2, router).Result()
+	defer res2.Body.Close()
+	assert.Equal(t, res2.StatusCode, http.StatusNotFound)
+}
+
+// TestDeleteDeviceSettingsByIdHandler_NotFound tests deleting non-existent setting
+func TestDeleteDeviceSettingsByIdHandler_NotFound(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	url := "/xconfAdminService/dcm/deviceSettings/non-existent-delete-id"
+	req, err := http.NewRequest("DELETE", url, nil)
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, res.StatusCode, http.StatusNotFound)
+}
+
+// TestCreateDeviceSettingsHandler_InvalidJSON tests create with invalid JSON
+func TestCreateDeviceSettingsHandler_InvalidJSON(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	url := "/xconfAdminService/dcm/deviceSettings"
+	invalidJSON := []byte(`{"id":"invalid"invalid json}`)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(invalidJSON))
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
+}
+
+// TestUpdateDeviceSettingsHandler_Success tests successful update
+func TestUpdateDeviceSettingsHandler_Success(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	// Create initial setting
+	deviceSettings := &logupload.DeviceSettings{
+		ID:                "test-update-id",
+		Name:              "Original Name",
+		CheckOnReboot:     false,
+		SettingsAreActive: false,
+		ApplicationType:   "stb",
+		Schedule: logupload.Schedule{
+			Type:              "ActNow",
+			Expression:        "0 0 * * *",
+			TimeZone:          "UTC",
+			TimeWindowMinutes: json.Number("0"),
+		},
+	}
+	CreateDeviceSettings(deviceSettings, "stb")
+
+	// Update it
+	updatedSettings := &logupload.DeviceSettings{
+		ID:                "test-update-id",
+		Name:              "Updated Name",
+		CheckOnReboot:     true,
+		SettingsAreActive: true,
+		ApplicationType:   "stb",
+		Schedule: logupload.Schedule{
+			Type:              "ActNow",
+			Expression:        "0 0 * * *",
+			TimeZone:          "UTC",
+			TimeWindowMinutes: json.Number("0"),
+		},
+	}
+	updatedJSON, _ := json.Marshal(updatedSettings)
+
+	url := "/xconfAdminService/dcm/deviceSettings"
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(updatedJSON))
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+
+	// Verify the update
+	getReq, _ := http.NewRequest("GET", "/xconfAdminService/dcm/deviceSettings/test-update-id", nil)
+	getReq.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+	getRes := ExecuteRequest(getReq, router).Result()
+	defer getRes.Body.Close()
+
+	body, _ := ioutil.ReadAll(getRes.Body)
+	var result logupload.DeviceSettings
+	json.Unmarshal(body, &result)
+	assert.Equal(t, result.Name, "Updated Name")
+	assert.Equal(t, result.CheckOnReboot, true)
+}
+
+// TestUpdateDeviceSettingsHandler_NotExisting tests updating non-existent setting
+func TestUpdateDeviceSettingsHandler_NotExisting(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	deviceSettings := &logupload.DeviceSettings{
+		ID:                "non-existent-update",
+		Name:              "Should Not Update",
+		CheckOnReboot:     false,
+		SettingsAreActive: false,
+		ApplicationType:   "stb",
+	}
+	settingsJSON, _ := json.Marshal(deviceSettings)
+
+	url := "/xconfAdminService/dcm/deviceSettings"
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(settingsJSON))
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, res.StatusCode, http.StatusConflict)
+}
+
+// TestPostDeviceSettingsFilteredWithParamsHandler_WithFilters tests filtered endpoint with context
+func TestPostDeviceSettingsFilteredWithParamsHandler_WithFilters(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	// Create test data
+	ds1 := &logupload.DeviceSettings{
+		ID:                "filter-test-1",
+		Name:              "Filter Test 1",
+		CheckOnReboot:     true,
+		SettingsAreActive: true,
+		ApplicationType:   "stb",
+		Schedule: logupload.Schedule{
+			Type:              "ActNow",
+			Expression:        "0 0 * * *",
+			TimeZone:          "UTC",
+			TimeWindowMinutes: json.Number("0"),
+		},
+	}
+	ds2 := &logupload.DeviceSettings{
+		ID:                "filter-test-2",
+		Name:              "Filter Test 2",
+		CheckOnReboot:     false,
+		SettingsAreActive: false,
+		ApplicationType:   "stb",
+		Schedule: logupload.Schedule{
+			Type:              "ActNow",
+			Expression:        "0 0 * * *",
+			TimeZone:          "UTC",
+			TimeWindowMinutes: json.Number("0"),
+		},
+	}
+	CreateDeviceSettings(ds1, "stb")
+	CreateDeviceSettings(ds2, "stb")
+
+	url := "/xconfAdminService/dcm/deviceSettings/filtered?pageNumber=1&pageSize=10"
+	filterContext := map[string]interface{}{}
+	filterJSON, _ := json.Marshal(filterContext)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(filterJSON))
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+	body, _ := ioutil.ReadAll(res.Body)
+	var results []logupload.DeviceSettings
+	json.Unmarshal(body, &results)
+	assert.Check(t, len(results) >= 2)
+}
+
+// TestPostDeviceSettingsFilteredWithParamsHandler_InvalidPagination tests invalid pagination
+func TestPostDeviceSettingsFilteredWithParamsHandler_InvalidPagination(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	url := "/xconfAdminService/dcm/deviceSettings/filtered?pageNumber=0&pageSize=0"
+	filterContext := map[string]interface{}{}
+	filterJSON, _ := json.Marshal(filterContext)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(filterJSON))
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
+}
+
+// TestGetDeviceSettingsExportHandler_MultipleApplicationTypes tests export for different app types
+func TestGetDeviceSettingsExportHandler_MultipleApplicationTypes(t *testing.T) {
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
+	// Create formulas for different app types
+	formula1 := &logupload.DCMGenericRule{
+		ID:              "export-formula-stb",
+		Name:            "STB Formula",
+		ApplicationType: "stb",
+	}
+	formula2 := &logupload.DCMGenericRule{
+		ID:              "export-formula-xhome",
+		Name:            "XHome Formula",
+		ApplicationType: "xhome",
+	}
+	ds1 := &logupload.DeviceSettings{
+		ID:                "export-formula-stb",
+		Name:              "STB Settings",
+		CheckOnReboot:     true,
+		SettingsAreActive: true,
+		ApplicationType:   "stb",
+		Schedule: logupload.Schedule{
+			Type:              "ActNow",
+			Expression:        "0 0 * * *",
+			TimeZone:          "UTC",
+			TimeWindowMinutes: json.Number("0"),
+		},
+	}
+	ds2 := &logupload.DeviceSettings{
+		ID:                "export-formula-xhome",
+		Name:              "XHome Settings",
+		CheckOnReboot:     false,
+		SettingsAreActive: false,
+		ApplicationType:   "xhome",
+		Schedule: logupload.Schedule{
+			Type:              "ActNow",
+			Expression:        "0 0 * * *",
+			TimeZone:          "UTC",
+			TimeWindowMinutes: json.Number("0"),
+		},
+	}
+
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula1.ID, formula1)
+	ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula2.ID, formula2)
+	CreateDeviceSettings(ds1, "stb")
+	CreateDeviceSettings(ds2, "xhome")
+
+	// Test STB export
+	url := "/xconfAdminService/dcm/deviceSettings/export"
+	req, err := http.NewRequest("GET", url, nil)
+	assert.NilError(t, err)
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
+
+	res := ExecuteRequest(req, router).Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+	body, _ := ioutil.ReadAll(res.Body)
+	var stbResults []*logupload.DeviceSettings
+	json.Unmarshal(body, &stbResults)
+
+	// Should only have STB results
+	nonNilCount := 0
+	for _, ds := range stbResults {
+		if ds != nil && ds.ApplicationType == "stb" {
+			nonNilCount++
+		}
+	}
+	assert.Check(t, nonNilCount >= 1)
+}

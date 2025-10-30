@@ -345,3 +345,259 @@ func TestJSONMarshallingApprovedChange(t *testing.T) {
 		t.Fatalf("expected json marshal success")
 	}
 }
+
+// ============================================================================
+// Additional Coverage Tests for change_service.go
+// ============================================================================
+
+func TestGetApprovedAll_EmptyResult(t *testing.T) {
+	// Clean all approved changes first
+	approvedChanges := xchange.GetApprovedChangeList()
+	for _, ac := range approvedChanges {
+		xchange.DeleteOneApprovedChange(ac.ID)
+	}
+
+	r := httptest.NewRequest(http.MethodGet, "/?applicationType=stb", nil)
+	result, err := GetApprovedAll(r)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result == nil {
+		t.Fatalf("expected non-nil result")
+	}
+}
+
+func TestGetApprovedAll_WithResults(t *testing.T) {
+	defer func() {
+		approvedChanges := xchange.GetApprovedChangeList()
+		for _, ac := range approvedChanges {
+			xchange.DeleteOneApprovedChange(ac.ID)
+		}
+	}()
+
+	// Create test approved changes
+	p1 := buildPermTelemetryProfile("gaa1", "gaa1", shared.STB)
+	c1 := buildChange("gaac1", xwchange.Create, nil, p1, shared.STB, "author1")
+	ac1 := xwchange.ApprovedChange(*c1)
+	if err := xchange.SetOneApprovedChange(&ac1); err != nil {
+		t.Fatalf("failed to create approved change: %v", err)
+	}
+
+	r := httptest.NewRequest(http.MethodGet, "/?applicationType=stb", nil)
+	result, err := GetApprovedAll(r)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) == 0 {
+		t.Fatalf("expected results")
+	}
+}
+
+func TestFindByContextForChanges_EmptyContext(t *testing.T) {
+	context := make(map[string]string)
+	result := FindByContextForChanges(context)
+	if result == nil {
+		t.Fatalf("expected non-nil result")
+	}
+}
+
+func TestFindByContextForChanges_WithApplicationType(t *testing.T) {
+	defer func() {
+		changes := xchange.GetChangeList()
+		for _, c := range changes {
+			xchange.DeleteOneChange(c.ID)
+		}
+	}()
+
+	p := buildPermTelemetryProfile("fbc1", "fbc1", shared.STB)
+	c := buildChange("fbcc1", xwchange.Create, nil, p, shared.STB, "testauthor")
+	if err := xchange.CreateOneChange(c); err != nil {
+		t.Fatalf("failed to create change: %v", err)
+	}
+
+	context := map[string]string{"applicationType": shared.STB}
+	result := FindByContextForChanges(context)
+	if len(result) == 0 {
+		t.Fatalf("expected results")
+	}
+}
+
+func TestFindByContextForApprovedChanges_EmptyContext(t *testing.T) {
+	context := make(map[string]string)
+	result := FindByContextForApprovedChanges(dummyRequest(), context)
+	if result == nil {
+		t.Fatalf("expected non-nil result")
+	}
+}
+
+func TestFindByContextForApprovedChanges_WithApplicationType(t *testing.T) {
+	defer func() {
+		approvedChanges := xchange.GetApprovedChangeList()
+		for _, ac := range approvedChanges {
+			xchange.DeleteOneApprovedChange(ac.ID)
+		}
+	}()
+
+	p := buildPermTelemetryProfile("fbac1", "fbac1", shared.STB)
+	c := buildChange("fbacc1", xwchange.Create, nil, p, shared.STB, "testauthor")
+	ac := xwchange.ApprovedChange(*c)
+	if err := xchange.SetOneApprovedChange(&ac); err != nil {
+		t.Fatalf("failed to create approved change: %v", err)
+	}
+
+	context := map[string]string{"applicationType": shared.STB}
+	result := FindByContextForApprovedChanges(dummyRequest(), context)
+	if len(result) == 0 {
+		t.Fatalf("expected results")
+	}
+}
+
+func TestGetChangesByEntityIds_EmptyList(t *testing.T) {
+	ids := []string{}
+	result, err := GetChangesByEntityIds(&ids)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result == nil {
+		t.Fatalf("expected non-nil result")
+	}
+}
+
+func TestGetChangesByEntityIds_NonExistent(t *testing.T) {
+	ids := []string{"nonexistent1", "nonexistent2"}
+	_, err := GetChangesByEntityIds(&ids)
+	if err == nil {
+		t.Fatalf("expected error for nonexistent entities")
+	}
+}
+
+func TestCancelApprovedChangesByEntityId_EmptyList(t *testing.T) {
+	err := CancelApprovedChangesByEntityId(dummyRequest(), []string{}, []string{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCancelApprovedChangesByEntityId_NonExistent(t *testing.T) {
+	err := CancelApprovedChangesByEntityId(dummyRequest(), []string{"nonexistent"}, []string{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRevertChanges_EmptyList(t *testing.T) {
+	ids := []string{}
+	result, err := RevertChanges(dummyRequest(), &ids)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result == nil {
+		t.Fatalf("expected non-nil result")
+	}
+}
+
+func TestApproveChanges_EmptyList(t *testing.T) {
+	ids := []string{}
+	result, err := ApproveChanges(dummyRequest(), &ids)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result == nil {
+		t.Fatalf("expected non-nil result")
+	}
+}
+
+// Tests for low coverage functions
+func TestLogAndCollectChangeException(t *testing.T) {
+	change := buildChange("change1", xwchange.Create, nil, buildPermTelemetryProfile("p1", "P1", "stb"), "stb", "admin")
+	errorMessages := make(map[string]string)
+	testErr := http.ErrAbortHandler
+
+	logAndCollectChangeException(change, testErr, errorMessages)
+
+	if _, exists := errorMessages[change.ID]; !exists {
+		t.Fatalf("error message should have been collected")
+	}
+	if errorMessages[change.ID] == "" {
+		t.Fatalf("error message should not be empty")
+	}
+}
+
+func TestBeforeSavingChange_MissingID(t *testing.T) {
+	change := buildChange("", xwchange.Create, nil, buildPermTelemetryProfile("p1", "P1", "stb"), "stb", "admin")
+
+	err := beforeSavingChange(dummyRequest(), change)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if change.ID == "" {
+		t.Fatalf("ID should have been generated")
+	}
+}
+
+func TestBeforeSavingApprovedChange_Validation(t *testing.T) {
+	change := buildChange("c1", xwchange.Create, nil, buildPermTelemetryProfile("p1", "P1", "stb"), "stb", "admin")
+	change.ApprovedUser = "approver"
+
+	err := beforeSavingApprovedChange(dummyRequest(), change)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCancelApprovedChangesByEntityId_EmptyEntityList(t *testing.T) {
+	entityIds := []string{}
+	excludeIds := []string{}
+
+	err := CancelApprovedChangesByEntityId(dummyRequest(), entityIds, excludeIds)
+	if err != nil {
+		t.Fatalf("unexpected error for empty list: %v", err)
+	}
+}
+
+func TestRevertChanges_NonExistent(t *testing.T) {
+	ids := []string{"nonexistent1"}
+	_, err := RevertChanges(dummyRequest(), &ids)
+	if err == nil {
+		t.Fatalf("expected error for non-existent approved change")
+	}
+}
+
+func TestApproveChanges_NonExistent(t *testing.T) {
+	ids := []string{"nonexistent1"}
+	_, err := ApproveChanges(dummyRequest(), &ids)
+	if err == nil {
+		t.Fatalf("expected error for non-existent change")
+	}
+}
+
+func TestGroupApprovedChange_SingleChange(t *testing.T) {
+	p1 := buildPermTelemetryProfile("p1", "P1", "stb")
+	c1 := buildChange("c1", xwchange.Create, nil, p1, "stb", "admin")
+	c1.ApprovedUser = "approver"
+	ac1 := xwchange.ApprovedChange(*c1)
+
+	result := make(map[string][]*xwchange.ApprovedChange)
+	groupApprovedChange(&ac1, result)
+
+	if len(result) != 1 || len(result["p1"]) != 1 {
+		t.Fatalf("expected single group with single change")
+	}
+}
+
+func TestGetChangeIds_MultipleChanges(t *testing.T) {
+	p1 := buildPermTelemetryProfile("p1", "P1", "stb")
+	p2 := buildPermTelemetryProfile("p2", "P2", "stb")
+	c1 := buildChange("c1", xwchange.Create, nil, p1, "stb", "admin")
+	c2 := buildChange("c2", xwchange.Create, nil, p2, "stb", "admin")
+
+	changes := []*xwchange.Change{c1, c2}
+	entityIds := getChangeIds(changes)
+
+	if len(entityIds) != 2 {
+		t.Fatalf("expected 2 entity IDs, got %d", len(entityIds))
+	}
+	if entityIds[0] != "p1" || entityIds[1] != "p2" {
+		t.Fatalf("unexpected entity IDs: %v", entityIds)
+	}
+}

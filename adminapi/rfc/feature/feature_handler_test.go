@@ -344,6 +344,239 @@ func TestGetFeaturesByIdList(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
+// Error path tests
+
+func TestGetFeatureByIdHandler_ExportNotFound(t *testing.T) {
+	cleanDB()
+	url := fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb&export=true", uuid.NewString())
+	r := httptest.NewRequest(http.MethodGet, url, nil)
+	rr := executeRequest(r)
+	assert.Equal(t, http.StatusNotFound, rr.Code)
+}
+
+func TestDeleteFeatureByIdHandler_FeatureUsedInRule(t *testing.T) {
+	cleanDB()
+	fe := buildFeatureEntity("stb")
+	feat, _ := FeaturePost(fe.CreateFeature())
+	// Create a feature rule that uses this feature
+	fr := &xwrfc.FeatureRule{
+		Id:              uuid.NewString(),
+		Name:            "TestFeatureRule",
+		ApplicationType: "stb",
+		FeatureIds:      []string{feat.ID},
+		Priority:        1,
+	}
+	db.GetCachedSimpleDao().SetOne(db.TABLE_FEATURE_CONTROL_RULE, fr.Id, fr)
+	// Try to delete the feature - should fail with conflict
+	url := fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb", feat.ID)
+	r := httptest.NewRequest(http.MethodDelete, url, nil)
+	rr := executeRequest(r)
+	assert.Equal(t, http.StatusConflict, rr.Code)
+	assert.Contains(t, rr.Body.String(), "linked to FeatureRule")
+}
+
+func TestPostFeatureHandler_InvalidJson(t *testing.T) {
+	cleanDB()
+	invalidJson := []byte(`{invalid json}`)
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(invalidJson))
+	rr := executeRequest(r)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestPostFeatureHandler_InvalidFeature_BlankName(t *testing.T) {
+	cleanDB()
+	fe := buildFeatureEntity("stb")
+	// Make feature invalid by setting blank Name
+	fe.Name = ""
+	b, _ := json.Marshal(fe)
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
+	rr := executeRequest(r)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "Name is blank")
+}
+
+func TestPostFeatureHandler_DuplicateFeatureInstance(t *testing.T) {
+	cleanDB()
+	fe1 := buildFeatureEntity("stb")
+	_, _ = FeaturePost(fe1.CreateFeature())
+	// Create new feature with different ID but same FeatureName
+	fe2 := buildFeatureEntity("stb")
+	fe2.FeatureName = fe1.FeatureName
+	fe2.FeatureInstance = fe1.FeatureInstance
+	b, _ := json.Marshal(fe2)
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
+	rr := executeRequest(r)
+	assert.Equal(t, http.StatusConflict, rr.Code)
+	assert.Contains(t, rr.Body.String(), "featureInstance already exists")
+}
+
+func TestPutFeatureHandler_InvalidJson(t *testing.T) {
+	cleanDB()
+	invalidJson := []byte(`{invalid json}`)
+	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(invalidJson))
+	rr := executeRequest(r)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestPutFeatureHandler_EmptyId(t *testing.T) {
+	cleanDB()
+	fe := buildFeatureEntity("stb")
+	fe.ID = ""
+	b, _ := json.Marshal(fe)
+	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
+	rr := executeRequest(r)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "Entity id is empty")
+}
+
+func TestPutFeatureHandler_InvalidFeature_BlankName(t *testing.T) {
+	cleanDB()
+	fe := buildFeatureEntity("stb")
+	_, _ = FeaturePost(fe.CreateFeature())
+	// Make feature invalid - blank Name should fail validation
+	fe.Name = ""
+	b, _ := json.Marshal(fe)
+	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
+	rr := executeRequest(r)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "Name is blank")
+}
+
+func TestPutFeatureHandler_DuplicateFeatureInstance(t *testing.T) {
+	cleanDB()
+	fe1 := buildFeatureEntity("stb")
+	_, _ = FeaturePost(fe1.CreateFeature())
+	fe2 := buildFeatureEntity("stb")
+	_, _ = FeaturePost(fe2.CreateFeature())
+	// Try to update fe2 with fe1's FeatureName
+	fe2.FeatureName = fe1.FeatureName
+	fe2.FeatureInstance = fe1.FeatureInstance
+	b, _ := json.Marshal(fe2)
+	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
+	rr := executeRequest(r)
+	assert.Equal(t, http.StatusConflict, rr.Code)
+	assert.Contains(t, rr.Body.String(), "featureInstance already exists")
+}
+
+func TestPutFeatureEntitiesHandler_InvalidJson(t *testing.T) {
+	cleanDB()
+	invalidJson := []byte(`{invalid json}`)
+	req := httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature/entities?applicationType=stb", bytes.NewReader(invalidJson))
+	rr := httptest.NewRecorder()
+	xw := xwhttp.NewXResponseWriter(rr)
+	xw.SetBody(string(invalidJson))
+	PutFeatureEntitiesHandler(xw, req)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestPostFeatureEntitiesHandler_InvalidJson(t *testing.T) {
+	cleanDB()
+	invalidJson := []byte(`{invalid json}`)
+	req := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature/entities?applicationType=stb", bytes.NewReader(invalidJson))
+	rr := httptest.NewRecorder()
+	xw := xwhttp.NewXResponseWriter(rr)
+	xw.SetBody(string(invalidJson))
+	PostFeatureEntitiesHandler(xw, req)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestGetFeaturesFilteredHandler_MissingPageParams(t *testing.T) {
+	cleanDB()
+	body := map[string]string{}
+	b, _ := json.Marshal(body)
+	// Missing pageNumber and pageSize
+	url := "/xconfAdminService/rfc/feature/filtered?applicationType=stb"
+	req := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(b))
+	rr := httptest.NewRecorder()
+	xw := xwhttp.NewXResponseWriter(rr)
+	xw.SetBody(string(b))
+	GetFeaturesFilteredHandler(xw, req)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestGetFeaturesFilteredHandler_InvalidPageSize(t *testing.T) {
+	cleanDB()
+	body := map[string]string{}
+	b, _ := json.Marshal(body)
+	// Invalid pageSize (negative)
+	url := "/xconfAdminService/rfc/feature/filtered?pageNumber=1&pageSize=-5&applicationType=stb"
+	req := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(b))
+	rr := httptest.NewRecorder()
+	xw := xwhttp.NewXResponseWriter(rr)
+	xw.SetBody(string(b))
+	GetFeaturesFilteredHandler(xw, req)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestGetFeaturesFilteredHandler_InvalidPageNumber(t *testing.T) {
+	cleanDB()
+	body := map[string]string{}
+	b, _ := json.Marshal(body)
+	// Invalid pageNumber (non-numeric)
+	url := "/xconfAdminService/rfc/feature/filtered?pageNumber=abc&pageSize=10&applicationType=stb"
+	req := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(b))
+	rr := httptest.NewRecorder()
+	xw := xwhttp.NewXResponseWriter(rr)
+	xw.SetBody(string(b))
+	GetFeaturesFilteredHandler(xw, req)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestGetFeaturesFilteredHandler_InvalidBodyJson(t *testing.T) {
+	cleanDB()
+	invalidJson := []byte(`{invalid}`)
+	url := "/xconfAdminService/rfc/feature/filtered?pageNumber=1&pageSize=10&applicationType=stb"
+	req := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(invalidJson))
+	rr := httptest.NewRecorder()
+	xw := xwhttp.NewXResponseWriter(rr)
+	xw.SetBody(string(invalidJson))
+	GetFeaturesFilteredHandler(xw, req)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestGetFeaturesByIdListHandler_InvalidJson(t *testing.T) {
+	cleanDB()
+	invalidJson := []byte(`{invalid json}`)
+	req := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature/byIdList?applicationType=stb", bytes.NewReader(invalidJson))
+	rr := httptest.NewRecorder()
+	xw := xwhttp.NewXResponseWriter(rr)
+	xw.SetBody(string(invalidJson))
+	GetFeaturesByIdListHandler(xw, req)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "Unable to extract featureIds")
+}
+
+func TestGetFeaturesByIdListHandler_EmptyList(t *testing.T) {
+	cleanDB()
+	emptyList := []string{}
+	b, _ := json.Marshal(emptyList)
+	req := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature/byIdList?applicationType=stb", bytes.NewReader(b))
+	rr := httptest.NewRecorder()
+	xw := xwhttp.NewXResponseWriter(rr)
+	xw.SetBody(string(b))
+	GetFeaturesByIdListHandler(xw, req)
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestGetFeaturesFilteredHandler_WithContextFilters(t *testing.T) {
+	cleanDB()
+	// Create a few features
+	for i := 0; i < 3; i++ {
+		fe := buildFeatureEntity("stb")
+		_, _ = FeaturePost(fe.CreateFeature())
+	}
+	// Filter with context
+	contextMap := map[string]string{"key": "value"}
+	b, _ := json.Marshal(contextMap)
+	url := "/xconfAdminService/rfc/feature/filtered?pageNumber=1&pageSize=10&applicationType=stb"
+	req := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(b))
+	rr := httptest.NewRecorder()
+	xw := xwhttp.NewXResponseWriter(rr)
+	xw.SetBody(string(b))
+	GetFeaturesFilteredHandler(xw, req)
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
 // helpers
 func executeRequest(r *http.Request) *httptest.ResponseRecorder {
 	// Wrap with XResponseWriter so handlers that cast can read drained body
