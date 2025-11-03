@@ -24,17 +24,15 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
+	"github.com/google/uuid"
 	"github.com/rdkcentral/xconfadmin/common"
 	owcommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	core "github.com/rdkcentral/xconfadmin/shared"
-
+	"github.com/rdkcentral/xconfadmin/util"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
-
-	"github.com/rdkcentral/xconfadmin/util"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -455,6 +453,15 @@ func GetUserNameOrUnknown(r *http.Request) string {
 	} else {
 		return userName
 	}
+}
+
+func GetDistributedLockOwner(r *http.Request) (owner string) {
+	owner = r.Header.Get(xhttp.AUTH_SUBJECT)
+	if owner == "" {
+		owner = uuid.New().String()
+		log.Warnf("Unknown user; setting lock owner to a random UUID: %s", owner)
+	}
+	return
 }
 
 func ExtractBodyAndCheckPermissions(obj owcommon.ApplicationTypeAware, w http.ResponseWriter, r *http.Request, entityType string) (applicationType string, err error) {

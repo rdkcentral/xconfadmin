@@ -25,17 +25,16 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
-	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
+	"github.com/rdkcentral/xconfadmin/adminapi/queries"
 	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	core "github.com/rdkcentral/xconfadmin/shared"
 	requtil "github.com/rdkcentral/xconfadmin/util"
-
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	log "github.com/sirupsen/logrus"
 )
 
 func GetDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
@@ -197,7 +196,17 @@ func DeleteDcmFormulaByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ds.GetCacheManager().ForceSyncChanges()
+	owner := auth.GetDistributedLockOwner(r)
+	if err := dcmRuleTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := dcmRuleTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
 
 	respEntity := DeleteDcmFormulabyId(id, appType)
 	if respEntity.Error != nil {
@@ -228,7 +237,18 @@ func CreateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ds.GetCacheManager().ForceSyncChanges()
+	owner := auth.GetDistributedLockOwner(r)
+	if err := dcmRuleTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := dcmRuleTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
 	respEntity := CreateDcmRule(&newdfrule, appType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -264,7 +284,18 @@ func UpdateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ds.GetCacheManager().ForceSyncChanges()
+	owner := auth.GetDistributedLockOwner(r)
+	if err := dcmRuleTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := dcmRuleTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
 	respEntity := UpdateDcmRule(&newdfrule, appType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -425,10 +456,19 @@ func DcmFormulaChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, errorStr)
 		return
 	}
-	ds.GetCacheManager().ForceSyncChanges()
 
-	formulaUpdateMutex.Lock()
-	defer formulaUpdateMutex.Unlock()
+	owner := auth.GetDistributedLockOwner(r)
+	if err := dcmRuleTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := dcmRuleTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
 	formulaToUpdate := logupload.GetOneDCMGenericRule(id)
 	if formulaToUpdate == nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("unable to find dcm formula  with id  %s", id))
@@ -453,7 +493,7 @@ func DcmFormulaChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, entry := range reorganizedFormulas {
-		if err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, entry.GetID(), entry); err != nil {
+		if err = db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, entry.GetID(), entry); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("unable to update dcm rule: %s", err))
 			return
 		}
@@ -496,7 +536,18 @@ func ImportDcmFormulaWithOverwriteHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	ds.GetCacheManager().ForceSyncChanges()
+	owner := auth.GetDistributedLockOwner(r)
+	if err := dcmRuleTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := dcmRuleTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
 	respEntity := importFormula(&formulaWithSettings, overwrite, appType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -536,7 +587,18 @@ func ImportDcmFormulasHandler(w http.ResponseWriter, r *http.Request) {
 
 	failedToImport := []string{}
 	successfulImportIds := []string{}
-	ds.GetCacheManager().ForceSyncChanges()
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := dcmRuleTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := dcmRuleTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
 
 	for _, formulaWithSettings := range formulaWithSettingsList {
 		formulaWithSettings := formulaWithSettings
@@ -583,7 +645,18 @@ func PostDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ds.GetCacheManager().ForceSyncChanges()
+	owner := auth.GetDistributedLockOwner(r)
+	if err := dcmRuleTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := dcmRuleTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
 	result := importFormulas(formulaWithSettingsList, appType, false)
 
 	res, err := xhttp.ReturnJsonResponse(result, r)
@@ -615,7 +688,18 @@ func PutDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ds.GetCacheManager().ForceSyncChanges()
+	owner := auth.GetDistributedLockOwner(r)
+	if err := dcmRuleTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := dcmRuleTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
 	result := importFormulas(formulaWithSettingsList, appType, true)
 
 	res, err := xhttp.ReturnJsonResponse(result, r)

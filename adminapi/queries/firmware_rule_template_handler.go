@@ -25,23 +25,19 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rdkcentral/xconfadmin/common"
-
-	ds "github.com/rdkcentral/xconfwebconfig/db"
-	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
-	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
-	xutil "github.com/rdkcentral/xconfwebconfig/util"
-
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	"github.com/rdkcentral/xconfadmin/common"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfadmin/util"
-
 	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	xutil "github.com/rdkcentral/xconfwebconfig/util"
+	log "github.com/sirupsen/logrus"
 )
 
 func GetFirmwareRuleTemplateFilteredHandler(w http.ResponseWriter, r *http.Request) {
@@ -194,7 +190,19 @@ func PostFirmwareRuleTemplateImportAllHandler(w http.ResponseWriter, r *http.Req
 			return
 		}
 	}
-	ds.GetCacheManager().ForceSyncChanges()
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
 	result := importOrUpdateAllFirmwareRTs(firmwareRTs, successTag, failedTag)
 	response, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
@@ -240,6 +248,18 @@ func PostFirmwareRuleTemplateImportHandler(w http.ResponseWriter, r *http.Reques
 		return wrappedFrts[i].Entity.ID < wrappedFrts[j].Entity.ID
 	})
 
+	owner := auth.GetDistributedLockOwner(r)
+	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
 	for _, wrapped := range wrappedFrts {
 		entity := wrapped.Entity
 		if entity.ID == "" {
@@ -276,6 +296,7 @@ func PostFirmwareRuleTemplateImportHandler(w http.ResponseWriter, r *http.Reques
 	}
 	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
+
 func PostChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err := auth.CanWrite(r, auth.COMMON_ENTITY); err != nil {
 		xhttp.AdminError(w, err)
@@ -303,9 +324,18 @@ func PostChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("Invalid priority value %s", newPrioVar))
 		return
 	}
-	ds.GetCacheManager().ForceSyncChanges()
-	firmwareRuleTemplateUpdateMutex.Lock()
-	defer firmwareRuleTemplateUpdateMutex.Unlock()
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
 
 	//TODO: basically this is the same action get all and filtered by action type
 	allTemplates, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS("")
@@ -328,6 +358,7 @@ func PostChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	xhttp.WriteXconfResponse(w, http.StatusOK, res)
 }
+
 func PostFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err := auth.CanWrite(r, auth.COMMON_ENTITY); err != nil {
 		xhttp.AdminError(w, err)
@@ -353,13 +384,24 @@ func PostFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	owner := auth.GetDistributedLockOwner(r)
+	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
 	_, err := corefw.GetFirmwareRuleTemplateOneDB(firmwareRT.ID)
 	if err == nil {
 		response := "firmwareRuleTemplate already exists for " + firmwareRT.ID
 		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, response)
 		return
 	}
-	ds.GetCacheManager().ForceSyncChanges()
 	if _, err = createFirmwareRT(firmwareRT); err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -391,7 +433,19 @@ func PutFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, response)
 		return
 	}
-	ds.GetCacheManager().ForceSyncChanges()
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
 	entityOnDb, err := corefw.GetFirmwareRuleTemplateOneDB(firmwareRT.ID)
 	if err == nil {
 		err = updateFirmwareRT(firmwareRT, entityOnDb)
@@ -437,9 +491,19 @@ func DeleteFirmwareRuleTemplateByIdHandler(w http.ResponseWriter, r *http.Reques
 		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, "FirmwareRuleTemplate "+id+" is used by Rule(s): "+strings.Join(usedByRules[:], ","))
 		return
 	}
-	ds.GetCacheManager().ForceSyncChanges()
-	firmwareRuleTemplateUpdateMutex.Lock()
-	defer firmwareRuleTemplateUpdateMutex.Unlock()
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
 	templateToDelete, err := corefw.GetFirmwareRuleTemplateOneDBWithId(id)
 	if err == nil {
 		err = db.GetCachedSimpleDao().DeleteOne(db.TABLE_FIRMWARE_RULE_TEMPLATE, id)
@@ -554,7 +618,19 @@ func PostFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Requ
 		}
 		return entities[i].Priority < entities[j].Priority
 	})
-	ds.GetCacheManager().ForceSyncChanges()
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		_, err := corefw.GetFirmwareRuleTemplateOneDB(entity.ID)
@@ -611,7 +687,19 @@ func PutFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Reque
 		}
 		return entities[i].Priority < entities[j].Priority
 	})
-	ds.GetCacheManager().ForceSyncChanges()
+
+	owner := auth.GetDistributedLockOwner(r)
+	if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	defer func() {
+		if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			log.Error(err)
+		}
+	}()
+	db.GetCacheManager().ForceSyncChanges()
+
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entityOnDb, err := corefw.GetFirmwareRuleTemplateOneDB(entity.ID)

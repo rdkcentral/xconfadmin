@@ -21,28 +21,23 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/rdkcentral/xconfwebconfig/dataapi"
-
+	"github.com/gorilla/mux"
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
-	change "github.com/rdkcentral/xconfadmin/adminapi/change"
+	"github.com/rdkcentral/xconfadmin/adminapi/canary"
+	"github.com/rdkcentral/xconfadmin/adminapi/change"
 	ipmacrule "github.com/rdkcentral/xconfadmin/adminapi/configuration/ip-macrule"
-	dcm "github.com/rdkcentral/xconfadmin/adminapi/dcm"
-	firmware "github.com/rdkcentral/xconfadmin/adminapi/firmware"
-	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
+	"github.com/rdkcentral/xconfadmin/adminapi/dcm"
+	"github.com/rdkcentral/xconfadmin/adminapi/firmware"
+	"github.com/rdkcentral/xconfadmin/adminapi/lockdown"
+	"github.com/rdkcentral/xconfadmin/adminapi/queries"
 	"github.com/rdkcentral/xconfadmin/adminapi/rfc/feature"
-	setting "github.com/rdkcentral/xconfadmin/adminapi/setting"
-	telemetry "github.com/rdkcentral/xconfadmin/adminapi/telemetry"
+	"github.com/rdkcentral/xconfadmin/adminapi/setting"
+	"github.com/rdkcentral/xconfadmin/adminapi/telemetry"
+	"github.com/rdkcentral/xconfadmin/adminapi/xcrp"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
-	"github.com/rdkcentral/xconfadmin/taggingapi/tag"
-
-	db "github.com/rdkcentral/xconfwebconfig/db"
-
-	"github.com/rdkcentral/xconfadmin/adminapi/canary"
-	"github.com/rdkcentral/xconfadmin/adminapi/lockdown"
-	"github.com/rdkcentral/xconfadmin/adminapi/xcrp"
-
-	"github.com/gorilla/mux"
+	"github.com/rdkcentral/xconfwebconfig/dataapi"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rs/cors"
 )
 
@@ -53,13 +48,11 @@ func XconfSetup(server *xhttp.WebconfigServer, r *mux.Router) {
 	WebServerInjection(server, xc)
 	db.ConfigInjection(server.XW_XconfServer.ServerConfig.Config)
 	dataapi.WebServerInjection(server.XW_XconfServer, xc)
-	//dao.WebServerInjection(server)
 	auth.WebServerInjection(server)
 	dataapi.RegisterTables()
 
-	InitDatastoreContextForAdmin()
-	initDB()
 	db.GetCacheManager() // Initialize cache manager
+	initDB()
 
 	if server.XW_XconfServer.ServerConfig.GetBoolean("xconfwebconfig.xconf.dataservice_enabled") {
 		dataapi.XconfSetup(server.XW_XconfServer, r)
@@ -72,11 +65,6 @@ func XconfSetup(server *xhttp.WebconfigServer, r *mux.Router) {
 	if server.XW_XconfServer.ServerConfig.GetBoolean("xconfwebconfig.xconf.enable_tagging_service_admin") {
 		taggingapi.XconfTaggingServiceSetup(server, r)
 	}
-}
-
-// Register Tables specific to Admin Service
-func InitDatastoreContextForAdmin() {
-	db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf)
 }
 
 func TrailingSlashRemover(next http.Handler) http.Handler {
