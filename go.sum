@@ -98,8 +98,8 @@ github.com/prometheus/common v0.45.0 h1:2BGz0eBc2hdMDLnO/8n0jeB3oPrt2D08CekT0lne
 github.com/prometheus/common v0.45.0/go.mod h1:YJmSTw9BoKxJplESWWxlbyttQR4uaEcGyv9MZjVOJsY=
 github.com/prometheus/procfs v0.12.0 h1:jluTpSng7V9hY0O2R9DzzJHYb2xULk9VTR1V1R/k6Bo=
 github.com/prometheus/procfs v0.12.0/go.mod h1:pcuDEFsWDnvcgNzo4EEweacyhjeA9Zk3cnaOZAZEfOo=
-github.com/rdkcentral/xconfwebconfig v1.0.10 h1:XHIoW5cpRUfyNRJhIpw7TCwJRXYAmrb3fRfj7CGvZNc=
-github.com/rdkcentral/xconfwebconfig v1.0.10/go.mod h1:e6kwCd+4ru5tDy190JGGcNtc6LyOSdmVaHDRbOcX+5Y=
+github.com/rdkcentral/xconfwebconfig v1.0.11 h1:Mtch9IbbRStqs0Hkb5tbIieaVd0FSN9E+LbKXwRrv+c=
+github.com/rdkcentral/xconfwebconfig v1.0.11/go.mod h1:e6kwCd+4ru5tDy190JGGcNtc6LyOSdmVaHDRbOcX+5Y=
 github.com/rogpeppe/go-internal v1.12.0 h1:exVL4IDcn6na9z1rAb56Vxr+CgyK3nn3O+epU5NdKM8=
 github.com/rogpeppe/go-internal v1.12.0/go.mod h1:E+RYuTGaKKdloAfM02xzb0FW3Paa99yedzYV+kq4uf4=
 github.com/rs/cors v1.11.1 h1:eU3gRzXLRK57F5rKMGMZURNdIG4EoAmX8k94r9wXWHA=
