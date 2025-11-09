@@ -14,6 +14,7 @@ import (
 	percentageutils "github.com/rdkcentral/xconfadmin/taggingapi/percentage"
 	proto "github.com/rdkcentral/xconfadmin/taggingapi/proto/generated"
 	"github.com/rdkcentral/xconfadmin/util"
+	taggingds "github.com/rdkcentral/xconfwebconfig/tag"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
@@ -44,7 +45,7 @@ func GetGroupServiceConnector() *http.GroupServiceConnector {
 	return http.WebConfServer.GroupServiceConnector
 }
 
-func GetTagById(id string) *Tag {
+func GetTagById(id string) *taggingds.Tag {
 	tag := GetOneTag(SetTagPrefix(id))
 	if tag != nil {
 		tag.Id = RemovePrefixFromTag(tag.Id)
@@ -146,7 +147,7 @@ func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<-
 	}
 }
 
-func RemoveMemberFromTag(id string, member string) (*Tag, error) {
+func RemoveMemberFromTag(id string, member string) (*taggingds.Tag, error) {
 	id = SetTagPrefix(id)
 	normalizedEcm := ToNormalizedEcm(member)
 	err := GetGroupServiceSyncConnector().RemoveGroupMembers(normalizedEcm, id)
@@ -244,7 +245,7 @@ func removeMembersFromXdasTag(id string, members []string) ([]string, error) {
 	return removeFromXconf, nil
 }
 
-func saveOrRemove(tag *Tag) error {
+func saveOrRemove(tag *taggingds.Tag) error {
 	if len(tag.Members) > 0 {
 		return SaveTag(tag)
 	} else {
@@ -273,7 +274,7 @@ func DeleteTag(id string) error {
 	return DeleteOneTag(id)
 }
 
-func deleteTagFromXdas(tag *Tag) (*Tag, error) {
+func deleteTagFromXdas(tag *taggingds.Tag) (*taggingds.Tag, error) {
 	var removedMembers []string
 	var err error
 	for _, member := range tag.Members.ToSlice() {
