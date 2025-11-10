@@ -433,11 +433,19 @@ func TestUpdateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	createResp := CreateLogRepoSettings(repo, "stb")
+	assert.Equal(t, http.StatusCreated, createResp.Status)
 
 	// Try to update with different app type in parameter
-	repo.ApplicationType = "xhome"
-	respEntity := UpdateLogRepoSettings(repo, "xhome")
+	// Create a new object to avoid pointer reference issues
+	updateRepo := &logupload.UploadRepository{
+		ID:              "test-id",
+		Name:            "Test Repo",
+		URL:             "http://test.com",
+		Protocol:        "HTTP",
+		ApplicationType: "xhome",
+	}
+	respEntity := UpdateLogRepoSettings(updateRepo, "xhome")
 
 	assert.Equal(t, http.StatusConflict, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)

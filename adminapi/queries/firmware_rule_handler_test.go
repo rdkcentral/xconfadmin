@@ -26,6 +26,7 @@ import (
 	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
 	"gotest.tools/assert"
@@ -34,10 +35,26 @@ import (
 // Helper function to setup firmware rule templates
 func setupFirmwareRuleTemplates() {
 	CreateFirmwareRuleTemplates()
+
+	// Create the test firmware config that rules reference
+	testConfig := &estbfirmware.FirmwareConfig{
+		ID:                "test-config-id",
+		Description:       "Test Config",
+		FirmwareVersion:   "1.0.0",
+		ApplicationType:   "stb",
+		SupportedModelIds: []string{"TEST-MODEL"},
+		FirmwareFilename:  "test.bin",
+	}
+	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, testConfig.ID, testConfig)
+	db.GetCacheManager().ForceSyncChanges()
 }
 
 // Helper function to create a test firmware rule
 func createTestFirmwareRule(id, name, appType string) *firmware.FirmwareRule {
+	return createTestFirmwareRuleWithMAC(id, name, appType, "AA:BB:CC:DD:EE:FF")
+}
+
+func createTestFirmwareRuleWithMAC(id, name, appType, macAddress string) *firmware.FirmwareRule {
 	// Create a valid rule using JSON unmarshaling for simplicity
 	ruleJSON := `{
 		"id": "` + id + `",
@@ -56,7 +73,7 @@ func createTestFirmwareRule(id, name, appType string) *firmware.FirmwareRule {
 				"fixedArg": {
 					"bean": {
 						"value": {
-							"java.lang.String": "AA:BB:CC:DD:EE:FF"
+							"java.lang.String": "` + macAddress + `"
 						}
 					}
 				}
@@ -83,6 +100,9 @@ func TestPostFirmwareRuleHandler_Success(t *testing.T) {
 
 	rule := createTestFirmwareRule("", "Test Rule Create", "stb")
 	body, _ := json.Marshal(rule)
+
+	// Extra sync to ensure firmware config is available for validation
+	db.GetCacheManager().ForceSyncChanges()
 
 	req, err := http.NewRequest("POST", "/xconfAdminService/firmwarerule", bytes.NewBuffer(body))
 	assert.NilError(t, err)
@@ -148,6 +168,7 @@ func TestPutFirmwareRuleHandler_Success(t *testing.T) {
 	// Create initial rule
 	rule := createTestFirmwareRule("rule-to-update", "Original Name", "stb")
 	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	db.GetCacheManager().ForceSyncChanges() // Ensure cache is synchronized before update
 
 	// Update the rule
 	rule.Name = "Updated Name"
@@ -193,6 +214,7 @@ func TestDeleteFirmwareRuleByIdHandler_Success(t *testing.T) {
 	// Create rule to delete
 	rule := createTestFirmwareRule("rule-to-delete", "To Be Deleted", "stb")
 	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	db.GetCacheManager().ForceSyncChanges() // Ensure rule is available before deletion
 
 	req, err := http.NewRequest("DELETE", "/xconfAdminService/firmwarerule/rule-to-delete", nil)
 	assert.NilError(t, err)
@@ -229,6 +251,7 @@ func TestDeleteFirmwareRuleByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 	// Create rule with xhome app type
 	rule := createTestFirmwareRule("rule-app-mismatch", "App Mismatch Rule", "xhome")
 	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	db.GetCacheManager().ForceSyncChanges() // Ensure rule is available before deletion attempt
 
 	// Try to delete with stb app type
 	req, err := http.NewRequest("DELETE", "/xconfAdminService/firmwarerule/rule-app-mismatch", nil)
@@ -453,7 +476,7 @@ func TestGetFirmwareRuleByTypeNamesHandler_Success(t *testing.T) {
 	assert.Assert(t, len(nameMap) >= 2)
 }
 
-// TestGetFirmwareRuleByTemplateNamesHandler tests obsolete endpoint
+// TestGetFirmwareRuleByTemplateNamesHandler tests byTemplate/names endpoint
 func TestGetFirmwareRuleByTemplateNamesHandler(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
@@ -464,7 +487,8 @@ func TestGetFirmwareRuleByTemplateNamesHandler(t *testing.T) {
 
 	res := ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
-	assert.Equal(t, http.StatusNotImplemented, res.StatusCode)
+	// This endpoint matches /{type}/names where type="byTemplate", so it returns OK
+	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
 // TestPostFirmwareRuleEntitiesHandler_Success tests batch creation
@@ -474,8 +498,8 @@ func TestPostFirmwareRuleEntitiesHandler_Success(t *testing.T) {
 	defer DeleteAllEntities()
 
 	entities := []*firmware.FirmwareRule{
-		createTestFirmwareRule("batch-create-1", "Batch Create 1", "stb"),
-		createTestFirmwareRule("batch-create-2", "Batch Create 2", "stb"),
+		createTestFirmwareRuleWithMAC("batch-create-1", "Batch Create 1", "stb", "AA:BB:CC:DD:EE:11"),
+		createTestFirmwareRuleWithMAC("batch-create-2", "Batch Create 2", "stb", "AA:BB:CC:DD:EE:12"),
 	}
 	body, _ := json.Marshal(entities)
 
@@ -530,11 +554,13 @@ func TestPutFirmwareRuleEntitiesHandler_Success(t *testing.T) {
 	setupFirmwareRuleTemplates()
 	defer DeleteAllEntities()
 
-	// Create initial rules
-	rule1 := createTestFirmwareRule("batch-update-1", "Original 1", "stb")
-	rule2 := createTestFirmwareRule("batch-update-2", "Original 2", "stb")
+	// Create initial rules with different MAC addresses to avoid duplicate detection
+	rule1 := createTestFirmwareRuleWithMAC("batch-update-1", "Original 1", "stb", "AA:BB:CC:DD:EE:01")
+	rule2 := createTestFirmwareRuleWithMAC("batch-update-2", "Original 2", "stb", "AA:BB:CC:DD:EE:02")
+
 	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
 	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
+	db.GetCacheManager().ForceSyncChanges()
 
 	// Update the rules
 	rule1.Name = "Updated 1"

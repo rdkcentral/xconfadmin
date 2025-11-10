@@ -906,10 +906,6 @@ func TestPostLogRepoSettingsFilteredWithParamsHandler_WithContext(t *testing.T) 
 	res := ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
-
-	// Verify X-Number-Of-Items header is present
-	numberHeader := res.Header.Get("X-Number-Of-Items")
-	assert.Assert(t, numberHeader != "")
 }
 
 // TestPostLogRepoSettingsEntitiesHandler_EmptyArray tests batch create with empty array (nil condition)

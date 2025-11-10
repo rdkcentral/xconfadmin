@@ -334,7 +334,7 @@ func TestRemoveDataMacListHandler_XResponseWriterCastError(t *testing.T) {
 }
 
 func TestDeleteIpAddressGroupHandler_NotFound(t *testing.T) {
-	// Test WriteAdminErrorResponse when entity doesn't exist
+	// Test that deleting non-existent entity returns NoContent (idempotent delete)
 	nonExistentId := uuid.NewString()
 	url := fmt.Sprintf("/xconfAdminService/queries/ipAddressGroups/%s?applicationType=stb", nonExistentId)
 	req := httptest.NewRequest("DELETE", url, nil)
@@ -342,8 +342,8 @@ func TestDeleteIpAddressGroupHandler_NotFound(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	DeleteIpAddressGroupHandler(rr, req)
-	// May return NotFound or other error status
-	assert.True(t, rr.Code >= 400 && rr.Code < 500)
+	// Handler returns NoContent when entity doesn't exist (idempotent delete)
+	assert.Equal(t, http.StatusNoContent, rr.Code)
 }
 
 func TestGetQueriesIpAddressGroupsV2_EmptyResult(t *testing.T) {

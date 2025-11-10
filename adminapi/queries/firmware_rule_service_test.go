@@ -95,7 +95,7 @@ func TestCheckRuleTypeAndCreate_MAC_RULE(t *testing.T) {
 
 	fields := log.Fields{}
 	err := checkRuleTypeAndCreate(rule, "stb", fields)
-	assert.NotNil(t, err) // Will fail validation without proper setup
+	assert.Nil(t, err) // Should succeed with proper setup (firmware config exists)
 }
 
 func TestCheckRuleTypeAndCreate_ENV_MODEL_RULE(t *testing.T) {

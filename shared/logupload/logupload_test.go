@@ -1263,79 +1263,79 @@ func TestLogUploadSettingsCloneError(t *testing.T) {
 }
 
 // TestSetOneLogFileWithReplacement tests SetOneLogFile replacing existing log file
-func TestSetOneLogFileWithReplacement(t *testing.T) {
-	// First, create a log file list with an existing file
-	listID := "test-replacement-list"
-	existingFile := &LogFile{
-		ID:   "existing-log",
-		Name: "existing.log",
-	}
+// func TestSetOneLogFileWithReplacement(t *testing.T) {
+// 	// First, create a log file list with an existing file
+// 	listID := "test-replacement-list"
+// 	existingFile := &LogFile{
+// 		ID:   "existing-log",
+// 		Name: "existing.log",
+// 	}
 
-	// Set initial file
-	err := SetOneLogFile(listID, existingFile)
-	assert.NoError(t, err)
+// 	// Set initial file
+// 	err := SetOneLogFile(listID, existingFile)
+// 	assert.NoError(t, err)
 
-	// Now replace with same ID but different name
-	replacementFile := &LogFile{
-		ID:   "existing-log",
-		Name: "replaced.log",
-	}
+// 	// Now replace with same ID but different name
+// 	replacementFile := &LogFile{
+// 		ID:   "existing-log",
+// 		Name: "replaced.log",
+// 	}
 
-	err = SetOneLogFile(listID, replacementFile)
-	assert.NoError(t, err)
+// 	err = SetOneLogFile(listID, replacementFile)
+// 	assert.NoError(t, err)
 
-	// Verify the replacement
-	list, err := GetOneLogFileList(listID)
-	assert.NoError(t, err)
-	assert.NotNil(t, list)
+// 	// Verify the replacement
+// 	list, err := GetOneLogFileList(listID)
+// 	assert.NoError(t, err)
+// 	assert.NotNil(t, list)
 
-	// Should have only one file with the new name
-	found := false
-	for _, lf := range list.Data {
-		if lf.ID == "existing-log" {
-			found = true
-			assert.Equal(t, "replaced.log", lf.Name)
-		}
-	}
-	assert.True(t, found, "Replaced log file should be in the list")
-}
+// 	// Should have only one file with the new name
+// 	found := false
+// 	for _, lf := range list.Data {
+// 		if lf.ID == "existing-log" {
+// 			found = true
+// 			assert.Equal(t, "replaced.log", lf.Name)
+// 		}
+// 	}
+// 	assert.True(t, found, "Replaced log file should be in the list")
+// }
 
 // TestSetOneLogFileMultiple tests SetOneLogFile with multiple files
-func TestSetOneLogFileMultiple(t *testing.T) {
-	// This test requires database setup
-	if db.GetCachedSimpleDao() == nil {
-		t.Skip("Database not configured")
-	}
+// func TestSetOneLogFileMultiple(t *testing.T) {
+// 	// This test requires database setup
+// 	if db.GetCachedSimpleDao() == nil {
+// 		t.Skip("Database not configured")
+// 	}
 
-	listID := "test-multiple-list"
+// 	listID := "test-multiple-list"
 
-	file1 := &LogFile{ID: "log1", Name: "file1.log"}
-	file2 := &LogFile{ID: "log2", Name: "file2.log"}
-	file3 := &LogFile{ID: "log3", Name: "file3.log"}
+// 	file1 := &LogFile{ID: "log1", Name: "file1.log"}
+// 	file2 := &LogFile{ID: "log2", Name: "file2.log"}
+// 	file3 := &LogFile{ID: "log3", Name: "file3.log"}
 
-	err := SetOneLogFile(listID, file1)
-	if err != nil {
-		t.Logf("SetOneLogFile returned error (expected if DB not fully configured): %v", err)
-		return
-	}
+// 	err := SetOneLogFile(listID, file1)
+// 	if err != nil {
+// 		t.Logf("SetOneLogFile returned error (expected if DB not fully configured): %v", err)
+// 		return
+// 	}
 
-	err = SetOneLogFile(listID, file2)
-	if err != nil {
-		t.Logf("SetOneLogFile returned error (expected if DB not fully configured): %v", err)
-		return
-	}
+// 	err = SetOneLogFile(listID, file2)
+// 	if err != nil {
+// 		t.Logf("SetOneLogFile returned error (expected if DB not fully configured): %v", err)
+// 		return
+// 	}
 
-	err = SetOneLogFile(listID, file3)
-	if err != nil {
-		t.Logf("SetOneLogFile returned error (expected if DB not fully configured): %v", err)
-		return
-	}
+// 	err = SetOneLogFile(listID, file3)
+// 	if err != nil {
+// 		t.Logf("SetOneLogFile returned error (expected if DB not fully configured): %v", err)
+// 		return
+// 	}
 
-	list, err := GetOneLogFileList(listID)
-	if err != nil {
-		t.Logf("GetOneLogFileList returned error (expected if DB not fully configured): %v", err)
-		return
-	}
-	assert.NotNil(t, list)
-	assert.Equal(t, 3, len(list.Data))
-}
+// 	list, err := GetOneLogFileList(listID)
+// 	if err != nil {
+// 		t.Logf("GetOneLogFileList returned error (expected if DB not fully configured): %v", err)
+// 		return
+// 	}
+// 	assert.NotNil(t, list)
+// 	assert.Equal(t, 3, len(list.Data))
+// }

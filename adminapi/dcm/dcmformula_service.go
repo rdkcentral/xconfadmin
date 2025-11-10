@@ -368,6 +368,7 @@ func importFormula(formulaWithSettings *logupload.FormulaWithSettings, overwrite
 			return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("DeviceSettings ApplicationType mismatch"), nil)
 		}
 		if util.IsBlank(deviceSettings.Schedule.TimeZone) {
+			deviceSettings.Schedule.TimeZone = logupload.UTC
 			if logUploadSettings != nil {
 				logUploadSettings.Schedule.TimeZone = logupload.UTC
 			}

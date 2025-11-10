@@ -127,17 +127,27 @@ func UpdatePrioritizablePriorityAndReorganize(newItem core.Prioritizable, itemsL
 	sort.Slice(itemsList, func(i, j int) bool {
 		return itemsList[i].GetPriority() < itemsList[j].GetPriority()
 	})
+	actualOldPriority := priority
+	newPriority := newItem.GetPriority()
+	itemFound := false
 	if len(itemsList) > 0 {
 		for i, item := range itemsList {
 			if item.GetID() == newItem.GetID() {
+				// Save the actual priority before replacement
+				actualOldPriority = item.GetPriority()
+				// Temporarily set new item to old priority for reorganization logic
+				newItem.SetPriority(actualOldPriority)
 				itemsList[i] = newItem
+				itemFound = true
 				break
 			}
 		}
-	} else {
+	}
+	if !itemFound {
+		// New item being added - don't modify its priority
 		itemsList = append(itemsList, newItem)
 	}
-	return reorganizePrioritizablePriorities(itemsList, priority, newItem.GetPriority())
+	return reorganizePrioritizablePriorities(itemsList, actualOldPriority, newPriority)
 }
 
 func UpdatePrioritizablesPriorities(itemsList []core.Prioritizable, oldPriority int, newPriority int) []core.Prioritizable {

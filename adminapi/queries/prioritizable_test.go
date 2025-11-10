@@ -34,7 +34,11 @@ func TestPackPriorities(t *testing.T) {
 	items := []core.Prioritizable{item1, item2, item3}
 	altered := PackPriorities(items, item2)
 	assert.NotNil(t, altered)
-	assert.Equal(t, altered[0].GetPriority(), 1)
+	// After deleting item2 (priority 2), only item3 changes priority from 3 to 2
+	// item1 stays at priority 1 (unchanged, not in altered list)
+	assert.Equal(t, 1, len(altered))
+	assert.Equal(t, 2, altered[0].GetPriority())
+	assert.Equal(t, "c", altered[0].GetID())
 }
 
 func TestPackPriorities_ErrorCase(t *testing.T) {
