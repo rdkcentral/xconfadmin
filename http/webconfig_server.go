@@ -40,11 +40,7 @@ const (
 	DEV_PROFILE = "dev"
 )
 
-var (
-	WebConfServer              *WebconfigServer
-	DistributedLockTableTTL    int
-	DistributedLockTableRowTTL int
-)
+var WebConfServer *WebconfigServer
 
 // len(response) < lowerBound               ==> convert to json
 // lowerBound <= len(response) < upperBound ==> stay string
@@ -62,18 +58,25 @@ type WebconfigServer struct {
 	*GroupServiceSyncConnector
 	*taggingapi_config.TaggingApiConfig
 	*tracing.XpcTracer
-	tlsConfig          *tls.Config
-	notLoggedHeaders   []string
-	metricsEnabled     bool
-	testOnly           bool
-	AppName            string
-	ServerOriginId     string
-	IdpLoginPath       string
-	IdpLogoutPath      string
-	IdpLogoutAfterPath string
-	IdpCodePath        string
-	IdpUrlPath         string
-	VerifyStageHost    bool
+	tlsConfig             *tls.Config
+	DistributedLockConfig *DistributedLockConfig
+	notLoggedHeaders      []string
+	metricsEnabled        bool
+	testOnly              bool
+	AppName               string
+	ServerOriginId        string
+	IdpLoginPath          string
+	IdpLogoutPath         string
+	IdpLogoutAfterPath    string
+	IdpCodePath           string
+	IdpUrlPath            string
+	VerifyStageHost       bool
+}
+
+type DistributedLockConfig struct {
+	Enabled  bool
+	TableTTL int
+	RowTTL   int
 }
 
 type ExternalConnectors struct {
@@ -129,6 +132,14 @@ func NewTlsConfig(conf *configuration.Config) (*tls.Config, error) {
 	}, nil
 }
 
+func NewDistributedLockConfig(conf *configuration.Config) *DistributedLockConfig {
+	return &DistributedLockConfig{
+		Enabled:  conf.GetBoolean("xconfwebconfig.xconf.distributed_lock_enabled", false),
+		TableTTL: int(conf.GetInt32("xconfwebconfig.xconf.distributed_lock_table_ttl", 5)),
+		RowTTL:   int(conf.GetInt32("xconfwebconfig.xconf.distributed_lock_table_row_ttl", 2)),
+	}
+}
+
 // testOnly=true ==> running unit test
 func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseClient, ec *ExternalConnectors) *WebconfigServer {
 	if ec == nil {
@@ -136,9 +147,6 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 	}
 	conf := sc.Config
 	var err error
-
-	DistributedLockTableTTL = int(conf.GetInt32("xconfwebconfig.xconf.distributed_lock_table_ttl", 5))
-	DistributedLockTableRowTTL = int(conf.GetInt32("xconfwebconfig.xconf.distributed_lock_table_row_ttl", 2))
 
 	// appname from config
 	appName := strings.Split(conf.GetString("xconfwebconfig.code_git_commit", "xconfadmin-xconf"), "-")[0]
@@ -189,6 +197,7 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 		GroupServiceConnector:     NewGroupServiceConnector(conf, tlsConfig),
 		GroupServiceSyncConnector: NewGroupServiceSyncConnector(conf, tlsConfig),
 		TaggingApiConfig:          taggingapi_config.NewTaggingApiConfig(conf),
+		DistributedLockConfig:     NewDistributedLockConfig(conf),
 		XconfConnector:            NewXconfConnector(conf, "xconf", tlsConfig),
 		XW_XconfServer:            xhttp.NewXconfServer(sc, testOnly, ec.xw_ect),
 		IdpLoginPath:              idpLoginPath,

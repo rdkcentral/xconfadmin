@@ -196,16 +196,22 @@ func DeleteDcmFormulaByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	owner := auth.GetDistributedLockOwner(r)
-	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
-		return
-	}
-	defer func() {
-		if err := dcmRuleTableLock.Unlock(owner); err != nil {
-			log.Error(err)
+	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
+		owner := auth.GetDistributedLockOwner(r)
+		if err := dcmRuleTableLock.Lock(owner); err != nil {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+			return
 		}
-	}()
+		defer func() {
+			if err := dcmRuleTableLock.Unlock(owner); err != nil {
+				log.Error(err)
+			}
+		}()
+	} else {
+		dcmRuleTableMutex.Lock()
+		defer dcmRuleTableMutex.Unlock()
+	}
+
 	db.GetCacheManager().ForceSyncChanges()
 
 	respEntity := DeleteDcmFormulabyId(id, appType)
@@ -237,16 +243,21 @@ func CreateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	owner := auth.GetDistributedLockOwner(r)
-	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
-		return
-	}
-	defer func() {
-		if err := dcmRuleTableLock.Unlock(owner); err != nil {
-			log.Error(err)
+	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
+		owner := auth.GetDistributedLockOwner(r)
+		if err := dcmRuleTableLock.Lock(owner); err != nil {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+			return
 		}
-	}()
+		defer func() {
+			if err := dcmRuleTableLock.Unlock(owner); err != nil {
+				log.Error(err)
+			}
+		}()
+	} else {
+		dcmRuleTableMutex.Lock()
+		defer dcmRuleTableMutex.Unlock()
+	}
 	db.GetCacheManager().ForceSyncChanges()
 
 	respEntity := CreateDcmRule(&newdfrule, appType)
@@ -284,16 +295,21 @@ func UpdateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	owner := auth.GetDistributedLockOwner(r)
-	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
-		return
-	}
-	defer func() {
-		if err := dcmRuleTableLock.Unlock(owner); err != nil {
-			log.Error(err)
+	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
+		owner := auth.GetDistributedLockOwner(r)
+		if err := dcmRuleTableLock.Lock(owner); err != nil {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+			return
 		}
-	}()
+		defer func() {
+			if err := dcmRuleTableLock.Unlock(owner); err != nil {
+				log.Error(err)
+			}
+		}()
+	} else {
+		dcmRuleTableMutex.Lock()
+		defer dcmRuleTableMutex.Unlock()
+	}
 	db.GetCacheManager().ForceSyncChanges()
 
 	respEntity := UpdateDcmRule(&newdfrule, appType)
@@ -457,16 +473,21 @@ func DcmFormulaChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	owner := auth.GetDistributedLockOwner(r)
-	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
-		return
-	}
-	defer func() {
-		if err := dcmRuleTableLock.Unlock(owner); err != nil {
-			log.Error(err)
+	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
+		owner := auth.GetDistributedLockOwner(r)
+		if err := dcmRuleTableLock.Lock(owner); err != nil {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+			return
 		}
-	}()
+		defer func() {
+			if err := dcmRuleTableLock.Unlock(owner); err != nil {
+				log.Error(err)
+			}
+		}()
+	} else {
+		dcmRuleTableMutex.Lock()
+		defer dcmRuleTableMutex.Unlock()
+	}
 	db.GetCacheManager().ForceSyncChanges()
 
 	formulaToUpdate := logupload.GetOneDCMGenericRule(id)
@@ -536,16 +557,21 @@ func ImportDcmFormulaWithOverwriteHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	owner := auth.GetDistributedLockOwner(r)
-	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
-		return
-	}
-	defer func() {
-		if err := dcmRuleTableLock.Unlock(owner); err != nil {
-			log.Error(err)
+	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
+		owner := auth.GetDistributedLockOwner(r)
+		if err := dcmRuleTableLock.Lock(owner); err != nil {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+			return
 		}
-	}()
+		defer func() {
+			if err := dcmRuleTableLock.Unlock(owner); err != nil {
+				log.Error(err)
+			}
+		}()
+	} else {
+		dcmRuleTableMutex.Lock()
+		defer dcmRuleTableMutex.Unlock()
+	}
 	db.GetCacheManager().ForceSyncChanges()
 
 	respEntity := importFormula(&formulaWithSettings, overwrite, appType)
@@ -588,16 +614,21 @@ func ImportDcmFormulasHandler(w http.ResponseWriter, r *http.Request) {
 	failedToImport := []string{}
 	successfulImportIds := []string{}
 
-	owner := auth.GetDistributedLockOwner(r)
-	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
-		return
-	}
-	defer func() {
-		if err := dcmRuleTableLock.Unlock(owner); err != nil {
-			log.Error(err)
+	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
+		owner := auth.GetDistributedLockOwner(r)
+		if err := dcmRuleTableLock.Lock(owner); err != nil {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+			return
 		}
-	}()
+		defer func() {
+			if err := dcmRuleTableLock.Unlock(owner); err != nil {
+				log.Error(err)
+			}
+		}()
+	} else {
+		dcmRuleTableMutex.Lock()
+		defer dcmRuleTableMutex.Unlock()
+	}
 	db.GetCacheManager().ForceSyncChanges()
 
 	for _, formulaWithSettings := range formulaWithSettingsList {
@@ -645,16 +676,21 @@ func PostDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	owner := auth.GetDistributedLockOwner(r)
-	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
-		return
-	}
-	defer func() {
-		if err := dcmRuleTableLock.Unlock(owner); err != nil {
-			log.Error(err)
+	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
+		owner := auth.GetDistributedLockOwner(r)
+		if err := dcmRuleTableLock.Lock(owner); err != nil {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+			return
 		}
-	}()
+		defer func() {
+			if err := dcmRuleTableLock.Unlock(owner); err != nil {
+				log.Error(err)
+			}
+		}()
+	} else {
+		dcmRuleTableMutex.Lock()
+		defer dcmRuleTableMutex.Unlock()
+	}
 	db.GetCacheManager().ForceSyncChanges()
 
 	result := importFormulas(formulaWithSettingsList, appType, false)
@@ -688,16 +724,21 @@ func PutDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	owner := auth.GetDistributedLockOwner(r)
-	if err := dcmRuleTableLock.Lock(owner); err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
-		return
-	}
-	defer func() {
-		if err := dcmRuleTableLock.Unlock(owner); err != nil {
-			log.Error(err)
+	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
+		owner := auth.GetDistributedLockOwner(r)
+		if err := dcmRuleTableLock.Lock(owner); err != nil {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
+			return
 		}
-	}()
+		defer func() {
+			if err := dcmRuleTableLock.Unlock(owner); err != nil {
+				log.Error(err)
+			}
+		}()
+	} else {
+		dcmRuleTableMutex.Lock()
+		defer dcmRuleTableMutex.Unlock()
+	}
 	db.GetCacheManager().ForceSyncChanges()
 
 	result := importFormulas(formulaWithSettingsList, appType, true)
