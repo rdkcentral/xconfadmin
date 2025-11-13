@@ -15,7 +15,7 @@ import (
 	"github.com/rdkcentral/xconfadmin/util"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
-	xwtagging "github.com/rdkcentral/xconfwebconfig/tagging"
+	xwtagging "github.com/rdkcentral/xconfwebconfig/tag"
 
 	log "github.com/sirupsen/logrus"
 )
