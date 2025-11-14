@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
@@ -39,6 +40,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var featureRuleTableMutex sync.Mutex
 var featureRuleTableLock = db.NewDistributedLock(db.TABLE_FEATURE_CONTROL_RULE, 10)
 
 func GetAllFeatureRulesByType(applicationType string) []*rfc.FeatureRule {

@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"net/http"
 
@@ -41,6 +42,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var fwRuleTemplateTableMutex sync.Mutex
 var fwRuleTemplateTableLock = db.NewDistributedLock(db.TABLE_FIRMWARE_RULE_TEMPLATE, 10)
 
 const (
