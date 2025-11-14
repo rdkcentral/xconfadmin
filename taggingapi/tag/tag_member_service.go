@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
@@ -206,12 +208,7 @@ func GetMembersV2Paginated(tagId string, limit int, cursor string) (*PaginatedMe
 	}
 
 	if len(populatedBuckets) == 0 {
-		log.Debugf("No populated buckets found for tag %s", tagId)
-		return &PaginatedMembersResponse{
-			Data:      []string{},
-			NextToken: "",
-			HasMore:   false,
-		}, nil
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf(NotFoundErrorMsg, tagId))
 	}
 
 	log.Debugf("Found %d populated buckets for tag %s", len(populatedBuckets), tagId)
@@ -707,8 +704,7 @@ func GetMembersV2NonPaginated(tagId string) ([]string, bool, error) {
 	}
 
 	if len(populatedBuckets) == 0 {
-		// Return empty array for non-existent tags (V1 compatible behavior)
-		return []string{}, false, nil
+		return nil, false, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf(NotFoundErrorMsg, tagId))
 	}
 
 	log.Infof("Fetching tag members for '%s' (non-paginated) with %d populated buckets", tagId, len(populatedBuckets))
