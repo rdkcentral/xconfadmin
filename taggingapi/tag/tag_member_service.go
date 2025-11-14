@@ -662,7 +662,8 @@ func deleteBucketMembers(tagId string, bucketId int) (int, error) {
 		}
 
 		if len(removedFromXdas) < len(chunk) {
-			return totalDeleted, fmt.Errorf("partial XDAS deletion: %d/%d members removed", len(removedFromXdas), len(chunk))
+			log.Warnf("partial XDAS deletion: %d/%d members removed", len(removedFromXdas), len(chunk))
+			return totalDeleted, nil
 		}
 
 		if len(chunk) < MaxBatchSizeV2 {
