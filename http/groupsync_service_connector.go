@@ -21,8 +21,8 @@ const (
 	TtlHeader                 = "Xttl"
 	OneYearTtl                = "31536000"
 
-	AddGroupMember    = "%s/v2/ft/%s"
-	RemoveGroupMember = "%s/v2/ft/%s?field=%s"
+	AddGroupMember    = "%s/ft/%s"
+	RemoveGroupMember = "%s/ft/%s?field=%s"
 )
 
 type GroupServiceSyncConnector struct {
