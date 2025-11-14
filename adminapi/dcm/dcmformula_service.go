@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/rdkcentral/xconfadmin/adminapi/queries"
@@ -45,6 +46,7 @@ const (
 	cDcmRulePageSize   = "pageSize"
 )
 
+var dcmRuleTableMutex sync.Mutex
 var dcmRuleTableLock = db.NewDistributedLock(db.TABLE_DCM_RULE, 10)
 
 func GetDcmFormulaAll() []*logupload.DCMGenericRule {

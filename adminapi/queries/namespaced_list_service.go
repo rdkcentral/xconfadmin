@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/rdkcentral/xconfadmin/common"
 	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
@@ -54,6 +55,7 @@ const (
 	RI_MAC_LIST = "RI_MAC_LIST"
 )
 
+var namedListTableMutex sync.Mutex
 var namedListTableLock = db.NewDistributedLock(db.TABLE_GENERIC_NS_LIST, 5)
 
 func GetNamespacedListIdsByType(typeName string) []string {
