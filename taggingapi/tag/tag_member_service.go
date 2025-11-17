@@ -53,9 +53,10 @@ type BucketedCursor struct {
 }
 
 type PaginatedMembersResponse struct {
-	Data      []string `json:"data"`
-	NextToken string   `json:"nextToken,omitempty"`
-	HasMore   bool     `json:"hasMore"`
+	Data       []string `json:"data"`
+	Data       []string `json:"data"`
+	NextCursor string   `json:"nextCursor,omitempty"`
+	HasMore    bool     `json:"hasMore"`
 }
 
 type PaginationParams struct {
@@ -224,7 +225,10 @@ func GetMembersV2Paginated(tagId string, limit int, cursor string) (*PaginatedMe
 		}
 	}
 
+	lastProcessedIndex := startIndex - 1 // Track the last bucket we processed
+
 	for i := startIndex; i < len(populatedBuckets) && len(allMembers) < limit; i++ {
+		lastProcessedIndex = i // Update as we process each bucket
 		bucketId := populatedBuckets[i]
 
 		lastMember := ""
@@ -250,9 +254,9 @@ func GetMembersV2Paginated(tagId string, limit int, cursor string) (*PaginatedMe
 			log.Debugf("Returning %d members for tag %s with more data in bucket %d",
 				len(allMembers), tagId, bucketId)
 			return &PaginatedMembersResponse{
-				Data:      allMembers,
-				NextToken: nextCursor,
-				HasMore:   true,
+				Data:       allMembers,
+				NextCursor: nextCursor,
+				HasMore:    true,
 			}, nil
 		}
 
@@ -260,18 +264,19 @@ func GetMembersV2Paginated(tagId string, limit int, cursor string) (*PaginatedMe
 	}
 
 	// Check if we have more populated buckets to process
-	hasMore := startIndex+len(allMembers)/limit < len(populatedBuckets)
+	// hasMore is true only if there are more buckets after the last one we processed
+	hasMore := lastProcessedIndex+1 < len(populatedBuckets)
 	var nextCursor string
-	if hasMore && len(populatedBuckets) > startIndex+1 {
-		nextBucketId := populatedBuckets[startIndex+1]
-		nextCursor = generateBucketedCursor(nextBucketId, "", len(allMembers))
+	if hasMore {
+		nextBucketId := populatedBuckets[lastProcessedIndex+1]
+		nextCursor = generateBucketedCursor(nextBucketId, "", 0)
 	}
 
 	log.Debugf("Returning %d members for tag %s, hasMore: %v", len(allMembers), tagId, hasMore)
 	return &PaginatedMembersResponse{
-		Data:      allMembers,
-		NextToken: nextCursor,
-		HasMore:   hasMore,
+		Data:       allMembers,
+		NextCursor: nextCursor,
+		HasMore:    hasMore,
 	}, nil
 }
 
