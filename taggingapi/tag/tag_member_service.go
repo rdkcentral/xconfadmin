@@ -54,7 +54,6 @@ type BucketedCursor struct {
 
 type PaginatedMembersResponse struct {
 	Data       []string `json:"data"`
-	Data       []string `json:"data"`
 	NextCursor string   `json:"nextCursor,omitempty"`
 	HasMore    bool     `json:"hasMore"`
 }
@@ -248,7 +247,6 @@ func GetMembersV2Paginated(tagId string, limit int, cursor string) (*PaginatedMe
 
 		needed := limit - len(allMembers)
 		if len(bucketMembers) > needed {
-			// Take only what we need from this bucket
 			allMembers = append(allMembers, bucketMembers[:needed]...)
 			nextCursor := generateBucketedCursor(bucketId, bucketMembers[needed-1], len(allMembers))
 			log.Debugf("Returning %d members for tag %s with more data in bucket %d",
