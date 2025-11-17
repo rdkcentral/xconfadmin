@@ -13,6 +13,7 @@ import (
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -265,7 +266,7 @@ func GetTagByIdV2Handler(w http.ResponseWriter, r *http.Request) {
 	xhttp.WriteXconfResponse(w, statusCode, respBytes)
 }
 
-// DeleteTagV2Handler deletes a tag and all its members from V2 storage
+// DeleteTagV2Handler deletes a tag and all its members from V2 storage asynchronously
 func DeleteTagV2Handler(w http.ResponseWriter, r *http.Request) {
 	id, found := mux.Vars(r)[common.Tag]
 	if !found {
@@ -273,16 +274,34 @@ func DeleteTagV2Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := DeleteTagV2(id)
+	populatedBuckets, err := getPopulatedBuckets(id)
 	if err != nil {
-		// Check if tag not found
-		if err.Error() == "tag not found" {
-			xhttp.WriteXconfResponse(w, http.StatusNotFound, []byte(fmt.Sprintf(NotFoundErrorMsg, id)))
-			return
-		}
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
 
-	xhttp.WriteXconfResponse(w, http.StatusNoContent, nil)
+	if len(populatedBuckets) == 0 {
+		xhttp.WriteXconfResponse(w, http.StatusNotFound, []byte(fmt.Sprintf(NotFoundErrorMsg, id)))
+		return
+	}
+
+	go func(tagId string) {
+		if err := DeleteTagV2(tagId); err != nil {
+			log.Errorf("Background deletion failed for tag '%s': %v", tagId, err)
+		}
+	}(id)
+
+	response := map[string]string{
+		"status":  "accepted",
+		"message": fmt.Sprintf("Tag '%s' deletion has been queued for processing", id),
+		"tag":     id,
+	}
+
+	respBytes, err := json.Marshal(response)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+
+	xhttp.WriteXconfResponse(w, http.StatusAccepted, respBytes)
 }
