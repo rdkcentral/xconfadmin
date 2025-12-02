@@ -4,137 +4,74 @@
 
 ```mermaid
 graph TB
-    subgraph "Client Layer"
-        RDK[RDK Devices]
-        UI[Web UI]
-        API[External APIs]
-    end
+    %% Clients
+    RDK[RDK Devices] 
+    Operators[Operators/Admins]
     
-    subgraph "Service Layer"
-        subgraph "XConf Admin - Port: 9001"
-            AdminAPI[Admin API Handler]
-            AdminCache[Built-in Cache<br/>Redis/In-Memory]
-            AdminLogic[Business Logic]
-        end
-        
-        subgraph "XConf WebConfig - Port: 9000"
-            WebAPI[WebConfig API]
-            WebCache[Built-in Cache<br/>Redis/In-Memory]
-            RulesEngine[Rules Engine]
-        end
-        
-        subgraph "XConf UI - Port: 8081"
-            UIServer[UI Server & Proxy]
-        end
-    end
+    %% XConf Services
+    UI[XConf UI<br/>Port: 8081<br/>Web Interface]
+    Admin[XConf Admin<br/>Port: 9001<br/>API + Cache]
+    WebConfig[XConf WebConfig<br/>Port: 9000<br/>Data Service + Cache]
     
-    subgraph "Data Layer"
-        Cassandra[(Cassandra Database)]
-    end
+    %% Database
+    DB[(Cassandra<br/>Database)]
     
-    subgraph "External Services"
-        SAT[SAT Service<br/>Authentication]
-        IDP[IDP Service<br/>Identity Provider]
-        Metrics[Prometheus<br/>Metrics]
-        Tracing[OTEL Collector<br/>Tracing]
-    end
+    %% Flow
+    RDK --> WebConfig
+    Operators --> UI
+    UI --> Admin
+    Admin --> DB
+    WebConfig --> DB
     
-    RDK -->|Configuration Requests| WebAPI
-    UI -->|User Interface| UIServer
-    API -->|Admin Operations| AdminAPI
-    
-    UIServer -->|Proxy Requests| AdminAPI
-    
-    WebAPI --> WebCache
-    WebCache -->|Cache Miss| RulesEngine
-    RulesEngine --> Cassandra
-    
-    AdminAPI --> AdminCache
-    AdminCache -->|Cache Miss| AdminLogic
-    AdminLogic --> Cassandra
-    
-    AdminLogic -->|Config Updates| WebCache
-    
-    AdminAPI --> SAT
-    AdminAPI --> IDP
-    WebAPI --> SAT
-    
-    AdminAPI --> Metrics
-    WebAPI --> Metrics
-    UIServer --> Metrics
-    
-    AdminAPI --> Tracing
-    WebAPI --> Tracing
-    
-    style AdminCache fill:#e1f5fe
-    style WebCache fill:#e1f5fe
-    style Cassandra fill:#f3e5f5
-    style SAT fill:#fff3e0
-    style IDP fill:#fff3e0
+    %% Styling
+    style UI fill:#e3f2fd
+    style Admin fill:#fff3e0
+    style WebConfig fill:#e8f5e8
+    style DB fill:#f3e5f5
 ```
 
 ## Deployment Architecture Diagram
 
 ```mermaid
 graph TB
-    subgraph "Load Balancer Layer"
-        LB[Load Balancer<br/>NGINX/HAProxy]
-    end
+    %% Load Balancer
+    LB[Load Balancer]
     
-    subgraph "Service Instances"
-        subgraph "XConf Admin Cluster"
-            XA1[Admin Instance 1<br/>Built-in Cache]
-            XA2[Admin Instance 2<br/>Built-in Cache]
-        end
-        
-        subgraph "XConf WebConfig Cluster"
-            WC1[WebConfig Instance 1<br/>Built-in Cache]
-            WC2[WebConfig Instance 2<br/>Built-in Cache]
-        end
-        
-        subgraph "XConf UI Cluster"
-            UI1[UI Instance 1]
-            UI2[UI Instance 2]
-        end
-    end
+    %% Service Instances
+    UI1[XConf UI]
+    UI2[XConf UI]
     
-    subgraph "Data Layer"
-        C1[(Cassandra<br/>Node 1)]
-        C2[(Cassandra<br/>Node 2)]
-        C3[(Cassandra<br/>Node 3)]
-    end
+    Admin1[XConf Admin]
+    Admin2[XConf Admin] 
     
-    subgraph "External Services"
-        SAT[SAT Service]
-        IDP[Identity Provider]
-        Prometheus[Prometheus]
-        OTEL[OTEL Collector]
-    end
+    Web1[XConf WebConfig]
+    Web2[XConf WebConfig]
     
-    LB --> XA1
-    LB --> XA2
-    LB --> WC1
-    LB --> WC2
+    %% Database Cluster
+    DB1[(Cassandra)]
+    DB2[(Cassandra)]
+    DB3[(Cassandra)]
+    
+    %% Connections
     LB --> UI1
     LB --> UI2
+    LB --> Admin1
+    LB --> Admin2
+    LB --> Web1
+    LB --> Web2
     
-    XA1 --> C1
-    XA2 --> C2
-    WC1 --> C1
-    WC2 --> C3
+    Admin1 --> DB1
+    Admin2 --> DB2
+    Web1 --> DB1
+    Web2 --> DB3
     
-    XA1 -.->|Cache Sync| XA2
-    WC1 -.->|Cache Sync| WC2
-    
-    XA1 --> SAT
-    XA2 --> SAT
-    WC1 --> SAT
-    WC2 --> SAT
-    
-    style XA1 fill:#e3f2fd
-    style XA2 fill:#e3f2fd
-    style WC1 fill:#e8f5e8
-    style WC2 fill:#e8f5e8
+    %% Styling
+    style UI1 fill:#e3f2fd
+    style UI2 fill:#e3f2fd
+    style Admin1 fill:#fff3e0
+    style Admin2 fill:#fff3e0
+    style Web1 fill:#e8f5e8
+    style Web2 fill:#e8f5e8
 ```
 
 ## How to Generate PNG
