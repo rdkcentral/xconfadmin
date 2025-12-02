@@ -125,7 +125,6 @@ sequenceDiagram
     participant Device as RDK Device
     participant WebConfig as XConf WebConfig
     participant Cache as Built-in Cache
-    participant Rules as Rules Engine
     participant DB as Cassandra
     
     Note over Device,DB: Device Configuration Request Process
@@ -142,25 +141,23 @@ sequenceDiagram
     else Cache Miss
         Cache-->>WebConfig: 3b. Cache Miss
         
-        WebConfig->>Rules: 4. Evaluate Rules
-        Note right of WebConfig: Apply device-specific rules
+        WebConfig->>DB: 4. Query Configurations
+        Note right of WebConfig: Get firmware rules, etc.
         
-        Rules->>DB: 5. Query Configurations
-        Note right of Rules: Get firmware rules, etc.
+        DB-->>WebConfig: 5. Return Config Data
         
-        DB-->>Rules: 6. Return Config Data
+        WebConfig->>WebConfig: 6. Evaluate Rules
+        Note right of WebConfig: Match device to config by priority
         
-        Rules->>Rules: 7. Process Rules
-        Note right of Rules: Match device to config
+        WebConfig->>WebConfig: 7. Process Configuration
+        Note right of WebConfig: Apply device-specific logic
         
-        Rules-->>WebConfig: 8. Computed Config
-        
-        WebConfig->>Cache: 9. Store in Cache
+        WebConfig->>Cache: 8. Store in Cache
         Note right of WebConfig: Cache for future requests
     end
     
-    WebConfig->>WebConfig: 10. Format Response
-    WebConfig-->>Device: 11. Return Configuration
+    WebConfig->>WebConfig: 9. Format Response
+    WebConfig-->>Device: 10. Return Configuration
     
     Note over Device,DB: Device applies received configuration
 ```
@@ -214,7 +211,6 @@ sequenceDiagram
     participant Device as RDK Device
     participant WebConfig as XConf WebConfig
     participant Cache as Built-in Cache
-    participant Rules as Rules Engine
     participant DB as Cassandra
     
     Note over Device,DB: Rule-Based Configuration Delivery
@@ -239,18 +235,18 @@ sequenceDiagram
         Note right of WebConfig: Store for reuse
     end
     
-    WebConfig->>Rules: 7. Evaluate Rules
-    Note right of Rules: Match device to rules by priority
+    WebConfig->>WebConfig: 7. Evaluate Rules
+    Note right of WebConfig: Match device to rules by priority
     
-    Rules->>Rules: 8. Apply Conditions
-    Note right of Rules: Check model, MAC, env, etc.
+    WebConfig->>WebConfig: 8. Apply Conditions
+    Note right of WebConfig: Check model, MAC, env, etc.
     
     alt Rule Matches
-        Rules->>DB: 9a. Get Firmware Config
-        DB-->>Rules: 10a. Return Config
-        Rules-->>WebConfig: 11a. Matched Configuration
+        WebConfig->>DB: 9a. Get Firmware Config
+        DB-->>WebConfig: 10a. Return Config
+        WebConfig->>WebConfig: 11a. Process Configuration
     else No Rule Match
-        Rules-->>WebConfig: 9b. Default Configuration
+        WebConfig->>WebConfig: 9b. Use Default Configuration
     end
     
     WebConfig->>Cache: 12. Cache Result
