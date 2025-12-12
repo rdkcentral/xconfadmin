@@ -78,7 +78,7 @@ func TestMain(m *testing.M) {
 
 	testConfigFile = "/app/xconfadmin/xconfadmin.conf"
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
-		testConfigFile = "../config/sample_xconfadmin.conf"
+		testConfigFile = "../../config/sample_xconfadmin.conf"
 		if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
 			panic(fmt.Errorf("config file problem %v", err))
 		}

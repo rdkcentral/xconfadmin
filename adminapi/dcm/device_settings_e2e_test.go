@@ -35,12 +35,13 @@ func ImportDeviceSettingsTableData(data []string, tabletype logupload.DeviceSett
 	var err error
 	for _, row := range data {
 		err = json.Unmarshal([]byte(row), &tabletype)
-		err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_DEVICE_SETTINGS, tabletype.ID, &tabletype)
+		err = setOneInDao(ds.TABLE_DEVICE_SETTINGS, tabletype.ID, &tabletype)
 
 	}
 	return err
 }
 func TestAllDeviceSettingsApis(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test: requires external package data retrieval
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -240,6 +241,7 @@ func performRequest(t *testing.T, router *mux.Router, url string, method string,
 
 // TestGetDeviceSettingsExportHandler_Success tests successful export with matching formulas and device settings
 func TestGetDeviceSettingsExportHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -284,9 +286,9 @@ func TestGetDeviceSettingsExportHandler_Success(t *testing.T) {
 	}
 
 	// Save test data directly to DB
-	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula1.ID, formula1)
+	err := setOneInDao(ds.TABLE_DCM_RULE, formula1.ID, formula1)
 	assert.NilError(t, err)
-	err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula2.ID, formula2)
+	err = setOneInDao(ds.TABLE_DCM_RULE, formula2.ID, formula2)
 	assert.NilError(t, err)
 	CreateDeviceSettings(deviceSettings1, "stb")
 	CreateDeviceSettings(deviceSettings2, "stb")
@@ -344,6 +346,7 @@ func TestGetDeviceSettingsExportHandler_EmptyResult(t *testing.T) {
 
 // TestGetDeviceSettingsExportHandler_FilterByApplicationType tests that only matching app type is exported
 func TestGetDeviceSettingsExportHandler_FilterByApplicationType(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -387,9 +390,9 @@ func TestGetDeviceSettingsExportHandler_FilterByApplicationType(t *testing.T) {
 	}
 
 	// Save test data
-	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formulaSTB.ID, formulaSTB)
+	err := setOneInDao(ds.TABLE_DCM_RULE, formulaSTB.ID, formulaSTB)
 	assert.NilError(t, err)
-	err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formulaXHome.ID, formulaXHome)
+	err = setOneInDao(ds.TABLE_DCM_RULE, formulaXHome.ID, formulaXHome)
 	assert.NilError(t, err)
 	CreateDeviceSettings(deviceSettingsSTB, "stb")
 	CreateDeviceSettings(deviceSettingsXHome, "xhome")
@@ -422,6 +425,7 @@ func TestGetDeviceSettingsExportHandler_FilterByApplicationType(t *testing.T) {
 
 // TestGetDeviceSettingsExportHandler_MissingDeviceSettings tests when formula exists but device settings don't
 func TestGetDeviceSettingsExportHandler_MissingDeviceSettings(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -431,7 +435,7 @@ func TestGetDeviceSettingsExportHandler_MissingDeviceSettings(t *testing.T) {
 		Name:            "Orphan Formula Export",
 		ApplicationType: "stb",
 	}
-	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula.ID, formula)
+	err := setOneInDao(ds.TABLE_DCM_RULE, formula.ID, formula)
 	assert.NilError(t, err)
 
 	// Make request
@@ -508,6 +512,7 @@ func TestGetDeviceSettingsExportHandler_AuthError(t *testing.T) {
 
 // TestGetDeviceSettingsExportHandler_MultipleFormulasWithSomeMatching tests partial matching
 func TestGetDeviceSettingsExportHandler_MultipleFormulasWithSomeMatching(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -537,9 +542,9 @@ func TestGetDeviceSettingsExportHandler_MultipleFormulasWithSomeMatching(t *test
 		},
 	}
 
-	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula1.ID, formula1)
+	err := setOneInDao(ds.TABLE_DCM_RULE, formula1.ID, formula1)
 	assert.NilError(t, err)
-	err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula2.ID, formula2)
+	err = setOneInDao(ds.TABLE_DCM_RULE, formula2.ID, formula2)
 	assert.NilError(t, err)
 	respEntity := CreateDeviceSettings(deviceSettings1, "stb")
 	assert.Check(t, respEntity.Error == nil, "Failed to create device settings: %v", respEntity.Error)
@@ -580,6 +585,7 @@ func TestGetDeviceSettingsExportHandler_MultipleFormulasWithSomeMatching(t *test
 
 // TestGetDeviceSettingsExportHandler_JSONResponseFormat tests JSON response structure
 func TestGetDeviceSettingsExportHandler_JSONResponseFormat(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -603,7 +609,7 @@ func TestGetDeviceSettingsExportHandler_JSONResponseFormat(t *testing.T) {
 		},
 	}
 
-	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula.ID, formula)
+	err := setOneInDao(ds.TABLE_DCM_RULE, formula.ID, formula)
 	assert.NilError(t, err)
 	CreateDeviceSettings(deviceSettings, "stb")
 
@@ -941,6 +947,7 @@ func TestPostDeviceSettingsFilteredWithParamsHandler_InvalidPagination(t *testin
 
 // TestGetDeviceSettingsExportHandler_MultipleApplicationTypes tests export for different app types
 func TestGetDeviceSettingsExportHandler_MultipleApplicationTypes(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -982,8 +989,8 @@ func TestGetDeviceSettingsExportHandler_MultipleApplicationTypes(t *testing.T) {
 		},
 	}
 
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula1.ID, formula1)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula2.ID, formula2)
+	setOneInDao(ds.TABLE_DCM_RULE, formula1.ID, formula1)
+	setOneInDao(ds.TABLE_DCM_RULE, formula2.ID, formula2)
 	CreateDeviceSettings(ds1, "stb")
 	CreateDeviceSettings(ds2, "xhome")
 

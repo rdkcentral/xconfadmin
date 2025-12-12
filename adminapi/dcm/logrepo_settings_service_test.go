@@ -60,6 +60,7 @@ func TestGetLogRepoSettings_Success(t *testing.T) {
 
 // TestGetLogRepoSettingsAll_EmptyList tests when no repositories exist
 func TestGetLogRepoSettingsAll_EmptyList(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -231,6 +232,7 @@ func TestLogRepoSettingsValidate_InvalidProtocol(t *testing.T) {
 
 // TestLogRepoSettingsValidate_DuplicateName tests validation with duplicate name
 func TestLogRepoSettingsValidate_DuplicateName(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -261,6 +263,7 @@ func TestLogRepoSettingsValidate_DuplicateName(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyID tests validation generates ID when empty
 func TestLogRepoSettingsValidate_EmptyID(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -281,6 +284,7 @@ func TestLogRepoSettingsValidate_EmptyID(t *testing.T) {
 
 // TestLogRepoSettingsValidate_Success tests successful validation
 func TestLogRepoSettingsValidate_Success(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -362,6 +366,7 @@ func TestCreateLogRepoSettings_ValidationError(t *testing.T) {
 
 // TestCreateLogRepoSettings_Success tests successful creation
 func TestCreateLogRepoSettings_Success(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -422,6 +427,7 @@ func TestUpdateLogRepoSettings_NonExistent(t *testing.T) {
 
 // TestUpdateLogRepoSettings_ApplicationTypeMismatch tests updating with mismatched ApplicationType
 func TestUpdateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -476,6 +482,7 @@ func TestUpdateLogRepoSettings_ChangeApplicationType(t *testing.T) {
 
 // TestUpdateLogRepoSettings_ValidationError tests updating with validation errors
 func TestUpdateLogRepoSettings_ValidationError(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -499,6 +506,7 @@ func TestUpdateLogRepoSettings_ValidationError(t *testing.T) {
 
 // TestUpdateLogRepoSettings_Success tests successful update
 func TestUpdateLogRepoSettings_Success(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -589,6 +597,7 @@ func TestDeleteLogRepoSettingsbyId_InUse(t *testing.T) {
 
 // TestDeleteLogRepoSettingsbyId_Success tests successful deletion
 func TestDeleteLogRepoSettingsbyId_Success(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -829,6 +838,7 @@ func TestLogRepoSettingsFilterByContext_FilterByApplicationType(t *testing.T) {
 
 // TestLogRepoSettingsFilterByContext_FilterByName tests filtering by name
 func TestLogRepoSettingsFilterByContext_FilterByName(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 

@@ -34,12 +34,13 @@ func ImportVodSettingsTableData(data []string, tabletype logupload.VodSettings) 
 	var err error
 	for _, row := range data {
 		err = json.Unmarshal([]byte(row), &tabletype)
-		err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_VOD_SETTINGS, tabletype.ID, &tabletype)
+		err = setOneInDao(ds.TABLE_VOD_SETTINGS, tabletype.ID, &tabletype)
 	}
 	return err
 }
 
 func TestAllVodSettingsApis(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test: requires external package data retrieval
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 

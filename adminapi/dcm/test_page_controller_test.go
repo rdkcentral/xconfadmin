@@ -122,8 +122,8 @@ func TestDcmTestPageHandler_SuccessWithMatchingRules(t *testing.T) {
 	}
 
 	// Store in database - DeviceSettings uses same ID as formula for association
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, formula.ID, formula)
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_DEVICE_SETTINGS, deviceSettings.ID, deviceSettings)
+	_ = setOneInDao(ds.TABLE_DCM_RULE, formula.ID, formula)
+	_ = setOneInDao(ds.TABLE_DEVICE_SETTINGS, deviceSettings.ID, deviceSettings)
 
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/dcm/testpage?applicationType=stb", nil)
 	// Provide context that will match our rule

@@ -282,6 +282,7 @@ func TestPutLogRepoSettingsEntitiesHandler_NonExistentEntity(t *testing.T) {
 
 // TestPutLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure tests batch update with mixed results
 func TestPutLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -500,6 +501,7 @@ func TestGetLogRepoSettingsByIdHandler_WithExport(t *testing.T) {
 
 // TestGetLogRepoSettingsHandler_EmptyList tests handling when no repositories exist (nil condition)
 func TestGetLogRepoSettingsHandler_EmptyList(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -554,6 +556,7 @@ func TestGetLogRepoSettingsHandler_WithExport(t *testing.T) {
 
 // TestGetLogRepoSettingsSizeHandler_ZeroCount tests size handler with no repositories (nil condition)
 func TestGetLogRepoSettingsSizeHandler_ZeroCount(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -572,6 +575,7 @@ func TestGetLogRepoSettingsSizeHandler_ZeroCount(t *testing.T) {
 
 // TestGetLogRepoSettingsSizeHandler_NonZeroCount tests size handler with repositories
 func TestGetLogRepoSettingsSizeHandler_NonZeroCount(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -602,6 +606,7 @@ func TestGetLogRepoSettingsSizeHandler_NonZeroCount(t *testing.T) {
 
 // TestGetLogRepoSettingsNamesHandler_EmptyList tests names handler with no repositories (nil condition)
 func TestGetLogRepoSettingsNamesHandler_EmptyList(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -620,6 +625,7 @@ func TestGetLogRepoSettingsNamesHandler_EmptyList(t *testing.T) {
 
 // TestGetLogRepoSettingsNamesHandler_WithNames tests names handler with repositories
 func TestGetLogRepoSettingsNamesHandler_WithNames(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -680,6 +686,7 @@ func TestDeleteLogRepoSettingsByIdHandler_NonExistent(t *testing.T) {
 
 // TestDeleteLogRepoSettingsByIdHandler_Success tests successful delete
 func TestDeleteLogRepoSettingsByIdHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -846,6 +853,7 @@ func TestUpdateLogRepoSettingsHandler_Success(t *testing.T) {
 
 // TestPostLogRepoSettingsFilteredWithParamsHandler_EmptyBody tests filtered search with empty body (nil condition)
 func TestPostLogRepoSettingsFilteredWithParamsHandler_EmptyBody(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
