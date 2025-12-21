@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
@@ -431,7 +430,7 @@ func TestTelemetryProfileHandlerTimeoutSafety(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/profile?applicationType=stb", nil)
 		_ = execTPReq(r, nil)
-		time.Sleep(5 * time.Millisecond)
+		// Sleep removed for performance - operation is synchronous
 	}
 	assert.True(t, true)
 }

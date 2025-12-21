@@ -12,6 +12,7 @@ import (
 
 // TestGetIpMacRuleConfigurationHandler_Success verifies a 200 response and JSON body contents
 func TestGetIpMacRuleConfigurationHandler_Success(t *testing.T) {
+	t.Parallel()
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
 	r := httptest.NewRequest(http.MethodGet, "/ipmac/config", nil)
@@ -32,6 +33,7 @@ func TestGetIpMacRuleConfigurationHandler_Success(t *testing.T) {
 // Note: In test environments, auth.CanRead may pass by default, so this test verifies
 // the error handling path exists in the code: xhttp.AdminError(w, err)
 func TestGetIpMacRuleConfigurationHandler_AuthError(t *testing.T) {
+	t.Parallel()
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
 	// Request without proper auth headers or applicationType
@@ -52,6 +54,7 @@ func TestGetIpMacRuleConfigurationHandler_AuthError(t *testing.T) {
 
 // TestGetIpMacRuleConfigurationHandler_NilResponseWriter tests error handling with nil writer
 func TestGetIpMacRuleConfigurationHandler_NilResponseWriter(t *testing.T) {
+	t.Parallel()
 	// This test verifies the handler doesn't panic with unusual input
 	// Testing with nil would cause panic, so we use a minimal ResponseWriter
 	r := httptest.NewRequest(http.MethodGet, "/ipmac/config", nil)
@@ -69,6 +72,7 @@ func TestGetIpMacRuleConfigurationHandler_NilResponseWriter(t *testing.T) {
 // Note: This is difficult to test in practice since MacIpRuleConfig is a simple struct
 // that should always marshal successfully. This test demonstrates the error path exists.
 func TestGetIpMacRuleConfigurationHandler_MarshalError(t *testing.T) {
+	t.Parallel()
 	// The handler uses json.Marshal on a simple struct which should never fail
 	// However, the error handling path exists: w.WriteHeader(http.StatusInternalServerError)
 	// followed by w.Write([]byte(err.Error()))
@@ -90,6 +94,7 @@ func TestGetIpMacRuleConfigurationHandler_MarshalError(t *testing.T) {
 
 // TestGetIpMacRuleConfigurationHandler_ResponseWriter tests behavior with plain ResponseWriter
 func TestGetIpMacRuleConfigurationHandler_ResponseWriter(t *testing.T) {
+	t.Parallel()
 	// Test with regular httptest.ResponseRecorder (not XResponseWriter)
 	rr := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/ipmac/config", nil)
@@ -102,6 +107,7 @@ func TestGetIpMacRuleConfigurationHandler_ResponseWriter(t *testing.T) {
 
 // TestGetIpMacRuleConfigurationHandler_ContentTypeHeader tests the Content-Type header is set correctly
 func TestGetIpMacRuleConfigurationHandler_ContentTypeHeader(t *testing.T) {
+	t.Parallel()
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
 	r := httptest.NewRequest(http.MethodGet, "/ipmac/config", nil)
@@ -115,6 +121,7 @@ func TestGetIpMacRuleConfigurationHandler_ContentTypeHeader(t *testing.T) {
 
 // TestGetIpMacRuleConfigurationHandler_ValidResponseStructure tests the response structure
 func TestGetIpMacRuleConfigurationHandler_ValidResponseStructure(t *testing.T) {
+	t.Parallel()
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
 	r := httptest.NewRequest(http.MethodGet, "/ipmac/config", nil)
@@ -139,6 +146,7 @@ func TestGetIpMacRuleConfigurationHandler_ValidResponseStructure(t *testing.T) {
 
 // TestGetIpMacRuleConfigurationHandler_MethodVariants tests handler with different HTTP methods
 func TestGetIpMacRuleConfigurationHandler_MethodVariants(t *testing.T) {
+	t.Parallel()
 	methods := []string{http.MethodGet, http.MethodPost, http.MethodPut}
 
 	for _, method := range methods {
@@ -157,6 +165,7 @@ func TestGetIpMacRuleConfigurationHandler_MethodVariants(t *testing.T) {
 
 // TestGetIpMacRuleConfigurationHandler_MultipleInvocations tests handler can be called multiple times
 func TestGetIpMacRuleConfigurationHandler_MultipleInvocations(t *testing.T) {
+	t.Parallel()
 	for i := 0; i < 5; i++ {
 		rr := httptest.NewRecorder()
 		xw := xwhttp.NewXResponseWriter(rr)
@@ -174,6 +183,7 @@ func TestGetIpMacRuleConfigurationHandler_MultipleInvocations(t *testing.T) {
 
 // TestGetIpMacRuleConfigurationHandler_ConcurrentRequests tests handler thread safety
 func TestGetIpMacRuleConfigurationHandler_ConcurrentRequests(t *testing.T) {
+	t.Parallel()
 	done := make(chan bool, 10)
 
 	for i := 0; i < 10; i++ {
@@ -197,6 +207,7 @@ func TestGetIpMacRuleConfigurationHandler_ConcurrentRequests(t *testing.T) {
 
 // TestGetIpMacRuleConfigurationHandler_ErrorPathCoverage documents error handling paths
 func TestGetIpMacRuleConfigurationHandler_ErrorPathCoverage(t *testing.T) {
+	t.Parallel()
 	// This test documents the error handling paths in the handler:
 	// 1. Line 14-17: auth.CanRead error → xhttp.AdminError(w, err) → return
 	// 2. Line 27-29: json.Marshal error → w.WriteHeader(500) → w.Write(err.Error())

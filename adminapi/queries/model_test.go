@@ -48,6 +48,7 @@ func (aut *apiUnitTest) cleanupModelWholeApi() {
 }
 
 func TestModelWholeCRUD(t *testing.T) {
+	t.Parallel()
 	aut := newModelWholeApiUnitTest(t)
 	sysGenId1 := uuid.New().String()
 	sysGenId2 := uuid.New().String()
@@ -80,6 +81,7 @@ func TestModelWholeCRUD(t *testing.T) {
 }
 
 func TestModelWholeEndPoints(t *testing.T) {
+	t.Parallel()
 	aut := newModelWholeApiUnitTest(t)
 	sysGenId := strings.ToUpper(uuid.New().String())
 	sysGenId2 := strings.ToUpper(uuid.New().String())
@@ -136,6 +138,7 @@ func TestModelWholeEndPoints(t *testing.T) {
 }
 
 func TestPostModelFilteredWithParams(t *testing.T) {
+	t.Parallel()
 	aut := newModelWholeApiUnitTest(t)
 	sysGenId1 := uuid.New().String()
 	sysGenId2 := uuid.New().String()

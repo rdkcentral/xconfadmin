@@ -24,6 +24,7 @@ func makeLogFileXW(obj any) (*httptest.ResponseRecorder, *xwhttp.XResponseWriter
 }
 
 func TestCreateLogFile_ResponseWriterCastError(t *testing.T) {
+	t.Parallel()
 	// pass plain recorder -> cast fail
 	r := httptest.NewRequest(http.MethodPost, "/logfile", nil)
 	rr := httptest.NewRecorder()
@@ -32,6 +33,7 @@ func TestCreateLogFile_ResponseWriterCastError(t *testing.T) {
 }
 
 func TestCreateLogFile_InvalidJSON(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodPost, "/logfile", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -41,6 +43,7 @@ func TestCreateLogFile_InvalidJSON(t *testing.T) {
 }
 
 func TestCreateLogFile_EmptyName(t *testing.T) {
+	t.Parallel()
 	lf := logupload.LogFile{ID: "", Name: ""}
 	rr, xw := makeLogFileXW(lf)
 	r := httptest.NewRequest(http.MethodPost, "/logfile", nil)
@@ -49,6 +52,7 @@ func TestCreateLogFile_EmptyName(t *testing.T) {
 }
 
 func TestCreateLogFile_NewSuccess(t *testing.T) {
+	t.Parallel()
 	lf := logupload.LogFile{Name: "alpha.log"}
 	rr, xw := makeLogFileXW(lf)
 	r := httptest.NewRequest(http.MethodPost, "/logfile", nil)
@@ -61,6 +65,7 @@ func TestCreateLogFile_NewSuccess(t *testing.T) {
 }
 
 func TestCreateLogFile_DuplicateName(t *testing.T) {
+	t.Parallel()
 	// seed first
 	seed := logupload.LogFile{Name: "dup.log"}
 	rr1, xw1 := makeLogFileXW(seed)
@@ -79,6 +84,7 @@ func TestCreateLogFile_DuplicateName(t *testing.T) {
 }
 
 func TestCreateLogFile_UpdatePath(t *testing.T) {
+	t.Parallel()
 	// create first
 	base := logupload.LogFile{Name: "update.me"}
 	rr1, xw1 := makeLogFileXW(base)

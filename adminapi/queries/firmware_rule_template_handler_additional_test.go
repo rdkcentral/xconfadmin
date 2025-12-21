@@ -33,6 +33,7 @@ import (
 
 // Test PostChangePriorityHandler
 func TestPostChangePriorityHandler_MissingID(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate/priority/5", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -43,6 +44,7 @@ func TestPostChangePriorityHandler_MissingID(t *testing.T) {
 }
 
 func TestPostChangePriorityHandler_MissingNewPriority(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate/test-id/priority", nil)
 	req = mux.SetURLVars(req, map[string]string{
 		common.ID: "test-id",
@@ -56,6 +58,7 @@ func TestPostChangePriorityHandler_MissingNewPriority(t *testing.T) {
 }
 
 func TestPostChangePriorityHandler_InvalidPriority(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name        string
 		templateId  string
@@ -90,6 +93,7 @@ func TestPostChangePriorityHandler_InvalidPriority(t *testing.T) {
 
 // Test PutFirmwareRuleTemplateHandler
 func TestPutFirmwareRuleTemplateHandler_ResponseWriterCastError(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPut, "/firmwareruletemplate", nil)
 	recorder := httptest.NewRecorder()
 
@@ -99,6 +103,7 @@ func TestPutFirmwareRuleTemplateHandler_ResponseWriterCastError(t *testing.T) {
 }
 
 func TestPutFirmwareRuleTemplateHandler_InvalidJSON(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPut, "/firmwareruletemplate", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -110,6 +115,7 @@ func TestPutFirmwareRuleTemplateHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestPutFirmwareRuleTemplateHandler_NonExistentTemplate(t *testing.T) {
+	t.Parallel()
 	action := corefw.NewTemplateApplicableActionAndType(corefw.RuleActionClass, corefw.RULE_TEMPLATE, "")
 	template := corefw.FirmwareRuleTemplate{
 		ID:               "non-existent-id",
@@ -131,6 +137,7 @@ func TestPutFirmwareRuleTemplateHandler_NonExistentTemplate(t *testing.T) {
 
 // Test PostFirmwareRuleTemplateHandler
 func TestPostFirmwareRuleTemplateHandler_ResponseWriterCastError(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate", nil)
 	recorder := httptest.NewRecorder()
 
@@ -140,6 +147,7 @@ func TestPostFirmwareRuleTemplateHandler_ResponseWriterCastError(t *testing.T) {
 }
 
 func TestPostFirmwareRuleTemplateHandler_InvalidJSON(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -151,6 +159,7 @@ func TestPostFirmwareRuleTemplateHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestPostFirmwareRuleTemplateHandler_MissingID(t *testing.T) {
+	t.Parallel()
 	template := corefw.FirmwareRuleTemplate{
 		ID:       "",
 		Priority: 1,
@@ -169,6 +178,7 @@ func TestPostFirmwareRuleTemplateHandler_MissingID(t *testing.T) {
 
 // Test DeleteFirmwareRuleTemplateByIdHandler
 func TestDeleteFirmwareRuleTemplateByIdHandler_MissingID(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodDelete, "/firmwareruletemplate", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -179,6 +189,7 @@ func TestDeleteFirmwareRuleTemplateByIdHandler_MissingID(t *testing.T) {
 }
 
 func TestDeleteFirmwareRuleTemplateByIdHandler_NonExistent(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodDelete, "/firmwareruletemplate/non-existent", nil)
 	req = mux.SetURLVars(req, map[string]string{
 		common.ID: "non-existent-id",
@@ -193,6 +204,7 @@ func TestDeleteFirmwareRuleTemplateByIdHandler_NonExistent(t *testing.T) {
 
 // Test GetFirmwareRuleTemplateByIdHandler
 func TestGetFirmwareRuleTemplateByIdHandler_MissingID(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -203,6 +215,7 @@ func TestGetFirmwareRuleTemplateByIdHandler_MissingID(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateByIdHandler_NonExistent(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate/non-existent", nil)
 	req = mux.SetURLVars(req, map[string]string{
 		common.ID: "non-existent-id",
@@ -217,6 +230,7 @@ func TestGetFirmwareRuleTemplateByIdHandler_NonExistent(t *testing.T) {
 
 // Test PostFirmwareRuleTemplateEntitiesHandler
 func TestPostFirmwareRuleTemplateEntitiesHandler_ResponseWriterCastError(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate/entities", nil)
 	recorder := httptest.NewRecorder()
 
@@ -226,6 +240,7 @@ func TestPostFirmwareRuleTemplateEntitiesHandler_ResponseWriterCastError(t *test
 }
 
 func TestPostFirmwareRuleTemplateEntitiesHandler_InvalidJSON(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate/entities", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -237,6 +252,7 @@ func TestPostFirmwareRuleTemplateEntitiesHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestPostFirmwareRuleTemplateEntitiesHandler_EmptyArray(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate/entities", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -249,6 +265,7 @@ func TestPostFirmwareRuleTemplateEntitiesHandler_EmptyArray(t *testing.T) {
 
 // Test PutFirmwareRuleTemplateEntitiesHandler
 func TestPutFirmwareRuleTemplateEntitiesHandler_ResponseWriterCastError(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPut, "/firmwareruletemplate/entities", nil)
 	recorder := httptest.NewRecorder()
 
@@ -258,6 +275,7 @@ func TestPutFirmwareRuleTemplateEntitiesHandler_ResponseWriterCastError(t *testi
 }
 
 func TestPutFirmwareRuleTemplateEntitiesHandler_InvalidJSON(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPut, "/firmwareruletemplate/entities", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -270,6 +288,7 @@ func TestPutFirmwareRuleTemplateEntitiesHandler_InvalidJSON(t *testing.T) {
 
 // Test PostFirmwareRuleTemplateImportAllHandler
 func TestPostFirmwareRuleTemplateImportAllHandler_ResponseWriterCastError(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate/importAll", nil)
 	recorder := httptest.NewRecorder()
 
@@ -279,6 +298,7 @@ func TestPostFirmwareRuleTemplateImportAllHandler_ResponseWriterCastError(t *tes
 }
 
 func TestPostFirmwareRuleTemplateImportAllHandler_InvalidJSON(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate/importAll", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -290,6 +310,7 @@ func TestPostFirmwareRuleTemplateImportAllHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestPostFirmwareRuleTemplateImportAllHandler_EmptyArray(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate/importAll", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -302,6 +323,7 @@ func TestPostFirmwareRuleTemplateImportAllHandler_EmptyArray(t *testing.T) {
 
 // Test PostFirmwareRuleTemplateImportHandler
 func TestPostFirmwareRuleTemplateImportHandler_ResponseWriterCastError(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate/import", nil)
 	recorder := httptest.NewRecorder()
 
@@ -311,6 +333,7 @@ func TestPostFirmwareRuleTemplateImportHandler_ResponseWriterCastError(t *testin
 }
 
 func TestPostFirmwareRuleTemplateImportHandler_InvalidJSON(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate/import", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -322,6 +345,7 @@ func TestPostFirmwareRuleTemplateImportHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestPostFirmwareRuleTemplateImportHandler_EmptyArray(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate/import", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -334,6 +358,7 @@ func TestPostFirmwareRuleTemplateImportHandler_EmptyArray(t *testing.T) {
 
 // Test PostFirmwareRuleTemplateFilteredHandler
 func TestPostFirmwareRuleTemplateFilteredHandler_ResponseWriterCastError(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate/filtered", nil)
 	recorder := httptest.NewRecorder()
 
@@ -343,6 +368,7 @@ func TestPostFirmwareRuleTemplateFilteredHandler_ResponseWriterCastError(t *test
 }
 
 func TestPostFirmwareRuleTemplateFilteredHandler_InvalidJSON(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate/filtered", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -354,6 +380,7 @@ func TestPostFirmwareRuleTemplateFilteredHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestPostFirmwareRuleTemplateFilteredHandler_EmptyBody(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/firmwareruletemplate/filtered", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -366,6 +393,7 @@ func TestPostFirmwareRuleTemplateFilteredHandler_EmptyBody(t *testing.T) {
 
 // Test GetFirmwareRuleTemplateAllByTypeHandler
 func TestGetFirmwareRuleTemplateAllByTypeHandler_MissingType(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate/all", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -376,6 +404,7 @@ func TestGetFirmwareRuleTemplateAllByTypeHandler_MissingType(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateAllByTypeHandler_ValidType(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate/all/RULE_TEMPLATE", nil)
 	req = mux.SetURLVars(req, map[string]string{
 		xcommon.TYPE: "RULE_TEMPLATE",
@@ -391,6 +420,7 @@ func TestGetFirmwareRuleTemplateAllByTypeHandler_ValidType(t *testing.T) {
 
 // Test GetFirmwareRuleTemplateIdsHandler
 func TestGetFirmwareRuleTemplateIdsHandler_MissingTypeParam(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate/ids", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -402,6 +432,7 @@ func TestGetFirmwareRuleTemplateIdsHandler_MissingTypeParam(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateIdsHandler_WithTypeParam(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate/ids?type=RULE_TEMPLATE", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -413,6 +444,7 @@ func TestGetFirmwareRuleTemplateIdsHandler_WithTypeParam(t *testing.T) {
 
 // Test GetFirmwareRuleTemplateWithVarWithVarHandler
 func TestGetFirmwareRuleTemplateWithVarWithVarHandler_MissingType(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate/type/editable", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -423,6 +455,7 @@ func TestGetFirmwareRuleTemplateWithVarWithVarHandler_MissingType(t *testing.T) 
 }
 
 func TestGetFirmwareRuleTemplateWithVarWithVarHandler_MissingEditable(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate/RULE_TEMPLATE", nil)
 	req = mux.SetURLVars(req, map[string]string{
 		xcommon.TYPE: "RULE_TEMPLATE",
@@ -436,6 +469,7 @@ func TestGetFirmwareRuleTemplateWithVarWithVarHandler_MissingEditable(t *testing
 }
 
 func TestGetFirmwareRuleTemplateWithVarWithVarHandler_ValidParams(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate/RULE_TEMPLATE/true", nil)
 	req = mux.SetURLVars(req, map[string]string{
 		xcommon.TYPE:     "RULE_TEMPLATE",
@@ -450,6 +484,7 @@ func TestGetFirmwareRuleTemplateWithVarWithVarHandler_ValidParams(t *testing.T) 
 }
 
 func TestGetFirmwareRuleTemplateWithVarWithVarHandler_EditableFalse(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate/RULE_TEMPLATE/false", nil)
 	req = mux.SetURLVars(req, map[string]string{
 		xcommon.TYPE:     "RULE_TEMPLATE",
@@ -465,6 +500,7 @@ func TestGetFirmwareRuleTemplateWithVarWithVarHandler_EditableFalse(t *testing.T
 
 // Test GetFirmwareRuleTemplateExportHandler
 func TestGetFirmwareRuleTemplateExportHandler_MissingTypeParam(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate/export", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -476,6 +512,7 @@ func TestGetFirmwareRuleTemplateExportHandler_MissingTypeParam(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateExportHandler_WithTypeParam(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate/export?type=RULE_TEMPLATE", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -491,6 +528,7 @@ func TestGetFirmwareRuleTemplateExportHandler_WithTypeParam(t *testing.T) {
 
 // Test GetFirmwareRuleTemplateHandler
 func TestGetFirmwareRuleTemplateHandler_NoExport(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -501,6 +539,7 @@ func TestGetFirmwareRuleTemplateHandler_NoExport(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateHandler_WithExport(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate?export", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -515,6 +554,7 @@ func TestGetFirmwareRuleTemplateHandler_WithExport(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateHandler_WithExportAll(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate?exportAll", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -530,6 +570,7 @@ func TestGetFirmwareRuleTemplateHandler_WithExportAll(t *testing.T) {
 
 // Test GetFirmwareRuleTemplateFilteredHandler
 func TestGetFirmwareRuleTemplateFilteredHandler_NoParams(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate/filtered", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -540,6 +581,7 @@ func TestGetFirmwareRuleTemplateFilteredHandler_NoParams(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateFilteredHandler_WithParams(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/firmwareruletemplate/filtered?name=test", nil)
 	recorder := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(recorder)
@@ -551,11 +593,13 @@ func TestGetFirmwareRuleTemplateFilteredHandler_WithParams(t *testing.T) {
 
 // Test PackFrtPriorities function
 func TestPackFrtPriorities_EmptyList(t *testing.T) {
+	t.Parallel()
 	result := PackFrtPriorities([]*corefw.FirmwareRuleTemplate{}, nil)
 	assert.Equal(t, 0, len(result))
 }
 
 func TestPackFrtPriorities_WithTemplates(t *testing.T) {
+	t.Parallel()
 	templates := []*corefw.FirmwareRuleTemplate{
 		{ID: "1", Priority: 1},
 		{ID: "2", Priority: 3},
@@ -581,6 +625,7 @@ func TestPackFrtPriorities_WithTemplates(t *testing.T) {
 }
 
 func TestPackFrtPriorities_NoChanges(t *testing.T) {
+	t.Parallel()
 	templates := []*corefw.FirmwareRuleTemplate{
 		{ID: "1", Priority: 1},
 		{ID: "2", Priority: 2},

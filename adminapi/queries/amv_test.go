@@ -137,6 +137,7 @@ const (
 )
 
 func TestAmvAllApi(t *testing.T) {
+	t.Parallel()
 	//t.Skip("TODO:need to move this to adminapi")
 	//	config := GetTestConfig()
 	//	_, router := GetTestWebConfigServer(config)
@@ -315,6 +316,7 @@ func TestAmvAllApi(t *testing.T) {
 
 // Additional tests for comprehensive coverage of amv_handler and amv_service
 func TestAmv_GetById_NotFound(t *testing.T) {
+	t.Parallel()
 	// create request with non-existent id
 	urlWithId := fmt.Sprintf("%s/%s", AMV_URL, uuid.New().String())
 	req, err := http.NewRequest("GET", urlWithId, nil)
@@ -327,6 +329,7 @@ func TestAmv_GetById_NotFound(t *testing.T) {
 }
 
 func TestAmv_GetById_Export(t *testing.T) {
+	t.Parallel()
 	// prepare model and create an amv
 	newModel := shared.Model{ID: "EXPORT00"}
 	_, err1 := shared.SetOneModel(&newModel)
@@ -355,6 +358,7 @@ func TestAmv_GetById_Export(t *testing.T) {
 }
 
 func TestAmv_GetAll_ExportAll(t *testing.T) {
+	t.Parallel()
 	// ensure at least one amv present per applicationType
 	newModel := shared.Model{ID: "EXPALL00"}
 	_, err1 := shared.SetOneModel(&newModel)
@@ -381,6 +385,7 @@ func TestAmv_GetAll_ExportAll(t *testing.T) {
 }
 
 func TestAmv_Create_ApplicationTypeMismatch(t *testing.T) {
+	t.Parallel()
 	// model exists
 	newModel := shared.Model{ID: "MIS00"}
 	_, err1 := shared.SetOneModel(&newModel)
@@ -399,6 +404,7 @@ func TestAmv_Create_ApplicationTypeMismatch(t *testing.T) {
 }
 
 func TestAmv_Update_NotFound(t *testing.T) {
+	t.Parallel()
 	// attempt update with unknown id
 	body := fmt.Sprintf(`{"id":"%s","applicationType":"stb","description":"desc","regularExpressions":["re"],"model":"UNKNOWN","firmwareVersions":[],"partnerId":"p"}`, uuid.New().String())
 	req, err := http.NewRequest("PUT", AMV_URL, bytes.NewBuffer([]byte(body)))
@@ -412,6 +418,7 @@ func TestAmv_Update_NotFound(t *testing.T) {
 }
 
 func TestAmv_Filtered_Post_InvalidJSON(t *testing.T) {
+	t.Parallel()
 	// correct POST filtered endpoint lives under activationMinimumVersion
 	req, err := http.NewRequest("POST", "/xconfAdminService/activationMinimumVersion/filtered?pageNumber=1&pageSize=10", bytes.NewBuffer([]byte("{invalid")))
 	req.Header.Set("Content-Type", "application/json")
@@ -424,6 +431,7 @@ func TestAmv_Filtered_Post_InvalidJSON(t *testing.T) {
 }
 
 func TestAmv_Filtered_Post_PaginationErrors(t *testing.T) {
+	t.Parallel()
 	// endpoints under activationMinimumVersion
 	req, err := http.NewRequest("POST", "/xconfAdminService/activationMinimumVersion/filtered?pageNumber=0&pageSize=1", bytes.NewBuffer([]byte("{}")))
 	req.Header.Set("Content-Type", "application/json")
@@ -445,6 +453,7 @@ func TestAmv_Filtered_Post_PaginationErrors(t *testing.T) {
 }
 
 func TestAmv_BatchCreateAndUpdate(t *testing.T) {
+	t.Parallel()
 	// create model
 	newModel := shared.Model{ID: "BATCH00"}
 	_, err := shared.SetOneModel(&newModel)
@@ -474,6 +483,7 @@ func TestAmv_BatchCreateAndUpdate(t *testing.T) {
 }
 
 func TestAmv_ImportAll_MixingApplicationTypes(t *testing.T) {
+	t.Parallel()
 	newModel := shared.Model{ID: "MIX00"}
 	_, err := shared.SetOneModel(&newModel)
 	assert.NilError(t, err)

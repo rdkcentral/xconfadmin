@@ -9,6 +9,7 @@ import (
 )
 
 func TestSetCanarySettingValidationPass(t *testing.T) {
+	t.Parallel()
 	distributionPercentage := 15.0
 	maxSize := 5000
 	startTime := 1800
@@ -39,11 +40,13 @@ func TestSetCanarySettingValidationPass(t *testing.T) {
 }
 
 func TestGetCanarySettings(t *testing.T) {
+	t.Parallel()
 	_, err := GetCanarySettings()
 	assert.Error(t, err, "Should return error when app settings are not set")
 }
 
 func TestProcessCanarySettings(t *testing.T) {
+	t.Parallel()
 	settings := map[string]interface{}{
 		common.PROP_CANARY_DISTRIBUTION_PERCENTAGE: 20.0,
 		common.PROP_CANARY_MAXSIZE:                 10000,

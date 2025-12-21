@@ -46,6 +46,7 @@ type TelemetryTwoResponse struct {
 }
 
 func TestTelemetryTwoHandlerSampleData(t *testing.T) {
+	t.Parallel()
 	// setup env
 	log.SetLevel(log.WarnLevel)
 
@@ -178,6 +179,7 @@ func TestTelemetryTwoHandlerSampleData(t *testing.T) {
 }
 
 func TestTelemetryTwoHandlerMac(t *testing.T) {
+	t.Parallel()
 	// setup env
 	log.SetLevel(log.WarnLevel)
 
@@ -293,6 +295,7 @@ func TestTelemetryTwoHandlerMac(t *testing.T) {
 }
 
 func TestTelemetryTwoHandlerIpRange(t *testing.T) {
+	t.Parallel()
 	// setup env
 	log.SetLevel(log.WarnLevel)
 

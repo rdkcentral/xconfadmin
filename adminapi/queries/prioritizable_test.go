@@ -17,6 +17,7 @@ func (m *mockPrioritizable) GetPriority() int  { return m.priority }
 func (m *mockPrioritizable) SetPriority(p int) { m.priority = p }
 
 func TestUpdatePrioritizablePriorityAndReorganize(t *testing.T) {
+	t.Parallel()
 	item1 := &mockPrioritizable{id: "a", priority: 1}
 	item2 := &mockPrioritizable{id: "b", priority: 2}
 	item3 := &mockPrioritizable{id: "c", priority: 3}
@@ -28,6 +29,7 @@ func TestUpdatePrioritizablePriorityAndReorganize(t *testing.T) {
 }
 
 func TestPackPriorities(t *testing.T) {
+	t.Parallel()
 	item1 := &mockPrioritizable{id: "a", priority: 1}
 	item2 := &mockPrioritizable{id: "b", priority: 2}
 	item3 := &mockPrioritizable{id: "c", priority: 3}
@@ -42,6 +44,7 @@ func TestPackPriorities(t *testing.T) {
 }
 
 func TestPackPriorities_ErrorCase(t *testing.T) {
+	t.Parallel()
 	item1 := &mockPrioritizable{id: "a", priority: 1}
 	item2 := &mockPrioritizable{id: "b", priority: 2}
 	items := []core.Prioritizable{item1, item2}

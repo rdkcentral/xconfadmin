@@ -15,6 +15,7 @@ import (
 const testURL = "/canary-settings"
 
 func TestPutCanarySettingsHandler(t *testing.T) {
+	t.Parallel()
 	originalSatOn := common.SatOn
 	common.SatOn = false
 	defer func() { common.SatOn = originalSatOn }()
@@ -58,6 +59,7 @@ func TestPutCanarySettingsHandler(t *testing.T) {
 }
 
 func TestGetCanarySettingsHandler(t *testing.T) {
+	t.Parallel()
 	originalSatOn := common.SatOn
 	common.SatOn = false
 	defer func() { common.SatOn = originalSatOn }()

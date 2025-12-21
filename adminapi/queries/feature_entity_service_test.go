@@ -30,7 +30,9 @@ import (
 )
 
 func TestFeatureGetPostPutDeleteImport(t *testing.T) {
+	// Clean state before test to ensure isolation
 	DeleteAllEntities()
+	defer DeleteAllEntities() // cleanup after test
 
 	// test GET ALL
 	featureList := GetAllFeatureEntity()
@@ -114,14 +116,16 @@ func TestFeatureGetPostPutDeleteImport(t *testing.T) {
 
 	// test DELETE
 	DeleteFeatureById(featureEntity1.ID)
-	time.Sleep(1 * time.Second)
+	// Database delete is async - need small delay for cache to update
+	time.Sleep(100 * time.Millisecond)
 	fe = GetFeatureEntityById(featureEntity1.ID)
-	assert.Equal(t, fe == nil, true)
+	assert.Equal(t, fe == nil, true, "featureEntity1 should be deleted")
 
 	DeleteFeatureById(featureEntity2.ID)
-	time.Sleep(1 * time.Second)
+	// Database delete is async - need small delay for cache to update
+	time.Sleep(100 * time.Millisecond)
 	fe = GetFeatureEntityById(featureEntity2.ID)
-	assert.Equal(t, fe == nil, true)
+	assert.Equal(t, fe == nil, true, "featureEntity2 should be deleted")
 }
 
 func TestDoesFeatureExist(t *testing.T) {

@@ -139,6 +139,7 @@ func (aut *apiUnitTest) modelEntitiesMapValidator(tcase apiUnitTestCase, genRsp 
 }
 
 func TestModelsCRUD(t *testing.T) {
+	t.Parallel()
 	aut := newModelApiUnitTest(t)
 	sysGenId1 := uuid.New().String()
 	sysGenId2 := uuid.New().String()

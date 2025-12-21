@@ -28,6 +28,7 @@ import (
 
 // TestStr2Time_ValidInput tests parsing a valid datetime string
 func TestStr2Time_ValidInput(t *testing.T) {
+	t.Parallel()
 	dateStr := "2021-10-05 14:30:00"
 
 	result, err := str2Time(dateStr)
@@ -43,6 +44,7 @@ func TestStr2Time_ValidInput(t *testing.T) {
 
 // TestStr2Time_ValidInputMidnight tests parsing a datetime string at midnight
 func TestStr2Time_ValidInputMidnight(t *testing.T) {
+	t.Parallel()
 	dateStr := "2025-01-01 00:00:00"
 
 	result, err := str2Time(dateStr)
@@ -58,6 +60,7 @@ func TestStr2Time_ValidInputMidnight(t *testing.T) {
 
 // TestStr2Time_ValidInputEndOfDay tests parsing a datetime string at end of day
 func TestStr2Time_ValidInputEndOfDay(t *testing.T) {
+	t.Parallel()
 	dateStr := "2024-12-31 23:59:59"
 
 	result, err := str2Time(dateStr)
@@ -73,6 +76,7 @@ func TestStr2Time_ValidInputEndOfDay(t *testing.T) {
 
 // TestStr2Time_EmptyString tests parsing an empty string (nil condition)
 func TestStr2Time_EmptyString(t *testing.T) {
+	t.Parallel()
 	dateStr := ""
 
 	_, err := str2Time(dateStr)
@@ -82,6 +86,7 @@ func TestStr2Time_EmptyString(t *testing.T) {
 
 // TestStr2Time_InvalidFormat tests parsing a string with invalid format
 func TestStr2Time_InvalidFormat(t *testing.T) {
+	t.Parallel()
 	dateStr := "2021/10/05 14:30:00" // Wrong separator
 
 	_, err := str2Time(dateStr)
@@ -91,6 +96,7 @@ func TestStr2Time_InvalidFormat(t *testing.T) {
 
 // TestStr2Time_InvalidDateFormat tests parsing a string with wrong date format
 func TestStr2Time_InvalidDateFormat(t *testing.T) {
+	t.Parallel()
 	dateStr := "10-05-2021 14:30:00" // Wrong order
 
 	_, err := str2Time(dateStr)
@@ -100,6 +106,7 @@ func TestStr2Time_InvalidDateFormat(t *testing.T) {
 
 // TestStr2Time_PartialString tests parsing a partial datetime string (nil condition)
 func TestStr2Time_PartialString(t *testing.T) {
+	t.Parallel()
 	dateStr := "2021-10-05"
 
 	_, err := str2Time(dateStr)
@@ -109,6 +116,7 @@ func TestStr2Time_PartialString(t *testing.T) {
 
 // TestStr2Time_InvalidMonth tests parsing with invalid month
 func TestStr2Time_InvalidMonth(t *testing.T) {
+	t.Parallel()
 	dateStr := "2021-13-05 14:30:00" // Month 13 doesn't exist
 
 	_, err := str2Time(dateStr)
@@ -118,6 +126,7 @@ func TestStr2Time_InvalidMonth(t *testing.T) {
 
 // TestStr2Time_InvalidDay tests parsing with invalid day
 func TestStr2Time_InvalidDay(t *testing.T) {
+	t.Parallel()
 	dateStr := "2021-02-30 14:30:00" // Feb 30 doesn't exist
 
 	_, err := str2Time(dateStr)
@@ -127,6 +136,7 @@ func TestStr2Time_InvalidDay(t *testing.T) {
 
 // TestStr2Time_InvalidHour tests parsing with invalid hour
 func TestStr2Time_InvalidHour(t *testing.T) {
+	t.Parallel()
 	dateStr := "2021-10-05 25:30:00" // Hour 25 doesn't exist
 
 	_, err := str2Time(dateStr)
@@ -136,6 +146,7 @@ func TestStr2Time_InvalidHour(t *testing.T) {
 
 // TestStr2Time_InvalidMinute tests parsing with invalid minute
 func TestStr2Time_InvalidMinute(t *testing.T) {
+	t.Parallel()
 	dateStr := "2021-10-05 14:60:00" // Minute 60 doesn't exist
 
 	_, err := str2Time(dateStr)
@@ -145,6 +156,7 @@ func TestStr2Time_InvalidMinute(t *testing.T) {
 
 // TestStr2Time_InvalidSecond tests parsing with invalid second
 func TestStr2Time_InvalidSecond(t *testing.T) {
+	t.Parallel()
 	dateStr := "2021-10-05 14:30:60" // Second 60 doesn't exist (normally)
 
 	_, err := str2Time(dateStr)
@@ -154,6 +166,7 @@ func TestStr2Time_InvalidSecond(t *testing.T) {
 
 // TestStr2Time_NullString tests parsing a null/nil-like string (nil condition)
 func TestStr2Time_NullString(t *testing.T) {
+	t.Parallel()
 	dateStr := "null"
 
 	_, err := str2Time(dateStr)
@@ -163,6 +176,7 @@ func TestStr2Time_NullString(t *testing.T) {
 
 // TestStr2Time_WithExtraSpaces tests parsing with extra spaces (nil condition)
 func TestStr2Time_WithExtraSpaces(t *testing.T) {
+	t.Parallel()
 	dateStr := " 2021-10-05 14:30:00 "
 
 	_, err := str2Time(dateStr)
@@ -174,6 +188,7 @@ func TestStr2Time_WithExtraSpaces(t *testing.T) {
 
 // TestChangeTZ_UTCToMST tests timezone conversion from UTC to MST
 func TestChangeTZ_UTCToMST(t *testing.T) {
+	t.Parallel()
 	// Create a time: 2021-10-05 00:00:00 UTC
 	inputTime := time.Date(2021, 10, 5, 0, 0, 0, 0, time.UTC)
 
@@ -190,6 +205,7 @@ func TestChangeTZ_UTCToMST(t *testing.T) {
 
 // TestChangeTZ_UTCToEST tests timezone conversion from UTC to EST
 func TestChangeTZ_UTCToEST(t *testing.T) {
+	t.Parallel()
 	// Create a time: 2021-10-05 00:00:00 UTC
 	inputTime := time.Date(2021, 10, 5, 0, 0, 0, 0, time.UTC)
 
@@ -206,6 +222,7 @@ func TestChangeTZ_UTCToEST(t *testing.T) {
 
 // TestChangeTZ_UTCToUTC tests timezone conversion from UTC to UTC (no change expected)
 func TestChangeTZ_UTCToUTC(t *testing.T) {
+	t.Parallel()
 	// Create a time: 2021-10-05 12:30:45 UTC
 	inputTime := time.Date(2021, 10, 5, 12, 30, 45, 0, time.UTC)
 
@@ -217,6 +234,7 @@ func TestChangeTZ_UTCToUTC(t *testing.T) {
 
 // TestChangeTZ_UTCToAsiaTokyo tests timezone conversion to Asia/Tokyo
 func TestChangeTZ_UTCToAsiaTokyo(t *testing.T) {
+	t.Parallel()
 	// Create a time: 2021-10-05 00:00:00 UTC
 	inputTime := time.Date(2021, 10, 5, 0, 0, 0, 0, time.UTC)
 
@@ -233,6 +251,7 @@ func TestChangeTZ_UTCToAsiaTokyo(t *testing.T) {
 
 // TestChangeTZ_UTCToAmericaLosAngeles tests timezone conversion to America/Los_Angeles
 func TestChangeTZ_UTCToAmericaLosAngeles(t *testing.T) {
+	t.Parallel()
 	// Create a time: 2021-10-05 00:00:00 UTC
 	inputTime := time.Date(2021, 10, 5, 0, 0, 0, 0, time.UTC)
 
@@ -248,6 +267,7 @@ func TestChangeTZ_UTCToAmericaLosAngeles(t *testing.T) {
 
 // TestChangeTZ_MidnightCrossover tests timezone conversion that crosses midnight
 func TestChangeTZ_MidnightCrossover(t *testing.T) {
+	t.Parallel()
 	// Create a time: 2021-12-31 23:00:00 UTC
 	inputTime := time.Date(2021, 12, 31, 23, 0, 0, 0, time.UTC)
 
@@ -263,6 +283,7 @@ func TestChangeTZ_MidnightCrossover(t *testing.T) {
 
 // TestChangeTZ_NilLocation tests changeTZ with nil location (nil condition)
 func TestChangeTZ_NilLocation(t *testing.T) {
+	t.Parallel()
 	// Create a time: 2021-10-05 00:00:00 UTC
 	inputTime := time.Date(2021, 10, 5, 0, 0, 0, 0, time.UTC)
 
@@ -283,6 +304,7 @@ func TestChangeTZ_NilLocation(t *testing.T) {
 
 // TestChangeTZ_ZeroTime tests changeTZ with zero time value (nil condition)
 func TestChangeTZ_ZeroTime(t *testing.T) {
+	t.Parallel()
 	// Zero time
 	var inputTime time.Time
 
@@ -296,6 +318,7 @@ func TestChangeTZ_ZeroTime(t *testing.T) {
 
 // TestChangeTZ_LeapYear tests timezone conversion with leap year date
 func TestChangeTZ_LeapYear(t *testing.T) {
+	t.Parallel()
 	// Create a time on leap day: 2024-02-29 12:00:00 UTC
 	inputTime := time.Date(2024, 2, 29, 12, 0, 0, 0, time.UTC)
 
@@ -311,6 +334,7 @@ func TestChangeTZ_LeapYear(t *testing.T) {
 
 // TestChangeTZ_DaylightSavingTransition tests timezone conversion during DST transition
 func TestChangeTZ_DaylightSavingTransition(t *testing.T) {
+	t.Parallel()
 	// Create a time during DST transition: 2021-03-14 02:30:00 UTC
 	inputTime := time.Date(2021, 3, 14, 2, 30, 0, 0, time.UTC)
 
@@ -327,6 +351,7 @@ func TestChangeTZ_DaylightSavingTransition(t *testing.T) {
 
 // TestChangeTZ_FarFutureDate tests timezone conversion with far future date
 func TestChangeTZ_FarFutureDate(t *testing.T) {
+	t.Parallel()
 	// Create a time in the far future: 2099-12-31 23:59:59 UTC
 	inputTime := time.Date(2099, 12, 31, 23, 59, 59, 0, time.UTC)
 
@@ -338,6 +363,7 @@ func TestChangeTZ_FarFutureDate(t *testing.T) {
 
 // TestChangeTZ_EarlyMorningHour tests timezone conversion with early morning hour
 func TestChangeTZ_EarlyMorningHour(t *testing.T) {
+	t.Parallel()
 	// Create a time: 2021-10-05 01:00:00 UTC
 	inputTime := time.Date(2021, 10, 5, 1, 0, 0, 0, time.UTC)
 
@@ -353,6 +379,7 @@ func TestChangeTZ_EarlyMorningHour(t *testing.T) {
 
 // TestChangeTZ_ConsistencyCheck tests that changeTZ maintains consistency
 func TestChangeTZ_ConsistencyCheck(t *testing.T) {
+	t.Parallel()
 	// Create multiple times and ensure consistent behavior
 	times := []time.Time{
 		time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),

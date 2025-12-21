@@ -15,6 +15,7 @@ import (
 // For now, call GetLogs with states that exercise each branch.
 
 func TestGetLogs_MissingMac(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/logs", nil)
 	rr := httptest.NewRecorder()
 	GetLogs(rr, r) // no mux vars -> missing macStr
@@ -23,6 +24,7 @@ func TestGetLogs_MissingMac(t *testing.T) {
 }
 
 func TestGetLogs_InvalidMac(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/logs/bad", nil)
 	r = mux.SetURLVars(r, map[string]string{"macStr": "BAD-MAC"})
 	rr := httptest.NewRecorder()
@@ -32,6 +34,7 @@ func TestGetLogs_InvalidMac(t *testing.T) {
 }
 
 func TestGetLogs_NoLogsForValidMac(t *testing.T) {
+	t.Parallel()
 	// use a valid mac format but ensure estbfirmware returns nil (assuming empty db) => empty map serialized
 	r := httptest.NewRequest(http.MethodGet, "/logs/aa:bb:cc:00:00:01", nil)
 	r = mux.SetURLVars(r, map[string]string{"macStr": "AA:BB:CC:00:00:01"})
@@ -49,6 +52,7 @@ func TestGetLogs_NoLogsForValidMac(t *testing.T) {
 // We can't directly set estbfirmware cache without deeper seeding; so current coverage focuses on error and empty-success branches.
 
 func TestGetLogs_ResponseWriterCastNotNeeded(t *testing.T) {
+	t.Parallel()
 	// Ensure code still works when wrapped writer (not required by this handler but sanity test) and logs empty.
 	r := httptest.NewRequest(http.MethodGet, "/logs/aa:bb:cc:00:00:02", nil)
 	r = mux.SetURLVars(r, map[string]string{"macStr": "AA:BB:CC:00:00:02"})
@@ -59,6 +63,7 @@ func TestGetLogs_ResponseWriterCastNotNeeded(t *testing.T) {
 }
 
 func TestLogController_InternalHelpers(t *testing.T) {
+	t.Parallel()
 	// exercise helper returning nil on empty
 	if v := getOneConfigChangeLog(""); v != nil {
 		t.Fatalf("expected nil for empty mac")

@@ -13,6 +13,7 @@ func makeGenericList(id, tname string, data []string) *shared.GenericNamespacedL
 }
 
 func TestNamespacedListService_CreateConflictAndUpdateRename(t *testing.T) {
+	t.Parallel()
 	// create initial list
 	l1 := makeGenericList("L1", shared.IP_LIST, []string{"10.0.0.1"})
 	if resp := CreateNamespacedList(l1, false); resp.Status != http.StatusCreated {
@@ -35,6 +36,7 @@ func TestNamespacedListService_CreateConflictAndUpdateRename(t *testing.T) {
 }
 
 func TestNamespacedListService_AddRemoveDataAndValidationErrors(t *testing.T) {
+	t.Parallel()
 	base := makeGenericList("ML1", shared.MAC_LIST, []string{"AA:BB:CC:00:00:01"})
 	if resp := CreateNamespacedList(base, false); resp.Status != http.StatusCreated {
 		t.Fatalf("create mac list failed")
@@ -58,12 +60,14 @@ func TestNamespacedListService_AddRemoveDataAndValidationErrors(t *testing.T) {
 }
 
 func TestNamespacedListService_DeleteNotFound(t *testing.T) {
+	t.Parallel()
 	if resp := DeleteNamespacedList(shared.IP_LIST, "DOES_NOT_EXIST"); resp.Status != http.StatusNotFound {
 		t.Fatalf("expected 404 got %d", resp.Status)
 	}
 }
 
 func TestNamespacedListService_GeneratePageAndHelpers(t *testing.T) {
+	t.Parallel()
 	for i := 1; i <= 3; i++ {
 		id := fmt.Sprintf("PAGELIST%d", i)
 		resp := CreateNamespacedList(makeGenericList(id, shared.STRING, []string{"v"}), true)
@@ -89,6 +93,7 @@ func TestNamespacedListService_GeneratePageAndHelpers(t *testing.T) {
 }
 
 func TestNamespacedListService_ValidateListData(t *testing.T) {
+	t.Parallel()
 	if err := ValidateListDataForAdmin(shared.IP_LIST, []string{"10.0.0.1"}); err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -98,6 +103,7 @@ func TestNamespacedListService_ValidateListData(t *testing.T) {
 }
 
 func TestNamespacedListService_CreateUsageConflict(t *testing.T) {
+	t.Parallel()
 	// to simulate usage conflict we need to create list then simulate rule referencing it; simplest path: create list and manually invoke DeleteNamespacedList after adding a mock rule? For brevity we just assert normal NoContent path by deleting unused list.
 	l := makeGenericList("DEL1", shared.STRING, []string{"a"})
 	if resp := CreateNamespacedList(l, false); resp.Status != http.StatusCreated {

@@ -60,6 +60,7 @@ func newValidTimeFilter(name string) *coreef.TimeFilter {
 // }
 
 func TestUpdateTimeFilter_ValidationFailures(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	seedEnvModelRule("M1", "E1", "stb")
 	cases := []struct {
@@ -77,6 +78,7 @@ func TestUpdateTimeFilter_ValidationFailures(t *testing.T) {
 }
 
 func TestUpdateTimeFilter_BadTimes(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	seedEnvModelRule("M1", "E1", "stb")
 	tf := newValidTimeFilter("BADTIME")
@@ -88,6 +90,7 @@ func TestUpdateTimeFilter_BadTimes(t *testing.T) {
 }
 
 func TestUpdateTimeFilter_InvalidIpGroup(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	seedEnvModelRule("M1", "E1", "stb")
 	grp := shared.NewIpAddressGroupWithAddrStrings("G1", "G1", []string{"10.0.0.1"})
@@ -97,6 +100,7 @@ func TestUpdateTimeFilter_InvalidIpGroup(t *testing.T) {
 }
 
 func TestUpdateTimeFilter_EnvModelMissing(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	// no seed for env-model
 	tf := newValidTimeFilter("TFMISS")
@@ -110,6 +114,7 @@ func TestUpdateTimeFilter_EnvModelMissing(t *testing.T) {
 }
 
 func TestDeleteTimeFilter_Paths(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	seedEnvModelRule("M1", "E1", "stb")
 	tf := newValidTimeFilter("DELTF")
@@ -135,6 +140,7 @@ func TestDeleteTimeFilter_Paths(t *testing.T) {
 // TestUpdateTimeFilter_ApplicationTypeValidation tests the ValidateApplicationType error path
 // Tests line 86-88: xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 func TestUpdateTimeFilter_ApplicationTypeValidation(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	seedEnvModelRule("M1", "E1", "stb")
 
@@ -159,6 +165,7 @@ func TestUpdateTimeFilter_ApplicationTypeValidation(t *testing.T) {
 // TestUpdateTimeFilter_CreateFirmwareRuleError tests the CreateFirmwareRuleOneDB error path
 // Tests line 90-92: xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 func TestUpdateTimeFilter_CreateFirmwareRuleError(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	seedEnvModelRule("M1", "E1", "stb")
 
@@ -183,6 +190,7 @@ func TestUpdateTimeFilter_CreateFirmwareRuleError(t *testing.T) {
 // TestUpdateTimeFilter_IdAssignment tests the ID assignment logic
 // Tests line 94-96: if timeFilter.Id == "" { timeFilter.Id = firmwareRule.ID }
 func TestUpdateTimeFilter_IdAssignment(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	seedEnvModelRule("M1", "E1", "stb")
 
@@ -207,6 +215,7 @@ func TestUpdateTimeFilter_IdAssignment(t *testing.T) {
 // TestUpdateTimeFilter_UppercaseConversion tests the strings.ToUpper conversion
 // Tests line 77-78: EnvironmentId and ModelId conversion to uppercase
 func TestUpdateTimeFilter_UppercaseConversion(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	emBean := seedEnvModelRule("M2", "E2", "stb")
 
@@ -250,6 +259,7 @@ func TestUpdateTimeFilter_UppercaseConversion(t *testing.T) {
 
 // TestUpdateTimeFilter_UppercaseConversion_MixedCase tests mixed case conversion
 func TestUpdateTimeFilter_UppercaseConversion_MixedCase(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	emBean := seedEnvModelRule("MIXEDMODEL", "MIXEDENV", "stb")
 
@@ -287,6 +297,7 @@ func TestUpdateTimeFilter_UppercaseConversion_MixedCase(t *testing.T) {
 // TestUpdateTimeFilter_ConvertTimeFilterToFirmwareRule tests the conversion step
 // Tests line 80: firmwareRule := coreef.ConvertTimeFilterToFirmwareRule(timeFilter)
 func TestUpdateTimeFilter_ConvertTimeFilterToFirmwareRule(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	emBean := seedEnvModelRule("CONVERT1", "CONVERT1", "stb")
 
@@ -331,6 +342,7 @@ func TestUpdateTimeFilter_ConvertTimeFilterToFirmwareRule(t *testing.T) {
 // TestUpdateTimeFilter_ApplicationTypeAssignment tests application type assignment
 // Tests line 82-84: if !util.IsBlank(applicationType) { firmwareRule.ApplicationType = applicationType }
 func TestUpdateTimeFilter_ApplicationTypeAssignment_NonBlank(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	seedEnvModelRule("APPTYPE1", "APPTYPE1", "stb")
 
@@ -357,6 +369,7 @@ func TestUpdateTimeFilter_ApplicationTypeAssignment_NonBlank(t *testing.T) {
 // TestUpdateTimeFilter_SecondValidateApplicationType tests the second ValidateApplicationType call
 // Tests line 86-88: if err := xshared.ValidateApplicationType(firmwareRule.ApplicationType); err != nil
 func TestUpdateTimeFilter_SecondValidateApplicationType_Error(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	seedEnvModelRule("VAL2", "VAL2", "stb")
 
@@ -386,6 +399,7 @@ func TestUpdateTimeFilter_SecondValidateApplicationType_Error(t *testing.T) {
 // TestUpdateTimeFilter_CreateFirmwareRuleOneDB_Success tests successful creation
 // Tests line 90-92: err := corefw.CreateFirmwareRuleOneDB(firmwareRule)
 func TestUpdateTimeFilter_CreateFirmwareRuleOneDB_Success(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	emBean := seedEnvModelRule("CREATE2", "CREATE2", "stb")
 
@@ -417,6 +431,7 @@ func TestUpdateTimeFilter_CreateFirmwareRuleOneDB_Success(t *testing.T) {
 // TestUpdateTimeFilter_IdAssignment_EmptyId tests ID assignment when empty
 // Tests line 94-96: if timeFilter.Id == "" { timeFilter.Id = firmwareRule.ID }
 func TestUpdateTimeFilter_IdAssignment_EmptyId(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	emBean := seedEnvModelRule("IDASSIGN", "IDASSIGN", "stb")
 
@@ -448,6 +463,7 @@ func TestUpdateTimeFilter_IdAssignment_EmptyId(t *testing.T) {
 // TestUpdateTimeFilter_IdAssignment_NonEmptyId tests ID assignment when already set
 // Tests line 94-96: if timeFilter.Id == "" { timeFilter.Id = firmwareRule.ID }
 func TestUpdateTimeFilter_IdAssignment_NonEmptyId(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	emBean := seedEnvModelRule("IDEXIST", "IDEXIST", "stb")
 
@@ -480,6 +496,7 @@ func TestUpdateTimeFilter_IdAssignment_NonEmptyId(t *testing.T) {
 // TestUpdateTimeFilter_SuccessReturn tests the final success return
 // Tests line 98: return xwhttp.NewResponseEntity(http.StatusOK, nil, timeFilter)
 func TestUpdateTimeFilter_SuccessReturn(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	emBean := seedEnvModelRule("SUCCESS2", "SUCCESS2", "stb")
 
@@ -517,6 +534,7 @@ func TestUpdateTimeFilter_SuccessReturn(t *testing.T) {
 // TestUpdateTimeFilter_ComprehensiveCoverage specifically tests all the requested code lines
 // This test documents that we have achieved coverage of the specific lines requested
 func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 
 	// Test 1: Verify we reach the uppercase conversion lines (77-78)
@@ -682,6 +700,7 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 } // TestUpdateTimeFilter_BlankApplicationType tests blank application type handling
 // Tests line 83-85: if !util.IsBlank(applicationType) { firmwareRule.ApplicationType = applicationType }
 func TestUpdateTimeFilter_BlankApplicationType(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	seedEnvModelRule("M4", "E4", "stb")
 
@@ -707,6 +726,7 @@ func TestUpdateTimeFilter_BlankApplicationType(t *testing.T) {
 // TestDeleteTimeFilter_TimeFilterByNameError tests error handling in delete
 // Tests line 103-105: xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 func TestDeleteTimeFilter_TimeFilterByNameError(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 
 	// Attempt to delete from empty database may cause TimeFilterByName to error
@@ -720,6 +740,7 @@ func TestDeleteTimeFilter_TimeFilterByNameError(t *testing.T) {
 // TestDeleteTimeFilter_DeleteOneFirmwareRuleError tests delete operation error
 // Tests line 109-111: xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 func TestDeleteTimeFilter_DeleteOneFirmwareRuleError(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	seedEnvModelRule("M5", "E5", "stb")
 
@@ -749,6 +770,7 @@ func TestDeleteTimeFilter_DeleteOneFirmwareRuleError(t *testing.T) {
 // TestDeleteTimeFilter_NilTimeFilter tests when TimeFilterByName returns nil
 // Tests line 107-112: if timeFilter != nil { ... } path
 func TestDeleteTimeFilter_NilTimeFilter(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 
 	// Delete non-existent time filter
@@ -760,6 +782,7 @@ func TestDeleteTimeFilter_NilTimeFilter(t *testing.T) {
 
 // TestIsExistEnvModelRule_WithId tests the existence check logic
 func TestIsExistEnvModelRule_WithId(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	emBean := seedEnvModelRule("M6", "E6", "stb")
 
@@ -776,6 +799,7 @@ func TestIsExistEnvModelRule_WithId(t *testing.T) {
 
 // TestIsExistEnvModelRule_NoId tests when ID is empty
 func TestIsExistEnvModelRule_NoId(t *testing.T) {
+	t.Parallel()
 	envModelRule := coreef.EnvModelRuleBean{
 		Id:            "",
 		ModelId:       "M7",
@@ -788,6 +812,7 @@ func TestIsExistEnvModelRule_NoId(t *testing.T) {
 
 // TestIsExistEnvModelRule_NoModelId tests when ModelId is empty
 func TestIsExistEnvModelRule_NoModelId(t *testing.T) {
+	t.Parallel()
 	envModelRule := coreef.EnvModelRuleBean{
 		Id:            "EM_M8",
 		ModelId:       "",
@@ -800,6 +825,7 @@ func TestIsExistEnvModelRule_NoModelId(t *testing.T) {
 
 // TestGetOneByEnvModel_Found tests successful lookup
 func TestGetOneByEnvModel_Found(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	emBean := seedEnvModelRule("M9", "E9", "stb")
 
@@ -814,6 +840,7 @@ func TestGetOneByEnvModel_Found(t *testing.T) {
 
 // TestGetOneByEnvModel_NotFound tests when no matching rule exists
 func TestGetOneByEnvModel_NotFound(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 
 	bean := GetOneByEnvModel("NONEXIST", "NONEXIST", "stb")
@@ -822,6 +849,7 @@ func TestGetOneByEnvModel_NotFound(t *testing.T) {
 
 // TestGetOneByEnvModel_CaseInsensitive tests case-insensitive matching
 func TestGetOneByEnvModel_CaseInsensitive(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	_ = seedEnvModelRule("M10", "E10", "stb")
 

@@ -65,6 +65,7 @@ func (aut *apiUnitTest) cleanupFirmwaresApi() {
 }
 
 func TestGetFirmwares(t *testing.T) {
+	t.Parallel()
 	aut := newFirmwaresApiUnitTest(t)
 
 	testCases := []apiUnitTestCase{
@@ -88,6 +89,7 @@ func TestGetFirmwares(t *testing.T) {
 }
 
 func TestPostFirmwares(t *testing.T) {
+	t.Parallel()
 	aut := newFirmwaresApiUnitTest(t)
 
 	testCases := []apiUnitTestCase{
@@ -119,6 +121,7 @@ func TestPostFirmwares(t *testing.T) {
 }
 
 func TestPutFirmwares(t *testing.T) {
+	t.Parallel()
 	aut := newFirmwaresApiUnitTest(t)
 
 	testCases := []apiUnitTestCase{
@@ -157,6 +160,7 @@ func TestPutFirmwares(t *testing.T) {
 }
 
 func TestGetFirmwaresById(t *testing.T) {
+	t.Parallel()
 	aut := newFirmwaresApiUnitTest(t)
 	testCases := []apiUnitTestCase{
 		{FWS_QAPI, NO_INPUT, NO_PRETERMS, nil, "GET", "", http.StatusOK, "saveFetchedCntIn=begin_count", aut.firmwareConfigArrayValidator},
@@ -206,6 +210,7 @@ func TestGetFirmwaresById(t *testing.T) {
 // }
 
 func TestGetFirmwaresModelByModelId(t *testing.T) {
+	t.Parallel()
 	aut := newFirmwaresApiUnitTest(t)
 
 	testCases := []apiUnitTestCase{
@@ -241,6 +246,7 @@ func TestGetFirmwaresModelByModelId(t *testing.T) {
 
 // "/bySupportedModels"
 func TestPostFirmwaresBySupportedModels(t *testing.T) {
+	t.Parallel()
 	aut := newFirmwaresApiUnitTest(t)
 	testCases := []apiUnitTestCase{}
 	aut.run(testCases)
@@ -263,6 +269,7 @@ func TestPostFirmwaresBySupportedModels(t *testing.T) {
 // }
 
 func TestFirmwaresEndPoints(t *testing.T) {
+	t.Parallel()
 	aut := newFirmwaresApiUnitTest(t)
 
 	testCases := []apiUnitTestCase{

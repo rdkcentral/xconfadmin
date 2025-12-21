@@ -16,6 +16,7 @@ import (
 
 // Test error scenarios - these test the xhttp.AdminError, WriteAdminErrorResponse paths
 func TestGetSettingProfilesAllExport_NoAuthContext(t *testing.T) {
+	t.Parallel()
 	// Test without proper auth context to trigger xhttp.AdminError
 	req := httptest.NewRequest(http.MethodGet, "/setting-profiles", nil)
 	recorder := httptest.NewRecorder()
@@ -30,6 +31,7 @@ func TestGetSettingProfilesAllExport_NoAuthContext(t *testing.T) {
 }
 
 func TestGetSettingProfilesAllExport(t *testing.T) {
+	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/setting-profiles", nil)
 	recorder := httptest.NewRecorder()
@@ -47,6 +49,7 @@ func TestGetSettingProfilesAllExport(t *testing.T) {
 }
 
 func TestCreateNumberOfItemsHttpHeaders(t *testing.T) {
+	t.Parallel()
 
 	result := createNumberOfItemsHttpHeaders(nil)
 	assert.Equal(t, "0", result[NumberOfItems])
@@ -64,6 +67,7 @@ func TestCreateNumberOfItemsHttpHeaders(t *testing.T) {
 }
 
 func TestDeleteOneSettingProfilesHandler_Success(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodDelete, "/setting-profiles/test-profile-123", nil)
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -79,6 +83,7 @@ func TestDeleteOneSettingProfilesHandler_Success(t *testing.T) {
 }
 
 func TestUpdateSettingProfilesHandler(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPut, "/setting-profiles", nil)
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -95,6 +100,7 @@ func TestUpdateSettingProfilesHandler(t *testing.T) {
 }
 
 func TestUpdateSettingProfilesHandler_ReachJSONMarshal(t *testing.T) {
+	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodPut, "/setting-profiles", nil)
 	recorder := httptest.NewRecorder()
@@ -128,6 +134,7 @@ func TestUpdateSettingProfilesHandler_ReachJSONMarshal(t *testing.T) {
 }
 
 func TestGetAllSettingProfilesWithPage(t *testing.T) {
+	t.Parallel()
 	// Test case 1: Default pagination (no query parameters)
 	req := httptest.NewRequest(http.MethodGet, "/setting-profiles", nil)
 	recorder := httptest.NewRecorder()
@@ -158,6 +165,7 @@ func TestGetAllSettingProfilesWithPage(t *testing.T) {
 }
 
 func TestGetSettingProfileOneExport(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/setting-profiles/test-profile-123", nil)
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -200,6 +208,7 @@ func TestGetSettingProfileOneExport(t *testing.T) {
 }
 
 func TestGetSettingProfilesFilteredWithPage(t *testing.T) {
+	t.Parallel()
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
 	ctx := context.WithValue(context.Background(), "applicationType", "STB")
@@ -256,6 +265,7 @@ func TestGetSettingProfilesFilteredWithPage(t *testing.T) {
 }
 
 func TestCreateSettingProfileHandler(t *testing.T) {
+	t.Parallel()
 	recorder := httptest.NewRecorder()
 	ctx := context.WithValue(context.Background(), "applicationType", "STB")
 	settingProfile := logupload.SettingProfiles{
@@ -306,6 +316,7 @@ func TestCreateSettingProfileHandler(t *testing.T) {
 }
 
 func TestCreateSettingProfilesPackageHandler(t *testing.T) {
+	t.Parallel()
 	settingProfiles := []logupload.SettingProfiles{
 		{
 			ID:               "test-profile-1",
@@ -359,6 +370,7 @@ func TestCreateSettingProfilesPackageHandler(t *testing.T) {
 }
 
 func TestUpdateSettingProfilesPackageHandler(t *testing.T) {
+	t.Parallel()
 	settingProfiles := []logupload.SettingProfiles{
 		{
 			ID:               "test-profile-1",
@@ -401,6 +413,7 @@ func TestUpdateSettingProfilesPackageHandler(t *testing.T) {
 // Additional comprehensive error tests to cover xhttp.AdminError, WriteAdminErrorResponse, etc.
 
 func TestGetSettingProfileOneExport_WriteAdminErrorResponse_Cases(t *testing.T) {
+	t.Parallel()
 	// Test case 1: Missing ID to trigger WriteAdminErrorResponse with BadRequest
 	req := httptest.NewRequest(http.MethodGet, "/setting-profiles/", nil)
 	recorder := httptest.NewRecorder()
@@ -433,6 +446,7 @@ func TestGetSettingProfileOneExport_WriteAdminErrorResponse_Cases(t *testing.T) 
 }
 
 func TestDeleteOneSettingProfilesHandler_ErrorCases(t *testing.T) {
+	t.Parallel()
 	// Test case 1: Missing ID to trigger WriteAdminErrorResponse with MethodNotAllowed
 	req := httptest.NewRequest(http.MethodDelete, "/setting-profiles/", nil)
 	recorder := httptest.NewRecorder()
@@ -461,6 +475,7 @@ func TestDeleteOneSettingProfilesHandler_ErrorCases(t *testing.T) {
 }
 
 func TestGetSettingProfilesFilteredWithPage_ResponseWriterCastError(t *testing.T) {
+	t.Parallel()
 	// Test ResponseWriter cast error to trigger xwhttp.Error
 	req := httptest.NewRequest(http.MethodPost, "/setting-profiles/filtered", nil)
 	recorder := httptest.NewRecorder()
@@ -474,6 +489,7 @@ func TestGetSettingProfilesFilteredWithPage_ResponseWriterCastError(t *testing.T
 }
 
 func TestCreateSettingProfileHandler_ResponseWriterCastError(t *testing.T) {
+	t.Parallel()
 	// Test ResponseWriter cast error to trigger xwhttp.Error
 	req := httptest.NewRequest(http.MethodPost, "/setting-profiles", nil)
 	recorder := httptest.NewRecorder()
@@ -487,6 +503,7 @@ func TestCreateSettingProfileHandler_ResponseWriterCastError(t *testing.T) {
 }
 
 func TestUpdateSettingProfilesHandler_ResponseWriterCastError(t *testing.T) {
+	t.Parallel()
 	// Test ResponseWriter cast error to trigger xwhttp.Error
 	req := httptest.NewRequest(http.MethodPut, "/setting-profiles", nil)
 	recorder := httptest.NewRecorder()
@@ -500,6 +517,7 @@ func TestUpdateSettingProfilesHandler_ResponseWriterCastError(t *testing.T) {
 }
 
 func TestCreateSettingProfilesPackageHandler_WriteXconfResponse_Cases(t *testing.T) {
+	t.Parallel()
 	// Test case 1: ResponseWriter cast error to trigger xwhttp.WriteXconfResponse with BadRequest
 	req := httptest.NewRequest(http.MethodPost, "/setting-profiles/package", nil)
 	recorder := httptest.NewRecorder()
@@ -526,6 +544,7 @@ func TestCreateSettingProfilesPackageHandler_WriteXconfResponse_Cases(t *testing
 }
 
 func TestUpdateSettingProfilesPackageHandler_Comprehensive_Coverage(t *testing.T) {
+	t.Parallel()
 	ctx := context.WithValue(context.Background(), "applicationType", "STB")
 
 	// Test case 1: ResponseWriter cast error
@@ -604,6 +623,7 @@ func TestUpdateSettingProfilesPackageHandler_Comprehensive_Coverage(t *testing.T
 }
 
 func TestGetAllSettingProfilesWithPage_AdditionalErrorCases(t *testing.T) {
+	t.Parallel()
 	// Test case 1: pageNumber = 0 (edge case)
 	req := httptest.NewRequest(http.MethodGet, "/setting-profiles?pageNumber=0", nil)
 	recorder := httptest.NewRecorder()
@@ -630,6 +650,7 @@ func TestGetAllSettingProfilesWithPage_AdditionalErrorCases(t *testing.T) {
 }
 
 func TestWriteXconfResponse_JSONMarshalError(t *testing.T) {
+	t.Parallel()
 	// This test aims to cover the JSON marshal error paths in various handlers
 	// Since we can't easily force json.Marshal to fail with our structs,
 	// we'll test the successful paths that lead to xwhttp.WriteXconfResponse calls
@@ -646,6 +667,7 @@ func TestWriteXconfResponse_JSONMarshalError(t *testing.T) {
 }
 
 func TestGetSettingProfileOneExport_Success(t *testing.T) {
+	t.Parallel()
 	// Create a test profile
 	profile := &logupload.SettingProfiles{
 		ID:               "export-test-profile-1",
@@ -669,6 +691,7 @@ func TestGetSettingProfileOneExport_Success(t *testing.T) {
 
 // TestGetSettingProfileOneExport_WithExportParam tests export with export query parameter
 func TestGetSettingProfileOneExport_WithExportParam(t *testing.T) {
+	t.Parallel()
 	profile := &logupload.SettingProfiles{
 		ID:               "export-test-profile-2",
 		SettingProfileID: "export-profile-2",
@@ -691,6 +714,7 @@ func TestGetSettingProfileOneExport_WithExportParam(t *testing.T) {
 
 // TestGetSettingProfileOneExport_BlankID tests with blank ID
 func TestGetSettingProfileOneExport_BlankID(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/setting-profiles/", nil)
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -704,6 +728,7 @@ func TestGetSettingProfileOneExport_BlankID(t *testing.T) {
 
 // TestGetSettingProfileOneExport_NotFound tests with non-existent ID
 func TestGetSettingProfileOneExport_NotFound(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/setting-profiles/non-existent-id", nil)
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -717,6 +742,7 @@ func TestGetSettingProfileOneExport_NotFound(t *testing.T) {
 
 // TestUpdateSettingProfilesPackageHandler_EmptyArray tests with empty array
 func TestUpdateSettingProfilesPackageHandler_EmptyArray(t *testing.T) {
+	t.Parallel()
 	jsonBody, _ := json.Marshal([]logupload.SettingProfiles{})
 
 	req := httptest.NewRequest(http.MethodPut, "/setting-profiles/package", strings.NewReader(string(jsonBody)))
@@ -733,11 +759,13 @@ func TestUpdateSettingProfilesPackageHandler_EmptyArray(t *testing.T) {
 
 // TestUpdateSettingProfilesPackageHandler_SingleItem tests with single item
 func TestUpdateSettingProfilesPackageHandler_SingleItem(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration - cannot set up test data")
 }
 
 // TestDeleteOneSettingProfilesHandler_NoID tests delete with no ID
 func TestDeleteOneSettingProfilesHandler_NoID(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodDelete, "/setting-profiles/", nil)
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -752,6 +780,7 @@ func TestDeleteOneSettingProfilesHandler_NoID(t *testing.T) {
 
 // TestUpdateSettingProfilesHandler_InvalidJSON tests update with invalid JSON
 func TestUpdateSettingProfilesHandler_InvalidJSON(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPut, "/setting-profiles", strings.NewReader(`{invalid json}`))
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -765,5 +794,6 @@ func TestUpdateSettingProfilesHandler_InvalidJSON(t *testing.T) {
 
 // TestUpdateSettingProfilesHandler_ValidProfile tests update with valid profile
 func TestUpdateSettingProfilesHandler_ValidProfile(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration - cannot set up test data for update")
 }

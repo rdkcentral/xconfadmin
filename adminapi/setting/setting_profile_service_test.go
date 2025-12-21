@@ -8,11 +8,13 @@ import (
 )
 
 func TestDeleteSettingProfile(t *testing.T) {
+	t.Parallel()
 	DeleteSettingProfile("test-profile-123")
 	assert.True(t, true)
 }
 
 func TestValidateProperties(t *testing.T) {
+	t.Parallel()
 	validEntity := &xwlogupload.SettingProfiles{
 		SettingType: "PARTNER_SETTINGS",
 		Properties: map[string]string{
@@ -45,6 +47,7 @@ func TestValidateProperties(t *testing.T) {
 }
 
 func TestValidateAll(t *testing.T) {
+	t.Parallel()
 	entity := &xwlogupload.SettingProfiles{
 		ID:               "entity-1",
 		SettingProfileID: "profile-new",
@@ -63,6 +66,7 @@ func TestValidateAll(t *testing.T) {
 }
 
 func TestValidateUsage(t *testing.T) {
+	t.Parallel()
 	validateUsage("non-existent-id")
 	assert.NotPanics(t, func() {
 		defer func() {
@@ -73,12 +77,14 @@ func TestValidateUsage(t *testing.T) {
 }
 
 func TestSetSettingProfile(t *testing.T) {
+	t.Parallel()
 	err := SetSettingProfile("test-id", nil)
 	assert.NotNil(t, err)
 }
 
 // TestFindByContext_WithApplicationType tests searching with application type
 func TestFindByContext_WithApplicationType(t *testing.T) {
+	t.Parallel()
 	searchContext := map[string]string{
 		"applicationType": "STB",
 	}
@@ -88,6 +94,7 @@ func TestFindByContext_WithApplicationType(t *testing.T) {
 
 // TestFindByContext_WithName tests searching with name
 func TestFindByContext_WithName(t *testing.T) {
+	t.Parallel()
 	searchContext := map[string]string{
 		"name": "test",
 	}
@@ -97,6 +104,7 @@ func TestFindByContext_WithName(t *testing.T) {
 
 // TestFindByContext_WithType tests searching with type
 func TestFindByContext_WithType(t *testing.T) {
+	t.Parallel()
 	searchContext := map[string]string{
 		"type": "PARTNER_SETTINGS",
 	}
@@ -106,6 +114,7 @@ func TestFindByContext_WithType(t *testing.T) {
 
 // TestFindByContext_MultipleFilters tests with multiple search criteria
 func TestFindByContext_MultipleFilters(t *testing.T) {
+	t.Parallel()
 	searchContext := map[string]string{
 		"applicationType": "STB",
 		"name":            "profile",
@@ -117,11 +126,13 @@ func TestFindByContext_MultipleFilters(t *testing.T) {
 
 // TestDelete_Success tests successful deletion
 func TestDelete_Success(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration")
 }
 
 // TestDelete_NonExistentID tests delete with non-existent ID
 func TestDelete_NonExistentID(t *testing.T) {
+	t.Parallel()
 	result, err := Delete("non-existent-delete-id", "STB")
 	assert.NotNil(t, err)
 	assert.Nil(t, result)
@@ -129,36 +140,43 @@ func TestDelete_NonExistentID(t *testing.T) {
 
 // TestDelete_WrongApplicationType tests delete with wrong application type
 func TestDelete_WrongApplicationType(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration")
 }
 
 // TestUpdate_ValidProfile tests successful update
 func TestUpdate_ValidProfile(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration")
 }
 
 // TestUpdate_InvalidProperties tests update with invalid properties
 func TestUpdate_InvalidProperties(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration")
 }
 
 // TestUpdate_WrongApplicationType tests update with wrong application type
 func TestUpdate_WrongApplicationType(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration")
 }
 
 // TestCreate_ValidProfile tests creating a new profile
 func TestCreate_ValidProfile(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration")
 }
 
 // TestCreate_InvalidProperties tests create with invalid properties
 func TestCreate_InvalidProperties(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration")
 }
 
 // TestBeforeSaving_ValidEntity tests validation before saving
 func TestBeforeSaving_ValidEntity(t *testing.T) {
+	t.Parallel()
 	profile := &xwlogupload.SettingProfiles{
 		ID:               "before-save-test-1",
 		SettingProfileID: "Before Save Test",
@@ -176,6 +194,7 @@ func TestBeforeSaving_ValidEntity(t *testing.T) {
 
 // TestBeforeSaving_EmptyProperties tests with empty properties
 func TestBeforeSaving_EmptyProperties(t *testing.T) {
+	t.Parallel()
 	profile := &xwlogupload.SettingProfiles{
 		ID:               "before-save-test-2",
 		SettingProfileID: "Before Save Test 2",
@@ -190,6 +209,7 @@ func TestBeforeSaving_EmptyProperties(t *testing.T) {
 
 // TestValidate_ValidEntity tests validation with valid entity
 func TestValidate_ValidEntity(t *testing.T) {
+	t.Parallel()
 	profile := &xwlogupload.SettingProfiles{
 		SettingType: "PARTNER_SETTINGS",
 		Properties:  map[string]string{"key1": "value1"},
@@ -201,6 +221,7 @@ func TestValidate_ValidEntity(t *testing.T) {
 
 // TestValidate_InvalidEntity tests validation with invalid entity
 func TestValidate_InvalidEntity(t *testing.T) {
+	t.Parallel()
 	profile := &xwlogupload.SettingProfiles{
 		SettingType: "",
 		Properties:  map[string]string{"key1": "value1"},
@@ -212,6 +233,7 @@ func TestValidate_InvalidEntity(t *testing.T) {
 
 // TestSettingProfilesGeneratePage_ValidPage tests pagination with valid page
 func TestSettingProfilesGeneratePage_ValidPage(t *testing.T) {
+	t.Parallel()
 	profiles := []*xwlogupload.SettingProfiles{
 		{ID: "1", SettingProfileID: "Profile 1"},
 		{ID: "2", SettingProfileID: "Profile 2"},
@@ -227,6 +249,7 @@ func TestSettingProfilesGeneratePage_ValidPage(t *testing.T) {
 
 // TestSettingProfilesGeneratePage_LastPage tests pagination on last page
 func TestSettingProfilesGeneratePage_LastPage(t *testing.T) {
+	t.Parallel()
 	profiles := []*xwlogupload.SettingProfiles{
 		{ID: "1", SettingProfileID: "Profile 1"},
 		{ID: "2", SettingProfileID: "Profile 2"},
@@ -240,6 +263,7 @@ func TestSettingProfilesGeneratePage_LastPage(t *testing.T) {
 
 // TestSettingProfilesGeneratePage_InvalidPage tests with invalid page
 func TestSettingProfilesGeneratePage_InvalidPage(t *testing.T) {
+	t.Parallel()
 	profiles := []*xwlogupload.SettingProfiles{
 		{ID: "1", SettingProfileID: "Profile 1"},
 	}
@@ -250,6 +274,7 @@ func TestSettingProfilesGeneratePage_InvalidPage(t *testing.T) {
 
 // TestSettingProfilesGeneratePage_OutOfBounds tests with page beyond bounds
 func TestSettingProfilesGeneratePage_OutOfBounds(t *testing.T) {
+	t.Parallel()
 	profiles := []*xwlogupload.SettingProfiles{
 		{ID: "1", SettingProfileID: "Profile 1"},
 	}

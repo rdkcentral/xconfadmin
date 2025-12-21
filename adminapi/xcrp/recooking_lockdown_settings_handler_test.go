@@ -80,6 +80,7 @@ const (
 
 // Test case 1: No write permission (covers lines 28-31)
 func TestPostRecookingLockdownSettingsHandler(t *testing.T) {
+	t.Parallel()
 	originalSatOn := common.SatOn
 	common.SatOn = true
 	defer func() { common.SatOn = originalSatOn }()
@@ -119,6 +120,7 @@ func TestPostRecookingLockdownSettingsHandler(t *testing.T) {
 
 // Test with nil models and partners (covers lines 50-55)
 func TestPostRecookingLockdownSettingsHandler_NilModelsPartners(t *testing.T) {
+	t.Parallel()
 	common.SatOn = false
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -139,6 +141,7 @@ func TestPostRecookingLockdownSettingsHandler_NilModelsPartners(t *testing.T) {
 
 // Test with empty models and partners arrays
 func TestPostRecookingLockdownSettingsHandler_EmptyArrays(t *testing.T) {
+	t.Parallel()
 	common.SatOn = false
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -159,6 +162,7 @@ func TestPostRecookingLockdownSettingsHandler_EmptyArrays(t *testing.T) {
 
 // Test current time parsing error (covers line 87-90)
 func TestPostRecookingLockdownSettingsHandler_TimeParseError(t *testing.T) {
+	t.Parallel()
 	// This branch is hard to trigger as time.Now() always produces valid time
 	// But we can test that the handler completes successfully with valid time
 	common.SatOn = false
@@ -180,6 +184,7 @@ func TestPostRecookingLockdownSettingsHandler_TimeParseError(t *testing.T) {
 
 // Test lockdown settings save error (covers lines 98-101)
 func TestPostRecookingLockdownSettingsHandler_SaveError(t *testing.T) {
+	t.Parallel()
 	common.SatOn = false
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -199,6 +204,7 @@ func TestPostRecookingLockdownSettingsHandler_SaveError(t *testing.T) {
 
 // Test successful execution with all branches (covers lines 104-112)
 func TestPostRecookingLockdownSettingsHandler_Success(t *testing.T) {
+	t.Parallel()
 	common.SatOn = false
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -221,6 +227,7 @@ func TestPostRecookingLockdownSettingsHandler_Success(t *testing.T) {
 
 // Test lockdown mode branch where rfc lockdown enabled triggers 400
 func TestPostRecookingLockdownSettingsHandler_LockdownModeRFC(t *testing.T) {
+	t.Parallel()
 	// Enable lockdown settings via app settings
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, "00:00:00")
@@ -242,6 +249,7 @@ func TestPostRecookingLockdownSettingsHandler_LockdownModeRFC(t *testing.T) {
 
 // Simulate timezone load failure by temporarily altering DefaultLockdownTimezone (if possible via env) to invalid value
 func TestPostRecookingLockdownSettingsHandler_TimezoneError(t *testing.T) {
+	t.Parallel()
 	// Force branch where time.LoadLocation fails by setting TZ env to invalid and expecting internal error during timezone load
 	originalTz := os.Getenv("TZ")
 	os.Setenv("TZ", "Invalid/Zone")
@@ -260,12 +268,14 @@ func TestPostRecookingLockdownSettingsHandler_TimezoneError(t *testing.T) {
 }
 
 func TestIsLockdownMode(t *testing.T) {
+	t.Parallel()
 	res := isLockdownMode()
 	assert.False(t, res)
 }
 
 // Test isLockdownMode with lockdown disabled (covers line 160)
 func TestIsLockdownMode_Disabled(t *testing.T) {
+	t.Parallel()
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, false)
 	result := isLockdownMode()
 	assert.False(t, result, "Should return false when lockdown is disabled")
@@ -273,6 +283,7 @@ func TestIsLockdownMode_Disabled(t *testing.T) {
 
 // Test isLockdownMode with timezone load error (covers lines 121-124)
 func TestIsLockdownMode_TimezoneError(t *testing.T) {
+	t.Parallel()
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, "12:00:00")
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, "13:00:00")
@@ -285,6 +296,7 @@ func TestIsLockdownMode_TimezoneError(t *testing.T) {
 
 // Test isLockdownMode with current time parse error (covers lines 130-133)
 func TestIsLockdownMode_CurrentTimeParseError(t *testing.T) {
+	t.Parallel()
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, "12:00:00")
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, "13:00:00")
@@ -297,6 +309,7 @@ func TestIsLockdownMode_CurrentTimeParseError(t *testing.T) {
 
 // Test isLockdownMode with start time parse error (covers lines 134-137)
 func TestIsLockdownMode_StartTimeParseError(t *testing.T) {
+	t.Parallel()
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, "invalid-time")
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, "13:00:00")
@@ -308,6 +321,7 @@ func TestIsLockdownMode_StartTimeParseError(t *testing.T) {
 
 // Test isLockdownMode with end time parse error (covers lines 138-141)
 func TestIsLockdownMode_EndTimeParseError(t *testing.T) {
+	t.Parallel()
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, "12:00:00")
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, "invalid-time")
@@ -319,6 +333,7 @@ func TestIsLockdownMode_EndTimeParseError(t *testing.T) {
 
 // Test isLockdownMode with start time after end time (covers lines 143-145)
 func TestIsLockdownMode_StartAfterEnd(t *testing.T) {
+	t.Parallel()
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, "23:00:00")
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, "01:00:00")
@@ -330,6 +345,7 @@ func TestIsLockdownMode_StartAfterEnd(t *testing.T) {
 
 // Test isLockdownMode when current time is in lockdown window (covers lines 147-150)
 func TestIsLockdownMode_InWindow(t *testing.T) {
+	t.Parallel()
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
 
 	// Set times so current time is definitely in window
@@ -347,6 +363,7 @@ func TestIsLockdownMode_InWindow(t *testing.T) {
 
 // Test isLockdownMode when current time equals start time (covers line 147)
 func TestIsLockdownMode_AtStartTime(t *testing.T) {
+	t.Parallel()
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
 
 	// Try to set current time as start
@@ -364,6 +381,7 @@ func TestIsLockdownMode_AtStartTime(t *testing.T) {
 
 // Test isLockdownMode when current time is outside window (covers line 151)
 func TestIsLockdownMode_OutsideWindow(t *testing.T) {
+	t.Parallel()
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
 
 	// Set times so current time is definitely outside
@@ -381,6 +399,7 @@ func TestIsLockdownMode_OutsideWindow(t *testing.T) {
 
 // Exercise isLockdownMode with startTime > endTime (adjustment branch) and active window true
 func TestIsLockdownMode_AdjustmentAndActiveWindow(t *testing.T) {
+	t.Parallel()
 	// Set app settings for enabled lockdown with inverted times (start after end)
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
 	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, "23:59:59")
@@ -399,6 +418,7 @@ func TestIsLockdownMode_AdjustmentAndActiveWindow(t *testing.T) {
 }
 
 func TestCheckRecookingStatus(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -443,6 +463,7 @@ func TestCheckRecookingStatus(t *testing.T) {
 
 // Test CheckRecookingStatus with short duration (covers lines 159-163)
 func TestCheckRecookingStatus_ShortDuration(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic: %v", r)
@@ -474,6 +495,7 @@ func TestCheckRecookingStatus_ShortDuration(t *testing.T) {
 
 // Test CheckRecookingStatus error path (covers lines 168-171)
 func TestCheckRecookingStatus_ErrorPath(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic from connector: %v", r)
@@ -506,6 +528,7 @@ func TestCheckRecookingStatus_ErrorPath(t *testing.T) {
 
 // Test CheckRecookingStatus state false path (covers lines 173-178)
 func TestCheckRecookingStatus_StateFalse(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic: %v", r)
@@ -539,6 +562,7 @@ func TestCheckRecookingStatus_StateFalse(t *testing.T) {
 
 // Test CheckRecookingStatus state true path (covers lines 179-184)
 func TestCheckRecookingStatus_StateTrue(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic: %v", r)
@@ -571,6 +595,7 @@ func TestCheckRecookingStatus_StateTrue(t *testing.T) {
 
 // Test CheckRecookingStatus lockdown modules = rfc (covers lines 187-193)
 func TestCheckRecookingStatus_LockdownModulesRFC(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic: %v", r)
@@ -606,6 +631,7 @@ func TestCheckRecookingStatus_LockdownModulesRFC(t *testing.T) {
 
 // Test CheckRecookingStatus with multiple modules (covers lines 194-206)
 func TestCheckRecookingStatus_MultipleModules(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic: %v", r)
@@ -641,6 +667,7 @@ func TestCheckRecookingStatus_MultipleModules(t *testing.T) {
 
 // Test CheckRecookingStatus with modules not including rfc
 func TestCheckRecookingStatus_NoRFCModule(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic: %v", r)

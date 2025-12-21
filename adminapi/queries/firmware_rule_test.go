@@ -183,6 +183,7 @@ func (aut *apiUnitTest) firmwareRuleSingleValidator(tcase apiUnitTestCase, rsp *
 }
 
 func TestGetFirmwareRuleFromQueryParams(t *testing.T) {
+	t.Parallel()
 	aut := newFirmwareRuleApiUnitTest(t)
 	testCases := []apiUnitTestCase{
 		{FR_API, NO_INPUT, NO_PRETERMS, nil, "GET", "", http.StatusOK, "saveFetchedCntIn=begin_count", aut.firmwareRuleArrayValidator},
@@ -361,6 +362,7 @@ func TestGetFirmwareRuleFromQueryParams(t *testing.T) {
 // }
 
 func TestGetFirmwareRuleById(t *testing.T) {
+	t.Parallel()
 	aut := newFirmwareRuleApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -417,6 +419,7 @@ func TestGetFirmwareRuleById(t *testing.T) {
 // }
 
 func TestGetFirmwareRuleByIdWithExportParam(t *testing.T) {
+	t.Parallel()
 	aut := newFirmwareRuleApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -433,6 +436,7 @@ func TestGetFirmwareRuleByIdWithExportParam(t *testing.T) {
 }
 
 func TestGetFirmwareRuleWithParam(t *testing.T) {
+	t.Parallel()
 	aut := newFirmwareRuleApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -451,6 +455,7 @@ func TestGetFirmwareRuleWithParam(t *testing.T) {
 }
 
 func TestGetFirmwareRuleExportAllTypesWithParam(t *testing.T) {
+	t.Parallel()
 	aut := newFirmwareRuleApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -469,6 +474,7 @@ func TestGetFirmwareRuleExportAllTypesWithParam(t *testing.T) {
 }
 
 func TestGetFirmwareRuleExportByTypeWithParam(t *testing.T) {
+	t.Parallel()
 	aut := newFirmwareRuleApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -489,6 +495,7 @@ func TestGetFirmwareRuleExportByTypeWithParam(t *testing.T) {
 }
 
 func TestGetFirmwareRuleByTypeNames(t *testing.T) {
+	t.Parallel()
 	aut := newFirmwareRuleApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -507,6 +514,7 @@ func TestGetFirmwareRuleByTypeNames(t *testing.T) {
 }
 
 func TestGetFirmwareRuleByTemplateByTemplateIdNames(t *testing.T) {
+	t.Parallel()
 	aut := newFirmwareRuleApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -525,6 +533,7 @@ func TestGetFirmwareRuleByTemplateByTemplateIdNames(t *testing.T) {
 }
 
 func TestFirmwareRuleEndPoints(t *testing.T) {
+	t.Parallel()
 
 	aut := newFirmwareRuleApiUnitTest(t)
 	sysGenId := uuid.New().String()
@@ -592,6 +601,7 @@ func TestFirmwareRuleEndPoints(t *testing.T) {
 }
 
 func TestFirmwareRuleCRUDInLoop(t *testing.T) {
+	t.Parallel()
 
 	aut := newFirmwareRuleApiUnitTest(t)
 
@@ -608,6 +618,7 @@ func TestFirmwareRuleCRUDInLoop(t *testing.T) {
 }
 
 func TestPostFirmwareRuleImportAllFromBodyParams(t *testing.T) {
+	t.Parallel()
 
 	aut := newFirmwareRuleApiUnitTest(t)
 	testCases := []apiUnitTestCase{

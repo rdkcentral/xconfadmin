@@ -28,6 +28,7 @@ import (
 )
 
 func TestNextChar(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    rune
@@ -49,6 +50,7 @@ func TestNextChar(t *testing.T) {
 }
 
 func TestDoReport_EmptyMacAddresses(t *testing.T) {
+	t.Parallel()
 	macAddresses := []string{}
 
 	reportBytes, err := doReport(macAddresses)
@@ -68,6 +70,7 @@ func TestDoReport_EmptyMacAddresses(t *testing.T) {
 }
 
 func TestDoReport_WithNoConfigLog(t *testing.T) {
+	t.Parallel()
 	// Setup: Create MAC addresses that don't have any config logs
 	macAddresses := []string{
 		"AA:BB:CC:DD:EE:01",
@@ -89,6 +92,7 @@ func TestDoReport_WithNoConfigLog(t *testing.T) {
 }
 
 func TestDoReport_WithCompleteConfigLog(t *testing.T) {
+	t.Parallel()
 	// Test with MAC that has a complete config log set up properly through the system
 	macAddress := "11:22:33:44:55:66"
 
@@ -117,6 +121,7 @@ func TestDoReport_WithCompleteConfigLog(t *testing.T) {
 }
 
 func TestDoReport_WithNilFields(t *testing.T) {
+	t.Parallel()
 	macAddress := "AA:BB:CC:DD:EE:FF"
 	testTime := time.Now()
 
@@ -147,6 +152,7 @@ func TestDoReport_WithNilFields(t *testing.T) {
 }
 
 func TestDoReport_WithConfigChangeLogs(t *testing.T) {
+	t.Parallel()
 	// Test that report generates with change logs structure
 	macAddress := "12:34:56:78:90:AB"
 
@@ -170,6 +176,7 @@ func TestDoReport_WithConfigChangeLogs(t *testing.T) {
 }
 
 func TestDoReport_MacAddressSorting(t *testing.T) {
+	t.Parallel()
 	// Test MAC address sorting without config logs
 	macAddresses := []string{
 		"ZZ:ZZ:ZZ:ZZ:ZZ:ZZ",
@@ -191,6 +198,7 @@ func TestDoReport_MacAddressSorting(t *testing.T) {
 }
 
 func TestDoReport_EmptyConfigChangeLogs(t *testing.T) {
+	t.Parallel()
 	macAddress := "CC:DD:EE:FF:00:11"
 
 	reportBytes, err := doReport([]string{macAddress})
@@ -207,6 +215,7 @@ func TestDoReport_EmptyConfigChangeLogs(t *testing.T) {
 }
 
 func TestDoReport_MultipleFilters(t *testing.T) {
+	t.Parallel()
 	macAddress := "11:11:11:11:11:11"
 
 	reportBytes, err := doReport([]string{macAddress})
@@ -222,6 +231,7 @@ func TestDoReport_MultipleFilters(t *testing.T) {
 }
 
 func TestDoReport_AllHeadersPresent(t *testing.T) {
+	t.Parallel()
 	expectedHeaders := []string{
 		"estbMac",
 		"env",
@@ -267,6 +277,7 @@ func TestDoReport_AllHeadersPresent(t *testing.T) {
 }
 
 func TestDoReport_WithCompleteInput(t *testing.T) {
+	t.Parallel()
 	macAddress := "AA:BB:CC:DD:EE:11"
 	testTime := time.Now()
 
@@ -343,6 +354,7 @@ func TestDoReport_WithCompleteInput(t *testing.T) {
 }
 
 func TestDoReport_WithChangeLogInput(t *testing.T) {
+	t.Parallel()
 	macAddress := "BB:CC:DD:EE:FF:22"
 	testTime := time.Now()
 
@@ -409,6 +421,7 @@ func TestDoReport_WithChangeLogInput(t *testing.T) {
 }
 
 func TestDoReport_WithChangeLogNilInput(t *testing.T) {
+	t.Parallel()
 	macAddress := "CC:DD:EE:FF:00:33"
 	testTime := time.Now()
 
@@ -448,6 +461,7 @@ func TestDoReport_WithChangeLogNilInput(t *testing.T) {
 }
 
 func TestDoReport_WithChangeLogHasRule(t *testing.T) {
+	t.Parallel()
 	macAddress := "DD:EE:FF:00:11:44"
 	testTime := time.Now()
 
@@ -487,6 +501,7 @@ func TestDoReport_WithChangeLogHasRule(t *testing.T) {
 }
 
 func TestDoReport_WithChangeLogHasFirmwareConfig(t *testing.T) {
+	t.Parallel()
 	macAddress := "EE:FF:00:11:22:55"
 	testTime := time.Now()
 
@@ -529,6 +544,7 @@ func TestDoReport_WithChangeLogHasFirmwareConfig(t *testing.T) {
 }
 
 func TestDoReport_WithRuleNoOp(t *testing.T) {
+	t.Parallel()
 	macAddress := "FF:00:11:22:33:66"
 	testTime := time.Now()
 
@@ -560,6 +576,7 @@ func TestDoReport_WithRuleNoOp(t *testing.T) {
 }
 
 func TestDoReport_MultipleMacsSorted(t *testing.T) {
+	t.Parallel()
 	testTime := time.Now()
 
 	// Create config logs for multiple MACs

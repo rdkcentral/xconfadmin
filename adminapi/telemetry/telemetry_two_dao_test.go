@@ -34,6 +34,7 @@ import (
 )
 
 func TestTelemetryTwoDao(t *testing.T) {
+	t.Parallel()
 	// ==== setup random variable ====
 	// namedlistKey := fmt.Sprintf("red%v", uuid.New().String()[:4])
 	ruleUuid := uuid.New().String()
@@ -69,6 +70,7 @@ func TestTelemetryTwoDao(t *testing.T) {
 }
 
 func TestTelemetryTwoDaoSampleData(t *testing.T) {
+	t.Parallel()
 	// build sample t2rules
 	t2Rules := []logupload.TelemetryTwoRule{}
 	err := json.Unmarshal([]byte(SampleTelemetryTwoRulesString), &t2Rules)
@@ -117,6 +119,7 @@ func TestTelemetryTwoDaoSampleData(t *testing.T) {
 }
 
 func TestGenericNamedListDaoForMacs(t *testing.T) {
+	t.Parallel()
 	namedListKey := fmt.Sprintf("red%v", uuid.New().String()[:4])
 	macs := []string{
 		"11:11:22:22:33:02",
@@ -137,6 +140,7 @@ func TestGenericNamedListDaoForMacs(t *testing.T) {
 }
 
 func TestGenericNamedlistDaoForIpAddresses(t *testing.T) {
+	t.Parallel()
 	namedListKey := fmt.Sprintf("scarlet%v", uuid.New().String()[:4])
 	ips := []string{
 		"1.2.3.4",

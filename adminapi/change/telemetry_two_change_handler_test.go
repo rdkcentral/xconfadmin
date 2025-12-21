@@ -26,6 +26,7 @@ func marshal(v interface{}) []byte { b, _ := json.Marshal(v); return b }
 
 func TestGetTwoProfileChangesHandler_Empty(t *testing.T) {
 	cleanupChangeTest()
+	defer cleanupChangeTest()
 	r := httptest.NewRequest("GET", "/xconfAdminService/telemetry/v2/change/all?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
 	GetTwoProfileChangesHandler(rr, r)
@@ -314,6 +315,7 @@ func TestGetApprovedTwoChangesFilteredHandler_InvalidJSON(t *testing.T) {
 
 func TestGetApprovedTwoChangesFilteredHandler_EmptyResult(t *testing.T) {
 	cleanupChangeTest()
+	defer cleanupChangeTest()
 	r := httptest.NewRequest("POST", "/xconfAdminService/telemetry/v2/change/approved/filtered?pageNumber=1&pageSize=10&applicationType=stb", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -327,6 +329,7 @@ func TestGetApprovedTwoChangesFilteredHandler_EmptyResult(t *testing.T) {
 
 func TestRevertTwoChangesHandler_Success(t *testing.T) {
 	cleanupChangeTest()
+	defer cleanupChangeTest()
 	// Create and approve a change
 	ch := seedCreateChange(t, "RevertMultiple1")
 	ch2 := seedCreateChange(t, "RevertMultiple2")
@@ -553,6 +556,7 @@ func TestGetApprovedTwoChangesHandler_Success(t *testing.T) {
 
 func TestGetApprovedTwoChangesHandler_Empty(t *testing.T) {
 	cleanupChangeTest()
+	defer cleanupChangeTest()
 	// No approved changes
 	r := httptest.NewRequest("GET", "/xconfAdminService/telemetry/v2/change/approved/all?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
@@ -563,6 +567,7 @@ func TestGetApprovedTwoChangesHandler_Empty(t *testing.T) {
 
 func TestGetApprovedTwoChangesHandler_ApplicationTypeFilter(t *testing.T) {
 	cleanupChangeTest()
+	defer cleanupChangeTest()
 	// Create and approve a change
 	ch := seedCreateChange(t, "AppTypeTest")
 	r1 := httptest.NewRequest("GET", fmt.Sprintf("/approve/%s?applicationType=stb", ch.ID), nil)

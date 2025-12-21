@@ -42,6 +42,7 @@ func newValidIpFilter(name string) *coreef.IpFilter {
 }
 
 func TestUpdateIpFilter_Success(t *testing.T) {
+	t.Parallel()
 	truncateTable(db.TABLE_FIRMWARE_RULE)
 	truncateTable(db.TABLE_GENERIC_NS_LIST)
 
@@ -60,6 +61,7 @@ func TestUpdateIpFilter_Success(t *testing.T) {
 }
 
 func TestUpdateIpFilter_WithExistingId(t *testing.T) {
+	t.Parallel()
 	truncateTable(db.TABLE_FIRMWARE_RULE)
 	truncateTable(db.TABLE_GENERIC_NS_LIST)
 
@@ -74,6 +76,7 @@ func TestUpdateIpFilter_WithExistingId(t *testing.T) {
 }
 
 func TestUpdateIpFilter_BlankName(t *testing.T) {
+	t.Parallel()
 	truncateTable(db.TABLE_FIRMWARE_RULE)
 	truncateTable(db.TABLE_GENERIC_NS_LIST)
 
@@ -101,6 +104,7 @@ func TestUpdateIpFilter_BlankName(t *testing.T) {
 }
 
 func TestUpdateIpFilter_InvalidApplicationType(t *testing.T) {
+	t.Parallel()
 	truncateTable(db.TABLE_FIRMWARE_RULE)
 	truncateTable(db.TABLE_GENERIC_NS_LIST)
 
@@ -114,6 +118,7 @@ func TestUpdateIpFilter_InvalidApplicationType(t *testing.T) {
 }
 
 func TestUpdateIpFilter_DuplicateName(t *testing.T) {
+	t.Parallel()
 	truncateTable(db.TABLE_FIRMWARE_RULE)
 	truncateTable(db.TABLE_GENERIC_NS_LIST)
 
@@ -131,6 +136,7 @@ func TestUpdateIpFilter_DuplicateName(t *testing.T) {
 }
 
 func TestUpdateIpFilter_WithValidIpAddressGroup(t *testing.T) {
+	t.Parallel()
 	truncateTable(db.TABLE_FIRMWARE_RULE)
 	truncateTable(db.TABLE_GENERIC_NS_LIST)
 
@@ -150,6 +156,7 @@ func TestUpdateIpFilter_WithValidIpAddressGroup(t *testing.T) {
 }
 
 func TestUpdateIpFilter_WithChangedIpAddressGroup(t *testing.T) {
+	t.Parallel()
 	truncateTable(db.TABLE_FIRMWARE_RULE)
 	truncateTable(db.TABLE_GENERIC_NS_LIST)
 
@@ -167,6 +174,7 @@ func TestUpdateIpFilter_WithChangedIpAddressGroup(t *testing.T) {
 }
 
 func TestUpdateIpFilter_WithModifiedIpAddressGroup(t *testing.T) {
+	t.Parallel()
 	truncateTable(db.TABLE_FIRMWARE_RULE)
 	truncateTable(db.TABLE_GENERIC_NS_LIST)
 
@@ -190,6 +198,7 @@ func TestUpdateIpFilter_WithModifiedIpAddressGroup(t *testing.T) {
 }
 
 func TestDeleteIpsFilter_Success(t *testing.T) {
+	t.Parallel()
 	truncateTable(db.TABLE_FIRMWARE_RULE)
 	truncateTable(db.TABLE_GENERIC_NS_LIST)
 
@@ -206,6 +215,7 @@ func TestDeleteIpsFilter_Success(t *testing.T) {
 }
 
 func TestDeleteIpsFilter_NotFound(t *testing.T) {
+	t.Parallel()
 	truncateTable(db.TABLE_FIRMWARE_RULE)
 	truncateTable(db.TABLE_GENERIC_NS_LIST)
 
@@ -218,6 +228,7 @@ func TestDeleteIpsFilter_NotFound(t *testing.T) {
 }
 
 func TestDeleteIpsFilter_EmptyName(t *testing.T) {
+	t.Parallel()
 	truncateTable(db.TABLE_FIRMWARE_RULE)
 	truncateTable(db.TABLE_GENERIC_NS_LIST)
 
@@ -229,6 +240,7 @@ func TestDeleteIpsFilter_EmptyName(t *testing.T) {
 }
 
 func TestDeleteIpsFilter_WithApplicationType(t *testing.T) {
+	t.Parallel()
 	truncateTable(db.TABLE_FIRMWARE_RULE)
 	truncateTable(db.TABLE_GENERIC_NS_LIST)
 
@@ -243,6 +255,7 @@ func TestDeleteIpsFilter_WithApplicationType(t *testing.T) {
 }
 
 func TestUpdateIpFilter_UpdateExisting(t *testing.T) {
+	t.Parallel()
 	truncateTable(db.TABLE_FIRMWARE_RULE)
 	truncateTable(db.TABLE_GENERIC_NS_LIST)
 
@@ -261,6 +274,7 @@ func TestUpdateIpFilter_UpdateExisting(t *testing.T) {
 }
 
 func TestUpdateIpFilter_MultipleApplicationTypes(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name    string
 		appType string
@@ -284,6 +298,7 @@ func TestUpdateIpFilter_MultipleApplicationTypes(t *testing.T) {
 }
 
 func TestDeleteIpsFilter_AfterUpdate(t *testing.T) {
+	t.Parallel()
 	truncateTable(db.TABLE_FIRMWARE_RULE)
 	truncateTable(db.TABLE_GENERIC_NS_LIST)
 
@@ -306,6 +321,7 @@ func TestDeleteIpsFilter_AfterUpdate(t *testing.T) {
 }
 
 func TestUpdateIpFilter_RuleNameValidation(t *testing.T) {
+	t.Parallel()
 	truncateTable(db.TABLE_FIRMWARE_RULE)
 	truncateTable(db.TABLE_GENERIC_NS_LIST)
 

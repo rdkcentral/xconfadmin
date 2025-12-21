@@ -23,6 +23,7 @@ const (
 )
 
 func TestGetSettingRulesAllExport(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/setting-rules", nil)
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -50,6 +51,7 @@ func TestGetSettingRulesAllExport(t *testing.T) {
 }
 
 func TestGetSettingRuleOneExport(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/setting-rules/test-id", nil)
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -66,6 +68,7 @@ func TestGetSettingRuleOneExport(t *testing.T) {
 }
 
 func TestGetSettingRuleOneExport_ErrorCases(t *testing.T) {
+	t.Parallel()
 	// Test case 1: xhttp.AdminError - authentication failure
 	req1 := httptest.NewRequest(http.MethodGet, "/setting-rules/test-id", nil)
 	recorder1 := httptest.NewRecorder()
@@ -101,6 +104,7 @@ func TestGetSettingRuleOneExport_ErrorCases(t *testing.T) {
 }
 
 func TestGetSettingRuleOneExport_SuccessCases(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -135,6 +139,7 @@ func TestGetSettingRuleOneExport_SuccessCases(t *testing.T) {
 }
 
 func TestDeleteOneSettingRulesHandler(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -158,6 +163,7 @@ func TestDeleteOneSettingRulesHandler(t *testing.T) {
 
 }
 func TestGetSettingRulesFilteredWithPage(t *testing.T) {
+	t.Parallel()
 
 	ctx := context.WithValue(context.Background(), "applicationType", "STB")
 	req := httptest.NewRequest(http.MethodPost, "/setting-rules/filtered?pageNumber=invalid", nil)
@@ -208,6 +214,7 @@ func TestGetSettingRulesFilteredWithPage(t *testing.T) {
 }
 
 func TestCreateSettingRuleHandler(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/setting-rules", nil)
 	recorder := httptest.NewRecorder()
 	ctx := context.WithValue(context.Background(), applicationTypeKey, "STB")
@@ -247,6 +254,7 @@ func TestCreateSettingRuleHandler(t *testing.T) {
 }
 
 func TestCreateSettingRulesPackageHandler(t *testing.T) {
+	t.Parallel()
 
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -283,6 +291,7 @@ func TestCreateSettingRulesPackageHandler(t *testing.T) {
 }
 
 func TestUpdateSettingRulesHandler(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -319,6 +328,7 @@ func TestUpdateSettingRulesHandler(t *testing.T) {
 }
 
 func TestUpdateSettingRulesPackageHandler(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -358,6 +368,7 @@ func TestUpdateSettingRulesPackageHandler(t *testing.T) {
 }
 
 func TestUpdateSettingRulesPackageHandler_ErrorCases(t *testing.T) {
+	t.Parallel()
 	// Test case 1: xhttp.AdminError - authentication failure
 	req1 := httptest.NewRequest(http.MethodPut, "/setting-rules/package", nil)
 	recorder1 := httptest.NewRecorder()
@@ -391,6 +402,7 @@ func TestUpdateSettingRulesPackageHandler_ErrorCases(t *testing.T) {
 }
 
 func TestUpdateSettingRulesPackageHandler_SuccessCases(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -446,6 +458,7 @@ func TestUpdateSettingRulesPackageHandler_SuccessCases(t *testing.T) {
 }
 
 func TestSettingTestPageHandler(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/setting-test", nil)
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -488,16 +501,19 @@ func TestSettingTestPageHandler(t *testing.T) {
 }
 
 func TestGetSettingRuleOneExport_Success(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration")
 }
 
 // TestGetSettingRuleOneExport_WithExportParam tests export with export query parameter
 func TestGetSettingRuleOneExport_WithExportParam(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration")
 }
 
 // TestGetSettingRuleOneExport_BlankID tests with blank ID
 func TestGetSettingRuleOneExport_BlankID(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/setting-rules/", nil)
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -511,6 +527,7 @@ func TestGetSettingRuleOneExport_BlankID(t *testing.T) {
 
 // TestGetSettingRuleOneExport_NotFound tests with non-existent ID
 func TestGetSettingRuleOneExport_NotFound(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/setting-rules/non-existent-rule", nil)
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -524,6 +541,7 @@ func TestGetSettingRuleOneExport_NotFound(t *testing.T) {
 
 // TestGetSettingRulesAllExport_WithExportParam tests export with export parameter
 func TestGetSettingRulesAllExport_WithExportParam(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/setting-rules?export=true", nil)
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -536,6 +554,7 @@ func TestGetSettingRulesAllExport_WithExportParam(t *testing.T) {
 
 // TestDeleteOneSettingRulesHandler_EmptyID tests delete with empty ID
 func TestDeleteOneSettingRulesHandler_EmptyID(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodDelete, "/setting-rules/", nil)
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -549,6 +568,7 @@ func TestDeleteOneSettingRulesHandler_EmptyID(t *testing.T) {
 
 // TestCreateSettingRuleHandler_ValidRule tests create with valid rule
 func TestCreateSettingRuleHandler_ValidRule(t *testing.T) {
+	t.Parallel()
 	rule := map[string]interface{}{
 		"id":              "create-test-rule",
 		"name":            "Create Test Rule",
@@ -571,6 +591,7 @@ func TestCreateSettingRuleHandler_ValidRule(t *testing.T) {
 
 // TestUpdateSettingRulesPackageHandler_EmptyArray tests with empty array
 func TestUpdateSettingRulesPackageHandler_EmptyArray(t *testing.T) {
+	t.Parallel()
 	jsonBody, _ := json.Marshal([]logupload.SettingRule{})
 
 	req := httptest.NewRequest(http.MethodPut, "/setting-rules/package", strings.NewReader(string(jsonBody)))
@@ -586,6 +607,7 @@ func TestUpdateSettingRulesPackageHandler_EmptyArray(t *testing.T) {
 
 // TestSettingTestPageHandler_ValidContext tests with valid context
 func TestSettingTestPageHandler_ValidContext(t *testing.T) {
+	t.Parallel()
 	validContext := map[string]string{
 		"estbMacAddress": "AA:BB:CC:DD:EE:FF",
 		"model":          "TestModel",

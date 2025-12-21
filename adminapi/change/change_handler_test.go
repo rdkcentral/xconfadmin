@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
@@ -166,7 +165,7 @@ func TestChangeHandlersTimeoutSafety(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/changes?applicationType=stb", nil)
 		_ = execChangeReq(r, nil)
-		time.Sleep(10 * time.Millisecond)
+		// Sleep removed for performance - operation is synchronous
 	}
 	assert.True(t, true)
 }

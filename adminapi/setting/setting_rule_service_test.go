@@ -24,6 +24,7 @@ func getTestRequest() *http.Request {
 	return req.WithContext(ctx)
 }
 func TestGetOneSettingRule(t *testing.T) {
+	t.Parallel()
 
 	settingRule, err := GetOneSettingRule("non-existent-id")
 	assert.Nil(t, settingRule)
@@ -31,21 +32,25 @@ func TestGetOneSettingRule(t *testing.T) {
 }
 
 func TestDeleteSettingRuleOne(t *testing.T) {
+	t.Parallel()
 	DeleteSettingRuleOne("non-existent-id")
 	assert.True(t, true)
 }
 
 func TestSetSettingRule(t *testing.T) {
+	t.Parallel()
 	err := SetSettingRule("id", &logupload.SettingRule{})
 	assert.NotNil(t, err)
 }
 
 func TestValidateUsageSettingRule(t *testing.T) {
+	t.Parallel()
 	err := validateUsageSettingRule("id")
 	assert.Nil(t, err)
 }
 
 func TestValidateAllSettingRule(t *testing.T) {
+	t.Parallel()
 	err := validateAllSettingRule(&logupload.SettingRule{})
 	assert.Nil(t, err)
 }
@@ -53,6 +58,7 @@ func TestValidateAllSettingRule(t *testing.T) {
 // New comprehensive tests for uncovered functions
 
 func TestDeleteSettingRule_ComprehensiveCoverage(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -78,6 +84,7 @@ func TestDeleteSettingRule_ComprehensiveCoverage(t *testing.T) {
 }
 
 func TestDeleteSettingRule_SuccessPath(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -101,6 +108,7 @@ func TestDeleteSettingRule_SuccessPath(t *testing.T) {
 }
 
 func TestGetSettingRulesList_ComprehensiveCoverage(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -127,6 +135,7 @@ func TestGetSettingRulesList_ComprehensiveCoverage(t *testing.T) {
 }
 
 func TestGetSettingRulesList_SuccessPath(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -155,6 +164,7 @@ func TestGetSettingRulesList_SuccessPath(t *testing.T) {
 }
 
 func TestFindByContextSettingRule_ComprehensiveCoverage(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -247,6 +257,7 @@ func TestFindByContextSettingRule_ComprehensiveCoverage(t *testing.T) {
 }
 
 func TestValidateAllSettingRule_ComprehensiveCoverage(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -308,6 +319,7 @@ func TestValidateAllSettingRule_ComprehensiveCoverage(t *testing.T) {
 }
 
 func TestValidateUsageSettingRule_ComprehensiveCoverage(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -334,6 +346,7 @@ func TestValidateUsageSettingRule_ComprehensiveCoverage(t *testing.T) {
 }
 
 func TestUpdateSettingRule_ComprehensiveCoverage(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -398,6 +411,7 @@ func TestUpdateSettingRule_ComprehensiveCoverage(t *testing.T) {
 }
 
 func TestGetSettingRulesWithConfig_ComprehensiveCoverage(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -472,6 +486,7 @@ func TestGetSettingRulesWithConfig_ComprehensiveCoverage(t *testing.T) {
 }
 
 func TestGetSettingRulesList_ErrorHandling(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -485,6 +500,7 @@ func TestGetSettingRulesList_ErrorHandling(t *testing.T) {
 }
 
 func TestFindByContextSettingRule_ErrorCases(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -528,6 +544,7 @@ func TestFindByContextSettingRule_ErrorCases(t *testing.T) {
 }
 
 func TestValidateAllSettingRule_ErrorCases(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -560,6 +577,7 @@ func TestValidateAllSettingRule_ErrorCases(t *testing.T) {
 }
 
 func TestValidateSettingRule_ErrorCases(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to validation with nil entity: %v", r)
@@ -607,6 +625,7 @@ func TestValidateSettingRule_ErrorCases(t *testing.T) {
 }
 
 func TestValidateUsageSettingRule_ErrorCases(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -621,6 +640,7 @@ func TestValidateUsageSettingRule_ErrorCases(t *testing.T) {
 }
 
 func TestGetSettingRulesWithConfig_ErrorCases(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -647,6 +667,7 @@ func TestGetSettingRulesWithConfig_ErrorCases(t *testing.T) {
 }
 
 func TestUpdateSettingRule_ErrorCases(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -681,6 +702,7 @@ func TestUpdateSettingRule_ErrorCases(t *testing.T) {
 // Additional focused tests to improve coverage of specific error paths
 
 func TestValidatePropertiesSettingRule_ErrorCases(t *testing.T) {
+	t.Parallel()
 	// Test case 1: Empty name
 	entityWithEmptyName := &logupload.SettingRule{
 		Name:           "",
@@ -707,6 +729,7 @@ func TestValidatePropertiesSettingRule_ErrorCases(t *testing.T) {
 }
 
 func TestBeforeCreatingSettingRule_ErrorCases(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database/auth not configured: %v", r)
@@ -740,6 +763,7 @@ func TestBeforeCreatingSettingRule_ErrorCases(t *testing.T) {
 }
 
 func TestBeforeUpdatingSettingRule_ErrorCases(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database/auth not configured: %v", r)
@@ -770,6 +794,7 @@ func TestBeforeUpdatingSettingRule_ErrorCases(t *testing.T) {
 }
 
 func TestBeforeSavingSettingRule_ErrorCases(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database/auth not configured: %v", r)
@@ -805,6 +830,7 @@ func TestBeforeSavingSettingRule_ErrorCases(t *testing.T) {
 }
 
 func TestCreateSettingRule_ErrorCases(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database/auth not configured: %v", r)
@@ -828,6 +854,7 @@ func TestCreateSettingRule_ErrorCases(t *testing.T) {
 
 // TestFindByContextSettingRule_WithApplicationType tests searching with application type
 func TestFindByContextSettingRule_WithApplicationType(t *testing.T) {
+	t.Parallel()
 	req := getTestRequest()
 	searchContext := map[string]string{
 		"applicationType": "STB",
@@ -838,6 +865,7 @@ func TestFindByContextSettingRule_WithApplicationType(t *testing.T) {
 
 // TestFindByContextSettingRule_WithName tests searching with name
 func TestFindByContextSettingRule_WithName(t *testing.T) {
+	t.Parallel()
 	req := getTestRequest()
 	searchContext := map[string]string{
 		"name": "test",
@@ -848,6 +876,7 @@ func TestFindByContextSettingRule_WithName(t *testing.T) {
 
 // TestFindByContextSettingRule_WithKey tests searching with key
 func TestFindByContextSettingRule_WithKey(t *testing.T) {
+	t.Parallel()
 	req := getTestRequest()
 	searchContext := map[string]string{
 		"key": "estbMacAddress",
@@ -858,6 +887,7 @@ func TestFindByContextSettingRule_WithKey(t *testing.T) {
 
 // TestFindByContextSettingRule_WithValue tests searching with value
 func TestFindByContextSettingRule_WithValue(t *testing.T) {
+	t.Parallel()
 	req := getTestRequest()
 	searchContext := map[string]string{
 		"value": "AA:BB:CC:DD:EE:FF",
@@ -868,6 +898,7 @@ func TestFindByContextSettingRule_WithValue(t *testing.T) {
 
 // TestFindByContextSettingRule_MultipleFilters tests with multiple criteria
 func TestFindByContextSettingRule_MultipleFilters(t *testing.T) {
+	t.Parallel()
 	req := getTestRequest()
 	searchContext := map[string]string{
 		"applicationType": "STB",
@@ -880,11 +911,13 @@ func TestFindByContextSettingRule_MultipleFilters(t *testing.T) {
 
 // TestDeleteSettingRule_Success tests successful deletion
 func TestDeleteSettingRule_Success(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration")
 }
 
 // TestDeleteSettingRule_NonExistentID tests delete with non-existent ID
 func TestDeleteSettingRule_NonExistentID(t *testing.T) {
+	t.Parallel()
 	result, err := DeleteSettingRule("non-existent-rule-delete-id", "STB")
 	assert.NotNil(t, err)
 	assert.Nil(t, result)
@@ -892,26 +925,31 @@ func TestDeleteSettingRule_NonExistentID(t *testing.T) {
 
 // TestDeleteSettingRule_WrongApplicationType tests delete with wrong app type
 func TestDeleteSettingRule_WrongApplicationType(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration")
 }
 
 // TestUpdateSettingRule_ValidRule tests successful update
 func TestUpdateSettingRule_ValidRule(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration")
 }
 
 // TestUpdateSettingRule_WrongApplicationType tests update with wrong app type
 func TestUpdateSettingRule_WrongApplicationType(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration")
 }
 
 // TestCreateSettingRule_ValidRule tests creating a new rule
 func TestCreateSettingRule_ValidRule(t *testing.T) {
+	t.Parallel()
 	t.Skip("Requires database configuration")
 }
 
 // TestCreateSettingRule_EmptyBoundSettingID tests with empty BoundSettingID
 func TestCreateSettingRule_EmptyBoundSettingID(t *testing.T) {
+	t.Parallel()
 	req := getTestRequest()
 	rule := &logupload.SettingRule{
 		ID:              "create-rule-test-2",
@@ -926,6 +964,7 @@ func TestCreateSettingRule_EmptyBoundSettingID(t *testing.T) {
 
 // TestValidateAllSettingRule_WithExistingRules tests validation with existing rules
 func TestValidateAllSettingRule_WithExistingRules(t *testing.T) {
+	t.Parallel()
 	rule := &logupload.SettingRule{
 		ID:   "validate-test-1",
 		Name: "Validate Test Rule",
@@ -936,6 +975,7 @@ func TestValidateAllSettingRule_WithExistingRules(t *testing.T) {
 
 // TestValidateAllSettingRule_NilRule tests validation with nil rule
 func TestValidateAllSettingRule_NilRule(t *testing.T) {
+	t.Parallel()
 	err := validateAllSettingRule(nil)
 	// Should handle gracefully
 	if err != nil {
@@ -945,12 +985,14 @@ func TestValidateAllSettingRule_NilRule(t *testing.T) {
 
 // TestValidateUsageSettingRule_NotUsed tests rule not in use
 func TestValidateUsageSettingRule_NotUsed(t *testing.T) {
+	t.Parallel()
 	err := validateUsageSettingRule("non-existent-setting-id")
 	assert.Nil(t, err)
 }
 
 // TestGetAllSettingRules tests getting all rules
 func TestGetAllSettingRules(t *testing.T) {
+	t.Parallel()
 	rules := GetAllSettingRules()
 	// Without database, may return nil or empty slice
 	_ = rules
@@ -959,6 +1001,7 @@ func TestGetAllSettingRules(t *testing.T) {
 
 // TestGetSettingRulesList tests getting rules list
 func TestGetSettingRulesList(t *testing.T) {
+	t.Parallel()
 	rules := GetSettingRulesList()
 	// Without database, may return nil or empty slice
 	_ = rules
@@ -967,6 +1010,7 @@ func TestGetSettingRulesList(t *testing.T) {
 
 // TestSettingRulesGeneratePage_ValidPage tests pagination with valid page
 func TestSettingRulesGeneratePage_ValidPage(t *testing.T) {
+	t.Parallel()
 	rules := []*logupload.SettingRule{
 		{ID: "1", Name: "Rule 1"},
 		{ID: "2", Name: "Rule 2"},
@@ -982,6 +1026,7 @@ func TestSettingRulesGeneratePage_ValidPage(t *testing.T) {
 
 // TestSettingRulesGeneratePage_LastPage tests pagination on last page
 func TestSettingRulesGeneratePage_LastPage(t *testing.T) {
+	t.Parallel()
 	rules := []*logupload.SettingRule{
 		{ID: "1", Name: "Rule 1"},
 		{ID: "2", Name: "Rule 2"},
@@ -995,6 +1040,7 @@ func TestSettingRulesGeneratePage_LastPage(t *testing.T) {
 
 // TestSettingRulesGeneratePage_InvalidPage tests with invalid page
 func TestSettingRulesGeneratePage_InvalidPage(t *testing.T) {
+	t.Parallel()
 	rules := []*logupload.SettingRule{
 		{ID: "1", Name: "Rule 1"},
 	}
@@ -1005,6 +1051,7 @@ func TestSettingRulesGeneratePage_InvalidPage(t *testing.T) {
 
 // TestSettingRulesGeneratePage_OutOfBounds tests with page beyond bounds
 func TestSettingRulesGeneratePage_OutOfBounds(t *testing.T) {
+	t.Parallel()
 	rules := []*logupload.SettingRule{
 		{ID: "1", Name: "Rule 1"},
 	}

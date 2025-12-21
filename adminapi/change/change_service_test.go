@@ -132,6 +132,10 @@ func TestGroupApprovedChanges(t *testing.T) {
 }
 
 func TestFindByContextForChanges(t *testing.T) {
+	// Clean up before test to ensure no leftover data
+	cleanupChangeTest()
+	defer cleanupChangeTest()
+
 	// create some pending changes directly in DB via CreateOneChange
 	p1 := buildPermTelemetryProfile("p1", "telemetry-alpha", shared.STB)
 	p2 := buildPermTelemetryProfile("p2", "telemetry-beta", shared.STB)

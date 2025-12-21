@@ -34,6 +34,7 @@ import (
 )
 
 func TestCalculateHashAndPercent(t *testing.T) {
+	t.Parallel()
 	//	_, router := GetTestWebConfigServer(testconfig)
 	//adminapi.XconfSetup(server, router)
 	testCases := []struct {
@@ -97,6 +98,7 @@ func execWithXW(r *http.Request, handler func(http.ResponseWriter, *http.Request
 }
 
 func TestGetCalculatedHashAndPercentHandler_MissingParam(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/calculator", nil)
 	rr := execWithXW(r, GetCalculatedHashAndPercentHandler)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -104,6 +106,7 @@ func TestGetCalculatedHashAndPercentHandler_MissingParam(t *testing.T) {
 }
 
 func TestGetCalculatedHashAndPercentHandler_InvalidMac(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/calculator?esbMac=00:23:ED:22:E3:D&applicationType=stb", nil)
 	rr := execWithXW(r, GetCalculatedHashAndPercentHandler)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -111,6 +114,7 @@ func TestGetCalculatedHashAndPercentHandler_InvalidMac(t *testing.T) {
 }
 
 func TestGetCalculatedHashAndPercent_Success(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/calculator2?esb_mac=AA:BB:CC:DD:EE:11&applicationType=stb", nil)
 	rr := execWithXW(r, GetCalculatedHashAndPercent)
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -119,12 +123,14 @@ func TestGetCalculatedHashAndPercent_Success(t *testing.T) {
 }
 
 func TestGetCalculatedHashAndPercent_MissingParam(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/calculator2", nil)
 	rr := execWithXW(r, GetCalculatedHashAndPercent)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestGetPercentFilterGlobalHandler_Base(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/global?applicationType=stb", nil)
 	rr := execWithXW(r, GetPercentFilterGlobalHandler)
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -132,6 +138,7 @@ func TestGetPercentFilterGlobalHandler_Base(t *testing.T) {
 }
 
 func TestGetPercentFilterGlobalHandler_Export(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/global?applicationType=stb&export=true", nil)
 	rr := execWithXW(r, GetPercentFilterGlobalHandler)
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -139,12 +146,14 @@ func TestGetPercentFilterGlobalHandler_Export(t *testing.T) {
 }
 
 func TestGetGlobalPercentFilterHandler_Base(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/globalPercent?applicationType=stb", nil)
 	rr := execWithXW(r, GetGlobalPercentFilterHandler)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestGetGlobalPercentFilterHandler_Export(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/globalPercent?applicationType=stb&export=true", nil)
 	rr := execWithXW(r, GetGlobalPercentFilterHandler)
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -152,12 +161,14 @@ func TestGetGlobalPercentFilterHandler_Export(t *testing.T) {
 }
 
 func TestGetGlobalPercentFilterAsRuleHandler_Base(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/globalPercentAsRule?applicationType=stb", nil)
 	rr := execWithXW(r, GetGlobalPercentFilterAsRuleHandler)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestGetGlobalPercentFilterAsRuleHandler_Export(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/globalPercentAsRule?applicationType=stb&export=true", nil)
 	rr := execWithXW(r, GetGlobalPercentFilterAsRuleHandler)
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -165,6 +176,7 @@ func TestGetGlobalPercentFilterAsRuleHandler_Export(t *testing.T) {
 }
 
 func TestUpdatePercentFilterGlobalHandler_InvalidJSON(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/percentfilter/updateGlobal?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -174,6 +186,7 @@ func TestUpdatePercentFilterGlobalHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestUpdatePercentFilterGlobalHandler_SuccessOrBadRequest(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/percentfilter/updateGlobal?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -188,6 +201,7 @@ func TestUpdatePercentFilterGlobalHandler_SuccessOrBadRequest(t *testing.T) {
 
 // Negative cast error branch: invoke without XResponseWriter
 func TestUpdatePercentFilterGlobalHandler_CastError(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/percentfilter/updateGlobal?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
 	UpdatePercentFilterGlobalHandler(rr, r) // rr does not implement Body()
@@ -199,6 +213,7 @@ func TestUpdatePercentFilterGlobalHandler_CastError(t *testing.T) {
 
 // Validation of calculateHashAndPercent pure function for deterministic value
 func TestCalculateHashAndPercentPure(t *testing.T) {
+	t.Parallel()
 	hash, pct := calculateHashAndPercent("AA:BB:CC:DD:EE:FF")
 	if hash <= 0 || pct <= 0 || pct > 100 {
 		t.Fatalf("unexpected hash/percent values: %v %v", hash, pct)
@@ -207,6 +222,7 @@ func TestCalculateHashAndPercentPure(t *testing.T) {
 
 // Edge: ensure UpdatePercentFilterGlobal returns error entity when create/update fails by forcing invalid percentage (negative) if supported
 func TestUpdatePercentFilterGlobal_InvalidPercentage(t *testing.T) {
+	t.Parallel()
 	// Craft a body with negative percentage - underlying validation expected to reject
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/percentfilter/updateGlobal?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
@@ -231,6 +247,7 @@ func containsAll(s string, subs []string) bool {
 
 // Confirm Content-Disposition filename prefix correctness for export
 func TestPercentFilterExportFileName(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/global?applicationType=stb&export=true", nil)
 	rr := execWithXW(r, GetPercentFilterGlobalHandler)
 	cd := rr.Header().Get("Content-Disposition")
@@ -245,6 +262,7 @@ func TestPercentFilterExportFileName(t *testing.T) {
 
 // ensure export for global percent filter as rule uses expected filename prefix
 func TestGlobalPercentFilterAsRuleExportFileName(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/globalPercentAsRule?applicationType=stb&export=true", nil)
 	rr := execWithXW(r, GetGlobalPercentFilterAsRuleHandler)
 	cd := rr.Header().Get("Content-Disposition")
@@ -255,6 +273,7 @@ func TestGlobalPercentFilterAsRuleExportFileName(t *testing.T) {
 
 // ensure export for global percent filter uses expected filename prefix
 func TestGlobalPercentFilterExportFileName(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/globalPercent?applicationType=stb&export=true", nil)
 	rr := execWithXW(r, GetGlobalPercentFilterHandler)
 	cd := rr.Header().Get("Content-Disposition")
@@ -265,6 +284,7 @@ func TestGlobalPercentFilterExportFileName(t *testing.T) {
 
 // Light sanity for query param context map addition (no export) ensures no panic
 func TestGetPercentFilterGlobalHandler_NoExport_NoPanic(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/global?applicationType=stb", nil)
 	rr := execWithXW(r, GetPercentFilterGlobalHandler)
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -272,6 +292,7 @@ func TestGetPercentFilterGlobalHandler_NoExport_NoPanic(t *testing.T) {
 
 // Validate that absence of applicationType still defaults (dev profile assigns stb)
 func TestGetPercentFilterGlobalHandler_DefaultAppType(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/global", nil)
 	rr := execWithXW(r, GetPercentFilterGlobalHandler)
 	// Should not error; permission layer defaults to stb
@@ -280,6 +301,7 @@ func TestGetPercentFilterGlobalHandler_DefaultAppType(t *testing.T) {
 
 // Validate negative path for UpdatePercentFilterGlobalHandler where no applicationType yields default and cast works
 func TestUpdatePercentFilterGlobalHandler_DefaultAppType(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/percentfilter/updateGlobal", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -293,6 +315,7 @@ func TestUpdatePercentFilterGlobalHandler_DefaultAppType(t *testing.T) {
 
 // Ensure calculateHashAndPercent consistency with previous deterministic expectation subset
 func TestCalculateHashAndPercent_Consistency(t *testing.T) {
+	t.Parallel()
 	// We only check range to avoid brittle tests across platform/time
 	hash, pct := calculateHashAndPercent("00:23:ED:22:E3:BD")
 	if hash <= 0 || pct <= 0 || pct > 100 {
@@ -302,6 +325,7 @@ func TestCalculateHashAndPercent_Consistency(t *testing.T) {
 
 // Test that export flag parsing doesn't break when mixed-case (robustness)
 func TestGetPercentFilterGlobalHandler_ExportMixedCase(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/global?applicationType=stb&Export=true", nil)
 	// manually add query param in different case; handler expects exact key so should fall back to base path
 	rr := execWithXW(r, GetPercentFilterGlobalHandler)
@@ -311,6 +335,7 @@ func TestGetPercentFilterGlobalHandler_ExportMixedCase(t *testing.T) {
 
 // Confirm that adding unrelated query params doesn't cause failure
 func TestGetPercentFilterGlobalHandler_UnrelatedParams(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/global?applicationType=stb&foo=bar", nil)
 	rr := execWithXW(r, GetPercentFilterGlobalHandler)
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -318,6 +343,7 @@ func TestGetPercentFilterGlobalHandler_UnrelatedParams(t *testing.T) {
 
 // confirm that containsAll helper works for basic case
 func TestContainsAllHelper(t *testing.T) {
+	t.Parallel()
 	if !containsAll("hashValue percent", []string{"hashValue", "percent"}) {
 		t.Fatalf("containsAll should have returned true")
 	}
@@ -328,6 +354,7 @@ func TestContainsAllHelper(t *testing.T) {
 
 // Additional edge: ensure UpdatePercentFilterGlobalHandler with empty body triggers BadRequest (invalid JSON)
 func TestUpdatePercentFilterGlobalHandler_EmptyBody(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/percentfilter/updateGlobal?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -338,6 +365,7 @@ func TestUpdatePercentFilterGlobalHandler_EmptyBody(t *testing.T) {
 
 // Validate that malformed JSON with proper braces but wrong types results in BadRequest
 func TestUpdatePercentFilterGlobalHandler_MalformedTypes(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/percentfilter/updateGlobal?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -351,6 +379,7 @@ func TestUpdatePercentFilterGlobalHandler_MalformedTypes(t *testing.T) {
 
 // Ensure export branch handles when globalPercentage retrieval produces default (no rule existing)
 func TestGlobalPercentFilterHandler_Export_NoExistingRule(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/globalPercent?applicationType=stb&export=true", nil)
 	rr := execWithXW(r, GetGlobalPercentFilterHandler)
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -359,6 +388,7 @@ func TestGlobalPercentFilterHandler_Export_NoExistingRule(t *testing.T) {
 
 // Minimal test for UpdatePercentFilterGlobal logic via helper (direct function) with new struct
 func TestUpdatePercentFilterGlobal_DirectFunction(t *testing.T) {
+	t.Parallel()
 	gp := core.NewGlobalPercentage()
 	gp.ApplicationType = "stb"
 	gp.Percentage = 75
@@ -371,6 +401,7 @@ func TestUpdatePercentFilterGlobal_DirectFunction(t *testing.T) {
 
 // Validate Content-Type is application/json for hash handlers
 func TestGetCalculatedHashAndPercentHandler_ContentType(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/calculator?esbMac=AA:BB:CC:DD:EE:FF", nil)
 	rr := execWithXW(r, GetCalculatedHashAndPercentHandler)
 	if rr.Code == http.StatusOK { // only assert on success
@@ -383,6 +414,7 @@ func TestGetCalculatedHashAndPercentHandler_ContentType(t *testing.T) {
 
 // Validate that calculateHashAndPercent produces deterministic result for same mac
 func TestCalculateHashAndPercent_Deterministic(t *testing.T) {
+	t.Parallel()
 	h1, p1 := calculateHashAndPercent("AA:BB:CC:DD:EE:FF")
 	h2, p2 := calculateHashAndPercent("AA:BB:CC:DD:EE:FF")
 	if h1 != h2 || p1 != p2 {
@@ -392,6 +424,7 @@ func TestCalculateHashAndPercent_Deterministic(t *testing.T) {
 
 // edge: extremely short mac should fail validation in public handler path
 func TestGetCalculatedHashAndPercentHandler_InvalidShortMac(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/calculator?esbMac=AA:BB", nil)
 	rr := execWithXW(r, GetCalculatedHashAndPercentHandler)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -399,6 +432,7 @@ func TestGetCalculatedHashAndPercentHandler_InvalidShortMac(t *testing.T) {
 
 // Basic sanity: ensure export branch uses JSON not empty body
 func TestPercentFilterGlobalExport_NonEmptyBody(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/global?applicationType=stb&export=true", nil)
 	rr := execWithXW(r, GetPercentFilterGlobalHandler)
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -407,6 +441,7 @@ func TestPercentFilterGlobalExport_NonEmptyBody(t *testing.T) {
 
 // Confirm that Value calculation endpoint with esbMac differs from esb_mac endpoint (hash values should differ due to quoting difference)
 func TestHashEndpoints_ValueDifference(t *testing.T) {
+	t.Parallel()
 	r1 := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/calculator?esbMac=AA:BB:CC:DD:EE:FF", nil)
 	rr1 := execWithXW(r1, GetCalculatedHashAndPercentHandler)
 	r2 := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/calculator2?esb_mac=AA:BB:CC:DD:EE:FF", nil)
@@ -420,6 +455,7 @@ func TestHashEndpoints_ValueDifference(t *testing.T) {
 
 // Use url.QueryEscape to ensure containsAll fallback remains stable (indirect coverage of helper logic path)
 func TestContainsAllHelper_Escaped(t *testing.T) {
+	t.Parallel()
 	esc := url.QueryEscape("hashValue percent")
 	if !strings.Contains(esc, url.QueryEscape("hashValue")) {
 		t.Fatalf("expected escaped string to contain escaped hashValue")

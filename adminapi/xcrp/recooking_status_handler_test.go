@@ -9,6 +9,7 @@ import (
 )
 
 func TestGetRecookingStatusHandler(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/recooking-status", nil)
 	recorder := httptest.NewRecorder()
 
@@ -21,6 +22,7 @@ func TestGetRecookingStatusHandler(t *testing.T) {
 
 // Test multiple calls to ensure handler is idempotent
 func TestGetRecookingStatusHandler_IdempotentCall(t *testing.T) {
+	t.Parallel()
 	req1 := httptest.NewRequest(http.MethodGet, "/recooking-status", nil)
 	recorder1 := httptest.NewRecorder()
 	GetRecookingStatusHandler(recorder1, req1)
@@ -36,6 +38,7 @@ func TestGetRecookingStatusHandler_IdempotentCall(t *testing.T) {
 
 // Test different HTTP methods (should still work or error gracefully)
 func TestGetRecookingStatusHandler_DifferentMethod(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/recooking-status", nil)
 	recorder := httptest.NewRecorder()
 
@@ -61,12 +64,14 @@ func TestGetRecookingStatusHandler_DifferentMethod(t *testing.T) {
 //
 // These paths are tested in integration tests with actual Cassandra client.
 func TestGetRecookingStatusHandler_CoverageNote(t *testing.T) {
+	t.Parallel()
 	// This test documents the coverage limitation
 	// Run with actual Cassandra DB for full coverage
 	assert.True(t, true, "Coverage note documented")
 }
 
 func TestGetRecookingStatusDetailsHandler(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/recooking-status/details", nil)
 	recorder := httptest.NewRecorder()
 
@@ -79,6 +84,7 @@ func TestGetRecookingStatusDetailsHandler(t *testing.T) {
 
 // Test that response format is JSON when successful
 func TestGetRecookingStatusDetailsHandler_ResponseFormat(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/recooking-status/details", nil)
 	recorder := httptest.NewRecorder()
 
@@ -92,6 +98,7 @@ func TestGetRecookingStatusDetailsHandler_ResponseFormat(t *testing.T) {
 
 // Test multiple calls to ensure handler is idempotent
 func TestGetRecookingStatusDetailsHandler_IdempotentCall(t *testing.T) {
+	t.Parallel()
 	req1 := httptest.NewRequest(http.MethodGet, "/recooking-status/details", nil)
 	recorder1 := httptest.NewRecorder()
 	GetRecookingStatusDetailsHandler(recorder1, req1)
@@ -107,6 +114,7 @@ func TestGetRecookingStatusDetailsHandler_IdempotentCall(t *testing.T) {
 
 // Test different HTTP methods (should still work or error gracefully)
 func TestGetRecookingStatusDetailsHandler_DifferentMethod(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/recooking-status/details", nil)
 	recorder := httptest.NewRecorder()
 
@@ -132,6 +140,7 @@ func TestGetRecookingStatusDetailsHandler_DifferentMethod(t *testing.T) {
 //
 // These paths are tested in integration tests with actual Cassandra client.
 func TestGetRecookingStatusDetailsHandler_CoverageNote(t *testing.T) {
+	t.Parallel()
 	// This test documents the coverage limitation
 	// Run with actual Cassandra DB for full coverage
 	assert.True(t, true, "Coverage note documented")

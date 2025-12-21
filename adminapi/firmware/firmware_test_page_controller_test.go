@@ -28,6 +28,7 @@ func execFirmwareTestPage(t *testing.T, values url.Values) *httptest.ResponseRec
 }
 
 func TestGetFirmwareTestPageHandler_MissingMac(t *testing.T) {
+	t.Parallel()
 	values := url.Values{}
 	// no eStbMac -> expect 400 and specific error message
 	resp := execFirmwareTestPage(t, values)
@@ -40,6 +41,7 @@ func TestGetFirmwareTestPageHandler_MissingMac(t *testing.T) {
 }
 
 func TestGetFirmwareTestPageHandler_InvalidMacNormalization(t *testing.T) {
+	t.Parallel()
 	values := url.Values{}
 	values.Set(core.ESTB_MAC, "INVALID-MAC") // fails validator
 	resp := execFirmwareTestPage(t, values)
@@ -49,6 +51,7 @@ func TestGetFirmwareTestPageHandler_InvalidMacNormalization(t *testing.T) {
 }
 
 func TestGetFirmwareTestPageHandler_InvalidEnv(t *testing.T) {
+	t.Parallel()
 	// Provide invalid env -> validator will reject
 	values := url.Values{}
 	values.Set(core.ESTB_MAC, "AA:BB:CC:DD:EE:11")
@@ -63,6 +66,7 @@ func TestGetFirmwareTestPageHandler_InvalidEnv(t *testing.T) {
 }
 
 func TestGetFirmwareTestPageHandler_RuleEvalError(t *testing.T) {
+	t.Parallel()
 	values := url.Values{}
 	values.Set(core.ESTB_MAC, "AA:BB:CC:DD:EE:22")
 	// Provide a model that likely causes evaluation error by not existing
@@ -75,6 +79,7 @@ func TestGetFirmwareTestPageHandler_RuleEvalError(t *testing.T) {
 }
 
 func TestGetFirmwareTestPageHandler_Success(t *testing.T) {
+	t.Parallel()
 	// Build a minimal happy path using existing firmware evaluation test helpers if already executed
 	// Provide valid mac and applicationType; accept default time and injected ip
 	mac := "AA:BB:CC:DD:EE:33"
@@ -95,6 +100,7 @@ func TestGetFirmwareTestPageHandler_Success(t *testing.T) {
 }
 
 func TestWriteErrorResponse_Helper(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 	writeErrorResponse(w, r, "errMsg", http.StatusTeapot, "SomeType")
@@ -108,6 +114,7 @@ func TestWriteErrorResponse_Helper(t *testing.T) {
 
 // ensure util.ValidateAndNormalizeMacAddress invalid case hit indirectly already; add direct normalization test for branch coverage of uppercase env/model
 func TestGetFirmwareTestPageHandler_NormalizationBranches(t *testing.T) {
+	t.Parallel()
 	values := url.Values{}
 	values.Set(core.ESTB_MAC, "11-22-33-44-55-66") // will normalize
 	values.Set(core.MODEL, "abc123")               // uppercase expected
@@ -124,6 +131,7 @@ func TestGetFirmwareTestPageHandler_NormalizationBranches(t *testing.T) {
 // TestGetFirmwareTestPageHandler_NormalizationError tests xhttp.WriteAdminErrorResponse path
 // This covers the error case when xshared.NormalizeCommonContext fails
 func TestGetFirmwareTestPageHandler_NormalizationError(t *testing.T) {
+	t.Parallel()
 	// Use values that will fail normalization (e.g., invalid MAC format that fails before validator)
 	values := url.Values{}
 	// Provide a MAC that might fail normalization checks
@@ -140,6 +148,7 @@ func TestGetFirmwareTestPageHandler_NormalizationError(t *testing.T) {
 
 // TestGetFirmwareTestPageHandler_InvalidModelValidator tests writeErrorResponse for model validation
 func TestGetFirmwareTestPageHandler_InvalidModelValidator(t *testing.T) {
+	t.Parallel()
 	values := url.Values{}
 	values.Set(core.ESTB_MAC, "AA:BB:CC:DD:EE:11")
 	values.Set(core.MODEL, "NONEXISTENT_MODEL_XYZ123")
@@ -162,6 +171,7 @@ func TestGetFirmwareTestPageHandler_InvalidModelValidator(t *testing.T) {
 
 // TestGetFirmwareTestPageHandler_InvalidIPAddress tests writeErrorResponse for IP validation
 func TestGetFirmwareTestPageHandler_InvalidIPAddress(t *testing.T) {
+	t.Parallel()
 	values := url.Values{}
 	values.Set(core.ESTB_MAC, "AA:BB:CC:DD:EE:11")
 	values.Set(core.IP_ADDRESS, "invalid.ip.address")
@@ -181,6 +191,7 @@ func TestGetFirmwareTestPageHandler_InvalidIPAddress(t *testing.T) {
 // TestGetFirmwareTestPageHandler_AuthError tests xhttp.AdminError path
 // When auth.CanRead fails, xhttp.AdminError(w, err) should be called
 func TestGetFirmwareTestPageHandler_AuthError(t *testing.T) {
+	t.Parallel()
 	// Request without applicationType to potentially trigger auth error
 	r := httptest.NewRequest(http.MethodGet, "/firmware/test?eStbMac=AA:BB:CC:DD:EE:11", nil)
 	// Don't set applicationType - this may cause auth to fail
@@ -200,6 +211,7 @@ func TestGetFirmwareTestPageHandler_AuthError(t *testing.T) {
 
 // TestGetFirmwareTestPageHandler_MissingMacWriteErrorResponse verifies writeErrorResponse is called
 func TestGetFirmwareTestPageHandler_MissingMacWriteErrorResponse(t *testing.T) {
+	t.Parallel()
 	values := url.Values{}
 	values.Set("applicationType", "stb")
 	// No eStbMac provided
@@ -223,6 +235,7 @@ func TestGetFirmwareTestPageHandler_MissingMacWriteErrorResponse(t *testing.T) {
 // TestWriteErrorResponse_WithReturnJsonResponseError tests writeErrorResponse internal error handling
 // This tests the path where xhttp.ReturnJsonResponse fails and xhttp.AdminError is called
 func TestWriteErrorResponse_WithReturnJsonResponseError(t *testing.T) {
+	t.Parallel()
 	// Create a request that might cause issues with ReturnJsonResponse
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
@@ -239,6 +252,7 @@ func TestWriteErrorResponse_WithReturnJsonResponseError(t *testing.T) {
 
 // TestGetFirmwareTestPageHandler_RuleEvaluationError tests writeErrorResponse for rule eval errors
 func TestGetFirmwareTestPageHandler_RuleEvaluationError(t *testing.T) {
+	t.Parallel()
 	values := url.Values{}
 	values.Set(core.ESTB_MAC, "AA:BB:CC:DD:EE:11")
 	values.Set("applicationType", "stb")
@@ -265,6 +279,7 @@ func TestGetFirmwareTestPageHandler_RuleEvaluationError(t *testing.T) {
 
 // TestGetFirmwareTestPageHandler_AllValidators tests all validator paths
 func TestGetFirmwareTestPageHandler_AllValidators(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name          string
 		paramKey      string
@@ -328,6 +343,7 @@ func TestGetFirmwareTestPageHandler_AllValidators(t *testing.T) {
 
 // TestWriteErrorResponse_AllErrorTypes tests writeErrorResponse with various status codes
 func TestWriteErrorResponse_AllErrorTypes(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name       string
 		errorMsg   string

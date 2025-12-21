@@ -42,6 +42,7 @@ func newValidFilter(name string) *coreef.RebootImmediatelyFilter {
 }
 
 func TestUpdateRebootImmediatelyFilter_CreateAndUpdatePaths(t *testing.T) {
+	t.Parallel()
 	resetFirmwareRules()
 	seedModel("MODEL1")
 	seedEnvironment("ENV1")
@@ -61,6 +62,7 @@ func TestUpdateRebootImmediatelyFilter_CreateAndUpdatePaths(t *testing.T) {
 }
 
 func TestUpdateRebootImmediatelyFilter_ValidationFailures(t *testing.T) {
+	t.Parallel()
 	resetFirmwareRules()
 	seedModel("MODEL1")
 	seedEnvironment("ENV1")
@@ -89,6 +91,7 @@ func TestUpdateRebootImmediatelyFilter_ValidationFailures(t *testing.T) {
 }
 
 func TestUpdateRebootImmediatelyFilter_IpGroupChanged(t *testing.T) {
+	t.Parallel()
 	resetFirmwareRules()
 	seedModel("MODEL1")
 	seedEnvironment("ENV1")
@@ -102,6 +105,7 @@ func TestUpdateRebootImmediatelyFilter_IpGroupChanged(t *testing.T) {
 }
 
 func TestDeleteRebootImmediatelyFilter_Paths(t *testing.T) {
+	t.Parallel()
 	resetFirmwareRules()
 	seedModel("MODEL1")
 	seedEnvironment("ENV1")
@@ -118,6 +122,7 @@ func TestDeleteRebootImmediatelyFilter_Paths(t *testing.T) {
 }
 
 func TestSaveRebootImmediatelyFilter_ErrorPaths(t *testing.T) {
+	t.Parallel()
 	seedModel("MODEL1")
 	seedEnvironment("ENV1")
 	// invalid MAC normalization causes ConvertRebootFilterToFirmwareRule to fail
@@ -132,6 +137,7 @@ func TestSaveRebootImmediatelyFilter_ErrorPaths(t *testing.T) {
 
 // Additional safety: ensure SaveRebootImmediatelyFilter assigns applicationType
 func TestSaveRebootImmediatelyFilter_AssignsAppType(t *testing.T) {
+	t.Parallel()
 	resetFirmwareRules()
 	seedModel("MODEL1")
 	seedEnvironment("ENV1")

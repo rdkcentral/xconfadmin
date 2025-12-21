@@ -99,6 +99,7 @@ func cleanupServiceTest() {
 
 // Test reorganizeFeatureRulePriorities
 func TestReorganizeFeatureRulePriorities(t *testing.T) {
+	t.Parallel()
 	cleanupServiceTest()
 
 	// Create feature rules with different priorities
@@ -194,6 +195,7 @@ func TestReorganizeFeatureRulePriorities(t *testing.T) {
 
 // Test getAlteredFeatureRuleSubList
 func TestGetAlteredFeatureRuleSubList(t *testing.T) {
+	t.Parallel()
 	cleanupServiceTest()
 
 	f := makeFeatureForService("Feature1", "stb")
@@ -233,6 +235,7 @@ func TestGetAlteredFeatureRuleSubList(t *testing.T) {
 
 // Test addNewFeatureRuleAndReorganize
 func TestAddNewFeatureRuleAndReorganize(t *testing.T) {
+	t.Parallel()
 	cleanupServiceTest()
 
 	f := makeFeatureForService("Feature1", "stb")
@@ -275,6 +278,7 @@ func TestAddNewFeatureRuleAndReorganize(t *testing.T) {
 
 // Test FindFeatureRuleByContext
 func TestFindFeatureRuleByContext(t *testing.T) {
+	t.Parallel()
 	cleanupServiceTest()
 
 	f1 := makeFeatureForService("SearchFeature1", "stb")
@@ -415,6 +419,7 @@ func TestFindFeatureRuleByContext(t *testing.T) {
 
 // Test ValidateFeatureRule
 func TestValidateFeatureRule(t *testing.T) {
+	t.Parallel()
 	cleanupServiceTest()
 
 	f := makeFeatureForService("ValidateFeature", "stb")
@@ -640,6 +645,7 @@ func TestValidateFeatureRule(t *testing.T) {
 
 // Test parsePercentRange
 func TestParsePercentRange(t *testing.T) {
+	t.Parallel()
 	t.Run("ValidRange", func(t *testing.T) {
 		result, err := parsePercentRange("10-50")
 		assert.Nil(t, err)
@@ -688,6 +694,7 @@ func TestParsePercentRange(t *testing.T) {
 
 // Test validateAllFeatureRule
 func TestValidateAllFeatureRule(t *testing.T) {
+	t.Parallel()
 	cleanupServiceTest()
 
 	f := makeFeatureForService("Feature1", "stb")
@@ -771,6 +778,7 @@ func TestValidateAllFeatureRule(t *testing.T) {
 
 // Test getPercentRanges
 func TestGetPercentRanges(t *testing.T) {
+	t.Parallel()
 	t.Run("SingleRange", func(t *testing.T) {
 		rule := makeRuleWithPercentRange("10", "50")
 		ranges, err := getPercentRanges(rule)
@@ -828,6 +836,7 @@ func TestGetPercentRanges(t *testing.T) {
 
 // Test UpdateFeatureRule
 func TestUpdateFeatureRule(t *testing.T) {
+	t.Parallel()
 	cleanupServiceTest()
 
 	f := makeFeatureForService("UpdateFeature", "stb")
@@ -965,6 +974,7 @@ func TestUpdateFeatureRule(t *testing.T) {
 
 // Test updateFeatureRuleByPriorityAndReorganize
 func TestUpdateFeatureRuleByPriorityAndReorganize(t *testing.T) {
+	t.Parallel()
 	cleanupServiceTest()
 
 	f := makeFeatureForService("Feature1", "stb")
@@ -1027,6 +1037,7 @@ func TestUpdateFeatureRuleByPriorityAndReorganize(t *testing.T) {
 
 // Test importOrUpdateAllFeatureRule
 func TestImportOrUpdateAllFeatureRule(t *testing.T) {
+	t.Parallel()
 	cleanupServiceTest()
 
 	f := makeFeatureForService("ImportFeature", "stb")
@@ -1147,6 +1158,7 @@ func TestImportOrUpdateAllFeatureRule(t *testing.T) {
 
 // Test ChangeFeatureRulePriorities
 func TestChangeFeatureRulePriorities(t *testing.T) {
+	t.Parallel()
 	cleanupServiceTest()
 
 	f := makeFeatureForService("PriorityFeature", "stb")

@@ -19,6 +19,7 @@ func newWrapper(pct float64) *coreef.PercentFilterWrapper {
 }
 
 func TestUpdatePercentFilter_AppTypeAndGlobalRangeValidation(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	w := newWrapper(50)
 	assert.Equal(t, 400, UpdatePercentFilter("", w).Status)
@@ -29,6 +30,7 @@ func TestUpdatePercentFilter_AppTypeAndGlobalRangeValidation(t *testing.T) {
 }
 
 func TestUpdatePercentFilter_WhitelistMismatch(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	w := newWrapper(10)
 	// provide unsaved ip group -> mismatch
@@ -37,6 +39,7 @@ func TestUpdatePercentFilter_WhitelistMismatch(t *testing.T) {
 }
 
 func TestUpdatePercentFilter_EnvModelPercentageValidation(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	w := newWrapper(10)
 	// FirmwareCheckRequired true but no FirmwareVersions
@@ -65,6 +68,7 @@ func TestUpdatePercentFilter_EnvModelPercentageValidation(t *testing.T) {
 }
 
 func TestUpdatePercentFilter_SuccessMinimal(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	w := newWrapper(25)
 	resp := UpdatePercentFilter("stb", w)
@@ -74,6 +78,7 @@ func TestUpdatePercentFilter_SuccessMinimal(t *testing.T) {
 }
 
 func TestGetPercentFilter_NoRules(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	pf, err := GetPercentFilter("stb")
 	assert.NoError(t, err)
@@ -84,6 +89,7 @@ func TestGetPercentFilter_NoRules(t *testing.T) {
 }
 
 func TestGetPercentFilterFieldValues_Empty(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	vals, err := GetPercentFilterFieldValues("Percentage", "stb")
 	assert.NoError(t, err)
@@ -91,6 +97,7 @@ func TestGetPercentFilterFieldValues_Empty(t *testing.T) {
 }
 
 func TestUpdatePercentFilter_LastKnownGoodAndIntermediateVersionNotFound(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	w := newWrapper(10)
 	// valid env model percentage to pass earlier checks
@@ -103,6 +110,7 @@ func TestUpdatePercentFilter_LastKnownGoodAndIntermediateVersionNotFound(t *test
 }
 
 func TestUpdatePercentFilter_WhitelistValidPath(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	// store whitelist
 	ipg := shared.NewIpAddressGroupWithAddrStrings("G_OK_PF", "G_OK_PF", []string{"10.10.0.1"})
@@ -116,6 +124,7 @@ func TestUpdatePercentFilter_WhitelistValidPath(t *testing.T) {
 }
 
 func TestConvertPercentageBean_SumAndWhitelist(t *testing.T) {
+	t.Parallel()
 	// prepare a namespaced list
 	ipg := shared.NewIpAddressGroupWithAddrStrings("G_PCB", "G_PCB", []string{"192.168.0.1"})
 	nl := shared.ConvertFromIpAddressGroup(ipg)
@@ -136,6 +145,7 @@ func TestConvertPercentageBean_SumAndWhitelist(t *testing.T) {
 }
 
 func TestGetPercentFilterValue_ReturnsEmpty(t *testing.T) {
+	t.Parallel()
 	v := getPercentFilterValue("stb")
 	assert.Empty(t, v.EnvModelPercentages)
 }

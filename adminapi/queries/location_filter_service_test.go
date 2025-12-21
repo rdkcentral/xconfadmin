@@ -19,6 +19,7 @@ func newLocationFilter(name string) *coreef.DownloadLocationFilter {
 func seedEnv(id string) { CreateAndSaveEnvironment(id) }
 
 func TestUpdateLocationFilter_ValidationFailures(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	lfBlank := &coreef.DownloadLocationFilter{}
 	assert.Equal(t, 400, UpdateLocationFilter("stb", lfBlank).Status)
@@ -28,6 +29,7 @@ func TestUpdateLocationFilter_ValidationFailures(t *testing.T) {
 }
 
 func TestUpdateLocationFilter_MissingConditionsBranches(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	// no envs/models/ipgroup -> Condition required
 	lf := newLocationFilter("LFCOND")
@@ -43,6 +45,7 @@ func TestUpdateLocationFilter_MissingConditionsBranches(t *testing.T) {
 }
 
 func TestUpdateLocationFilter_ModelEnvExistenceChecks(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	lf := newLocationFilter("LFME")
 	lf.Models = []string{"modelx"}
@@ -59,6 +62,7 @@ func TestUpdateLocationFilter_ModelEnvExistenceChecks(t *testing.T) {
 }
 
 func TestUpdateLocationFilter_LocationValidation(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	seedModel("M1")
 	seedEnv("E1")
@@ -79,6 +83,7 @@ func TestUpdateLocationFilter_LocationValidation(t *testing.T) {
 }
 
 func TestUpdateLocationFilter_SuccessAndDelete(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 
 	// Pre-cleanup: remove any models/environments from other tests
@@ -112,6 +117,7 @@ func TestUpdateLocationFilter_SuccessAndDelete(t *testing.T) {
 }
 
 func TestUpdateDownloadLocationRoundRobinFilter(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	// invalid app type
 	rr := &coreef.DownloadLocationRoundRobinFilterValue{}
@@ -119,6 +125,7 @@ func TestUpdateDownloadLocationRoundRobinFilter(t *testing.T) {
 }
 
 func TestUpdateLocationFilter_IpGroupMismatch(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	seedModel("MM1")
 	seedEnv("EE1")
@@ -132,6 +139,7 @@ func TestUpdateLocationFilter_IpGroupMismatch(t *testing.T) {
 }
 
 func TestUpdateLocationFilter_FirmwareLocationInvalidVariants(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	seedModel("M3")
 	seedEnv("E3")
@@ -153,6 +161,7 @@ func TestUpdateLocationFilter_FirmwareLocationInvalidVariants(t *testing.T) {
 }
 
 func TestUpdateLocationFilter_Ipv6FirmwareLocationInvalidVariants(t *testing.T) {
+	t.Parallel()
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	seedModel("M4")
 	seedEnv("E4")

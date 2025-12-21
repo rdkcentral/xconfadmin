@@ -26,6 +26,7 @@ func newTestXWriter(body string) (*xwhttp.XResponseWriter, *httptest.ResponseRec
 
 // 1. Cast error path: provide a plain ResponseRecorder (not wrapped) so handler fails casting
 func TestDcmTestPageHandler_CastError(t *testing.T) {
+	t.Parallel()
 	// Need applicationType for auth.CanRead; append as query param
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/dcm/testpage?applicationType=stb", bytes.NewReader([]byte(`{}`)))
 	w := httptest.NewRecorder() // NOT an XResponseWriter -> triggers cast error branch
@@ -40,6 +41,7 @@ func TestDcmTestPageHandler_CastError(t *testing.T) {
 
 // 2. Bad JSON path: XResponseWriter but body not valid JSON
 func TestDcmTestPageHandler_BadJSON(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/dcm/testpage?applicationType=stb", nil)
 	xw, rr := newTestXWriter("{invalid-json")
 	DcmTestPageHandler(xw, r)
@@ -53,6 +55,7 @@ func TestDcmTestPageHandler_BadJSON(t *testing.T) {
 
 // 3. Success path with no matching rules -> should return context only (no settings)
 func TestDcmTestPageHandler_SuccessNoRules(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/dcm/testpage?applicationType=stb", nil)
 	// Provide minimal empty JSON body
 	xw, rr := newTestXWriter("{}")
@@ -80,6 +83,7 @@ func TestDcmTestPageHandler_SuccessNoRules(t *testing.T) {
 
 // 4. Authentication path when applicationType missing: CanRead should default to stb (dev profile) and still succeed
 func TestDcmTestPageHandler_DefaultApplicationType(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/dcm/testpage", nil)
 	xw, rr := newTestXWriter("{}")
 	DcmTestPageHandler(xw, r)
@@ -93,6 +97,7 @@ func TestDcmTestPageHandler_DefaultApplicationType(t *testing.T) {
 
 // 5. Success path with matching rules -> should return settings, matchedRules, and ruleType
 func TestDcmTestPageHandler_SuccessWithMatchingRules(t *testing.T) {
+	t.Parallel()
 	// Setup: Create a DCM formula and device settings that will match
 	defer func() {
 		// Clean up any test data
@@ -182,6 +187,7 @@ func TestDcmTestPageHandler_SuccessWithMatchingRules(t *testing.T) {
 	_ = ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_DEVICE_SETTINGS, deviceSettings.ID)
 } // 6. Test with various MAC address formats to ensure normalization works
 func TestDcmTestPageHandler_MacAddressNormalization(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/dcm/testpage?applicationType=stb", nil)
 	// Provide MAC in different format
 	searchContext := map[string]string{

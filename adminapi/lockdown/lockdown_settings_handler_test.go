@@ -15,6 +15,7 @@ import (
 const testURL = "/lockdown-settings"
 
 func TestPutLockdownSettingsHandler(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -61,6 +62,7 @@ func TestPutLockdownSettingsHandler(t *testing.T) {
 }
 
 func TestGetLockdownSettingsHandler(t *testing.T) {
+	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/lockdown/settings", nil)
 	recorder := httptest.NewRecorder()
@@ -72,6 +74,7 @@ func TestGetLockdownSettingsHandler(t *testing.T) {
 // TestPutLockdownSettingsHandler_AuthError tests the WriteAdminErrorResponse path for auth failure
 // When HasWritePermissionForTool returns false, WriteAdminErrorResponse should be called with 403
 func TestPutLockdownSettingsHandler_AuthError(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database/validation not configured: %v", r)
@@ -102,6 +105,7 @@ func TestPutLockdownSettingsHandler_AuthError(t *testing.T) {
 // TestPutLockdownSettingsHandler_ResponseWriterCastError tests WriteAdminErrorResponse for cast error
 // When w is not *xhttp.XResponseWriter, WriteAdminErrorResponse should be called with 400
 func TestPutLockdownSettingsHandler_ResponseWriterCastError(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPut, testURL, nil)
 	recorder := httptest.NewRecorder()
 
@@ -120,6 +124,7 @@ func TestPutLockdownSettingsHandler_ResponseWriterCastError(t *testing.T) {
 // TestPutLockdownSettingsHandler_InvalidJSONError tests WriteAdminErrorResponse for JSON unmarshal error
 // When json.Unmarshal fails, WriteAdminErrorResponse should be called with 400
 func TestPutLockdownSettingsHandler_InvalidJSONError(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPut, testURL, nil)
 	recorder := httptest.NewRecorder()
 	w := xhttp.NewXResponseWriter(recorder)
@@ -141,6 +146,7 @@ func TestPutLockdownSettingsHandler_InvalidJSONError(t *testing.T) {
 // TestPutLockdownSettingsHandler_SetLockdownSettingError tests WriteAdminErrorResponse for service error
 // When SetLockdownSetting returns an error, WriteAdminErrorResponse should be called
 func TestPutLockdownSettingsHandler_SetLockdownSettingError(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database/validation not configured: %v", r)
@@ -169,6 +175,7 @@ func TestPutLockdownSettingsHandler_SetLockdownSettingError(t *testing.T) {
 
 // TestPutLockdownSettingsHandler_EmptyBodyError tests error handling for empty body
 func TestPutLockdownSettingsHandler_EmptyBodyError(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodPut, testURL, nil)
 	recorder := httptest.NewRecorder()
 	w := xhttp.NewXResponseWriter(recorder)
@@ -185,6 +192,7 @@ func TestPutLockdownSettingsHandler_EmptyBodyError(t *testing.T) {
 
 // TestPutLockdownSettingsHandler_MalformedJSON tests various malformed JSON scenarios
 func TestPutLockdownSettingsHandler_MalformedJSON(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database/validation not configured: %v", r)
@@ -233,6 +241,7 @@ func TestPutLockdownSettingsHandler_MalformedJSON(t *testing.T) {
 // TestGetLockdownSettingsHandler_DatabaseError tests WriteAdminErrorResponse for DB error
 // When GetLockdownSettings fails, WriteAdminErrorResponse should be called with 500
 func TestGetLockdownSettingsHandler_DatabaseError(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/lockdown/settings", nil)
 	recorder := httptest.NewRecorder()
 
@@ -251,6 +260,7 @@ func TestGetLockdownSettingsHandler_DatabaseError(t *testing.T) {
 // TestGetLockdownSettingsHandler_ReturnJsonResponseError tests xhttp.AdminError path
 // When xhttp.ReturnJsonResponse fails, xhttp.AdminError should be called
 func TestGetLockdownSettingsHandler_ReturnJsonResponseError(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/lockdown/settings", nil)
 	recorder := httptest.NewRecorder()
 
@@ -266,6 +276,7 @@ func TestGetLockdownSettingsHandler_ReturnJsonResponseError(t *testing.T) {
 // TestGetLockdownSettingsHandler_SuccessPath tests the success scenario
 // This is a negative test - it will fail in test env due to no DB, but shows the path exists
 func TestGetLockdownSettingsHandler_SuccessPath(t *testing.T) {
+	t.Parallel()
 	req := httptest.NewRequest(http.MethodGet, "/lockdown/settings", nil)
 	recorder := httptest.NewRecorder()
 
@@ -280,6 +291,7 @@ func TestGetLockdownSettingsHandler_SuccessPath(t *testing.T) {
 
 // TestPutLockdownSettingsHandler_AllErrorPaths tests comprehensive error coverage
 func TestPutLockdownSettingsHandler_AllErrorPaths(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database/validation not configured: %v", r)
@@ -348,6 +360,7 @@ func TestPutLockdownSettingsHandler_AllErrorPaths(t *testing.T) {
 
 // TestWriteAdminErrorResponse_Coverage documents all WriteAdminErrorResponse calls in the handler
 func TestWriteAdminErrorResponse_Coverage(t *testing.T) {
+	t.Parallel()
 	// This test documents all WriteAdminErrorResponse calls:
 	// 1. Line 32: WriteAdminErrorResponse(w, http.StatusForbidden, "No write permission: tools")
 	// 2. Line 37: WriteAdminErrorResponse(w, http.StatusBadRequest, "responsewriter cast error")

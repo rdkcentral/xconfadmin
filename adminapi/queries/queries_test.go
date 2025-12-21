@@ -97,6 +97,7 @@ func truncateTable(tableName string) error {
 	}
 	return nil
 }
+
 func TestMain(m *testing.M) {
 	fmt.Printf("in TestMain\n")
 

@@ -9,6 +9,7 @@ import (
 )
 
 func TestSetLockdownSettings(t *testing.T) {
+	t.Parallel()
 	enabled := true
 	startTime := "10:00"
 	endTime := "18:00"
@@ -30,11 +31,13 @@ func TestSetLockdownSettings(t *testing.T) {
 }
 
 func TestGetLockdownSettings(t *testing.T) {
+	t.Parallel()
 	_, err := GetLockdownSettings()
 	assert.Error(t, err, "Should return error when app settings are not set")
 }
 
 func TestProcessLockdownSettings(t *testing.T) {
+	t.Parallel()
 	settings := map[string]interface{}{
 		common.PROP_LOCKDOWN_ENABLED:   true,
 		common.PROP_LOCKDOWN_STARTTIME: "1200",
@@ -49,6 +52,7 @@ func TestProcessLockdownSettings(t *testing.T) {
 
 // TestSetLockdownSetting_LockdownEnabledError tests error handling when saving LockdownEnabled fails
 func TestSetLockdownSetting_LockdownEnabledError(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -76,6 +80,7 @@ func TestSetLockdownSetting_LockdownEnabledError(t *testing.T) {
 
 // TestSetLockdownSetting_LockdownStartTimeError tests error handling when saving LockdownStartTime fails
 func TestSetLockdownSetting_LockdownStartTimeError(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -108,6 +113,7 @@ func TestSetLockdownSetting_LockdownStartTimeError(t *testing.T) {
 
 // TestSetLockdownSetting_LockdownEndTimeError tests error handling when saving LockdownEndTime fails
 func TestSetLockdownSetting_LockdownEndTimeError(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -140,6 +146,7 @@ func TestSetLockdownSetting_LockdownEndTimeError(t *testing.T) {
 
 // TestSetLockdownSetting_LockdownModulesError tests error handling when saving LockdownModules fails
 func TestSetLockdownSetting_LockdownModulesError(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -168,6 +175,7 @@ func TestSetLockdownSetting_LockdownModulesError(t *testing.T) {
 
 // TestSetLockdownSetting_AllFieldsError tests error handling when all fields are provided
 func TestSetLockdownSetting_AllFieldsError(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -196,6 +204,7 @@ func TestSetLockdownSetting_AllFieldsError(t *testing.T) {
 
 // TestSetLockdownSetting_ValidationError tests the validation error path
 func TestSetLockdownSetting_ValidationError(t *testing.T) {
+	t.Parallel()
 	// Invalid time format should trigger validation error
 	invalidTime := "invalid-format"
 	settings := &common.LockdownSettings{
@@ -212,6 +221,7 @@ func TestSetLockdownSetting_ValidationError(t *testing.T) {
 
 // TestSetLockdownSetting_SuccessPath tests the successful save scenario
 func TestSetLockdownSetting_SuccessPath(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -234,6 +244,7 @@ func TestSetLockdownSetting_SuccessPath(t *testing.T) {
 
 // TestSetLockdownSetting_PartialFields tests combinations of fields
 func TestSetLockdownSetting_PartialFields(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("Expected panic due to database not configured: %v", r)
@@ -309,6 +320,7 @@ func TestSetLockdownSetting_PartialFields(t *testing.T) {
 
 // TestGetLockdownSettings_Error tests error handling in GetLockdownSettings
 func TestGetLockdownSettings_Error(t *testing.T) {
+	t.Parallel()
 	_, err := GetLockdownSettings()
 
 	// In test environment without DB, GetAppSettings will fail
@@ -317,6 +329,7 @@ func TestGetLockdownSettings_Error(t *testing.T) {
 
 // TestProcessLockdownSettings_EmptySettings tests processing empty settings map
 func TestProcessLockdownSettings_EmptySettings(t *testing.T) {
+	t.Parallel()
 	settings := map[string]interface{}{}
 
 	lockdownSettings, err := ProcessLockdownSettings(settings)
@@ -331,6 +344,7 @@ func TestProcessLockdownSettings_EmptySettings(t *testing.T) {
 
 // TestProcessLockdownSettings_WrongTypes tests handling of incorrect types in settings map
 func TestProcessLockdownSettings_WrongTypes(t *testing.T) {
+	t.Parallel()
 	settings := map[string]interface{}{
 		common.PROP_LOCKDOWN_ENABLED:   "not-a-bool", // Should be bool
 		common.PROP_LOCKDOWN_STARTTIME: 12345,        // Should be string

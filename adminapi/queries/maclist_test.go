@@ -36,6 +36,7 @@ const (
 )
 
 func TestExpansionContractionOfMacList(t *testing.T) {
+	t.Parallel()
 	aut := newMaclistApiUnitTest(t)
 
 	testCases := []apiUnitTestCase{

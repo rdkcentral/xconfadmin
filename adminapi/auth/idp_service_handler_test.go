@@ -75,6 +75,7 @@ func runHandler(h func(http.ResponseWriter, *http.Request), req *http.Request) *
 }
 
 func TestGetAdminUIUrlFromCookies_FallbackAndSuccess(t *testing.T) {
+	t.Parallel()
 	// missing cookie => default
 	r1 := httptest.NewRequest("GET", "/", nil)
 	if v := GetAdminUIUrlFromCookies(r1); v != defaultAdminUIHost {
@@ -90,6 +91,7 @@ func TestGetAdminUIUrlFromCookies_FallbackAndSuccess(t *testing.T) {
 }
 
 func TestLoginUrlHandler_SetsUrl(t *testing.T) {
+	t.Parallel()
 	fidp := &fakeIdp{tokenReturn: "tok"}
 	WebServerInjection(makeWs(fidp))
 	// cookie defines admin UI base
@@ -108,6 +110,7 @@ func TestLoginUrlHandler_SetsUrl(t *testing.T) {
 }
 
 func TestLogoutHandler_SuccessAndError(t *testing.T) {
+	t.Parallel()
 	// success
 	fidp := &fakeIdp{}
 	WebServerInjection(makeWs(fidp))
@@ -129,6 +132,7 @@ func TestLogoutHandler_SuccessAndError(t *testing.T) {
 }
 
 func TestLogoutAfterHandler_Redirect(t *testing.T) {
+	t.Parallel()
 	fidp := &fakeIdp{}
 	WebServerInjection(makeWs(fidp))
 	r := httptest.NewRequest("GET", "/logoutafter", nil)
@@ -146,6 +150,7 @@ func TestLogoutAfterHandler_Redirect(t *testing.T) {
 // CodeHandler branches: missing code, idp returns empty token, invalid token, valid token
 // For invalid token we inject a token that ValidateAndGetLoginToken will reject (use plain text)
 func TestCodeHandler_Branches(t *testing.T) {
+	t.Parallel()
 	// missing code
 	fidp := &fakeIdp{}
 	WebServerInjection(makeWs(fidp))

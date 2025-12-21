@@ -28,6 +28,7 @@ import (
 
 // TestNullifyUnwantedFieldsPermanentTelemetryProfile_EmptyProfile tests with empty TelemetryProfile array
 func TestNullifyUnwantedFieldsPermanentTelemetryProfile_EmptyProfile(t *testing.T) {
+	t.Parallel()
 	profile := &logupload.PermanentTelemetryProfile{
 		ApplicationType:  "stb",
 		TelemetryProfile: []logupload.TelemetryElement{},
@@ -42,6 +43,7 @@ func TestNullifyUnwantedFieldsPermanentTelemetryProfile_EmptyProfile(t *testing.
 
 // TestNullifyUnwantedFieldsPermanentTelemetryProfile_WithElements tests with populated TelemetryProfile array
 func TestNullifyUnwantedFieldsPermanentTelemetryProfile_WithElements(t *testing.T) {
+	t.Parallel()
 	profile := &logupload.PermanentTelemetryProfile{
 		ApplicationType: "stb",
 		TelemetryProfile: []logupload.TelemetryElement{
@@ -90,6 +92,7 @@ func TestNullifyUnwantedFieldsPermanentTelemetryProfile_WithElements(t *testing.
 
 // TestNullifyUnwantedFieldsPermanentTelemetryProfile_SingleElement tests with single element
 func TestNullifyUnwantedFieldsPermanentTelemetryProfile_SingleElement(t *testing.T) {
+	t.Parallel()
 	profile := &logupload.PermanentTelemetryProfile{
 		ApplicationType: "xhome",
 		TelemetryProfile: []logupload.TelemetryElement{
@@ -113,6 +116,7 @@ func TestNullifyUnwantedFieldsPermanentTelemetryProfile_SingleElement(t *testing
 
 // TestConvertFirmwareConfigToFirmwareConfigResponse_FullConfig tests with fully populated config
 func TestConvertFirmwareConfigToFirmwareConfigResponse_FullConfig(t *testing.T) {
+	t.Parallel()
 	config := &coreef.FirmwareConfig{
 		ID:                       "firmware-id-123",
 		Updated:                  int64(1234567890),
@@ -151,6 +155,7 @@ func TestConvertFirmwareConfigToFirmwareConfigResponse_FullConfig(t *testing.T) 
 
 // TestConvertFirmwareConfigToFirmwareConfigResponse_MinimalConfig tests with minimal config
 func TestConvertFirmwareConfigToFirmwareConfigResponse_MinimalConfig(t *testing.T) {
+	t.Parallel()
 	config := &coreef.FirmwareConfig{
 		ID:              "minimal-id",
 		FirmwareVersion: "1.0",
@@ -177,6 +182,7 @@ func TestConvertFirmwareConfigToFirmwareConfigResponse_MinimalConfig(t *testing.
 
 // TestConvertFirmwareConfigToFirmwareConfigResponse_EmptyStrings tests with empty string values
 func TestConvertFirmwareConfigToFirmwareConfigResponse_EmptyStrings(t *testing.T) {
+	t.Parallel()
 	config := &coreef.FirmwareConfig{
 		ID:                       "",
 		Description:              "",
@@ -205,6 +211,7 @@ func TestConvertFirmwareConfigToFirmwareConfigResponse_EmptyStrings(t *testing.T
 
 // TestConvertFirmwareConfigToFirmwareConfigResponse_NilMaps tests with nil properties map
 func TestConvertFirmwareConfigToFirmwareConfigResponse_NilMaps(t *testing.T) {
+	t.Parallel()
 	config := &coreef.FirmwareConfig{
 		ID:         "test-id",
 		Properties: nil,
@@ -219,6 +226,7 @@ func TestConvertFirmwareConfigToFirmwareConfigResponse_NilMaps(t *testing.T) {
 
 // TestConvertFirmwareConfigToFirmwareConfigResponse_EmptyMaps tests with empty properties map
 func TestConvertFirmwareConfigToFirmwareConfigResponse_EmptyMaps(t *testing.T) {
+	t.Parallel()
 	config := &coreef.FirmwareConfig{
 		ID:         "test-id",
 		Properties: map[string]string{},
@@ -233,6 +241,7 @@ func TestConvertFirmwareConfigToFirmwareConfigResponse_EmptyMaps(t *testing.T) {
 
 // TestConvertFirmwareConfigToFirmwareConfigResponse_NilSlices tests with nil SupportedModelIds
 func TestConvertFirmwareConfigToFirmwareConfigResponse_NilSlices(t *testing.T) {
+	t.Parallel()
 	config := &coreef.FirmwareConfig{
 		ID:                "test-id",
 		SupportedModelIds: nil,
@@ -247,6 +256,7 @@ func TestConvertFirmwareConfigToFirmwareConfigResponse_NilSlices(t *testing.T) {
 
 // TestConvertFirmwareConfigToFirmwareConfigResponse_BooleanValues tests boolean field combinations
 func TestConvertFirmwareConfigToFirmwareConfigResponse_BooleanValues(t *testing.T) {
+	t.Parallel()
 	// Test case 1: Both true
 	config1 := &coreef.FirmwareConfig{
 		ID:                "test-1",
@@ -280,6 +290,7 @@ func TestConvertFirmwareConfigToFirmwareConfigResponse_BooleanValues(t *testing.
 
 // TestConvertFirmwareConfigToFirmwareConfigResponse_LargeValues tests with large numeric values
 func TestConvertFirmwareConfigToFirmwareConfigResponse_LargeValues(t *testing.T) {
+	t.Parallel()
 	config := &coreef.FirmwareConfig{
 		ID:           "large-values",
 		Updated:      int64(9223372036854775807), // Max int64
@@ -296,6 +307,7 @@ func TestConvertFirmwareConfigToFirmwareConfigResponse_LargeValues(t *testing.T)
 
 // TestConvertFirmwareConfigToFirmwareConfigResponse_SpecialCharacters tests with special characters in strings
 func TestConvertFirmwareConfigToFirmwareConfigResponse_SpecialCharacters(t *testing.T) {
+	t.Parallel()
 	config := &coreef.FirmwareConfig{
 		ID:               "special-chars-<>&\"'",
 		Description:      "Description with special chars: <>&\"'\n\t",
