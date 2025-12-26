@@ -277,7 +277,7 @@ func UpdatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id: %s ApplicationType  Mismatch", bean.ID), nil)
 	}
 	if fRule.ApplicationType != bean.ApplicationType {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("ApplicationType cannot be changed: Existing value:"+fRule.ApplicationType+" New Value:"+bean.ApplicationType), nil)
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("ApplicationType cannot be changed: Existing value:%s New Value: %s", fRule.ApplicationType, bean.ApplicationType), nil)
 	}
 
 	if err := firmware.ValidateRuleName(bean.ID, bean.Name, applicationType); err != nil {

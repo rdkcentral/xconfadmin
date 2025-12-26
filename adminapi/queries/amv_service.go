@@ -240,7 +240,7 @@ func amvValidate(newamv *firmware.ActivationVersion) *xwhttp.ResponseEntity {
 		}
 
 		if newamv.ID != examv.ID && newamv.ApplicationType == examv.ApplicationType && newamv.Description == examv.Description {
-			return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Activation versions with description "+examv.Description+" already exists"), nil)
+			return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("activation versions with description already %s exists", examv.Description), nil)
 		}
 	}
 
