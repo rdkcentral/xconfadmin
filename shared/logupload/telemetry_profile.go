@@ -91,7 +91,7 @@ func NewEmptyTelemetryTwoProfile() *logupload.TelemetryTwoProfile {
 func GetOneTelemetryTwoProfile(rowKey string) *logupload.TelemetryTwoProfile {
 	telemetryInst, err := logupload.GetCachedSimpleDaoFunc().GetOne(db.TABLE_TELEMETRY_TWO_PROFILES, rowKey)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no TelemetryTwoProfile found for " + rowKey))
+		log.Warn("no TelemetryTwoProfile found for " + rowKey)
 		return nil
 	}
 	telemetry := telemetryInst.(*logupload.TelemetryTwoProfile)
@@ -139,7 +139,7 @@ func GetOneTelemetryRule(id string) *logupload.TelemetryRule {
 func GetOneTelemetryTwoRule(rowKey string) *logupload.TelemetryTwoRule {
 	telemetryInst, err := logupload.GetCachedSimpleDaoFunc().GetOne(db.TABLE_TELEMETRY_TWO_RULES, rowKey)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no telemetryProfile found for " + rowKey))
+		log.Warn("no telemetryProfile found for " + rowKey)
 		return nil
 	}
 	telemetry := telemetryInst.(*logupload.TelemetryTwoRule)
@@ -157,7 +157,7 @@ func DeleteTelemetryTwoRule(rowKey string) error {
 func GetOnePermanentTelemetryProfile(rowKey string) *logupload.PermanentTelemetryProfile {
 	telemetryInst, err := logupload.GetCachedSimpleDaoFunc().GetOne(db.TABLE_PERMANENT_TELEMETRY, rowKey)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no telemetryProfile found for " + rowKey))
+		log.Warn("no telemetryProfile found for " + rowKey)
 		return nil
 	}
 	telemetry := telemetryInst.(*logupload.PermanentTelemetryProfile)
