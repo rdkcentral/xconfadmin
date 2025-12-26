@@ -237,7 +237,7 @@ func GetDCMGenericRuleList() []*DCMGenericRule {
 func GetOneDCMGenericRule(id string) *DCMGenericRule {
 	dmcRuleInst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_DCM_RULE, id)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no dmcRule found for " + id))
+		log.Warn("no dmcRule found for " + id)
 		return nil
 	}
 	dmcRule := dmcRuleInst.(*DCMGenericRule)
@@ -261,7 +261,7 @@ func GetAllEnvironmentList() []*shared.Environment {
 func GetOneEnvironment(id string) *shared.Environment {
 	inst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_ENVIRONMENT, id)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no environment found for " + id))
+		log.Warn("no environment found for " + id)
 		return nil
 	}
 	return inst.(*shared.Environment)
@@ -284,7 +284,7 @@ func GetAllModelList() []*shared.Model {
 func GetOneModel(id string) *shared.Model {
 	inst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_MODEL, id)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no model found for " + id))
+		log.Warn("no model found for " + id)
 		return nil
 	}
 	return inst.(*shared.Model)
@@ -402,7 +402,7 @@ func GetStringAppSetting(key string, vargs ...string) string {
 
 	inst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_APP_SETTINGS, key)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no AppSetting found for " + key))
+		log.Warn("no AppSetting found for " + key)
 		return defaultVal
 	}
 
