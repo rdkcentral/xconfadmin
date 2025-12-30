@@ -152,7 +152,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	// DeleteAllEntities()
+	// DeleteTelemetryEntities()
 
 	globAut = newApiUnitTest(nil)
 
@@ -382,14 +382,23 @@ func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRec
 	return recorder
 }
 
-func DeleteAllEntities() {
-	for _, tableInfo := range db.GetAllTableInfo() {
-		if err := truncateTable(tableInfo.TableName); err != nil {
-			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
-		}
-		if tableInfo.CacheData {
-			db.GetCachedSimpleDao().RefreshAll(tableInfo.TableName)
-		}
+// DeleteTelemetryEntities - Optimized cleanup that only deletes telemetry-related tables
+func DeleteTelemetryEntities() {
+	telemetryTables := []string{
+		ds.TABLE_TELEMETRY,
+		ds.TABLE_TELEMETRY_RULES,
+		ds.TABLE_TELEMETRY_TWO_PROFILES,
+		ds.TABLE_TELEMETRY_TWO_RULES,
+		ds.TABLE_PERMANENT_TELEMETRY,
+		db.TABLE_XCONF_CHANGE,
+		db.TABLE_XCONF_APPROVED_CHANGE,
+		db.TABLE_XCONF_TELEMETRY_TWO_CHANGE,
+		db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE,
+	}
+	for _, tableName := range telemetryTables {
+		truncateTable(tableName)
+		// Refresh cache for this table
+		db.GetCachedSimpleDao().RefreshAll(tableName)
 	}
 }
 
@@ -403,7 +412,7 @@ func truncateTable(tableName string) error {
 }
 
 func TestAddTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
 	ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
@@ -441,7 +450,7 @@ func TestAddTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
 	entry := &logupload.TelemetryElement{uuid.New().String(), "NEW header", "new content", "new type", "10", ""}
@@ -480,7 +489,7 @@ func TestRemoveTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 }
 
 func TestTelemetryProfileCreate(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
 
@@ -503,7 +512,7 @@ func TestTelemetryProfileCreate(t *testing.T) {
 }
 
 func TestTelemetryProfileCreateChangeAndApproveIt(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
 
@@ -542,7 +551,7 @@ func TestTelemetryProfileCreateChangeAndApproveIt(t *testing.T) {
 }
 
 func TestTelemetryProfileUpdate(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
 	ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
@@ -574,7 +583,7 @@ func TestTelemetryProfileUpdate(t *testing.T) {
 }
 
 func TestTelemetryProfileUpdateChangeAndApproveIt(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
 	ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
@@ -618,7 +627,7 @@ func TestTelemetryProfileUpdateChangeAndApproveIt(t *testing.T) {
 }
 
 func TestTelemetryProfileDelete(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
 	ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
@@ -641,7 +650,7 @@ func TestTelemetryProfileDelete(t *testing.T) {
 }
 
 func TestTelemetryProfileDeleteChangeAndApproveIt(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
 	ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
@@ -682,7 +691,7 @@ func TestTelemetryProfileDeleteChangeAndApproveIt(t *testing.T) {
 }
 
 func TestTelemetryProfileCreateChangeThrowsExceptionInCaseIfDuplicatedChange(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
 
@@ -705,7 +714,7 @@ func TestTelemetryProfileCreateChangeThrowsExceptionInCaseIfDuplicatedChange(t *
 }
 
 func TestTelemetryProfileUpdateChangeThrowsExceptionInCaseIfDuplicatedChange(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
 	ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
@@ -732,7 +741,7 @@ func TestTelemetryProfileUpdateChangeThrowsExceptionInCaseIfDuplicatedChange(t *
 }
 
 func TestTelemetryProfileDeleteChangeThrowsExceptionInCaseIfDuplicatedChange(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
 	ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
@@ -755,7 +764,7 @@ func TestTelemetryProfileDeleteChangeThrowsExceptionInCaseIfDuplicatedChange(t *
 }
 
 func TestUpdateTelemetyProfileThrowsAnExceptionInCaseOfDuplicatedTelemetryEntries(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
 	ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
@@ -794,7 +803,7 @@ func TestUpdateTelemetyProfileThrowsAnExceptionInCaseOfDuplicatedTelemetryEntrie
 }
 
 func TestAddTelemetryThrowsAnExceptionInCaseOfDuplicate(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
 	ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
@@ -831,7 +840,7 @@ func TestAddTelemetryThrowsAnExceptionInCaseOfDuplicate(t *testing.T) {
 }
 
 func IgnoreTestApplicationTypeIsMandatory(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
 	profileBytes, _ := json.Marshal(p)
