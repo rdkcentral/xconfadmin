@@ -36,14 +36,16 @@ const (
 	QueryAddMemberBucketed       = `INSERT INTO "TagMembersBucketed" (tag_id, bucket_id, member, created) VALUES (?, ?, ?, ?)`
 	QueryRemoveMemberBucketed    = `DELETE FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ? AND member = ?`
 	QueryGetMembersByBucket      = `SELECT member FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ? AND member > ? LIMIT ?`
+	QueryGetMembersCountByBucket = `SELECT count(*) FROM "TagMembersBucketed" WHERE tag_id = ? and bucket_id = ?`
 	QueryGetMembersByBucketFirst = `SELECT member FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ? LIMIT ?`
 
 	QueryGetPopulatedBuckets  = `SELECT bucket_id FROM "TagBucketMetadata" WHERE tag_id = ?`
 	QueryAddBucketMetadata    = `INSERT INTO "TagBucketMetadata" (tag_id, bucket_id) VALUES (?, ?)`
-	QueryRemoveBucketMetadata = `DELETE FROM "TagBucketMetadata" WHERE tag_id = ? AND bucket_id = ?`
 	QueryGetAllTagIds         = `SELECT tag_id FROM "TagBucketMetadata"`
 	QueryDeleteBucketMembers  = `DELETE FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ?`
 	QueryDeleteBucketMetadata = `DELETE FROM "TagBucketMetadata" WHERE tag_id = ? AND bucket_id = ?`
+
+	CountMembersCassandraResp = "count"
 )
 
 type BucketedCursor struct {
@@ -69,7 +71,7 @@ func getBucketId(member string) int {
 	return int(hash.Sum32()) % BucketCount
 }
 
-func AddMembersV2(tagId string, members []string) error {
+func AddMembers(tagId string, members []string) error {
 	if len(members) > MaxBatchSizeV2 {
 		return fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
@@ -125,7 +127,7 @@ func addMembersToBucket(tagId string, bucketId int, members []string, created st
 	return ds.GetSimpleDao().ExecuteBatch(batch)
 }
 
-func RemoveMembersV2(tagId string, members []string) error {
+func RemoveMembers(tagId string, members []string) error {
 	if len(members) > MaxBatchSizeV2 {
 		return fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
@@ -154,6 +156,20 @@ func RemoveMembersV2(tagId string, members []string) error {
 			log.Debugf("Successfully removed %d members from bucket %d for tag %s",
 				len(bucketMembers), bucketId, tagId)
 		}
+		// Clean up bucket metadata if bucket is now empty
+		membersCount, err := getMembersCountOfBucket(tagId, bucketId)
+		if err != nil {
+			log.Warnf("Failed to check bucket %d count for tag %s: %v (skipping cleanup)", bucketId, tagId, err)
+			continue
+		}
+		if membersCount == 0 {
+			err = ds.GetSimpleDao().Modify(QueryDeleteBucketMetadata, tagId, strconv.Itoa(bucketId))
+			if err != nil {
+				log.Warnf("Failed to delete empty bucket %d metadata for tag %s: %v", bucketId, tagId, err)
+			} else {
+				log.Infof("Deleted empty bucket %d metadata for tag %s", bucketId, tagId)
+			}
+		}
 	}
 
 	if len(allErrors) > 0 {
@@ -164,6 +180,27 @@ func RemoveMembersV2(tagId string, members []string) error {
 	log.Infof("Successfully removed %d members from tag %s across %d buckets",
 		successCount, tagId, len(bucketGroups))
 	return nil
+}
+
+func getMembersCountOfBucket(tagId string, bucketId int) (int, error) {
+	rows, err := ds.GetSimpleDao().Query(QueryGetMembersCountByBucket, tagId, strconv.Itoa(bucketId))
+	if err != nil {
+		return 0, err
+	}
+	if len(rows) == 0 {
+		return 0, nil
+	}
+	countVal, exists := rows[0][CountMembersCassandraResp]
+	if !exists || countVal == nil {
+		log.Errorf("Count result missing for bucket %d, tag %s", bucketId, tagId)
+		return 0, fmt.Errorf("count result missing")
+	}
+	count, ok := countVal.(int64)
+	if !ok {
+		log.Errorf("Failed to parse count for bucket %d, tag %s: unexpected type %T", bucketId, tagId, countVal)
+		return 0, fmt.Errorf("failed to parse count result")
+	}
+	return int(count), nil
 }
 
 func removeMembersFromBucket(tagId string, bucketId int, members []string) error {
@@ -192,7 +229,7 @@ func getPopulatedBuckets(tagId string) ([]int, error) {
 	return buckets, nil
 }
 
-func GetMembersV2Paginated(tagId string, limit int, cursor string) (*PaginatedMembersResponse, error) {
+func GetMembersPaginated(tagId string, limit int, cursor string) (*PaginatedMembersResponse, error) {
 	if limit > MaxPageSizeV2 {
 		limit = MaxPageSizeV2
 	}
@@ -377,7 +414,7 @@ func AddMembersWithXdas(tagId string, members []string) error {
 	}
 
 	if len(savedToXdasMembers) > 0 {
-		if err := AddMembersV2(tagId, savedToXdasMembers); err != nil {
+		if err := AddMembers(tagId, savedToXdasMembers); err != nil {
 			// Log error but don't remove from XDAS to maintain consistency
 			log.Errorf("Critical: XDAS succeeded but Cassandra V2 failed for tag %s: %v", tagId, err)
 			return fmt.Errorf("cassandra V2 storage failed after XDAS success: %w", err)
@@ -388,8 +425,8 @@ func AddMembersWithXdas(tagId string, members []string) error {
 	return nil
 }
 
-// RemoveMembersV2WithXdas removes members from both XDAS and Cassandra (XDAS-first approach)
-func RemoveMembersV2WithXdas(tagId string, members []string) error {
+// RemoveMembersWithXdas removes members from both XDAS and Cassandra (XDAS-first approach)
+func RemoveMembersWithXdas(tagId string, members []string) error {
 	if len(members) == 0 {
 		return fmt.Errorf("member list is empty")
 	}
@@ -404,7 +441,7 @@ func RemoveMembersV2WithXdas(tagId string, members []string) error {
 	}
 
 	if len(successfulRemovals) > 0 {
-		if err := RemoveMembersV2(tagId, successfulRemovals); err != nil {
+		if err := RemoveMembers(tagId, successfulRemovals); err != nil {
 			log.Errorf("Critical: XDAS removal succeeded but Cassandra V2 failed for tag %s: %v", tagId, err)
 			return fmt.Errorf("cassandra V2 removal failed after XDAS success: %w", err)
 		}
@@ -414,9 +451,9 @@ func RemoveMembersV2WithXdas(tagId string, members []string) error {
 	return nil
 }
 
-// RemoveMemberV2WithXdas removes a single member from both XDAS and Cassandra V2
-func RemoveMemberV2WithXdas(tagId string, member string) error {
-	return RemoveMembersV2WithXdas(tagId, []string{member})
+// RemoveMemberWithXdas removes a single member from both XDAS and Cassandra V2
+func RemoveMemberWithXdas(tagId string, member string) error {
+	return RemoveMembersWithXdas(tagId, []string{member})
 }
 
 // addMembersToXdas adds members to Xdas using concurrent workers (similar to V1 pattern)
@@ -507,8 +544,8 @@ func removeMembersFromXDAS(tagId string, members []string) ([]string, error) {
 	return removedMembers, nil
 }
 
-// GetAllTagIdsV2 returns all tag IDs from V2 tables
-func GetAllTagIdsV2() ([]string, error) {
+// GetAllTagIds returns all tag IDs from V2 tables
+func GetAllTagIds() ([]string, error) {
 	rows, err := ds.GetSimpleDao().Query(QueryGetAllTagIds)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tag IDs: %w", err)
@@ -533,8 +570,8 @@ func GetAllTagIdsV2() ([]string, error) {
 	return tagIds, nil
 }
 
-// GetTagByIdV2 retrieves a tag with up to MaxMembersInTagResponse members
-func GetTagByIdV2(tagId string) ([]string, bool, error) {
+// GetTagById retrieves a tag with up to MaxMembersInTagResponse members
+func GetTagById(tagId string) ([]string, bool, error) {
 	populatedBuckets, err := getPopulatedBuckets(tagId)
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to get populated buckets: %w", err)
@@ -591,9 +628,9 @@ func GetTagByIdV2(tagId string) ([]string, bool, error) {
 	return collected, false, nil
 }
 
-// DeleteTagV2 deletes a tag completely from V2 storage (XDAS and Cassandra)
+// DeleteTag deletes a tag completely from V2 storage (XDAS and Cassandra)
 // Uses memory-safe chunked deletion to handle tags with millions of members
-func DeleteTagV2(tagId string) error {
+func DeleteTag(tagId string) error {
 	populatedBuckets, err := getPopulatedBuckets(tagId)
 	if err != nil {
 		return fmt.Errorf("failed to get populated buckets: %w", err)
@@ -657,7 +694,7 @@ func deleteBucketMembers(tagId string, bucketId int) (int, error) {
 
 		if len(removedFromXdas) > 0 {
 			// Delete successfully removed members from Cassandra
-			if err := RemoveMembersV2(tagId, removedFromXdas); err != nil {
+			if err := RemoveMembers(tagId, removedFromXdas); err != nil {
 				log.Errorf("Critical: XDAS deletion succeeded but Cassandra V2 deletion failed for tag %s: %v", tagId, err)
 				return totalDeleted, fmt.Errorf("cassandra deletion failed after XDAS success: %w", err)
 			}
@@ -699,9 +736,9 @@ func deleteBucketFromCassandra(tagId string, bucketId int) error {
 	return nil
 }
 
-// GetMembersV2NonPaginated retrieves tag members for non-paginated response (V1 compatibility)
+// GetMembersNonPaginated retrieves tag members for non-paginated response (V1 compatibility)
 // Returns up to MaxMembersInTagResponse (100k) members as a plain array
-func GetMembersV2NonPaginated(tagId string) ([]string, bool, error) {
+func GetMembersNonPaginated(tagId string) ([]string, bool, error) {
 	populatedBuckets, err := getPopulatedBuckets(tagId)
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to get populated buckets: %w", err)
