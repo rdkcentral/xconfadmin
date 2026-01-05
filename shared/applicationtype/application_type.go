@@ -1,0 +1,21 @@
+package applicationtype
+
+import "strings"
+
+type ApplicationType struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	CreatedBy   string `json:"createdBy"`
+	CreatedAt   int64  `json:"createdAt"`
+	UpdatedAt   int64  `json:"updatedAt,omitempty"`
+}
+
+func IsDefaultAppType(name string) bool {
+	for _, dt := range defaultTypes {
+		if strings.Contains(name, dt) {
+			return true
+		}
+	}
+	return false
+}
