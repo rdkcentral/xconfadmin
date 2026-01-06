@@ -51,7 +51,7 @@ func ValidateApplicationType(appType *xapptype.ApplicationType) error {
 
 	matched, _ := regexp.MatchString(applicationRegexPattern, appType.Name)
 	if !matched {
-		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Application type name must be 3-10 alphabetic characters")
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Application type name must be 3-12 alphabetic characters")
 	}
 	return nil
 }
