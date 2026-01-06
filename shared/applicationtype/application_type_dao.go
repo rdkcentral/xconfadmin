@@ -11,8 +11,6 @@ const (
 	TABLE_APPLICATION_TYPES = "ApplicationTypes"
 )
 
-var defaultTypes = []string{"stb", "xhome", "rdkcloud"}
-
 // Get one application type
 func GetOneApplicationType(id string) (*ApplicationType, error) {
 	result, err := db.GetCachedSimpleDao().GetOne(TABLE_APPLICATION_TYPES, id)

@@ -11,6 +11,8 @@ type ApplicationType struct {
 	UpdatedAt   int64  `json:"updatedAt,omitempty"`
 }
 
+var defaultTypes = []string{"stb", "xhome", "sky"}
+
 func IsDefaultAppType(name string) bool {
 	for _, dt := range defaultTypes {
 		if strings.Contains(name, dt) {
