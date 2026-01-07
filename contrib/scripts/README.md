@@ -1,0 +1,1 @@
+This Folder serves as a place for community-contributed scripts, that are not part of the project's core functionality but can still be useful. 
