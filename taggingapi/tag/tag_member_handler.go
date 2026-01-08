@@ -47,10 +47,10 @@ func parsePaginationParams(r *http.Request) (*PaginationParams, error) {
 	}, nil
 }
 
-// GetTagMembersV2Handler - Unified handler supporting both paginated and non-paginated responses
+// GetTagMembersHandler - Unified handler supporting both paginated and non-paginated responses
 // Non-paginated mode (V1 compatible): Returns []string with up to 100k members, HTTP 206 if truncated
 // Paginated mode: Returns paginated envelope when limit/cursor params are present
-func GetTagMembersV2Handler(w http.ResponseWriter, r *http.Request) {
+func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 	id, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
@@ -67,7 +67,7 @@ func GetTagMembersV2Handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		response, err := GetMembersV2Paginated(id, params.Limit, params.Cursor)
+		response, err := GetMembersPaginated(id, params.Limit, params.Cursor)
 		if err != nil {
 			xhttp.WriteXconfErrorResponse(w, err)
 			return
@@ -82,7 +82,7 @@ func GetTagMembersV2Handler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponse(w, http.StatusOK, respBytes)
 	} else {
 		// Non-paginated mode: return plain array (V1 compatible)
-		members, wasTruncated, err := GetMembersV2NonPaginated(id)
+		members, wasTruncated, err := GetMembersNonPaginated(id)
 		if err != nil {
 			xhttp.WriteXconfErrorResponse(w, err)
 			return
@@ -103,8 +103,8 @@ func GetTagMembersV2Handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// AddMembersToTagV2Handler - Updated with bucketed implementation
-func AddMembersToTagV2Handler(w http.ResponseWriter, r *http.Request) {
+// AddMembersToTagHandler - Updated with bucketed implementation
+func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 	tagId, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
@@ -143,8 +143,8 @@ func AddMembersToTagV2Handler(w http.ResponseWriter, r *http.Request) {
 	xhttp.WriteXconfResponse(w, http.StatusAccepted, nil)
 }
 
-// RemoveMembersFromTagV2Handler - Updated with bucketed implementation
-func RemoveMembersFromTagV2Handler(w http.ResponseWriter, r *http.Request) {
+// RemoveMembersFromTagHandler - Updated with bucketed implementation
+func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 	id, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
@@ -174,7 +174,7 @@ func RemoveMembersFromTagV2Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = RemoveMembersV2WithXdas(id, members)
+	err = RemoveMembersWithXdas(id, members)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -183,8 +183,8 @@ func RemoveMembersFromTagV2Handler(w http.ResponseWriter, r *http.Request) {
 	xhttp.WriteXconfResponse(w, http.StatusAccepted, nil)
 }
 
-// RemoveMemberFromTagV2Handler - Updated with bucketed implementation
-func RemoveMemberFromTagV2Handler(w http.ResponseWriter, r *http.Request) {
+// RemoveMemberFromTagHandler - Updated with bucketed implementation
+func RemoveMemberFromTagHandler(w http.ResponseWriter, r *http.Request) {
 	id, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
@@ -197,7 +197,7 @@ func RemoveMemberFromTagV2Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := RemoveMemberV2WithXdas(id, member)
+	err := RemoveMemberWithXdas(id, member)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -206,9 +206,9 @@ func RemoveMemberFromTagV2Handler(w http.ResponseWriter, r *http.Request) {
 	xhttp.WriteXconfResponse(w, http.StatusNoContent, nil)
 }
 
-// GetAllTagsV2Handler returns all tag IDs from V2 storage
-func GetAllTagsV2Handler(w http.ResponseWriter, r *http.Request) {
-	tagIds, err := GetAllTagIdsV2()
+// GetAllTagsHandler returns all tag IDs from V2 storage
+func GetAllTagsHandler(w http.ResponseWriter, r *http.Request) {
+	tagIds, err := GetAllTagIds()
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -223,15 +223,15 @@ func GetAllTagsV2Handler(w http.ResponseWriter, r *http.Request) {
 	xhttp.WriteXconfResponse(w, http.StatusOK, respBytes)
 }
 
-// GetTagByIdV2Handler retrieves a single tag with its members from V2 storage
-func GetTagByIdV2Handler(w http.ResponseWriter, r *http.Request) {
+// GetTagByIdHandler retrieves a single tag with its members from V2 storage
+func GetTagByIdHandler(w http.ResponseWriter, r *http.Request) {
 	id, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
 		return
 	}
 
-	members, wasTruncated, err := GetTagByIdV2(id)
+	members, wasTruncated, err := GetTagById(id)
 	if err != nil {
 		// Check if tag not found
 		if err.Error() == "tag not found" {
@@ -266,8 +266,8 @@ func GetTagByIdV2Handler(w http.ResponseWriter, r *http.Request) {
 	xhttp.WriteXconfResponse(w, statusCode, respBytes)
 }
 
-// DeleteTagV2Handler deletes a tag and all its members from V2 storage asynchronously
-func DeleteTagV2Handler(w http.ResponseWriter, r *http.Request) {
+// DeleteTagHandler deletes a tag and all its members from V2 storage asynchronously
+func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	id, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
@@ -286,7 +286,7 @@ func DeleteTagV2Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go func(tagId string) {
-		if err := DeleteTagV2(tagId); err != nil {
+		if err := DeleteTag(tagId); err != nil {
 			log.Errorf("Background deletion failed for tag '%s': %v", tagId, err)
 		}
 	}(id)
