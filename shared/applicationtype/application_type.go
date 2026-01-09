@@ -15,7 +15,7 @@ var defaultTypes = []string{"stb", "xhome", "sky"}
 
 func IsDefaultAppType(name string) bool {
 	for _, dt := range defaultTypes {
-		if strings.Contains(name, dt) {
+		if strings.EqualFold(name, dt) {
 			return true
 		}
 	}

@@ -31,6 +31,11 @@ func CreateApplicationTypeHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	isDefault := xapptype.IsDefaultAppType(appType.Name)
+	if isDefault {
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Cannot create default application type")
+		return
+	}
 	exists, _ := xapptype.GetApplicationTypeByName(appType.Name)
 	if exists {
 		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, "Application type already exists")

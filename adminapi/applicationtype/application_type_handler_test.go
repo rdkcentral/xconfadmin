@@ -32,6 +32,11 @@ func TestCreateApplicationTypeHandler(t *testing.T) {
 	w.SetBody(validJson)
 	CreateApplicationTypeHandler(w, req)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	validJson = `{"name": "stb"}`
+	w.SetBody(validJson)
+	CreateApplicationTypeHandler(w, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
 func TestGetAllApplicationTypeHandler(t *testing.T) {
