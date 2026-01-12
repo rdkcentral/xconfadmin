@@ -52,7 +52,7 @@ func createPermanentTelemetryProfile(id string) *xwlogupload.PermanentTelemetryP
 		PollingFrequency: "120",
 		Component:        "comp_perm",
 	}}
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, perm.ID, perm)
+	_ = SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, perm.ID, perm)
 	return perm
 }
 
@@ -62,7 +62,7 @@ func createTelemetryRule(boundProfileId string) *xwlogupload.TelemetryRule {
 	r.Name = "telemetry_rule"
 	r.ApplicationType = "stb"
 	r.BoundTelemetryID = boundProfileId
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_RULES, r.ID, r)
+	_ = SetOneInDao(ds.TABLE_TELEMETRY_RULES, r.ID, r)
 	return r
 }
 

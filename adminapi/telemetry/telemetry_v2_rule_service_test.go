@@ -138,8 +138,8 @@ func TestFindByContext_ProfileFilter(t *testing.T) {
 	profile1 := createTestTelemetryTwoProfile("Profile1", "stb")
 	profile2 := createTestTelemetryTwoProfile("TestProfile", "stb")
 
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, profile1.ID, profile1)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, profile2.ID, profile2)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profile1.ID, profile1)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profile2.ID, profile2)
 
 	// Create rules with different profile bindings
 	rule1 := createTestTelemetryTwoRule("Rule1", "stb", []string{profile1.ID})
@@ -370,7 +370,7 @@ func TestFindByContext_CombinedFilters(t *testing.T) {
 	defer DeleteTelemetryEntities()
 
 	profile1 := createTestTelemetryTwoProfile("TestProfile", "stb")
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, profile1.ID, profile1)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profile1.ID, profile1)
 
 	rule1 := createTestTelemetryTwoRule("TestRule1", "stb", []string{profile1.ID})
 	rule2 := createTestTelemetryTwoRule("TestRule2", "stb", []string{})

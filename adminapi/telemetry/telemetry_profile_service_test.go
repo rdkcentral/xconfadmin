@@ -13,16 +13,15 @@ import (
 	"gotest.tools/assert"
 
 	ds "github.com/rdkcentral/xconfwebconfig/db"
-	logupload "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
-// Helper to store telemetry profile correctly (as non-pointer)
+// Helper to store telemetry profile with mock support
 func storeTelemetryProfile(rule *xwlogupload.TimestampedRule, profile *xwlogupload.TelemetryProfile) {
 	ruleBytes, _ := json.Marshal(rule)
-	// Store the dereferenced profile to match what GetOneTelemetryProfile expects
-	xwlogupload.GetCachedSimpleDaoFunc().SetOne(logupload.TABLE_TELEMETRY, string(ruleBytes), *profile)
+	// Use helper function that works with both mock and real DAO
+	SetOneInDao(ds.TABLE_TELEMETRY, string(ruleBytes), *profile)
 }
 
 // TestDropTelemetryFor_Success tests successful telemetry profile drop
@@ -131,6 +130,9 @@ func TestGetMatchedRules_EmptyContext(t *testing.T) {
 
 // TestGetMatchedRules_MultipleMatches tests multiple matching rules
 func TestGetMatchedRules_MultipleMatches(t *testing.T) {
+	// Skip - requires complex TABLE_TELEMETRY mocking with JSON-marshaled keys
+	SkipIfMockDatabase(t)
+
 	DeleteTelemetryEntities()
 
 	mac := "11:22:33:44:55:66"
@@ -170,8 +172,8 @@ func TestGetAvailableDescriptors_Success(t *testing.T) {
 		BoundTelemetryID: uuid.New().String(),
 	}
 
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_RULES, rule1.ID, rule1)
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_RULES, rule2.ID, rule2)
+	_ = SetOneInDao(ds.TABLE_TELEMETRY_RULES, rule1.ID, rule1)
+	_ = SetOneInDao(ds.TABLE_TELEMETRY_RULES, rule2.ID, rule2)
 
 	// Get descriptors
 	descriptors := GetAvailableDescriptors("stb")
@@ -212,8 +214,8 @@ func TestGetAvailableDescriptors_FilterByApplicationType(t *testing.T) {
 		BoundTelemetryID: uuid.New().String(),
 	}
 
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_RULES, ruleStb.ID, ruleStb)
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_RULES, ruleXhome.ID, ruleXhome)
+	_ = SetOneInDao(ds.TABLE_TELEMETRY_RULES, ruleStb.ID, ruleStb)
+	_ = SetOneInDao(ds.TABLE_TELEMETRY_RULES, ruleXhome.ID, ruleXhome)
 
 	// Get descriptors for "stb" only
 	descriptors := GetAvailableDescriptors("stb")
@@ -254,8 +256,8 @@ func TestGetAvailableDescriptors_EmptyApplicationType(t *testing.T) {
 		BoundTelemetryID: uuid.New().String(),
 	}
 
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_RULES, rule1.ID, rule1)
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_RULES, rule2.ID, rule2)
+	_ = SetOneInDao(ds.TABLE_TELEMETRY_RULES, rule1.ID, rule1)
+	_ = SetOneInDao(ds.TABLE_TELEMETRY_RULES, rule2.ID, rule2)
 
 	// Get descriptors with empty application type
 	descriptors := GetAvailableDescriptors("")
@@ -290,8 +292,8 @@ func TestGetAvailableProfileDescriptors_Success(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, profile1.ID, profile1)
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, profile2.ID, profile2)
+	_ = SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, profile1.ID, profile1)
+	_ = SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, profile2.ID, profile2)
 
 	// Get descriptors
 	descriptors := GetAvailableProfileDescriptors("stb")
@@ -330,8 +332,8 @@ func TestGetAvailableProfileDescriptors_FilterByApplicationType(t *testing.T) {
 		ApplicationType: "xhome",
 	}
 
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, profileStb.ID, profileStb)
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, profileXhome.ID, profileXhome)
+	_ = SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, profileStb.ID, profileStb)
+	_ = SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, profileXhome.ID, profileXhome)
 
 	// Get descriptors for "stb" only
 	descriptors := GetAvailableProfileDescriptors("stb")
@@ -370,8 +372,8 @@ func TestGetAvailableProfileDescriptors_EmptyApplicationType(t *testing.T) {
 		ApplicationType: "",
 	}
 
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, profile1.ID, profile1)
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_PERMANENT_TELEMETRY, profile2.ID, profile2)
+	_ = SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, profile1.ID, profile1)
+	_ = SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, profile2.ID, profile2)
 
 	// Get descriptors with empty application type
 	descriptors := GetAvailableProfileDescriptors("")
