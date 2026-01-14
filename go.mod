@@ -30,7 +30,7 @@ require (
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.18.0
-	github.com/rdkcentral/xconfwebconfig v0.0.0-20251110232019-da9146c7aedc
+	github.com/rdkcentral/xconfwebconfig v0.0.0-20260108202333-0ac91b0b1ebd
 	github.com/sirupsen/logrus v1.9.3
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.uber.org/automaxprocs v1.5.3
