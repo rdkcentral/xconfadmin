@@ -33,6 +33,7 @@ import (
 
 	"github.com/google/uuid"
 
+	ds "github.com/rdkcentral/xconfwebconfig/db"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
@@ -77,7 +78,7 @@ func newFirmwareConfigApiUnitTest(t *testing.T) *apiUnitTest {
 }
 func SavePercentageBeanPB(percentageBean *coreef.PercentageBean) error {
 	firmwareRule := coreef.ConvertPercentageBeanToFirmwareRule(*percentageBean)
-	return corefw.CreateFirmwareRuleOneDB(firmwareRule)
+	return SetOneInDao(ds.TABLE_FIRMWARE_RULE, firmwareRule.ID, firmwareRule)
 }
 func PreCreatePercentageBean() (*coreef.PercentageBean, error) {
 
@@ -98,6 +99,7 @@ func PreCreatePercentageBean() (*coreef.PercentageBean, error) {
 }
 
 func TestValidateUsageBeforeRemoving(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	//DeleteAllEntities()
 	percentageBean, err := PreCreatePercentageBean()
 	assert.NilError(t, err)

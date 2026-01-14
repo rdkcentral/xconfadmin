@@ -70,7 +70,7 @@ func TestPutSizesOfFirmwareRulesByTypeIntoHeaders_WithRules(t *testing.T) {
 		ID:       template.GetTemplateId(),
 		Editable: true,
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE_TEMPLATE, templateEntity.ID, templateEntity)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATE, templateEntity.ID, templateEntity)
 
 	// Create rules of different types
 	rule1 := createTestFirmwareRule("rule-1", "Rule 1", "stb")
@@ -86,6 +86,7 @@ func TestPutSizesOfFirmwareRulesByTypeIntoHeaders_WithRules(t *testing.T) {
 
 // Test checkRuleTypeAndCreate
 func TestCheckRuleTypeAndCreate_MAC_RULE(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 	setupFirmwareRuleTemplates()
 	defer DeleteAllEntities()
@@ -212,6 +213,7 @@ func TestValidateRuleAction_InvalidConfigId(t *testing.T) {
 }
 
 func TestValidateRuleAction_DuplicateConfigEntries(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -221,7 +223,7 @@ func TestValidateRuleAction_DuplicateConfigEntries(t *testing.T) {
 		Description:     "Test Config",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, config.ID, config)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, config.ID, config)
 
 	rule := corefw.FirmwareRule{
 		Name:            "Test",

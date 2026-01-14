@@ -79,6 +79,13 @@ func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRec
 }
 
 func DeleteAllEntities() {
+	// For mock database, just clear it - ultra fast!
+	if IsMockDatabaseEnabled() {
+		ClearMockDatabase()
+		return
+	}
+
+	// Real DB cleanup (only used if mock is disabled)
 	for _, tableInfo := range db.GetAllTableInfo() {
 		if err := truncateTable(tableInfo.TableName); err != nil {
 			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
@@ -99,6 +106,11 @@ func truncateTable(tableName string) error {
 }
 func TestMain(m *testing.M) {
 	fmt.Printf("in TestMain\n")
+
+	// CRITICAL: Initialize mock database FIRST for ultra-fast testing!
+	// This replaces ALL DB calls with in-memory mock (like telemetry/dcm success)
+	InitMockDatabase()
+	defer RestoreRealDatabase()
 
 	testConfigFile = "/app/xconfadmin/xconfadmin.conf"
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
@@ -197,7 +209,7 @@ func ImportTableData(data []interface{}) error {
 		case "TABLE_ENVIRONMENT":
 			var tabletype = shared.Environment{}
 			err = json.Unmarshal([]byte(row.(TableData).Tablerow), &tabletype)
-			err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_ENVIRONMENT, tabletype.ID, &tabletype)
+			err = SetOneInDao(ds.TABLE_ENVIRONMENT, tabletype.ID, &tabletype)
 			break
 		case "TABLE_GENERIC_NS_LIST":
 			var humptyStrList = []string{
@@ -216,26 +228,26 @@ func ImportTableData(data []interface{}) error {
 
 			tabletype.TypeName = "IP_LIST"
 			tabletype.Data = ipList
-			err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, tabletype.ID, tabletype)
+			err = SetOneInDao(ds.TABLE_GENERIC_NS_LIST, tabletype.ID, tabletype)
 			break
 		case "TABLE_FIRMWARE_CONFIG":
 			var firmwareConfig = coreef.NewEmptyFirmwareConfig()
 			err = json.Unmarshal([]byte(row.(TableData).Tablerow), &firmwareConfig)
-			err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_FIRMWARE_CONFIG, firmwareConfig.ID, firmwareConfig)
+			err = SetOneInDao(ds.TABLE_FIRMWARE_CONFIG, firmwareConfig.ID, firmwareConfig)
 			break
 
 		case "TABLE_FIRMWARE_RULE":
 			var firmwareRule = corefw.NewEmptyFirmwareRule()
 			var data_str = row.(TableData).Tablerow
 			err = json.Unmarshal([]byte(data_str), &firmwareRule)
-			err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_FIRMWARE_RULE, firmwareRule.ID, firmwareRule)
+			err = SetOneInDao(ds.TABLE_FIRMWARE_RULE, firmwareRule.ID, firmwareRule)
 			break
 
 		case "TABLE_SINGLETON_FILTER_VALUE":
 			var data_str = row.(TableData).Tablerow
 			locationRoundRobinFilter := coreef.NewEmptyDownloadLocationRoundRobinFilterValue()
 			err = json.Unmarshal([]byte(data_str), &locationRoundRobinFilter)
-			err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_SINGLETON_FILTER_VALUE, locationRoundRobinFilter.ID, locationRoundRobinFilter)
+			err = SetOneInDao(ds.TABLE_SINGLETON_FILTER_VALUE, locationRoundRobinFilter.ID, locationRoundRobinFilter)
 			break
 		}
 
@@ -648,6 +660,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 }
 
 func TestAllQueriesApis(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	//server, _ := SetupTestEnvironment()
 	DeleteAllEntities()
 

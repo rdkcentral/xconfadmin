@@ -27,7 +27,7 @@ func seedEnvironment(id string) {
 func seedIpGroup(name string, ips []string) {
 	grp := shared.NewIpAddressGroupWithAddrStrings(name, name, ips)
 	nl := shared.ConvertFromIpAddressGroup(grp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 }
 
 // create minimal valid filter (criteria: one model)
@@ -42,6 +42,7 @@ func newValidFilter(name string) *coreef.RebootImmediatelyFilter {
 }
 
 func TestUpdateRebootImmediatelyFilter_CreateAndUpdatePaths(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	resetFirmwareRules()
 	seedModel("MODEL1")
 	seedEnvironment("ENV1")
@@ -102,6 +103,7 @@ func TestUpdateRebootImmediatelyFilter_IpGroupChanged(t *testing.T) {
 }
 
 func TestDeleteRebootImmediatelyFilter_Paths(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	resetFirmwareRules()
 	seedModel("MODEL1")
 	seedEnvironment("ENV1")

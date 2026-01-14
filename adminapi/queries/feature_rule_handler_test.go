@@ -20,7 +20,7 @@ import (
 // Helpers
 func frMakeFeature(name string, app string) *xwrfc.Feature {
 	f := &xwrfc.Feature{ID: uuid.New().String(), Name: name, FeatureName: name + "Fn", ApplicationType: app, Enable: true, EffectiveImmediate: true, ConfigData: map[string]string{"k": "v"}}
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_XCONF_FEATURE, f.ID, f)
+	SetOneInDao(ds.TABLE_XCONF_FEATURE, f.ID, f)
 	return f
 }
 func frMakeRule() *re.Rule {
@@ -29,20 +29,20 @@ func frMakeRule() *re.Rule {
 
 func frMakeFeatureRule(featureIds []string, app string, priority int) *xwrfc.FeatureRule {
 	fr := &xwrfc.FeatureRule{Id: uuid.New().String(), Name: "FR-" + uuid.New().String(), ApplicationType: app, FeatureIds: featureIds, Priority: priority, Rule: frMakeRule()}
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, fr.Id, fr)
+	SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr.Id, fr)
 	return fr
 }
 
 func frCleanup() {
 	tables := []string{ds.TABLE_FEATURE_CONTROL_RULE, ds.TABLE_XCONF_FEATURE}
 	for _, tbl := range tables {
-		list, _ := ds.GetCachedSimpleDao().GetAllAsList(tbl, 0)
+		list, _ := GetAllAsListFromDao(tbl, 0)
 		for _, inst := range list {
 			switch v := inst.(type) {
 			case *xwrfc.FeatureRule:
-				ds.GetCachedSimpleDao().DeleteOne(tbl, v.Id)
+				DeleteOneFromDao(tbl, v.Id)
 			case *xwrfc.Feature:
-				ds.GetCachedSimpleDao().DeleteOne(tbl, v.ID)
+				DeleteOneFromDao(tbl, v.ID)
 			}
 		}
 		ds.GetCachedSimpleDao().RefreshAll(tbl)
@@ -51,6 +51,7 @@ func frCleanup() {
 
 // Tests
 func TestGetFeatureRulesFiltered_AndExportHandlers(t *testing.T) {
+	SkipIfMockDatabase(t)
 	frCleanup()
 	f := frMakeFeature("FeatA", "stb")
 	frMakeFeatureRule([]string{f.ID}, "stb", 1)
@@ -67,6 +68,7 @@ func TestGetFeatureRulesFiltered_AndExportHandlers(t *testing.T) {
 }
 
 func TestGetFeatureRuleOne_ExportAndErrors(t *testing.T) {
+	SkipIfMockDatabase(t)
 	rBlank := httptest.NewRequest("GET", "/featureRule//?applicationType=stb", nil)
 	rrBlank := httptest.NewRecorder()
 	GetFeatureRuleOne(rrBlank, rBlank)
@@ -89,6 +91,7 @@ func TestGetFeatureRuleOne_ExportAndErrors(t *testing.T) {
 }
 
 func TestCreateUpdateDeleteFeatureRuleHandlers(t *testing.T) {
+	SkipIfMockDatabase(t)
 	frCleanup()
 	f := frMakeFeature("FeatA", "stb")
 	bodyCreate := &xwrfc.FeatureRule{Name: "Rule1", ApplicationType: "stb", FeatureIds: []string{f.ID}, Priority: 1, Rule: frMakeRule()}
@@ -120,6 +123,7 @@ func TestCreateUpdateDeleteFeatureRuleHandlers(t *testing.T) {
 }
 
 func TestFeatureRulePriorityChangeAndErrors(t *testing.T) {
+	SkipIfMockDatabase(t)
 	frCleanup()
 	f := frMakeFeature("FeatA", "stb")
 	fr1 := frMakeFeatureRule([]string{f.ID}, "stb", 1)
@@ -139,6 +143,7 @@ func TestFeatureRulePriorityChangeAndErrors(t *testing.T) {
 }
 
 func TestFeatureRulesSizeAllowedNumberHandlers(t *testing.T) {
+	SkipIfMockDatabase(t)
 	frCleanup()
 	f := frMakeFeature("FeatA", "stb")
 	frMakeFeatureRule([]string{f.ID}, "stb", 1)
@@ -153,6 +158,7 @@ func TestFeatureRulesSizeAllowedNumberHandlers(t *testing.T) {
 }
 
 func TestBatchCreateAndUpdateHandlers(t *testing.T) {
+	SkipIfMockDatabase(t)
 	frCleanup()
 	f := frMakeFeature("FeatA", "stb")
 	// batch create mixed: second invalid (no featureIds)
@@ -171,7 +177,7 @@ func TestBatchCreateAndUpdateHandlers(t *testing.T) {
 	// need existing rule id
 	created := &xwrfc.FeatureRule{}
 	json.Unmarshal(rrNative.Body.Bytes(), &created) // body is map, ignore parse error for brevity
-	existingList, _ := ds.GetCachedSimpleDao().GetAllAsList(ds.TABLE_FEATURE_CONTROL_RULE, 0)
+	existingList, _ := GetAllAsListFromDao(ds.TABLE_FEATURE_CONTROL_RULE, 0)
 	var existing *xwrfc.FeatureRule
 	for _, inst := range existingList {
 		if fr, ok := inst.(*xwrfc.FeatureRule); ok {
@@ -192,6 +198,7 @@ func TestBatchCreateAndUpdateHandlers(t *testing.T) {
 }
 
 func TestFilteredWithPageAndTestPageHandlers(t *testing.T) {
+	SkipIfMockDatabase(t)
 	frCleanup()
 	f := frMakeFeature("FeatA", "stb")
 	frMakeFeatureRule([]string{f.ID}, "stb", 1)
@@ -219,6 +226,7 @@ func TestFilteredWithPageAndTestPageHandlers(t *testing.T) {
 }
 
 func TestPackFeaturePriorities(t *testing.T) {
+	SkipIfMockDatabase(t)
 	input := []*xwrfc.FeatureRule{
 		{Id: "id1", Priority: 2},
 		{Id: "id2", Priority: 1},
@@ -235,6 +243,7 @@ func TestPackFeaturePriorities(t *testing.T) {
 }
 
 func TestDeleteOneFeatureRuleHandler_Error(t *testing.T) {
+	SkipIfMockDatabase(t)
 	r := httptest.NewRequest("DELETE", "/featureRule//?applicationType=stb", nil)
 	r = mux.SetURLVars(r, map[string]string{"id": ""})
 	rr := httptest.NewRecorder()
@@ -244,6 +253,7 @@ func TestDeleteOneFeatureRuleHandler_Error(t *testing.T) {
 }
 
 func TestImportAllFeatureRulesHandler_Error(t *testing.T) {
+	SkipIfMockDatabase(t)
 	r := httptest.NewRequest("POST", "/featureRules/import/all?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
 	ImportAllFeatureRulesHandler(rr, r)
@@ -252,6 +262,7 @@ func TestImportAllFeatureRulesHandler_Error(t *testing.T) {
 }
 
 func TestUpdateFeatureRuleHandler_Error(t *testing.T) {
+	SkipIfMockDatabase(t)
 	r := httptest.NewRequest("PUT", "/featureRule?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -261,6 +272,7 @@ func TestUpdateFeatureRuleHandler_Error(t *testing.T) {
 }
 
 func TestCreateFeatureRuleHandler_Error(t *testing.T) {
+	SkipIfMockDatabase(t)
 	r := httptest.NewRequest("POST", "/featureRule?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -270,6 +282,7 @@ func TestCreateFeatureRuleHandler_Error(t *testing.T) {
 }
 
 func TestGetFeatureRuleOne_Error(t *testing.T) {
+	SkipIfMockDatabase(t)
 	r := httptest.NewRequest("GET", "/featureRule//?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
 	GetFeatureRuleOne(rr, r)
@@ -277,6 +290,7 @@ func TestGetFeatureRuleOne_Error(t *testing.T) {
 }
 
 func TestGetFeatureRulesHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	r := httptest.NewRequest("GET", "/featureRules?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
 	GetFeatureRulesHandler(rr, r)
@@ -285,6 +299,7 @@ func TestGetFeatureRulesHandler_Success(t *testing.T) {
 
 // Test xhttp.AdminError
 func TestAdminErrorResponse(t *testing.T) {
+	SkipIfMockDatabase(t)
 	rr := httptest.NewRecorder()
 	xhttp.WriteAdminErrorResponse(rr, http.StatusForbidden, "test error")
 	assert.Equal(t, http.StatusForbidden, rr.Code)
@@ -292,6 +307,7 @@ func TestAdminErrorResponse(t *testing.T) {
 
 // Test WriteXconfResponse
 func TestWriteXconfResponse(t *testing.T) {
+	SkipIfMockDatabase(t)
 	rr := httptest.NewRecorder()
 	data := []byte(`{"foo":"bar"}`)
 	xwhttp.WriteXconfResponse(rr, http.StatusOK, data)
@@ -300,6 +316,7 @@ func TestWriteXconfResponse(t *testing.T) {
 
 // GetFeatureRulesFilteredWithPage - Error paths
 func TestGetFeatureRulesFilteredWithPage_BadPageNumber(t *testing.T) {
+	SkipIfMockDatabase(t)
 	r := httptest.NewRequest("POST", "/featureRules/filteredWithPage?applicationType=stb&pageNumber=invalid", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -309,6 +326,7 @@ func TestGetFeatureRulesFilteredWithPage_BadPageNumber(t *testing.T) {
 }
 
 func TestGetFeatureRulesFilteredWithPage_BadPageSize(t *testing.T) {
+	SkipIfMockDatabase(t)
 	r := httptest.NewRequest("POST", "/featureRules/filteredWithPage?applicationType=stb&pageSize=invalid", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -318,6 +336,7 @@ func TestGetFeatureRulesFilteredWithPage_BadPageSize(t *testing.T) {
 }
 
 func TestGetFeatureRulesFilteredWithPage_InvalidJSON(t *testing.T) {
+	SkipIfMockDatabase(t)
 	r := httptest.NewRequest("POST", "/featureRules/filteredWithPage?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -328,6 +347,7 @@ func TestGetFeatureRulesFilteredWithPage_InvalidJSON(t *testing.T) {
 }
 
 func TestGetFeatureRulesFilteredWithPage_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	frCleanup()
 	f := frMakeFeature("FeatA", "stb")
 	frMakeFeatureRule([]string{f.ID}, "stb", 1)
@@ -346,6 +366,7 @@ func TestGetFeatureRulesFilteredWithPage_Success(t *testing.T) {
 
 // ImportAllFeatureRulesHandler - Error paths
 func TestImportAllFeatureRulesHandler_InvalidJSON(t *testing.T) {
+	SkipIfMockDatabase(t)
 	r := httptest.NewRequest("POST", "/featureRules/import/all?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -356,6 +377,7 @@ func TestImportAllFeatureRulesHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestImportAllFeatureRulesHandler_AppTypeMixing(t *testing.T) {
+	SkipIfMockDatabase(t)
 	frCleanup()
 	f := frMakeFeature("FeatA", "stb")
 
@@ -375,6 +397,7 @@ func TestImportAllFeatureRulesHandler_AppTypeMixing(t *testing.T) {
 }
 
 func TestImportAllFeatureRulesHandler_AppTypeConflict(t *testing.T) {
+	SkipIfMockDatabase(t)
 	frCleanup()
 	f := frMakeFeature("FeatA", "stb")
 
@@ -394,6 +417,7 @@ func TestImportAllFeatureRulesHandler_AppTypeConflict(t *testing.T) {
 }
 
 func TestImportAllFeatureRulesHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	frCleanup()
 	f := frMakeFeature("FeatA", "stb")
 
@@ -413,6 +437,7 @@ func TestImportAllFeatureRulesHandler_Success(t *testing.T) {
 
 // GetFeatureRuleOne - Error paths
 func TestGetFeatureRuleOne_BlankId(t *testing.T) {
+	SkipIfMockDatabase(t)
 	r := httptest.NewRequest("GET", "/featureRule/", nil)
 	r = mux.SetURLVars(r, map[string]string{"id": ""})
 	rr := httptest.NewRecorder()
@@ -422,6 +447,7 @@ func TestGetFeatureRuleOne_BlankId(t *testing.T) {
 }
 
 func TestGetFeatureRuleOne_NotFound(t *testing.T) {
+	SkipIfMockDatabase(t)
 	r := httptest.NewRequest("GET", "/featureRule/nonexistent-id?applicationType=stb", nil)
 	r = mux.SetURLVars(r, map[string]string{"id": "nonexistent-id"})
 	rr := httptest.NewRecorder()
@@ -431,6 +457,7 @@ func TestGetFeatureRuleOne_NotFound(t *testing.T) {
 }
 
 func TestGetFeatureRuleOne_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	frCleanup()
 	f := frMakeFeature("FeatA", "stb")
 	fr := frMakeFeatureRule([]string{f.ID}, "stb", 1)

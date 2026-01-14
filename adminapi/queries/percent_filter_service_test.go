@@ -103,11 +103,12 @@ func TestUpdatePercentFilter_LastKnownGoodAndIntermediateVersionNotFound(t *test
 }
 
 func TestUpdatePercentFilter_WhitelistValidPath(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 	// store whitelist
 	ipg := shared.NewIpAddressGroupWithAddrStrings("G_OK_PF", "G_OK_PF", []string{"10.10.0.1"})
 	nl := shared.ConvertFromIpAddressGroup(ipg)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipg.RawIpAddresses = []string{"10.10.0.1"}
 	w := newWrapper(40)
 	w.Whitelist = ipg
@@ -116,10 +117,11 @@ func TestUpdatePercentFilter_WhitelistValidPath(t *testing.T) {
 }
 
 func TestConvertPercentageBean_SumAndWhitelist(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	// prepare a namespaced list
 	ipg := shared.NewIpAddressGroupWithAddrStrings("G_PCB", "G_PCB", []string{"192.168.0.1"})
 	nl := shared.ConvertFromIpAddressGroup(ipg)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	// build bean with distributions (include a nil entry to exercise nil-skip) and whitelist id
 	bean := &coreef.PercentageBean{
 		Whitelist: nl.ID,

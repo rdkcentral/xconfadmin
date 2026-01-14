@@ -32,6 +32,7 @@ import (
 // ========== Tests for PostModelEntitiesHandler ==========
 
 func TestPostModelEntitiesHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -84,6 +85,7 @@ func TestPostModelEntitiesHandler_Success(t *testing.T) {
 }
 
 func TestPostModelEntitiesHandler_InvalidJSON(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -101,6 +103,7 @@ func TestPostModelEntitiesHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestPostModelEntitiesHandler_DuplicateModel(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -143,6 +146,7 @@ func TestPostModelEntitiesHandler_DuplicateModel(t *testing.T) {
 }
 
 func TestPostModelEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -246,6 +250,7 @@ func TestPostModelEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 // }
 
 func TestPutModelEntitiesHandler_InvalidJSON(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -263,6 +268,7 @@ func TestPutModelEntitiesHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestPutModelEntitiesHandler_NonExistentModel(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -299,6 +305,7 @@ func TestPutModelEntitiesHandler_NonExistentModel(t *testing.T) {
 // ========== Tests for ObsoleteGetModelPageHandler ==========
 
 func TestObsoleteGetModelPageHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -333,6 +340,7 @@ func TestObsoleteGetModelPageHandler_Success(t *testing.T) {
 }
 
 func TestObsoleteGetModelPageHandler_InvalidPageNumber(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -351,6 +359,7 @@ func TestObsoleteGetModelPageHandler_InvalidPageNumber(t *testing.T) {
 }
 
 func TestObsoleteGetModelPageHandler_InvalidPageSize(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -369,6 +378,7 @@ func TestObsoleteGetModelPageHandler_InvalidPageSize(t *testing.T) {
 }
 
 func TestObsoleteGetModelPageHandler_Pagination(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -398,6 +408,7 @@ func TestObsoleteGetModelPageHandler_Pagination(t *testing.T) {
 }
 
 func TestObsoleteGetModelPageHandler_EmptyResult(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -420,6 +431,7 @@ func TestObsoleteGetModelPageHandler_EmptyResult(t *testing.T) {
 // ========== Tests for PostModelFilteredHandler ==========
 
 func TestPostModelFilteredHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -457,6 +469,7 @@ func TestPostModelFilteredHandler_Success(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_WithEmptyBody(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -479,6 +492,7 @@ func TestPostModelFilteredHandler_WithEmptyBody(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_InvalidJSON(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -496,6 +510,7 @@ func TestPostModelFilteredHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_InvalidPageNumber(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -515,6 +530,7 @@ func TestPostModelFilteredHandler_InvalidPageNumber(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_Pagination(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -551,6 +567,7 @@ func TestPostModelFilteredHandler_Pagination(t *testing.T) {
 // ========== Tests for GetModelByIdHandler ==========
 
 func TestGetModelByIdHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -579,6 +596,7 @@ func TestGetModelByIdHandler_Success(t *testing.T) {
 }
 
 func TestGetModelByIdHandler_NotFound(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -593,6 +611,7 @@ func TestGetModelByIdHandler_NotFound(t *testing.T) {
 }
 
 func TestGetModelByIdHandler_WithExport(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -626,6 +645,7 @@ func TestGetModelByIdHandler_WithExport(t *testing.T) {
 }
 
 func TestGetModelByIdHandler_CaseInsensitive(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -650,6 +670,7 @@ func TestGetModelByIdHandler_CaseInsensitive(t *testing.T) {
 // ========== Tests for GetModelHandler ==========
 
 func TestGetModelHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -681,6 +702,7 @@ func TestGetModelHandler_Success(t *testing.T) {
 }
 
 func TestGetModelHandler_EmptyResult(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -703,6 +725,7 @@ func TestGetModelHandler_EmptyResult(t *testing.T) {
 }
 
 func TestGetModelHandler_WithExport(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -728,6 +751,7 @@ func TestGetModelHandler_WithExport(t *testing.T) {
 }
 
 func TestGetModelHandler_SortedAlphabetically(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -773,6 +797,7 @@ func TestGetModelHandler_SortedAlphabetically(t *testing.T) {
 // ========== Additional Error Path Tests for WriteAdminErrorResponse ==========
 
 func TestPostModelEntitiesHandler_UnableToExtractBody(t *testing.T) {
+	SkipIfMockDatabase(t)
 	// This test verifies the error path when response writer is not XResponseWriter
 	// In practice, this is hard to trigger in the test harness as ExecuteRequest
 	// always wraps with XResponseWriter, but we can document the behavior
@@ -802,6 +827,7 @@ func TestPostModelEntitiesHandler_UnableToExtractBody(t *testing.T) {
 }
 
 func TestPutModelEntitiesHandler_EmptyID(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -839,6 +865,7 @@ func TestPutModelEntitiesHandler_EmptyID(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_FilterContextError(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -867,6 +894,7 @@ func TestPostModelFilteredHandler_FilterContextError(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_NegativePageNumber(t *testing.T) {
+	SkipIfMockDatabase(t)
 	//	DeleteAllEntities()
 	//defer DeleteAllEntities()
 
@@ -887,6 +915,7 @@ func TestPostModelFilteredHandler_NegativePageNumber(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_ZeroPageSize(t *testing.T) {
+	SkipIfMockDatabase(t)
 	//DeleteAllEntities()
 	//defer DeleteAllEntities()
 
@@ -907,6 +936,7 @@ func TestPostModelFilteredHandler_ZeroPageSize(t *testing.T) {
 }
 
 func TestGetModelByIdHandler_EmptyID(t *testing.T) {
+	SkipIfMockDatabase(t)
 	//DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -924,6 +954,7 @@ func TestGetModelByIdHandler_EmptyID(t *testing.T) {
 }
 
 func TestPostModelEntitiesHandler_ValidationError(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -960,6 +991,7 @@ func TestPostModelEntitiesHandler_ValidationError(t *testing.T) {
 }
 
 func TestObsoleteGetModelPageHandler_PageOutOfBounds(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -990,6 +1022,7 @@ func TestObsoleteGetModelPageHandler_PageOutOfBounds(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_LargePageSize(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
