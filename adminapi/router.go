@@ -35,6 +35,7 @@ import (
 	"github.com/rdkcentral/xconfadmin/adminapi/setting"
 	"github.com/rdkcentral/xconfadmin/adminapi/telemetry"
 	"github.com/rdkcentral/xconfadmin/adminapi/xcrp"
+
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
@@ -768,6 +769,11 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	//xcrpRecookingStatusPath.HandleFunc("", xcrp.GetRecookingStatusHandler).Methods("GET").Name("RecookingStatus")
 	//xcrpRecookingStatusPath.HandleFunc("/details", xcrp.GetRecookingStatusDetailsHandler).Methods("GET").Name("RecookingStatusDetails")
 	//paths = append(paths, xcrpRecookingStatusPath)
+
+	//get preprocess rfc
+	rfcPreprocessPath := r.Path("/xconfAdminService/rfc/preprocess/{mac}").Subrouter()
+	rfcPreprocessPath.HandleFunc("", feature.GetPreprocessedFeaturesHandler).Methods("GET").Name("RfcPreprocess")
+	paths = append(paths, rfcPreprocessPath)
 
 	// canarysettings
 	canarysettingsPath := r.PathPrefix("/xconfAdminService/canarysettings").Subrouter()
