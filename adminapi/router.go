@@ -114,7 +114,7 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	authPaths = append(authPaths, urlPath)
 
 	//Application Type APIs
-	applicationTypePath := r.PathPrefix("/xconfAdminService/applicationtype").Subrouter()
+	applicationTypePath := r.PathPrefix("/xconfAdminService/application-types").Subrouter()
 	applicationTypePath.HandleFunc("", applicationtype.CreateApplicationTypeHandler).Methods("POST").Name("Application-Type")
 	applicationTypePath.HandleFunc("/all", applicationtype.GetAllApplicationTypeHandler).Methods("GET").Name("Application-Type")
 	applicationTypePath.HandleFunc("/{id}", applicationtype.GetApplicationTypeHandler).Methods("GET").Name("Application-Type")
