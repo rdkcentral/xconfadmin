@@ -20,7 +20,7 @@ XConf is a comprehensive configuration management platform designed for RDK (Ref
 
 - **Centralized Configuration Management**: XConf serves as a single point of control for all device configurations across large-scale RDK deployments. This unified approach eliminates configuration fragmentation and ensures consistency across thousands of devices in the field, providing operators with a comprehensive view of their entire device ecosystem.
 
-- **Firmware Management**: The platform enables operators to control firmware distribution and updates with sophisticated canary deployment strategies. This includes percentage-based rollouts, device cohort targeting, and manual rollback procedures based on device analytics to minimize risk during firmware updates while ensuring rapid deployment of security patches and feature enhancements. Rollback procedures are not automatic and are always manual go/no-go decisions based on device analytics.
+- **Firmware Management**: The platform enables operators to control firmware distribution and updates with sophisticated canary deployment strategies. This includes percentage-based rollouts, device cohort targeting, and manual rollback procedures based on device analytics to minimize risk during firmware updates while ensuring rapid deployment of security patches and feature enhancements. 
 
 - **Telemetry Services**: XConf manages comprehensive telemetry profiles and data collection policies, allowing operators to configure what data is collected, how frequently it's gathered, and where it's uploaded. This enables data-driven insights into device performance and user behavior patterns while maintaining privacy compliance and optimizing bandwidth usage.
 
@@ -651,3 +651,4 @@ go run *.go -f /etc/xconf/xconfui.conf &
 
 
 This overview provides a comprehensive understanding of the XConf system architecture, components, and operational patterns. For detailed API documentation, refer to the individual API documentation files in each component directory.
+
