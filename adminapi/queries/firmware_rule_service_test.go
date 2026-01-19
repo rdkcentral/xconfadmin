@@ -538,3 +538,4 @@ func TestCanBeIpv6(t *testing.T) {
 	assert.True(t, canBeIpv6([]corefw.ValidationType{corefw.IPV6}))
 	assert.False(t, canBeIpv6([]corefw.ValidationType{corefw.STRING}))
 }
+
