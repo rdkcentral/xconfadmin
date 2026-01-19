@@ -11,7 +11,7 @@ import (
 )
 
 func TestCreateApplicationTypeHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "/api/applicationtype", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/application-types", nil)
 	rec := httptest.NewRecorder()
 
 	CreateApplicationTypeHandler(rec, req)
@@ -40,14 +40,14 @@ func TestCreateApplicationTypeHandler(t *testing.T) {
 }
 
 func TestGetAllApplicationTypeHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/applicationtype", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/application-types", nil)
 	rec := httptest.NewRecorder()
 	GetAllApplicationTypeHandler(rec, req)
 	assert.True(t, rec.Code == http.StatusOK || rec.Code == http.StatusInternalServerError)
 }
 
 func TestGetApplicationTypeHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/applicationtype/{id}", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/application-types/{id}", nil)
 	req = mux.SetURLVars(req, map[string]string{"id": "nonexistentID"})
 	rec := httptest.NewRecorder()
 	GetApplicationTypeHandler(rec, req)
@@ -55,7 +55,7 @@ func TestGetApplicationTypeHandler(t *testing.T) {
 }
 
 func TestUpdateApplicationTypeHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPut, "/api/applicationtype/123", nil)
+	req := httptest.NewRequest(http.MethodPut, "/api/application-types/123", nil)
 	req = mux.SetURLVars(req, map[string]string{"id": "123"})
 	rec := httptest.NewRecorder()
 
@@ -86,7 +86,7 @@ func TestUpdateApplicationTypeHandler(t *testing.T) {
 }
 
 func TestDeleteApplicationTypeHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodDelete, "/api/applicationtype/{id}", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/application-types/{id}", nil)
 	req = mux.SetURLVars(req, map[string]string{"id": "nonexistentID"})
 	rec := httptest.NewRecorder()
 	DeleteApplicationTypeHandler(rec, req)

@@ -123,11 +123,11 @@ func loadApplicationTypes() {
 		log.Errorf("Error loading application types from DB: %v", err)
 		return
 	}
-	var at []string
-	for _, appName := range appTypes {
-		at = append(at, appName.Name)
+	var appTypeNames []string
+	for _, appType := range appTypes {
+		appTypeNames = append(appTypeNames, appType.Name)
 	}
-	common.ApplicationTypes = at
+	common.ApplicationTypes = appTypeNames
 	log.Info("Loaded application types from DB")
 }
 func initAppSettings() {

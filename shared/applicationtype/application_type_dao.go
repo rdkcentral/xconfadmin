@@ -2,6 +2,7 @@ package applicationtype
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	db "github.com/rdkcentral/xconfwebconfig/db"
@@ -18,7 +19,7 @@ func GetOneApplicationType(id string) (*ApplicationType, error) {
 		return nil, err
 	}
 	if result == nil {
-		return nil, nil
+		return nil, fmt.Errorf("application type with id %s not found", id)
 	}
 	appType, err := toApplicationType(result)
 	if err != nil {
@@ -28,7 +29,9 @@ func GetOneApplicationType(id string) (*ApplicationType, error) {
 }
 
 func SetOneApplicationType(appType *ApplicationType) error {
-	DeleteOneApplicationType(appType.ID)
+	if err := DeleteOneApplicationType(appType.ID); err != nil {
+		return err
+	}
 	return db.GetCachedSimpleDao().SetOne(TABLE_APPLICATION_TYPES, appType.ID, appType)
 }
 
@@ -36,7 +39,7 @@ func DeleteOneApplicationType(id string) error {
 	return db.GetCachedSimpleDao().DeleteOne(TABLE_APPLICATION_TYPES, id)
 }
 
-func GetApplicationTypeByName(name string) (bool, error) {
+func ApplicationTypeNameExists(name string) (bool, error) {
 	appTypes, err := GetAllApplicationTypeAsList()
 	if err != nil {
 		return false, err

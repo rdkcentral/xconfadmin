@@ -13,7 +13,8 @@ func TestSetOneApplicationType(t *testing.T) {
 		Name: "testAppType",
 	}
 	err := SetOneApplicationType(appType)
-	if err != nil && strings.Contains(err.Error(), "Table configuration not found") {
+	if err != nil && (strings.Contains(err.Error(), "Table configuration not found") ||
+		strings.Contains(err.Error(), "cache not found or configured")) {
 		t.Skip("Skipping test: database not configured")
 		return
 	}
@@ -57,8 +58,8 @@ func TestGetOneApplicationType(t *testing.T) {
 	assert.Nil(t, result)
 }
 
-func TestGetApplicationTypeByName(t *testing.T) {
-	exists, err := GetApplicationTypeByName("test")
+func TestApplicationTypeNameExists(t *testing.T) {
+	exists, err := ApplicationTypeNameExists("test")
 	if err != nil && (strings.Contains(err.Error(), "Table configuration not found") ||
 		strings.Contains(err.Error(), "cache not found or configured")) {
 		t.Skip("Skipping test: database not configured")

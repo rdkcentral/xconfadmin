@@ -36,7 +36,7 @@ func CreateApplicationTypeHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Cannot create default application type")
 		return
 	}
-	exists, _ := xapptype.GetApplicationTypeByName(appType.Name)
+	exists, _ := xapptype.ApplicationTypeNameExists(appType.Name)
 	if exists {
 		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, "Application type already exists")
 		return
@@ -109,6 +109,10 @@ func DeleteApplicationTypeHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if appType == nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, "Application type not found")
+		return
+	}
 	if xapptype.IsDefaultAppType(appType.Name) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Default application types cannot be deleted")
 		return
@@ -121,7 +125,11 @@ func DeleteApplicationTypeHandler(w http.ResponseWriter, r *http.Request) {
 	response := map[string]string{
 		"message": fmt.Sprintf("Application type '%s' deleted successfully", appType.Name),
 	}
-	data, _ := json.Marshal(response)
+	data, err := json.Marshal(response)
+	if err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	xhttp.WriteXconfResponse(w, http.StatusOK, data)
 }
 
@@ -155,13 +163,23 @@ func UpdateApplicationTypeHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-
+	if existingAppType.Name != updateRequest.Name {
+		nameExists, _ := xapptype.ApplicationTypeNameExists(updateRequest.Name)
+		if nameExists {
+			xhttp.WriteAdminErrorResponse(w, http.StatusConflict,
+				fmt.Sprintf("Application type with name '%s' already exists", updateRequest.Name))
+			return
+		}
+	}
 	if xapptype.IsDefaultAppType(existingAppType.Name) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Default application types cannot be updated")
 		return
 	}
 	existingAppType.ID = id
 	existingAppType.Name = updateRequest.Name
+	if updateRequest.Description != "" {
+		existingAppType.Description = updateRequest.Description
+	}
 	existingAppType.UpdatedAt = time.Now().Unix()
 
 	err = xapptype.SetOneApplicationType(existingAppType)
