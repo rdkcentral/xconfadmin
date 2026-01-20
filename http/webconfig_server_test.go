@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -10,6 +11,18 @@ import (
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
+
+func TestMain(m *testing.M) {
+	// Set required environment variables for tests
+	os.Setenv("SECURITY_TOKEN_KEY", "testSecurityTokenKey")
+	os.Setenv("XPC_KEY", "testXpcKey")
+	os.Setenv("SAT_CLIENT_ID", "test-sat-client")
+	os.Setenv("SAT_CLIENT_SECRET", "test-sat-secret")
+	os.Setenv("IDP_CLIENT_ID", "test-idp-client")
+	os.Setenv("IDP_CLIENT_SECRET", "test-idp-secret")
+
+	os.Exit(m.Run())
+}
 
 // helper to load sample server config
 func loadSampleServerConfig(t *testing.T) *xwcommon.ServerConfig {

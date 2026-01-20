@@ -21,7 +21,8 @@ import (
 	admin_change "github.com/rdkcentral/xconfadmin/shared/change"
 	admin_logupload "github.com/rdkcentral/xconfadmin/shared/logupload"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
-	"github.com/rdkcentral/xconfadmin/taggingapi/tag"
+
+	// "github.com/rdkcentral/xconfadmin/taggingapi/tag" // No longer needed - tag refactored
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -255,7 +256,7 @@ func telemetrySetup(server *oshttp.WebconfigServer, r *mux.Router) {
 	auth.WebServerInjection(server)
 	dataapi.RegisterTables()
 
-	db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf)
+	// db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf) // Tag refactored - NewTagInf no longer exists
 	//initDB()
 	db.GetCacheManager() // Initialize cache manager
 	SetupTelemetryRoutes(server, r)
@@ -430,7 +431,14 @@ func TestAddTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 	p := createTelemetryProfile()
 	SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
 
-	entry := &logupload.TelemetryElement{uuid.New().String(), "NEW header", "new content", "new type", "10", ""}
+	entry := &logupload.TelemetryElement{
+		ID:               uuid.New().String(),
+		Header:           "NEW header",
+		Content:          "new content",
+		Type:             "new type",
+		PollingFrequency: "10",
+		Component:        "",
+	}
 	entriesToAdd := []*logupload.TelemetryElement{entry}
 	entryByte, _ := json.Marshal(entriesToAdd)
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
@@ -466,7 +474,14 @@ func TestRemoveTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
-	entry := &logupload.TelemetryElement{uuid.New().String(), "NEW header", "new content", "new type", "10", ""}
+	entry := &logupload.TelemetryElement{
+		ID:               uuid.New().String(),
+		Header:           "NEW header",
+		Content:          "new content",
+		Type:             "new type",
+		PollingFrequency: "10",
+		Component:        "",
+	}
 	p.TelemetryProfile = append(p.TelemetryProfile, *entry)
 	SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
 
@@ -569,7 +584,14 @@ func TestTelemetryProfileUpdate(t *testing.T) {
 	p := createTelemetryProfile()
 	SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
 
-	entry := logupload.TelemetryElement{uuid.New().String(), "newly added header", "newly added content", "newly added type", "10", ""}
+	entry := logupload.TelemetryElement{
+		ID:               uuid.New().String(),
+		Header:           "newly added header",
+		Content:          "newly added content",
+		Type:             "newly added type",
+		PollingFrequency: "10",
+		Component:        "",
+	}
 	profileToUpdate, _ := p.Clone()
 	profileToUpdate.TelemetryProfile = append(profileToUpdate.TelemetryProfile, entry)
 	entryByte, _ := json.Marshal(profileToUpdate)
@@ -602,7 +624,14 @@ func TestTelemetryProfileUpdateChangeAndApproveIt(t *testing.T) {
 	p := createTelemetryProfile()
 	SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
 
-	entry := logupload.TelemetryElement{uuid.New().String(), "newly added header", "newly added content", "newly added type", "10", ""}
+	entry := logupload.TelemetryElement{
+		ID:               uuid.New().String(),
+		Header:           "newly added header",
+		Content:          "newly added content",
+		Type:             "newly added type",
+		PollingFrequency: "10",
+		Component:        "",
+	}
 	profileToUpdate, _ := p.Clone()
 	profileToUpdate.TelemetryProfile = append(profileToUpdate.TelemetryProfile, entry)
 	profileBytes, _ := json.Marshal(profileToUpdate)
@@ -734,7 +763,14 @@ func TestTelemetryProfileUpdateChangeThrowsExceptionInCaseIfDuplicatedChange(t *
 	p := createTelemetryProfile()
 	SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
 
-	entry := logupload.TelemetryElement{uuid.New().String(), "newly added header", "newly added content", "newly added type", "10", ""}
+	entry := logupload.TelemetryElement{
+		ID:               uuid.New().String(),
+		Header:           "newly added header",
+		Content:          "newly added content",
+		Type:             "newly added type",
+		PollingFrequency: "10",
+		Component:        "",
+	}
 	profileToUpdate, _ := p.Clone()
 	profileToUpdate.TelemetryProfile = append(profileToUpdate.TelemetryProfile, entry)
 	profileBytes, _ := json.Marshal(profileToUpdate)
@@ -897,7 +933,14 @@ func createTelemetryProfile() *logupload.PermanentTelemetryProfile {
 	p.Schedule = "1 1 1 1 1"
 	p.UploadRepository = "http://test.comcast.com"
 	p.UploadProtocol = logupload.HTTP
-	p.TelemetryProfile = []logupload.TelemetryElement{{uuid.New().String(), "test header", "test content", "str", "10", ""}}
+	p.TelemetryProfile = []logupload.TelemetryElement{{
+		ID:               uuid.New().String(),
+		Header:           "test header",
+		Content:          "test content",
+		Type:             "str",
+		PollingFrequency: "10",
+		Component:        "",
+	}}
 	p.ApplicationType = "stb"
 	return p
 }

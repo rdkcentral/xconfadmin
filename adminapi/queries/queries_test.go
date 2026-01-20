@@ -36,7 +36,8 @@ import (
 	"github.com/rdkcentral/xconfadmin/common"
 	oshttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
-	"github.com/rdkcentral/xconfadmin/taggingapi/tag"
+
+	// "github.com/rdkcentral/xconfadmin/taggingapi/tag" // No longer needed - tag refactored
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -346,7 +347,7 @@ func queriesSetup(server *oshttp.WebconfigServer, r *mux.Router) {
 	auth.WebServerInjection(server)
 	dataapi.RegisterTables()
 	setupRoutes(server, router)
-	db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf)
+	// db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf) // Tag refactored - NewTagInf no longer exists
 	initDB()
 	db.GetCacheManager() // Initialize cache manager
 }

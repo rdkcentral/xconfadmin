@@ -18,7 +18,8 @@ import (
 	"github.com/rdkcentral/xconfadmin/adminapi/queries"
 	"github.com/rdkcentral/xconfadmin/common"
 	oshttp "github.com/rdkcentral/xconfadmin/http"
-	"github.com/rdkcentral/xconfadmin/taggingapi/tag"
+
+	// "github.com/rdkcentral/xconfadmin/taggingapi/tag" // No longer needed - tag refactored
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
@@ -159,7 +160,7 @@ func featureSetup(server *oshttp.WebconfigServer, r *mux.Router) {
 	auth.WebServerInjection(server)
 	dataapi.RegisterTables()
 
-	db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf)
+	// db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf) // Tag refactored - NewTagInf no longer exists
 	db.GetCacheManager() // Initialize cache manager
 	SetupRFCRoutes(server, r)
 }

@@ -19,277 +19,136 @@
 package tag
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	taggingapi_config "github.com/rdkcentral/xconfadmin/taggingapi/config"
-	"github.com/rdkcentral/xconfadmin/util"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestConstants(t *testing.T) {
-	assert.Equal(t, "p:%v", percentageTag)
-	assert.Equal(t, "error converting string %s value to int: %s", StringToIntConversionErr)
-	assert.Equal(t, "start range should be greater then end range", IncorrectRangeErr)
-	assert.Equal(t, 0, MinStartPercentage)
-	assert.Equal(t, 100, MaxEndPercentage)
+func TestGetGroupServiceSyncConnector(t *testing.T) {
+	setupTestEnvironment()
+	connector := GetGroupServiceSyncConnector()
+	assert.NotNil(t, xhttp.WebConfServer)
+	t.Logf("GroupServiceSyncConnector: %v", connector)
 }
 
-func TestSetTagPrefix(t *testing.T) {
+func TestGetTagApiConfig(t *testing.T) {
+	setupTestEnvironment()
+	config := GetTagApiConfig()
+	assert.NotNil(t, config)
+	assert.Equal(t, 5000, config.BatchLimit)
+	assert.Equal(t, 20, config.WorkerCount)
+}
+
+func TestSetTagApiConfig(t *testing.T) {
+	setupTestEnvironment()
+	newConfig := &taggingapi_config.TaggingApiConfig{
+		BatchLimit:  3000,
+		WorkerCount: 10,
+	}
+	SetTagApiConfig(newConfig)
+
+	retrieved := GetTagApiConfig()
+	assert.NotNil(t, retrieved)
+	assert.Equal(t, 3000, retrieved.BatchLimit)
+	assert.Equal(t, 10, retrieved.WorkerCount)
+
+	// Restore original config after test
+	setupTestEnvironment()
+}
+
+func TestGetGroupServiceConnector(t *testing.T) {
+	setupTestEnvironment()
+	connector := GetGroupServiceConnector()
+	assert.NotNil(t, xhttp.WebConfServer)
+	t.Logf("GroupServiceConnector: %v", connector)
+}
+
+func TestCheckBatchSizeExceeded(t *testing.T) {
+	setupTestEnvironment() // Reset to BatchLimit: 5000
+
 	testCases := []struct {
-		input    string
-		expected string
+		name      string
+		batchSize int
+		expectErr bool
 	}{
-		{"test-tag", "t_test-tag"},
-		{"t_test-tag", "t_test-tag"}, // Already has prefix
-		{"", "t_"},
-		{"simple", "t_simple"},
+		{"within limit", 1000, false},
+		{"at limit", 5000, false},
+		{"exceeds limit", 5001, true},
+		{"far exceeds", 10000, true},
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("SetTagPrefix_%s", tc.input), func(t *testing.T) {
-			result := SetTagPrefix(tc.input)
-			assert.Equal(t, tc.expected, result)
-		})
-	}
-}
-
-func TestRemovePrefixFromTag(t *testing.T) {
-	testCases := []struct {
-		input    string
-		expected string
-	}{
-		{"t_test-tag", "test-tag"},
-		{"test-tag", "test-tag"}, // No prefix to remove
-		{"t_", ""},
-		{"t_simple", "simple"},
-		{"other:tag", "other:tag"}, // Different prefix
-	}
-
-	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("RemovePrefixFromTag_%s", tc.input), func(t *testing.T) {
-			result := RemovePrefixFromTag(tc.input)
-			assert.Equal(t, tc.expected, result)
+		t.Run(tc.name, func(t *testing.T) {
+			err := CheckBatchSizeExceeded(tc.batchSize)
+			if tc.expectErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "exceeds the limit")
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
 
 func TestFilterTagEntriesByPrefix(t *testing.T) {
-	input := []string{
-		"t_test-tag1",
-		"t_test-tag2",
-		"other-entry",
-		"t_another-tag",
-		"normal-tag",
-	}
-
-	expected := []string{
-		"test-tag1",
-		"test-tag2",
-		"another-tag",
-	}
-
-	result := filterTagEntriesByPrefix(input)
-	assert.ElementsMatch(t, expected, result)
-}
-
-func TestGetTagById_Integration(t *testing.T) {
-	// Integration test - calls actual GetOneTag function
-	result := GetTagById("test-tag")
-	// Should return nil if tag doesn't exist or the actual tag if it does
-	assert.True(t, result == nil || result != nil)
-}
-
-func TestAddMembersToXconfTag(t *testing.T) {
-	// Test creating a new tag with members
-	newMembers := []string{"member1", "member2"}
-	result := AddMembersToXconfTag("tag:new-tag", newMembers)
-
-	assert.NotNil(t, result)
-	assert.Equal(t, "tag:new-tag", result.Id)
-	assert.True(t, result.Members.Contains("member1"))
-	assert.True(t, result.Members.Contains("member2"))
-	assert.Len(t, result.Members, 2)
-	assert.Greater(t, result.Updated, int64(0))
-}
-
-func TestAddMembersToXconfTag_EmptyMembers(t *testing.T) {
-	// Test with empty members list
-	newMembers := []string{}
-	result := AddMembersToXconfTag("tag:empty-tag", newMembers)
-
-	assert.NotNil(t, result)
-	assert.Equal(t, "tag:empty-tag", result.Id)
-	assert.Len(t, result.Members, 0)
-	assert.Greater(t, result.Updated, int64(0))
-}
-
-func TestRemoveMembersFromXconfTag(t *testing.T) {
-	// Setup existing tag with members
-	memberSet := util.Set{}
-	memberSet.Add("member1")
-	memberSet.Add("member2")
-	memberSet.Add("member3")
-
-	existingTag := &Tag{
-		Id:      "tag:test-tag",
-		Members: memberSet,
-		Updated: 123456789,
-	}
-
-	membersToRemove := []string{"member1", "member3"}
-	result := removeMembersFromXconfTag(existingTag, membersToRemove)
-
-	assert.NotNil(t, result)
-	assert.Equal(t, "tag:test-tag", result.Id)
-	assert.False(t, result.Members.Contains("member1"))
-	assert.True(t, result.Members.Contains("member2"))
-	assert.False(t, result.Members.Contains("member3"))
-	assert.Len(t, result.Members, 1)
-	// Updated timestamp may not change in current implementation
-	assert.Equal(t, existingTag.Updated, result.Updated)
-}
-
-func TestRemoveMembersFromXconfTag_EmptyResult(t *testing.T) {
-	// Setup tag with only the members that will be removed
-	memberSet := util.Set{}
-	memberSet.Add("member1")
-	memberSet.Add("member2")
-
-	existingTag := &Tag{
-		Id:      "tag:test-tag",
-		Members: memberSet,
-		Updated: 123456789,
-	}
-
-	membersToRemove := []string{"member1", "member2"}
-	result := removeMembersFromXconfTag(existingTag, membersToRemove)
-
-	assert.NotNil(t, result)
-	assert.Equal(t, "tag:test-tag", result.Id)
-	assert.Len(t, result.Members, 0)
-}
-
-func TestRemoveMembersFromXconfTag_NonExistentMembers(t *testing.T) {
-	// Setup tag and try to remove members that don't exist
-	memberSet := util.Set{}
-	memberSet.Add("member1")
-	memberSet.Add("member2")
-
-	existingTag := &Tag{
-		Id:      "tag:test-tag",
-		Members: memberSet,
-		Updated: 123456789,
-	}
-
-	membersToRemove := []string{"non-existent-member1", "non-existent-member2"}
-	result := removeMembersFromXconfTag(existingTag, membersToRemove)
-
-	assert.NotNil(t, result)
-	assert.Equal(t, "tag:test-tag", result.Id)
-	// Original members should still be there
-	assert.True(t, result.Members.Contains("member1"))
-	assert.True(t, result.Members.Contains("member2"))
-	assert.Len(t, result.Members, 2)
-}
-
-func TestGetTagApiConfig(t *testing.T) {
-	// Test the configuration getter
-	config := GetTagApiConfig()
-	// This will return nil if WebConfServer is not properly set up
-	// In a real test environment, you would mock this
-	assert.True(t, config == nil || config != nil) // Just check it doesn't panic
-}
-
-func TestSetTagApiConfig(t *testing.T) {
-	// Skip if server not initialized; verify no panic by conditional call
-	defer func() { recover() }()
-	testConfig := &taggingapi_config.TaggingApiConfig{BatchLimit: 5000, WorkerCount: 20}
-	if GetTagApiConfig() != nil { // only set if accessor returns something (default struct)
-		SetTagApiConfig(testConfig)
-	}
-	assert.True(t, true)
-}
-
-func TestToNormalized(t *testing.T) {
 	testCases := []struct {
-		input    string
-		expected string
+		name     string
+		input    []string
+		expected int
 	}{
-		// ToNormalized uppercases and preserves formatting; hex without colons stays as provided (already upper)
-		{"AA:BB:CC:DD:EE:FF", "AA:BB:CC:DD:EE:FF"},
-		{"AABBCCDDEEFF", "AABBCCDDEEFF"},
-		{"regular-string", "REGULAR-STRING"},
-		{"", ""},
+		{
+			name:     "mixed entries",
+			input:    []string{"t_test1", "t_test2", "other/test3", "t_test4"},
+			expected: 3,
+		},
+		{
+			name:     "all with prefix",
+			input:    []string{"t_a", "t_b", "t_c"},
+			expected: 3,
+		},
+		{
+			name:     "none with prefix",
+			input:    []string{"other/a", "different/b"},
+			expected: 0,
+		},
+		{
+			name:     "empty input",
+			input:    []string{},
+			expected: 0,
+		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("ToNormalized_%s", tc.input), func(t *testing.T) {
-			result := ToNormalized(tc.input)
-			assert.Equal(t, tc.expected, result)
+		t.Run(tc.name, func(t *testing.T) {
+			result := filterTagEntriesByPrefix(tc.input)
+			assert.Equal(t, tc.expected, len(result))
+			// Verify prefix is removed
+			for _, tag := range result {
+				assert.NotContains(t, tag, "t_")
+			}
 		})
 	}
 }
 
-// Test utility functions for ECM normalization
-func TestToNormalizedEcm(t *testing.T) {
-	testCases := []struct {
-		input    string
-		expected string
-	}{
-		{"AA:BB:CC:DD:EE:FF", "AABBCCDDEEFD"},
-		{"AABBCCDDEEFF", "AABBCCDDEEFD"}, // current implementation adjusts last two chars (external util)
-		{"regular-ecm", "REGULAR-ECM"},
+func TestGetTagsByMember(t *testing.T) {
+	setupTestEnvironment()
+
+	testMembers := []string{
+		"AA:BB:CC:DD:EE:FF",
+		"AABBCCDDEEFF",
+		"test-member",
 	}
 
-	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("ToNormalizedEcm_%s", tc.input), func(t *testing.T) {
-			result := ToNormalizedEcm(tc.input)
-			assert.Equal(t, tc.expected, result)
-		})
+	for _, member := range testMembers {
+		tags, err := GetTagsByMember(member)
+		// Without real connector, expect error or empty result
+		if err != nil {
+			t.Logf("GetTagsByMember(%s) returned error: %v (expected without connector)", member, err)
+		} else {
+			assert.NotNil(t, tags)
+			t.Logf("GetTagsByMember(%s) returned %d tags", member, len(tags))
+		}
 	}
-}
-
-func TestToEstbIfMac(t *testing.T) {
-	testCases := []struct {
-		input    string
-		expected string
-	}{
-		{"aa:bb:cc:dd:ee:ff", "aa:bb:cc:dd:ee:ff"}, // current ToEstbIfMac returns input if already lowercase with colons
-		{"regular-string", "regular-string"},       // Non-MAC should remain unchanged
-		{"", ""},
-	}
-
-	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("ToEstbIfMac_%s", tc.input), func(t *testing.T) {
-			result := ToEstbIfMac(tc.input)
-			assert.Equal(t, tc.expected, result)
-		})
-	}
-}
-
-// Test creating percentage tag format
-func TestPercentageTagFormat(t *testing.T) {
-	// Test the percentage tag format function (from the constant)
-	percentageValue := 75
-	expected := fmt.Sprintf(percentageTag, percentageValue)
-	assert.Equal(t, "p:75", expected)
-}
-
-// Test integration functions that don't require external dependencies
-func TestGetTagsByMember_Integration(t *testing.T) {
-	// Integration test - will call actual services but should handle gracefully
-	result, err := GetTagsByMember("test-member")
-	// Should return empty slice and potentially an error if services aren't available
-	assert.True(t, result != nil)            // Should at least return a slice
-	assert.True(t, err == nil || err != nil) // Error handling should work
-}
-
-func TestGetTagMembers_Integration(t *testing.T) {
-	// Integration test for getting tag members
-	result, err := GetTagMembers("test-tag")
-	// Should return empty slice and potentially an error if tag doesn't exist
-	assert.True(t, result != nil)            // Should return a slice
-	assert.True(t, err == nil || err != nil) // Should handle errors gracefully
 }

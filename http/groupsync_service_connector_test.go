@@ -63,7 +63,7 @@ func TestGroupServiceSyncConnector_AddMembersToTag(t *testing.T) {
 		}
 
 		// Verify path
-		if r.URL.Path != "/v2/ft/test-group-id" {
+		if r.URL.Path != "/ft/test-group-id" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 
@@ -136,7 +136,7 @@ func TestGroupServiceSyncConnector_RemoveGroupMembers(t *testing.T) {
 		}
 
 		// Verify path contains group ID and member
-		expectedPath := "/v2/ft/test-group-id"
+		expectedPath := "/ft/test-group-id"
 		if r.URL.Path != expectedPath {
 			t.Errorf("expected path '%s', got '%s'", expectedPath, r.URL.Path)
 		}

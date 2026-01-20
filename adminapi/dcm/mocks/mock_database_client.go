@@ -166,3 +166,23 @@ func (m *MockDatabaseClient) GetPrecookDataFromXPC(RfcPrecookHash string) ([]byt
 func (m *MockDatabaseClient) GetLockInfo(lockName string) (map[string]interface{}, error) {
 	return nil, nil
 }
+
+// ExecuteBatch executes a batch of operations (stub for tests)
+func (m *MockDatabaseClient) ExecuteBatch(operation db.BatchOperation) error {
+	return nil
+}
+
+// ModifyXconfData modifies existing data (stub for tests)
+func (m *MockDatabaseClient) ModifyXconfData(tableName string, rowKeys ...string) error {
+	return nil
+}
+
+// NewBatch creates a new batch operation (stub for tests)
+func (m *MockDatabaseClient) NewBatch(size int) db.BatchOperation {
+	return nil
+}
+
+// QueryXconfDataRows queries data rows (stub for tests)
+func (m *MockDatabaseClient) QueryXconfDataRows(tableName string, rowKeys ...string) ([]map[string]interface{}, error) {
+	return nil, nil
+}

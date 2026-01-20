@@ -43,7 +43,8 @@ import (
 	"github.com/rdkcentral/xconfadmin/common"
 	oshttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
-	"github.com/rdkcentral/xconfadmin/taggingapi/tag"
+
+	// "github.com/rdkcentral/xconfadmin/taggingapi/tag" // No longer needed - tag refactored
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -546,7 +547,7 @@ func dcmSetup(server *oshttp.WebconfigServer, r *mux.Router) {
 	auth.WebServerInjection(server)
 	dataapi.RegisterTables()
 
-	db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf)
+	// db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf) // Tag refactored - NewTagInf no longer exists
 	initDB()
 	db.GetCacheManager() // Initialize cache manager
 	SetupDCMRoutes(server, r)
@@ -764,6 +765,13 @@ func TestMain(m *testing.M) {
 
 		// Create minimal router and set up routes
 		router = mux.NewRouter()
+
+		// Initialize minimal WebConfServer to prevent nil pointer panics
+		oshttp.WebConfServer = &oshttp.WebconfigServer{
+			DistributedLockConfig: &oshttp.DistributedLockConfig{
+				Enabled: false, // Disable distributed locks for mock tests
+			},
+		}
 
 		// Set up DCM routes without middleware (for mock mode)
 		SetupDCMRoutesForMock(router)

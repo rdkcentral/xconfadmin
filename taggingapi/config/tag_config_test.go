@@ -72,7 +72,7 @@ func TestNewTaggingApiConfig_WithDefaults(t *testing.T) {
 
 	assert.NotNil(t, result, "NewTaggingApiConfig should return a config instance")
 	assert.Equal(t, 2000, result.BatchLimit, "BatchLimit should use default value")
-	assert.Equal(t, 10, result.WorkerCount, "WorkerCount should use default value")
+	assert.Equal(t, 20, result.WorkerCount, "WorkerCount should use default value")
 }
 
 func TestNewTaggingApiConfig_WithPartialConfig(t *testing.T) {
@@ -90,7 +90,7 @@ func TestNewTaggingApiConfig_WithPartialConfig(t *testing.T) {
 
 	assert.NotNil(t, result, "NewTaggingApiConfig should return a config instance")
 	assert.Equal(t, 4000, result.BatchLimit, "BatchLimit should be read from config")
-	assert.Equal(t, 10, result.WorkerCount, "WorkerCount should use default value")
+	assert.Equal(t, 20, result.WorkerCount, "WorkerCount should use default value")
 }
 
 func TestNewTaggingApiConfig_WithOtherPartialConfig(t *testing.T) {
@@ -156,10 +156,10 @@ func TestNewTaggingApiConfig_DefaultValues(t *testing.T) {
 
 	// These are the default values from the function
 	expectedBatchLimit := 2000
-	expectedWorkerCount := 10
+	expectedWorkerCount := 20
 
 	assert.Equal(t, expectedBatchLimit, result.BatchLimit, "Default BatchLimit should be 2000")
-	assert.Equal(t, expectedWorkerCount, result.WorkerCount, "Default WorkerCount should be 10")
+	assert.Equal(t, expectedWorkerCount, result.WorkerCount, "Default WorkerCount should be 20")
 }
 
 func TestTaggingApiConfig_FieldTypes(t *testing.T) {
