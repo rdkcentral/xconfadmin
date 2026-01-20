@@ -6,8 +6,6 @@ The XConf Admin API provides comprehensive configuration management for RDK devi
 
 **Base URL**: `/xconfAdminService`
 
-**Authentication**: Most endpoints require authentication via SAT token as a Bearer Token in the Authorization header.
-
 ---
 
 ## API Overview
@@ -2085,26 +2083,22 @@ If activation minimum version with provided id does not exist it is imported oth
 
 ---
 
-## Change v2 API
+## Telemetry 2.0 Profile Json Schema
 
-### Approve by change ids (not supported in golang implementation)
+The JSON schema definition for Telemetry 2.0 profiles allows you to validate and define the structure of telemetry configuration data.
 
-All not selected changes by entity id will be canceled. For example, there are two changes, "change A" and "change B", id of "change A" is sent to approve, in result "change A" will be approved and "change B" will be canceled.
-
-**POST** `http://<host>:<port>/change/v2/approve/byChangeIds`
+**GET** `http://<host>:<port>/telemetry/v2/jsonschema`
 
 **Headers:**
 - Accept = application/json
-- Content-Type = application/json
 
-**Request Body:** Array with change ids
-```json
-["4705486f-2dcc-4ae9-a920-a45b33755993"]
-```
+**Response Codes:** 200
 
-**Response Codes:** 200, 404, 409
+**Response Body:** JSON Schema object defining the structure for Telemetry 2.0 profiles
 
-**Response Body:** Change id - error message object. If change successfully approve an empty object is returned
+---
+
+## Change v2 API
 
 ### Approve by entity id (not supported in golang implementation)
 
