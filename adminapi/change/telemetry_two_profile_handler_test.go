@@ -1,3 +1,20 @@
+/**
+ * Copyright 2025 Comcast Cable Communications Management, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package change
 
 import (
@@ -33,6 +50,14 @@ const telemetryTwoValidJson = "{\n    \"Description\":\"Test Json Data\",\n    \
 
 // Use different name to avoid collision with existing TestMain in change package
 func init() {
+	// Set required environment variables before server initialization
+	os.Setenv("SECURITY_TOKEN_KEY", "testSecurityTokenKey")
+	os.Setenv("XPC_KEY", "testXpcKey")
+	os.Setenv("SAT_CLIENT_ID", "test-sat-client")
+	os.Setenv("SAT_CLIENT_SECRET", "test-sat-secret")
+	os.Setenv("IDP_CLIENT_ID", "test-idp-client")
+	os.Setenv("IDP_CLIENT_SECRET", "test-idp-secret")
+
 	cfgFile := "../config/sample_xconfadmin.conf"
 	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
 		cfgFile = "../../config/sample_xconfadmin.conf"
