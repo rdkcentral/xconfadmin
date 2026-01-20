@@ -2087,7 +2087,7 @@ If activation minimum version with provided id does not exist it is imported oth
 
 The JsonConfig field of a Telemetry 2.0 Profile is validated using the following JSON Schema, which defines the structure and validation rules for the JSON configuration sent to RDK devices.
 
-**File Reference:** `telemetry_profile_2_0_schema.json`
+**File Reference:** [telemetry_profile_2_0_schema.json](https://github.com/rdkcentral/telemetry/blob/main/schemas/t2_reportProfileSchema.schema.json)
 
 ---
 
