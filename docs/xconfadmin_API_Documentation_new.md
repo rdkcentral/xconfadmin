@@ -4,13 +4,13 @@
 
 The XConf Admin API provides comprehensive configuration management for RDK devices through a RESTful interface. It manages firmware configurations, device settings, telemetry profiles, feature rules, and various configuration management operations.
 
-**Base URL**: `https://<admin-service-endpoint>:9443/xconfAdminService/`
+**Base URL**: `/xconfAdminService`
 
 **Authentication**: Most endpoints require authentication via SAT token as a Bearer Token in the Authorization header.
 
 ---
 
-## Table of Contents
+## API Overview
 
 ### Configuration Management
 1. [Firmware Config](#firmware-config)
@@ -45,6 +45,9 @@ The XConf Admin API provides comprehensive configuration management for RDK devi
 ### Change Management
 23. [Change API](#change-api)
 24. [Change v2 API](#change-v2-api)
+
+### Device Configuration Management
+25. [DCM (Device Configuration Management)](#dcm-device-configuration-management)
 
 ---
 
