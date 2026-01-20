@@ -2085,16 +2085,9 @@ If activation minimum version with provided id does not exist it is imported oth
 
 ## Telemetry 2.0 Profile Json Schema
 
-The JSON schema definition for Telemetry 2.0 profiles allows you to validate and define the structure of telemetry configuration data.
+The JsonConfig field of a Telemetry 2.0 Profile is validated using the following JSON Schema, which defines the structure and validation rules for the JSON configuration sent to RDK devices.
 
-**GET** `http://<host>:<port>/telemetry/v2/jsonschema`
-
-**Headers:**
-- Accept = application/json
-
-**Response Codes:** 200
-
-**Response Body:** JSON Schema object defining the structure for Telemetry 2.0 profiles
+**File Reference:** `telemetry_profile_2_0_schema.json`
 
 ---
 
