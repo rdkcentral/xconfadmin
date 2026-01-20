@@ -2393,61 +2393,10 @@ Get all upload repository settings:
     "applicationType": "stb"
   }
 ]
-`
-"@ | Add-Content "d:\RDKM\xconf_new_source_codes_generate_contents\xconfadmin_API_Documentation_new.md"
-# First, remove any existing DCM section at the end
- = Get-Content "d:\RDKM\xconf_new_source_codes_generate_contents\xconfadmin_API_Documentation_new.md" -Raw
- =  -replace '(?s)\n---\s*\n## DCM.*?$', ''
- | Set-Content "d:\RDKM\xconf_new_source_codes_generate_contents\xconfadmin_API_Documentation_new.md"
-"DCM section removed"
- = Get-Content "d:\RDKM\xconf_new_source_codes_generate_contents\xconfadmin_API_Documentation_new.md" -Raw;  =  -replace '(?s)\n---\s*\n## DCM.*?$', '';  | Set-Content "d:\RDKM\xconf_new_source_codes_generate_contents\xconfadmin_API_Documentation_new.md"; "DCM section cleaned"
-@"
-
----
-
-## DCM (Device Configuration Management)
-
-### Get All DCM Formulas
-Get all DCM formulas for authenticated application type:
-
-**GET** \/dcm/formula?applicationType=stb\
-
-<details>
-<summary><strong>Response Body:</strong> Array of DCM Formula objects</summary>
-
-\\\json
-[
-  {
-    "id": "formula-001",
-    "name": "STB Configuration Rule",
-    "description": "Configuration for STB devices",
-    "priority": 1,
-    "ruleExpression": "model == 'STB_MODEL_X'",
-    "percentage": 100,
-    "percentageL1": 50.0,
-    "percentageL2": 30.0,
-    "percentageL3": 20.0,
-    "applicationType": "stb",
-    "rule": {
-      "condition": {
-        "freeArg": "model",
-        "operation": "IS",
-        "fixedArg": "STB_MODEL_X"
-      }
-    }
-  }
-]
-\\\
+```
 </details>
 
 Response Codes: 200, 401
-
----
-
-### Create DCM Formula
-Create a new DCM formula:
-
-**POST** \/dcm/formula?applicationType=stb\
 
 <details>
 <summary><strong>Request Body:</strong> DCM Formula creation data</summary>
@@ -2629,3 +2578,4 @@ Get all upload repository settings:
 </details>
 
 Response Codes: 200, 401
+
