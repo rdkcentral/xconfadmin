@@ -67,6 +67,11 @@ func TestGetGroupServiceConnector(t *testing.T) {
 
 func TestCheckBatchSizeExceeded(t *testing.T) {
 	setupTestEnvironment() // Reset to BatchLimit: 5000
+	// Explicitly set the config to ensure proper test isolation
+	SetTagApiConfig(&taggingapi_config.TaggingApiConfig{
+		BatchLimit:  5000,
+		WorkerCount: 20,
+	})
 
 	testCases := []struct {
 		name      string
