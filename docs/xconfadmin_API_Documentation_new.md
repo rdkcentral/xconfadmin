@@ -2176,20 +2176,16 @@ PUT http://<host>:<port>/telemetry/v2/profile/change
 
 ## DCM (Device Configuration Management)
 
-### Retrieve all DCM Formulas
+### Get All DCM Formulas
 
 Get all DCM formulas for authenticated application type:
 
-**GET** /dcm/formula?applicationType=stb
+**GET** `http://<host>:<port>/dcm/formula?applicationType=stb`
 
-**Headers:**
-- Accept = application/json
-- applicationType is not required, default value is stb
+<details>
+<summary><strong>Response Body:</strong> Array of DCM Formula objects</summary>
 
-**Response:** 200 OK
-
-**Response Body Example:**
-`json
+```json
 [
   {
     "id": "formula-001",
@@ -2211,23 +2207,23 @@ Get all DCM formulas for authenticated application type:
     }
   }
 ]
-`
+```
+</details>
+
+Response Codes: 200, 401
+
+---
 
 ### Create DCM Formula
 
 Create a new DCM formula:
 
-**POST** /dcm/formula?applicationType=stb
+**POST** `http://<host>:<port>/dcm/formula?applicationType=stb`
 
-**Headers:**
-- Content-Type = application/json
-- Accept = application/json
-- applicationType is not required, default value is stb
+<details>
+<summary><strong>Request Body:</strong> DCM Formula creation data</summary>
 
-**Response:** 201 CREATED; 400 BAD REQUEST; 500 INTERNAL SERVER ERROR
-
-**Request Body Example:**
-`json
+```json
 {
   "name": "New STB Configuration Rule",
   "description": "New configuration for STB devices",
@@ -2246,10 +2242,13 @@ Create a new DCM formula:
     }
   }
 }
-`
+```
+</details>
 
-**Response Body Example:**
-`json
+<details>
+<summary><strong>Response Body:</strong> Created DCM Formula object</summary>
+
+```json
 {
   "id": "formula-002",
   "name": "New STB Configuration Rule",
@@ -2269,21 +2268,23 @@ Create a new DCM formula:
     }
   }
 }
-`
+```
+</details>
 
-### Retrieve all Device Settings
+Response Codes: 201, 400, 401
+
+---
+
+### Get All Device Settings
 
 Get all device settings:
 
-**GET** /dcm/deviceSettings
+**GET** `http://<host>:<port>/dcm/deviceSettings`
 
-**Headers:**
-- Accept = application/json
+<details>
+<summary><strong>Response Body:</strong> Array of Device Settings objects</summary>
 
-**Response:** 200 OK
-
-**Response Body Example:**
-`json
+```json
 [
   {
     "id": "device-settings-001",
@@ -2303,21 +2304,23 @@ Get all device settings:
     }
   }
 ]
-`
+```
+</details>
 
-### Retrieve all Log Upload Settings
+Response Codes: 200, 401
+
+---
+
+### Get All Log Upload Settings
 
 Get all log upload settings:
 
-**GET** /dcm/logUploadSettings
+**GET** `http://<host>:<port>/dcm/logUploadSettings`
 
-**Headers:**
-- Accept = application/json
+<details>
+<summary><strong>Response Body:</strong> Array of Log Upload Settings objects</summary>
 
-**Response:** 200 OK
-
-**Response Body Example:**
-`json
+```json
 [
   {
     "id": "log-upload-001",
@@ -2343,24 +2346,26 @@ Get all log upload settings:
     }
   }
 ]
-`
+```
+</details>
 
-### Retrieve all VOD Settings
+Response Codes: 200, 401
+
+---
+
+### Get All VOD Settings
 
 Get all Video On Demand settings:
 
-**GET** /dcm/vodsettings
+**GET** `http://<host>:<port>/dcm/vodsettings`
 
-**Headers:**
-- Accept = application/json
+<details>
+<summary><strong>Response Body:</strong> Array of VOD Settings objects</summary>
 
-**Response:** 200 OK
-
-**Response Body Example:**
-`json
+```json
 [
   {
-    "id": "vod-settings-001", 
+    "id": "vod-settings-001",
     "name": "Production VOD Settings",
     "locationsURL": "https://vod.example.com/locations",
     "srmIPList": ["192.168.1.10", "192.168.1.11"],
@@ -2368,21 +2373,23 @@ Get all Video On Demand settings:
     "ipList": ["192.168.1.10", "192.168.1.11"]
   }
 ]
-`
+```
+</details>
 
-### Retrieve all Upload Repositories
+Response Codes: 200, 401
+
+---
+
+### Get All Upload Repositories
 
 Get all upload repository settings:
 
-**GET** /dcm/uploadRepository
+**GET** `http://<host>:<port>/dcm/uploadRepository`
 
-**Headers:**
-- Accept = application/json
+<details>
+<summary><strong>Response Body:</strong> Array of Upload Repository objects</summary>
 
-**Response:** 200 OK
-
-**Response Body Example:**
-`json
+```json
 [
   {
     "id": "repo-001",
@@ -2394,187 +2401,6 @@ Get all upload repository settings:
   }
 ]
 ```
-</details>
-
-Response Codes: 200, 401
-
-<details>
-<summary><strong>Request Body:</strong> DCM Formula creation data</summary>
-
-\\\json
-{
-  "name": "New STB Configuration Rule",
-  "description": "New configuration for STB devices",
-  "priority": 2,
-  "ruleExpression": "model == 'STB_MODEL_Y'",
-  "percentage": 75,
-  "percentageL1": 40.0,
-  "percentageL2": 35.0,
-  "percentageL3": 25.0,
-  "applicationType": "stb",
-  "rule": {
-    "condition": {
-      "freeArg": "model",
-      "operation": "IS",
-      "fixedArg": "STB_MODEL_Y"
-    }
-  }
-}
-\\\
-</details>
-
-<details>
-<summary><strong>Response Body:</strong> Created DCM Formula object</summary>
-
-\\\json
-{
-  "id": "formula-002",
-  "name": "New STB Configuration Rule",
-  "description": "New configuration for STB devices",
-  "priority": 2,
-  "ruleExpression": "model == 'STB_MODEL_Y'",
-  "percentage": 75,
-  "percentageL1": 40.0,
-  "percentageL2": 35.0,
-  "percentageL3": 25.0,
-  "applicationType": "stb",
-  "rule": {
-    "condition": {
-      "freeArg": "model",
-      "operation": "IS",
-      "fixedArg": "STB_MODEL_Y"
-    }
-  }
-}
-\\\
-</details>
-
-Response Codes: 201, 400, 401
-
----
-
-### Get All Device Settings
-Get all device settings:
-
-**GET** \/dcm/deviceSettings\
-
-<details>
-<summary><strong>Response Body:</strong> Array of Device Settings objects</summary>
-
-\\\json
-[
-  {
-    "id": "device-settings-001",
-    "name": "STB Device Settings",
-    "checkOnReboot": true,
-    "settingsAreActive": true,
-    "schedule": {
-      "type": "CronExpression",
-      "expression": "0 2 * * *",
-      "timeWindowMinutes": 60,
-      "startDate": "2025-01-01",
-      "endDate": "2025-12-31"
-    },
-    "configData": {
-      "logLevel": "INFO",
-      "uploadOnReboot": true
-    }
-  }
-]
-\\\
-</details>
-
-Response Codes: 200, 401
-
----
-
-### Get All Log Upload Settings
-Get all log upload settings:
-
-**GET** \/dcm/logUploadSettings\
-
-<details>
-<summary><strong>Response Body:</strong> Array of Log Upload Settings objects</summary>
-
-\\\json
-[
-  {
-    "id": "log-upload-001",
-    "name": "Production Log Upload",
-    "uploadOnReboot": true,
-    "numberOfDays": 7,
-    "areSettingsActive": true,
-    "modeToGetLogFiles": "LogFiles",
-    "schedule": {
-      "type": "CronExpression",
-      "expression": "0 3 * * *",
-      "timeWindowMinutes": 120
-    },
-    "logFiles": [
-      {
-        "name": "system.log",
-        "logFileName": "/var/log/system.log"
-      }
-    ],
-    "logUploadSettings": {
-      "uploadRepositoryName": "prod-repo",
-      "uploadProtocol": "HTTPS"
-    }
-  }
-]
-\\\
-</details>
-
-Response Codes: 200, 401
-
----
-
-### Get All VOD Settings
-Get all Video On Demand settings:
-
-**GET** \/dcm/vodsettings\
-
-<details>
-<summary><strong>Response Body:</strong> Array of VOD Settings objects</summary>
-
-\\\json
-[
-  {
-    "id": "vod-settings-001", 
-    "name": "Production VOD Settings",
-    "locationsURL": "https://vod.example.com/locations",
-    "srmIPList": ["192.168.1.10", "192.168.1.11"],
-    "ipNames": ["SRM-1", "SRM-2"],
-    "ipList": ["192.168.1.10", "192.168.1.11"]
-  }
-]
-\\\
-</details>
-
-Response Codes: 200, 401
-
----
-
-### Get All Upload Repositories
-Get all upload repository settings:
-
-**GET** \/dcm/uploadRepository\
-
-<details>
-<summary><strong>Response Body:</strong> Array of Upload Repository objects</summary>
-
-\\\json
-[
-  {
-    "id": "repo-001",
-    "name": "Production Repository",
-    "description": "Production log upload repository",
-    "url": "https://logs.example.com/upload",
-    "protocol": "HTTPS",
-    "applicationType": "stb"
-  }
-]
-\\\
 </details>
 
 Response Codes: 200, 401
