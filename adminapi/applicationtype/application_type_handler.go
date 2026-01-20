@@ -80,6 +80,10 @@ func GetApplicationTypeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := mux.Vars(r)["id"]
+	if id == "" {
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Application type ID is required")
+		return
+	}
 	appType, err := xapptype.GetOneApplicationType(id)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -104,6 +108,10 @@ func DeleteApplicationTypeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := mux.Vars(r)["id"]
+	if id == "" {
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Application type ID is required")
+		return
+	}
 	appType, err := xapptype.GetOneApplicationType(id)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -140,6 +148,10 @@ func UpdateApplicationTypeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := mux.Vars(r)["id"]
+	if id == "" {
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Application type ID is required")
+		return
+	}
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "responsewriter cast error")

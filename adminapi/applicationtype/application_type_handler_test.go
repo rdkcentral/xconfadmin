@@ -52,6 +52,11 @@ func TestGetApplicationTypeHandler(t *testing.T) {
 	rec := httptest.NewRecorder()
 	GetApplicationTypeHandler(rec, req)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	req = mux.SetURLVars(req, map[string]string{"id": ""})
+	rec = httptest.NewRecorder()
+	GetApplicationTypeHandler(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
 func TestUpdateApplicationTypeHandler(t *testing.T) {
@@ -83,6 +88,11 @@ func TestUpdateApplicationTypeHandler(t *testing.T) {
 	w.SetBody(validJson)
 	UpdateApplicationTypeHandler(w, req)
 	assert.True(t, rec.Code == http.StatusOK || rec.Code == http.StatusBadRequest || rec.Code == http.StatusInternalServerError)
+
+	req = mux.SetURLVars(req, map[string]string{"id": ""})
+	rec = httptest.NewRecorder()
+	UpdateApplicationTypeHandler(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
 func TestDeleteApplicationTypeHandler(t *testing.T) {
@@ -91,4 +101,9 @@ func TestDeleteApplicationTypeHandler(t *testing.T) {
 	rec := httptest.NewRecorder()
 	DeleteApplicationTypeHandler(rec, req)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	req = mux.SetURLVars(req, map[string]string{"id": ""})
+	rec = httptest.NewRecorder()
+	DeleteApplicationTypeHandler(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
