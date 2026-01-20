@@ -1,202 +1,50 @@
 # XConf Admin REST API Documentation
 
-## Admin API Calling Changes
+## Overview
 
-Please note the below examples earlier were towards XConf DataService, but as of Oct 6th, 2021, these XConf APIs are considered Admin APIs, and are not available on the XConf DataService endpoint. These APIs are available on the XConf Admin Service.
+The XConf Admin API provides comprehensive configuration management for RDK devices through a RESTful interface. It manages firmware configurations, device settings, telemetry profiles, feature rules, and various configuration management operations.
 
-Also note that to communicate with XConf Admin API service you will need a SAT token as a Bearer Token in your RESTful API call. XConf Admin Service API endpoint is protected by Comcast firewall, so the endpoint is not visible to Internet, only client from Comcast ENTERPRISE networks can access this XConf admin service endpoint. If your application is not in the Comcast network, then it is required that the application be configured to communicate with XConf Admin service via CodeBig2. Request for xconf admin service credentials on CodeBig2 portal.
+**Base URL**: `https://<admin-service-endpoint>:9443/xconfAdminService/`
 
-Use the following prefix for the below APIs instead of http://<host>:<port>/:
-```
-https://<admin-service-endpoint>:9443/xconfAdminService/
-```
-
-If communicating via CodeBig2, then use:
-```
-https://<codebig-admin-service-endpoint>/xconfAdminService/
-```
-
-**Important Notes:**
-- The http://<host>:<port>/queries/foo.json method of calling is not supported and will not be supported
-- In the next major revision of XConf Admin service, all Admin API responses will default to "application/json" response format
-- Application types "text/xml" or "application/xml" for XConf API is no longer supported
+**Authentication**: Most endpoints require authentication via SAT token as a Bearer Token in the Authorization header.
 
 ---
 
-## API Endpoints Overview
+## Table of Contents
 
-### Firmware Config
-- Retrieve a list of firmware configs
-- Retrieve a single firmware config by id
-- Retrieve firmware configs by modelId
-- Create/update a firmware config
-- Delete a firmware config by id
+### Configuration Management
+1. [Firmware Config](#firmware-config)
+2. [IP Rules](#ip-rules)
+3. [Location Filter](#location-filter)
+4. [Download Location Filter](#download-location-filter)
+5. [Environment Model Rules](#environment-model-rules)
+6. [IP Filter](#ip-filter)
+7. [Percent Filter](#percent-filter)
+8. [Time Filter](#time-filter)
+9. [RebootImmediately Filter](#rebootimmediately-filter)
 
-### IP rules
-- Retrieve an ip rule list
-- Retrieve an ip rule by name
-- Create/update an ip rule
-- Delete an ip rule
+### Entity Management
+10. [Environment](#environment)
+11. [IP Address Group](#ip-address-group)
+12. [Model](#model)
+13. [NamespacedList](#namespacedlist)
+14. [Mac Rule](#mac-rule)
 
-### Location filter
-- Retrieve a location filter list
-- Retrieve a location filter by name
-- Create/update location filter
-- Delete location filter by name
+### Rule and Template Management
+15. [FirmwareRuleTemplate](#firmwareruletemplate)
+16. [FirmwareRule](#firmwarerule)
+17. [Feature](#feature)
+18. [Feature Rule](#feature-rule)
+19. [Activation Minimum Version](#activation-minimum-version)
 
-### Download location filter
-- Retrieve download location filter
-- Update download location filter
+### Telemetry Management
+20. [Telemetry Profile](#telemetry-profile)
+21. [Telemetry Profile 2.0](#telemetry-profile-20)
+22. [Telemetry 2.0 Profile Json Schema](#telemetry-20-profile-json-schema)
 
-### Environment model rules
-- Retrieve an environment model rule list
-- Retrieve an environment model rule by name
-- Create/update an environment model rule
-- Delete an environment model rule
-
-### IP filter
-- Retrieve an IP filter list
-- Retrieve an ip filter by name
-- Create/update an IP filter
-- Delete IP filter
-
-### Percent filter
-- Retrieve percent filter
-- Retrieve percent filter field values
-- Update percent filter
-- Retrieve EnvModelPercentages
-- Retrieve EnvModelPercentage by id
-- Create envModelPercentage
-- Update EnvModelPercentage
-- Delete envModelPercentage
-
-### Time filter
-- Retrieve time filter list
-- Retrieve time filter by name
-- Create/update time filter
-- Delete time filter by name
-
-### Environment
-- Retrieve an list of environments
-- Retrieve environment by id
-- Create an environment
-- Delete environment by id
-
-### IP address group
-- Retrieve an IP address group list
-- Retrieve an IP address group by name
-- Retrieve an IP address group by IP
-- Create an IP address group
-- Add data to IP Address Group (dev in progress)
-- Delete data from IP Address Group (dev in progress)
-- Delete an IP address group by id
-
-### Mac rule
-- Retrieve a mac rule list (legacy)
-- Retrieve a mac rule list (v2)
-- Retrieve mac rule by name (legacy)
-- Retrieve mac rule by name (v2)
-- Retrieve mac rule by mac address (legacy)
-- Retrieve mac rule by mac address (v2)
-- Create/update mac rule
-- Delete mac rule by name
-
-### Model
-- Retrieve a model list
-- Retrieve model by id
-- Create model
-- Update model description
-- Delete model by id
-
-### NamespacedList
-- Retrieve all NS lists
-- Retrieve NS list by mac part
-- Create a NS list
-- Add data to NS list
-- Delete data from NS list
-- Delete an NS list by id
-
-### RebootImmediately filter
-- Retrieve an RI filter list
-- Retrieve and RI filter by rule name
-- Create/update an RI filter
-- Delete RI filter by name
-
-### FirmwareRuleTemplate
-- Retrieve filtered templates
-- Import firmware rule templates
-- Create firmware rule template
-- Updating firmware rule template
-- Deleting Firmware rule template
-
-### FirmwareRule
-- Retrieve all firmware rules
-- Retrieve filtered firmware rules
-- Import firmware rule
-- Create firmware rule
-- Update firmware Rule
-- Delete firmware Rule
-
-### Feature
-- Retrieve all features
-- Retrieve filtered features
-- Import feature
-- Create feature
-- Update feature
-- Delete feature
-
-### Feature Rule
-- Retrieve all feature rules
-- Retrieve filtered feature rules
-- Import feature rule
-- Create feature rule
-- Update feature rule
-- Delete feature rule
-
-### Activation Minimum Version
-- Retrieve all activation minimum versions
-- Retrieve filtered activation minimum versions
-- Import activation version
-- Create activation minimum version
-- Update activation minimum version
-- Delete activation minimum version
-
-### Telemetry Profile
-- Retrieve all Telemetry Profiles
-- Retrieve Telemetry Profile
-- Create Telemetry Profile
-- Update Telemetry Profile
-- Delete Telemetry Profile
-- Add Telemetry Profile Entry
-- Remove Telemetry Profile entry
-- Create Telemetry Profile through pending changes
-- Update Telemetry Profile with approval
-- Delete Telemetry Profile with approval
-- Add Telemetry Profile Entry with approval
-- Remove Telemetry Profile entry with approval
-
-### Telemetry Profile 2.0
-- Retrieve all Telemetry 2.0 Profiles
-- Retrieve Telemetry 2.0 Profile
-- Create Telemetry 2.0 Profile
-- Update Telemetry 2.0 Profile
-- Delete Telemetry 2.0 Profile
-- Create with approval
-- Update with approval
-- Delete with approval
-- Telemetry 2.0 Profile Json Schema
-
-### Change API
-- Approve by change ids (not supported in golang implementation)
-- Approve by entity id (not supported in golang implementation)
-- Cancel change
-- Retrieve all changes
-
-### Change v2 API
-- Approve by change ids (not supported in golang implementation)
-- Approve by entity id (not supported in golang implementation)
-- Cancel change
-- Retrieve all changes
+### Change Management
+23. [Change API](#change-api)
+24. [Change v2 API](#change-v2-api)
 
 ---
 
@@ -990,6 +838,1145 @@ http://localhost:9091/updates/filters/ips
 ```
 http://localhost:9091/delete/filters/ips/namef
 ```
+
+---
+
+## Percent Filter
+
+### Retrieve percent filter
+
+**GET** `http://<host>:<port>/queries/filters/percent?applicationType={type}`
+
+**Headers:**
+- Accept = application/json
+- applicationType param is not required, default value is stb
+
+**Response:** 200 OK; 400 BAD REQUEST if applicationType is not valid
+
+### Retrieve percent filter field values
+
+**GET** `http://<host>:<port>/queries/filters/percent?field=fieldName&applicationType={type}`
+
+**Headers:**
+- Accept = application/json
+- applicationType param is not required, default value is stb
+
+**Response:** 200 OK if field exists; 404 Not Found if field does not exist
+
+### Update percent filter
+
+**POST** `http://<host>:<port>/updates/filters/percent?applicationType={type}`
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+- applicationType param is not required, default value is stb
+
+**Response:** 200 OK and saved object; 400 BAD REQUEST; 500 INTERNAL SERVER ERROR
+
+**Restrictions:**
+- Percentage should be positive and within [0, 100]
+
+### Retrieve EnvModelPercentages
+
+**GET** `http://<host>:<port>/queries/percentageBean?applicationType={type}`
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+- applicationType param is not required, default value is stb
+
+**Response:** 200 OK; 400 BAD REQUEST
+
+### Retrieve EnvModelPercentage by id
+
+**GET** `http://<host>:<port>/queries/percentageBean/id`
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+
+**Response:** 200 OK OR 404 if envModelPercentage is not found
+
+### Create envModelPercentage
+
+**POST** `http://<host>:<port>/updates/percentageBean?applicationType={type}`
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+- applicationType param is not required, default value is stb
+
+**Response:** 200 OK; 404 NOT FOUND; 409 CONFLICT; 400 BAD REQUEST
+
+**Restrictions:**
+- Name should be unique and not blank
+- Environment and model should be not empty
+- At least one firmware version should be in minCheck list if firmwareCheckRequired=true
+- Percentage within [0, 100]
+- Distribution firmware version should be in minCheck list if firmwareCheckRequired=true
+- Total distribution percentage is within [0, 100]
+- Last known good is not empty if total distribution percentage < 100
+
+### Update EnvModelPercentage
+
+**PUT** `http://<host>:<port>/updates/percentageBean?applicationType={type}`
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+- applicationType param is not required, default value is stb
+
+**Response:** 200 OK; 404 NOT FOUND; 409 CONFLICT; 400 BAD REQUEST
+
+### Delete envModelPercentage
+
+**DELETE** `http://<host>:<port>/delete/percentageBean/id`
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+
+**Response:** 204 NO CONTENT OR 404 NOT FOUND
+
+---
+
+## Time Filter
+
+### Retrieve time filter list
+
+**GET** `http://<host>:<port>/queries/filters/time?applicationType={type}`
+
+**Headers:**
+- Accept = application/json
+- applicationType param is not required, default value is stb
+
+**Response:** 200 OK; 400 BAD REQUEST
+
+### Retrieve time filter by name
+
+**GET** `http://<host>:<port>/queries/filters/time/{name}?applicationType={type}`
+
+**Headers:**
+- Accept = application/json
+- applicationType param is not required, default value is stb
+
+**Response:** 200 OK; 400 BAD REQUEST
+
+### Create/update time filter
+
+If time filter is missing it will be created, otherwise updated. For update operation id field is not needed.
+
+**POST** `http://<host>:<port>/updates/filters/time?applicationType={type}`
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+- applicationType param is not required, default value is stb
+
+**Response:** 200 OK and saved object; 400 BAD REQUEST; 500 INTERNAL SERVER ERROR
+
+**Restrictions:**
+- Name should be unique
+
+### Delete time filter by name
+
+**DELETE** `http://<host>:<port>/delete/filters/time/{timeFilterName}?applicationType={type}`
+
+**Headers:**
+- Accept = application/json
+- applicationType is not required, default value is stb
+
+**Response:** 204 NO CONTENT and message: Time Filter successfully deleted OR Filter doesn't exist with name: <filterName>
+
+---
+
+## RebootImmediately Filter
+
+### Retrieve an RI filter list
+
+**GET** `http://<host>:<port>/queries/filters/ri?applicationType={type}`
+
+**Headers:**
+- Accept = application/json
+- applicationType is not required, default value is stb
+
+**Response:** 200 OK; 400 BAD REQUEST
+
+### Retrieve an RI filter by rule name
+
+**GET** `http://<host>:<port>/queries/filters/ri/{ruleName}?applicationType={type}`
+
+**Headers:**
+- Accept = application/json
+- applicationType is not required, default value is stb
+
+**Response:** 200 OK; 400 BAD REQUEST
+
+### Create/update an RI filter
+
+If RI filter is missing it will be created, otherwise updated. For update operation id field is not needed.
+
+**POST** `http://<host>:<port>/updates/filters/ri?applicationType={type}`
+
+**Headers:**
+- Accept = application/json
+- applicationType is not required, default value is stb
+
+**Response:** 200 OK; 201 CREATED; 400 BAD REQUEST; 500 INTERNAL SERVER ERROR
+
+**Restrictions:**
+- Name should be not empty
+- At least one of filter criteria should be specified
+- MAC addresses should be valid
+
+### Delete RI filter by name
+
+**DELETE** `http://<host>:<port>/delete/filters/ri/{riFilterName}?applicationType={type}`
+
+**Headers:**
+- Accept = application/json
+- applicationType is not required, default value is stb
+
+**Response:** 204 NO CONTENT and message: Filter does't exist OR Successfully deleted; 400 BAD REQUEST
+
+---
+
+## Environment
+
+### Retrieve an list of environments
+
+**GET** `http://<host>:<port>/queries/environments`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK
+
+**Request Example:**
+```
+http://localhost:9091/queries/environments
+```
+
+**JSON Response:**
+```json
+[{"id":"DEV","description":"ff"},{"id":"TEST","description":"do not delete"}]
+```
+
+### Retrieve environment by id
+
+**GET** `http://<host>:<port>/queries/environments/<environmentId>`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK; 400 BAD REQUEST
+
+**Request Example:**
+```
+http://localhost:9091/queries/environments/DEV
+```
+
+### Create an environment
+
+**POST** `http://<host>:<port>/updates/environments`
+
+**Headers:**
+- Content-Type: application/json
+- Accept = application/json
+
+**Response:** 200 OK and saved object; 400 BAD REQUEST; 500 INTERNAL SERVER ERROR
+
+**Restrictions:**
+- Environment name should be valid by pattern: ^[a-zA-Z0-9]+$
+- Name should be unique
+
+**Request Example:**
+```
+http://localhost:9091/updates/environments
+```
+
+**JSON Request:**
+```json
+{"id":"testName","description":"some description"}
+```
+
+### Delete environment by id
+
+**DELETE** `http://<host>:<port>/delete/environments/<environmentId>`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 204 NO CONTENT and message: Environment doesn't exist OR Environment successfully deleted; 400 BAD REQUEST: Environment is used: <usage place>
+
+**Restrictions:**
+- Environment should be not used
+
+---
+
+## IP Address Group
+
+### Retrieve an IP address group list
+
+**GET** `http://<host>:<port>/queries/ipAddressGroups`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK
+
+**Request Example:**
+```
+http://localhost:9091/queries/ipAddressGroups
+```
+
+**JSON Response:**
+```json
+[
+  {
+    "id": "2c184325-f9eb-4edc-85c3-5b6466fc3c5c",
+    "name": "test",
+    "ipAddresses": [
+      "192.11.11.11"
+    ]
+  }
+]
+```
+
+### Retrieve an IP address group by name
+
+**GET** `http://<host>:<port>/queries/ipAddressGroups/byName/<ipAddressGroupName>/`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK; 400 BAD REQUEST
+
+### Retrieve an IP address group by IP
+
+**GET** `http://<host>:<port>/queries/ipAddressGroups/byIp/<ipAddressGroupIp>/`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK; 400 BAD REQUEST
+
+### Create an IP address group
+
+**POST** `http://<host>:<port>/updates/ipAddressGroups`
+
+**Headers:**
+- Content-Type: application/json
+- Accept = application/json
+
+**Response:** 200 OK and saved object; 400 BAD REQUEST; 500 INTERNAL SERVER ERROR
+
+**Restrictions:**
+- Name should be not empty and unique
+
+### Add data to IP Address Group
+
+**POST** `http://<host>:<port>/updates/ipAddressGroups/<ipAddressGroup_name>/addData`
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+
+**Response:** 200 OK and ipAddressGroup object; 400 BAD REQUEST; 500 INTERNAL SERVER ERROR
+
+**Restrictions:**
+- ipAddressGroup with current id should exist
+
+### Delete data from IP Address Group
+
+**POST** `http://<host>:<port>/updates/ipAddressGroups/<ipAddressGroup_name>/removeData`
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+
+**Response:** 204 NO CONTENT and ipAddressGroup object; 400 BAD REQUEST
+
+**Restrictions:**
+- List contains IPs which should be present in current IP address group
+- IP address group should contain at least one IP address
+
+### Delete an IP address group by id
+
+**DELETE** `http://<host>:<port>/delete/ipAddressGroups/<ipAddressGroupId>`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 204 NO CONTENT and message: IpAddressGroup doesn't exist OR IpAddressGroup successfully deleted; 400 BAD REQUEST: IpAddressGroup is used: <usage place>
+
+**Restrictions:**
+- IP address group should be not used
+
+---
+
+## Model
+
+### Retrieve a model list
+
+**GET** `http://<host>:<port>/queries/models`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK
+
+**Request Example:**
+```
+http://localhost:9091/queries/models
+```
+
+**JSON Response:**
+```json
+[
+  {
+    "id": "YETST",
+    "description": ""
+  },
+  {
+    "id": "PX013ANC",
+    "description": "Pace XG1v3 - Cisco Cable Card"
+  }
+]
+```
+
+### Retrieve model by id
+
+**GET** `http://<host>:<port>/queries/models/<modelId>`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK; 204 NO CONTENT
+
+### Create model
+
+**POST** `http://<host>:<port>/updates/models`
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+
+**Response:** 201 CREATED; 400 BAD REQUEST; 500 INTERNAL SERVER ERROR
+
+**Restrictions:**
+- Model name should be unique and valid by pattern: ^[a-zA-Z0-9]+$
+
+### Update model description
+
+**PUT** `http://<host>:<port>/updates/models`
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+
+**Response:** 200 OK; 400 BAD REQUEST; 404 NOT FOUND; 500 INTERNAL SERVER ERROR
+
+### Delete model by id
+
+**DELETE** `http://<host>:<port>/delete/models/<modelId>`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 204 NO CONTENT and message: Model deleted successfully; 404 NOT found and message "Model doesn't exist"
+
+**Restrictions:**
+- Model should be not used in another places
+
+---
+
+## NamespacedList
+
+### Retrieve all NS lists
+
+**GET** `http://<host>:<port>/queries/nsLists`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK
+
+**Request Example:**
+```
+http://localhost:9091/queries/nsLists
+```
+
+**JSON Response:**
+```json
+[
+  {
+    "id": "macs",
+    "data": [
+      "AA:AA:AA:AA:AA:AA"
+    ]
+  }
+]
+```
+
+### Retrieve NS list by id
+
+**GET** `http://<host>:<port>/queries/nsLists/byId/<nsListId>`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK
+
+### Retrieve NS list by mac part
+
+**GET** `http://<host>:<port>/queries/nsLists/byMacPart/<macAddressPart>`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK
+
+### Create a NS list
+
+**POST** `http://<host>:<port>/updates/nsLists`
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+
+**Response:** 201 CREATED; 400 BAD REQUEST; 500 INTERNAL SERVER ERROR
+
+**Restrictions:**
+- Name should be valid by pattern: ^[a-zA-Z0-9]+$
+- List data should be not empty and contain valid mac addresses
+- MAC address should be used only in one NS list
+
+### Add data to NS list
+
+**POST** `http://<host>:<port>/updates/nsLists/<nsListId>/addData`
+
+Or legacy endpoint:
+**POST** `http://<host>:<port>/updates/nslist/<nsListId>/addData`
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+
+**Response:** 200 OK and NS list object; 400 BAD REQUEST; 500 INTERNAL SERVER ERROR
+
+### Delete data from NS list
+
+**DELETE** `http://<host>:<port>/updates/nsLists/<nsListId>/removeData`
+
+Or legacy endpoint:
+**DELETE** `http://<host>:<port>/updates/nslist/<nsListId>/removeData`
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+
+**Response:** 204 NO CONTENT and NS list object; 400 BAD REQUEST
+
+**Restrictions:**
+- List contains MACs which should be present in current Namespaced list
+- Namespaced list should contain at least one MAC address
+
+### Delete an NS list by id
+
+**DELETE** `http://<host>:<port>/delete/nsLists/<nsListId>`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK and message: NamespacedList doesn't exist OR NamespacedList successfully deleted
+
+**Restrictions:**
+- NS list should be not used in another places
+
+---
+
+## Mac Rule
+
+### Retrieve a mac rule list (legacy)
+
+**GET** `http://<host>:<port>/queries/rules/macs?applicationType={type}`
+
+**Headers:**
+- Accept = application/json
+- applicationType is not required, default value is stb
+
+**Response:** 200 OK; 400 BAD REQUEST
+
+**Note:** With no version parameter or version < 2. Legacy query. For each macrule returned, if it was created with multiple maclists, only the first one is returned in macListRef.
+
+### Retrieve a mac rule list (v2)
+
+**GET** `http://<host>:<port>/queries/rules/macs?version=2&applicationType={type}`
+
+**Headers:**
+- Accept = application/json
+- applicationType is not required, default value is stb
+
+**Response:** 200 OK; 400 BAD REQUEST
+
+**Note:** Version parameter could be any number >= 2.
+
+### Retrieve mac rule by name (legacy)
+
+**GET** `http://<host>:<port>/queries/rules/macs/<macRuleName>`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK
+
+### Retrieve mac rule by name (v2)
+
+**GET** `http://<host>:<port>/queries/rules/macs/<macRuleName>?version=2&applicationType={type}`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK
+
+### Retrieve mac rule by mac address (legacy)
+
+**GET** `http://<host>:<port>/queries/rules/macs/address/{macAddress}?applicationType={type}`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK; 400 BAD REQUEST
+
+### Retrieve mac rule by mac address (v2)
+
+**GET** `http://<host>:<port>/queries/rules/macs/address/<macAddress>?version=2&applicationType={type}`
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK; 400 BAD REQUEST
+
+### Create/update mac rule
+
+For create operation id field is optional and the system will generate one in that case. If macrule corresponding to 'id' is missing, a new entry will be created. Otherwise existing entry is completely overwritten with the new parameters provided.
+
+**POST** `http://<host>:<port>/updates/rules/macs?applicationType={type}`
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+- applicationType is not required, default value is stb
+
+**Response:** 200 OK; 201 CREATED; 400 BAD REQUEST; 500 INTERNAL SERVER ERROR
+
+**Restrictions:**
+- Name, mac address list, model list, mac list, firmware configuration should be not empty
+- MAC address list is never used in another rule
+- Model list contain only existed model
+- Firmware config should support given models
+
+### Delete mac rule by name
+
+**DELETE** `http://<host>:<port>/delete/rules/macs/{macRuleName}?applicationType={type}`
+
+**Headers:**
+- Accept = application/json
+- applicationType is not required, default value is stb
+
+**Response:** 204 NO CONTENT and message: MacRule does'n exist OR MacRule deleted successfully; 400 BAD REQUEST
+
+---
+
+## FirmwareRuleTemplate
+
+### Retrieve filtered templates
+
+**GET** `http://<host>:<port>/firmwareruletemplate/filtered?name=MAC_RULE&key=someKey`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Request Parameters:**
+- Without params: Retrieve all firmware rule templates
+- `name`: Filter templates by name
+- `key`: Filter by rule key
+- `value`: Filter by rule value
+- Parameters can be combined: `?name=someName&value=testValue`
+
+**Response Codes:** 200
+
+### Import firmware rule templates
+
+**POST** `http://<host>:<port>/firmwareruletemplate/importAll`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Request Body:** List of firmware rule templates
+
+**Response Codes:** 200, 400, 404, 409
+
+**Response Body:**
+```json
+{
+    "NOT_IMPORTED": [],
+    "IMPORTED": []
+}
+```
+
+### Create firmware rule template
+
+**POST** `http://<host>:<port>/firmwareruletemplate/?applicationType=stb`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+- Authorization = Bearer {SAT token}
+
+**Response Status:** 201 Created
+
+### Update firmware rule template
+
+**POST** `http://<host>:<port>/firmwareruletemplate/?applicationType=stb`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+- Authorization = Bearer {SAT token}
+
+**Response Status:** 200 OK
+
+### Delete firmware rule template
+
+**POST** `http://<host>:<port>/firmwareruletemplate/testTemplateName`
+
+**Headers:**
+- Content-Type = application/json
+- Authorization = Bearer {SAT token}
+
+**Response Status:** 204 No Content
+
+---
+
+## FirmwareRule
+
+### Retrieve all firmware rules
+
+**GET** `http://<host>:<port>/firmwarerule`
+
+**Headers:**
+- Accept = application/json
+
+**Response Codes:** 200
+
+### Retrieve filtered firmware rules
+
+**GET** `http://<host>:<port>/firmwarerule/filtered?templateId=TEST_ID&key=firmwareVersion`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Request Parameters:**
+- `applicationType` (required): Filter by application type
+- `name`: Filter templates by name
+- `key`: Filter by rule key
+- `value`: Filter by rule value
+- `firmwareVersion`: Filter by firmware version
+- `templateId`: Filter by template
+
+**Response Codes:** 200
+
+### Import firmware rule
+
+**POST** `http://<host>:<port>/firmwarerule/importAll`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Request Body:** List of firmware rules
+
+**Response Codes:** 200, 400, 404, 409
+
+**Response Body:**
+```json
+{
+    "NOT_IMPORTED": [],
+    "IMPORTED": ["testName"]
+}
+```
+
+### Create firmware rule
+
+**POST** `http://<host>:<port>/firmwarerule/?applicationType=stb`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+- Authorization = Bearer {SAT token}
+
+**Response Status:** 201 Created
+
+### Update firmware rule
+
+**PUT** `http://<host>:<port>/firmwarerule/?applicationType=stb`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+- Authorization = Bearer {SAT token}
+
+**Response Status:** 200 OK
+
+### Delete firmware rule
+
+**DELETE** `http://<host>:<port>/firmwarerule/2ea59bab-b080-4593-8539-fb6db5fc8fd5`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+- Authorization = Bearer {SAT token}
+
+**Response Status:** 204 No Content
+
+---
+
+## Feature
+
+### Retrieve all features
+
+**GET** `http://<host>:<port>/feature`
+
+**Headers:**
+- Accept = application/json
+
+**Response Codes:** 200
+
+### Retrieve filtered features
+
+**GET** `http://<host>:<port>/feature/filtered?`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Request Parameters:**
+- `APPLICATION_TYPE` (required): Filter by application type
+- `NAME`: Filter features by name
+- `FEATURE_INSTANCE`: Filter by feature instance
+- `FREE_ARG`: Filter by property key
+- `FIXED_ARG`: Filter by property value
+
+**Response Codes:** 200
+
+### Import feature
+
+**POST** `http://<host>:<port>/feature/importAll`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Request Body:** List of features
+
+**Response Codes:** 200, 400, 409
+
+### Create feature
+
+**POST** `http://<host>:<port>/feature`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 201, 400, 409
+
+### Update feature
+
+**PUT** `http://<host>:<port>/feature`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 201, 400, 404, 409
+
+### Delete feature
+
+**DELETE** `http://<host>:<port>/feature/{id}`
+
+**Response Codes:** 204, 404, 409
+
+---
+
+## Feature Rule
+
+### Retrieve all feature rules
+
+**GET** `http://<host>:<port>/featurerule`
+
+**Headers:**
+- Accept = application/json
+
+**Response Codes:** 200
+
+### Retrieve filtered feature rules
+
+**GET** `http://<host>:<port>/featurerule/filtered?`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Request Parameters:**
+- `APPLICATION_TYPE` (required): Filter by application type
+- `NAME`: Filter by rule name
+- `FREE_ARG`: Filter by feature rule key
+- `FIXED_ARG`: Filter by feature rule value
+- `FEATURE`: Filter by feature instance
+
+**Response Codes:** 200
+
+### Import feature rule
+
+If feature rule with provided id does not exist it is imported otherwise updated.
+
+**POST** `http://<host>:<port>/featurerule/importAll`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Request Body:** List of feature rules
+
+**Response Codes:** 200, 400, 404, 409
+
+### Create feature rule
+
+**POST** `http://<host>:<port>/featurerule`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 201, 400, 404, 409
+
+### Update feature rule
+
+**PUT** `http://<host>:<port>/featurerule`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 201, 400, 404, 409
+
+### Delete feature rule
+
+**DELETE** `http://<host>:<port>/featurerule/{id}`
+
+**Response Codes:** 204, 404, 409
+
+---
+
+## Activation Minimum Version
+
+### Retrieve all activation minimum versions
+
+**GET** `http://<host>:<port>/amv`
+
+**Headers:**
+- Accept = application/json
+
+**Response Codes:** 200
+
+### Retrieve filtered activation minimum versions
+
+**GET** `http://<host>:<port>/amv/filtered?`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Request Parameters:**
+- `applicationType` (required): Filter by application type
+- `DESCRIPTION`: Filter by description
+- `MODEL`: Filter by model
+- `PARTNER_ID`: Filter by partner id
+- `FIRMWARE_VERSION`: Filter by firmware version
+- `REGULAR_EXPRESSION`: Filter by regular expression
+
+**Response Codes:** 200
+
+### Import activation version
+
+If activation minimum version with provided id does not exist it is imported otherwise updated.
+
+**POST** `http://<host>:<port>/amv/importAll`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Request Body:** List of activation minimum versions
+
+**Response Codes:** 200, 400, 404, 409
+
+### Create activation minimum version
+
+**POST** `http://<host>:<port>/amv`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 201, 400, 404, 409
+
+### Update activation minimum version
+
+**PUT** `http://<host>:<port>/amv`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 201, 400, 404, 409
+
+### Delete activation minimum version
+
+**DELETE** `http://<host>:<port>/amv/{id}`
+
+**Response Codes:** 204, 404, 409
+
+---
+
+## Telemetry Profile
+
+### Retrieve all Telemetry Profiles
+
+**GET** `http://<host>:<port>/telemetry/profile`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 200
+
+### Retrieve Telemetry Profile
+
+**GET** `http://<host>:<port>/telemetry/profile/{id}`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 200, 404
+
+### Create Telemetry Profile
+
+**POST** `http://<host>:<port>/telemetry/profile`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 201, 400, 409
+
+### Update Telemetry Profile
+
+**PUT** `http://<host>:<port>/telemetry/profile`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 200, 400, 404, 409
+
+### Delete Telemetry Profile
+
+**DELETE** `http://<host>:<port>/telemetry/profile/{id}`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 204, 404, 409
+
+### Add Telemetry Profile Entry
+
+**PUT** `http://<host>:<port>/telemetry/profile/entry/add/{id}`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 200, 404
+
+### Remove Telemetry Profile entry
+
+**PUT** `http://<host>:<port>/telemetry/profile/entry/remove/{id}`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 200, 404
+
+### Create Telemetry Profile through pending changes
+
+**POST** `http://<host>:<port>/telemetry/profile/change`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 201, 400, 409
+
+### Update Telemetry Profile with approval
+
+**PUT** `http://<host>:<port>/telemetry/profile/change`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 200, 400, 404, 409
+
+### Delete Telemetry Profile with approval
+
+**DELETE** `http://<host>:<port>/telemetry/profile/change/{id}`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 204, 404, 409
+
+### Add Telemetry Profile Entry with approval
+
+**PUT** `http://<host>:<port>/telemetry/profile/change/entry/add/{id}`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 200, 404
+
+### Remove Telemetry Profile entry with approval
+
+**PUT** `http://<host>:<port>/telemetry/profile/change/entry/remove/{id}`
+
+**Headers:**
+- Accept = application/json
+- Content-Type = application/json
+
+**Response Codes:** 200, 404
 
 ---
 
