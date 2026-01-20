@@ -719,6 +719,7 @@ func TestGetDeviceSettingsByIdHandler_EmptyID(t *testing.T) {
 
 // TestDeleteDeviceSettingsByIdHandler_Success tests successful deletion
 func TestDeleteDeviceSettingsByIdHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test: requires proper deletion behavior
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
