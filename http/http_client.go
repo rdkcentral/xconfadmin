@@ -295,6 +295,13 @@ func (c *HttpClient) DoWithRetries(method string, url string, inHeaders map[stri
 			time.Sleep(time.Duration(c.retryInMsecs) * time.Millisecond)
 		}
 		rbytes, err, cont, statusCode = c.Do(method, url, headers, cbytes, extServiceAuditFields, loggerName, i)
+
+		log.WithFields(log.Fields{
+			"method": method,
+			"url":    url,
+			"status": statusCode,
+		}).Debug("http client request sent")
+
 		if !cont {
 			break
 		}

@@ -36,14 +36,11 @@ const (
 	MetricsEnabledDefault     = true
 	responseLoggingLowerBound = 1000
 	responseLoggingUpperBound = 5000
+
+	DEV_PROFILE = "dev"
 )
 
-const DEV_PROFILE string = "dev"
-
-var (
-	WebConfServer *WebconfigServer
-	//ds            *xhttp.XconfServer //TODO
-)
+var WebConfServer *WebconfigServer
 
 // len(response) < lowerBound               ==> convert to json
 // lowerBound <= len(response) < upperBound ==> stay string
@@ -61,24 +58,32 @@ type WebconfigServer struct {
 	*GroupServiceSyncConnector
 	*taggingapi_config.TaggingApiConfig
 	*tracing.XpcTracer
-	tlsConfig          *tls.Config
-	notLoggedHeaders   []string
-	metricsEnabled     bool
-	testOnly           bool
-	AppName            string
-	ServerOriginId     string
-	IdpLoginPath       string
-	IdpLogoutPath      string
-	IdpLogoutAfterPath string
-	IdpCodePath        string
-	IdpUrlPath         string
-	VerifyStageHost    bool
+	tlsConfig             *tls.Config
+	DistributedLockConfig *DistributedLockConfig
+	notLoggedHeaders      []string
+	metricsEnabled        bool
+	testOnly              bool
+	AppName               string
+	ServerOriginId        string
+	IdpLoginPath          string
+	IdpLogoutPath         string
+	IdpLogoutAfterPath    string
+	IdpCodePath           string
+	IdpUrlPath            string
+	VerifyStageHost       bool
+}
+
+type DistributedLockConfig struct {
+	Enabled  bool
+	TableTTL int
+	RowTTL   int
 }
 
 type ExternalConnectors struct {
 	xw_ect *xhttp.ExternalConnectors
 	IdpServiceConnector
 }
+
 type ProcessHook interface {
 	Process(*WebconfigServer, ...interface{})
 }
@@ -127,6 +132,14 @@ func NewTlsConfig(conf *configuration.Config) (*tls.Config, error) {
 	}, nil
 }
 
+func NewDistributedLockConfig(conf *configuration.Config) *DistributedLockConfig {
+	return &DistributedLockConfig{
+		Enabled:  conf.GetBoolean("xconfwebconfig.xconf.distributed_lock_enabled", false),
+		TableTTL: int(conf.GetInt32("xconfwebconfig.xconf.distributed_lock_table_ttl", 5)),
+		RowTTL:   int(conf.GetInt32("xconfwebconfig.xconf.distributed_lock_table_row_ttl", 2)),
+	}
+}
+
 // testOnly=true ==> running unit test
 func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseClient, ec *ExternalConnectors) *WebconfigServer {
 	if ec == nil {
@@ -147,6 +160,7 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 	for _, x := range ignoredHeaders {
 		notLoggedHeaders = append(notLoggedHeaders, strings.ToLower(x))
 	}
+
 	// idp api paths fetching
 	idpAuthProvider := conf.GetString("xconfwebconfig.xconf.authprovider", "acl")
 	idpAuthServer := conf.GetString("xconfwebconfig.xconf.idp_service_name")
@@ -157,11 +171,12 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 	idpLogoutAfterPath := conf.GetString(fmt.Sprintf("xconfwebconfig.%v.idp_logout_after_path", idpAuthServer), idpAuthProvider+"/logout/after")
 	verifyStageHost := conf.GetBoolean("xconfwebconfig.sat_consumer.verify_stage_host", false)
 
-	// tlsConfig, here we ignore any error
+	// tlsConfig for http clients
 	tlsConfig, err := NewTlsConfig(conf)
 	if err != nil && !testOnly {
 		panic(err)
 	}
+
 	var idpSvc IdpServiceConnector
 	if idpAuthProvider != "acl" {
 		idpSvc = NewIdpServiceConnector(conf, ec.IdpServiceConnector)
@@ -182,6 +197,7 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 		GroupServiceConnector:     NewGroupServiceConnector(conf, tlsConfig),
 		GroupServiceSyncConnector: NewGroupServiceSyncConnector(conf, tlsConfig),
 		TaggingApiConfig:          taggingapi_config.NewTaggingApiConfig(conf),
+		DistributedLockConfig:     NewDistributedLockConfig(conf),
 		XconfConnector:            NewXconfConnector(conf, "xconf", tlsConfig),
 		XW_XconfServer:            xhttp.NewXconfServer(sc, testOnly, ec.xw_ect),
 		IdpLoginPath:              idpLoginPath,
@@ -196,6 +212,7 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 	if testOnly {
 		WebConfServer.setupMocks()
 	}
+
 	return WebConfServer
 }
 

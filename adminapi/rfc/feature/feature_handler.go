@@ -19,6 +19,7 @@ package feature
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -345,4 +346,49 @@ func GetFeaturesByIdListHandler(w http.ResponseWriter, r *http.Request) {
 	features := GetFeaturesByIdList(featureIdList)
 	response, _ := util.JSONMarshal(features)
 	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
+}
+
+func GetXconfConnector() *xhttp.XconfConnector {
+	return xhttp.WebConfServer.XconfConnector
+}
+
+func GetPreprocessedFeaturesHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanRead(r, auth.DCM_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+	xw, ok := w.(*xwhttp.XResponseWriter)
+	if !ok {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "responsewriter cast error")
+		return
+	}
+
+	fields := xw.Audit()
+	params := mux.Vars(r)
+	mac := params["mac"]
+	estbMac := strings.ToUpper(mac)
+	contextMap := make(map[string]string)
+	if estbMac != "" {
+		normalizedEstbMac, err := util.MacAddrComplexFormat(estbMac)
+		if err == nil {
+			contextMap[xcommon.ESTB_MAC_ADDRESS] = normalizedEstbMac
+		} else {
+			xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("invalid MAC address format"))
+			return
+		}
+	}
+
+	features, xconfError := GetXconfConnector().GetPreprocessedFeatures(estbMac, fields)
+	if xconfError != nil {
+		statusCode := http.StatusInternalServerError
+		var remoteErr xwcommon.RemoteHttpErrorAS
+		if errors.As(xconfError, &remoteErr) {
+			statusCode = remoteErr.StatusCode
+		}
+		xhttp.WriteAdminErrorResponse(w, statusCode, xconfError.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	xwhttp.WriteXconfResponse(w, http.StatusOK, []byte(features))
 }
