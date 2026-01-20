@@ -37,17 +37,17 @@ The XConf Admin API provides comprehensive configuration management for RDK devi
 18. [Feature Rule](#feature-rule)
 19. [Activation Minimum Version](#activation-minimum-version)
 
+### Device Configuration Management
+20. [DCM (Device Configuration Management)](#dcm-device-configuration-management)
+
 ### Telemetry Management
-20. [Telemetry Profile](#telemetry-profile)
-21. [Telemetry Profile 2.0](#telemetry-profile-20)
-22. [Telemetry 2.0 Profile Json Schema](#telemetry-20-profile-json-schema)
+21. [Telemetry Profile](#telemetry-profile)
+22. [Telemetry Profile 2.0](#telemetry-profile-20)
+23. [Telemetry 2.0 Profile Json Schema](#telemetry-20-profile-json-schema)
 
 ### Change Management
-23. [Change API](#change-api)
-24. [Change v2 API](#change-v2-api)
-
-### Device Configuration Management
-25. [DCM (Device Configuration Management)](#dcm-device-configuration-management)
+24. [Change API](#change-api)
+25. [Change v2 API](#change-v2-api)
 
 ---
 
