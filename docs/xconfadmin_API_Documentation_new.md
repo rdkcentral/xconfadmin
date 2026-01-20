@@ -2171,3 +2171,461 @@ PUT http://<host>:<port>/telemetry/v2/profile/change
     "author": "UNKNOWN_USER"
 }
 ```
+
+---
+
+## DCM (Device Configuration Management)
+
+### Retrieve all DCM Formulas
+
+Get all DCM formulas for authenticated application type:
+
+**GET** /dcm/formula?applicationType=stb
+
+**Headers:**
+- Accept = application/json
+- applicationType is not required, default value is stb
+
+**Response:** 200 OK
+
+**Response Body Example:**
+`json
+[
+  {
+    "id": "formula-001",
+    "name": "STB Configuration Rule",
+    "description": "Configuration for STB devices",
+    "priority": 1,
+    "ruleExpression": "model == 'STB_MODEL_X'",
+    "percentage": 100,
+    "percentageL1": 50.0,
+    "percentageL2": 30.0,
+    "percentageL3": 20.0,
+    "applicationType": "stb",
+    "rule": {
+      "condition": {
+        "freeArg": "model",
+        "operation": "IS",
+        "fixedArg": "STB_MODEL_X"
+      }
+    }
+  }
+]
+`
+
+### Create DCM Formula
+
+Create a new DCM formula:
+
+**POST** /dcm/formula?applicationType=stb
+
+**Headers:**
+- Content-Type = application/json
+- Accept = application/json
+- applicationType is not required, default value is stb
+
+**Response:** 201 CREATED; 400 BAD REQUEST; 500 INTERNAL SERVER ERROR
+
+**Request Body Example:**
+`json
+{
+  "name": "New STB Configuration Rule",
+  "description": "New configuration for STB devices",
+  "priority": 2,
+  "ruleExpression": "model == 'STB_MODEL_Y'",
+  "percentage": 75,
+  "percentageL1": 40.0,
+  "percentageL2": 35.0,
+  "percentageL3": 25.0,
+  "applicationType": "stb",
+  "rule": {
+    "condition": {
+      "freeArg": "model",
+      "operation": "IS",
+      "fixedArg": "STB_MODEL_Y"
+    }
+  }
+}
+`
+
+**Response Body Example:**
+`json
+{
+  "id": "formula-002",
+  "name": "New STB Configuration Rule",
+  "description": "New configuration for STB devices",
+  "priority": 2,
+  "ruleExpression": "model == 'STB_MODEL_Y'",
+  "percentage": 75,
+  "percentageL1": 40.0,
+  "percentageL2": 35.0,
+  "percentageL3": 25.0,
+  "applicationType": "stb",
+  "rule": {
+    "condition": {
+      "freeArg": "model",
+      "operation": "IS",
+      "fixedArg": "STB_MODEL_Y"
+    }
+  }
+}
+`
+
+### Retrieve all Device Settings
+
+Get all device settings:
+
+**GET** /dcm/deviceSettings
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK
+
+**Response Body Example:**
+`json
+[
+  {
+    "id": "device-settings-001",
+    "name": "STB Device Settings",
+    "checkOnReboot": true,
+    "settingsAreActive": true,
+    "schedule": {
+      "type": "CronExpression",
+      "expression": "0 2 * * *",
+      "timeWindowMinutes": 60,
+      "startDate": "2025-01-01",
+      "endDate": "2025-12-31"
+    },
+    "configData": {
+      "logLevel": "INFO",
+      "uploadOnReboot": true
+    }
+  }
+]
+`
+
+### Retrieve all Log Upload Settings
+
+Get all log upload settings:
+
+**GET** /dcm/logUploadSettings
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK
+
+**Response Body Example:**
+`json
+[
+  {
+    "id": "log-upload-001",
+    "name": "Production Log Upload",
+    "uploadOnReboot": true,
+    "numberOfDays": 7,
+    "areSettingsActive": true,
+    "modeToGetLogFiles": "LogFiles",
+    "schedule": {
+      "type": "CronExpression",
+      "expression": "0 3 * * *",
+      "timeWindowMinutes": 120
+    },
+    "logFiles": [
+      {
+        "name": "system.log",
+        "logFileName": "/var/log/system.log"
+      }
+    ],
+    "logUploadSettings": {
+      "uploadRepositoryName": "prod-repo",
+      "uploadProtocol": "HTTPS"
+    }
+  }
+]
+`
+
+### Retrieve all VOD Settings
+
+Get all Video On Demand settings:
+
+**GET** /dcm/vodsettings
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK
+
+**Response Body Example:**
+`json
+[
+  {
+    "id": "vod-settings-001", 
+    "name": "Production VOD Settings",
+    "locationsURL": "https://vod.example.com/locations",
+    "srmIPList": ["192.168.1.10", "192.168.1.11"],
+    "ipNames": ["SRM-1", "SRM-2"],
+    "ipList": ["192.168.1.10", "192.168.1.11"]
+  }
+]
+`
+
+### Retrieve all Upload Repositories
+
+Get all upload repository settings:
+
+**GET** /dcm/uploadRepository
+
+**Headers:**
+- Accept = application/json
+
+**Response:** 200 OK
+
+**Response Body Example:**
+`json
+[
+  {
+    "id": "repo-001",
+    "name": "Production Repository",
+    "description": "Production log upload repository",
+    "url": "https://logs.example.com/upload",
+    "protocol": "HTTPS",
+    "applicationType": "stb"
+  }
+]
+`
+"@ | Add-Content "d:\RDKM\xconf_new_source_codes_generate_contents\xconfadmin_API_Documentation_new.md"
+# First, remove any existing DCM section at the end
+ = Get-Content "d:\RDKM\xconf_new_source_codes_generate_contents\xconfadmin_API_Documentation_new.md" -Raw
+ =  -replace '(?s)\n---\s*\n## DCM.*?$', ''
+ | Set-Content "d:\RDKM\xconf_new_source_codes_generate_contents\xconfadmin_API_Documentation_new.md"
+"DCM section removed"
+ = Get-Content "d:\RDKM\xconf_new_source_codes_generate_contents\xconfadmin_API_Documentation_new.md" -Raw;  =  -replace '(?s)\n---\s*\n## DCM.*?$', '';  | Set-Content "d:\RDKM\xconf_new_source_codes_generate_contents\xconfadmin_API_Documentation_new.md"; "DCM section cleaned"
+@"
+
+---
+
+## DCM (Device Configuration Management)
+
+### Get All DCM Formulas
+Get all DCM formulas for authenticated application type:
+
+**GET** \/dcm/formula?applicationType=stb\
+
+<details>
+<summary><strong>Response Body:</strong> Array of DCM Formula objects</summary>
+
+\\\json
+[
+  {
+    "id": "formula-001",
+    "name": "STB Configuration Rule",
+    "description": "Configuration for STB devices",
+    "priority": 1,
+    "ruleExpression": "model == 'STB_MODEL_X'",
+    "percentage": 100,
+    "percentageL1": 50.0,
+    "percentageL2": 30.0,
+    "percentageL3": 20.0,
+    "applicationType": "stb",
+    "rule": {
+      "condition": {
+        "freeArg": "model",
+        "operation": "IS",
+        "fixedArg": "STB_MODEL_X"
+      }
+    }
+  }
+]
+\\\
+</details>
+
+Response Codes: 200, 401
+
+---
+
+### Create DCM Formula
+Create a new DCM formula:
+
+**POST** \/dcm/formula?applicationType=stb\
+
+<details>
+<summary><strong>Request Body:</strong> DCM Formula creation data</summary>
+
+\\\json
+{
+  "name": "New STB Configuration Rule",
+  "description": "New configuration for STB devices",
+  "priority": 2,
+  "ruleExpression": "model == 'STB_MODEL_Y'",
+  "percentage": 75,
+  "percentageL1": 40.0,
+  "percentageL2": 35.0,
+  "percentageL3": 25.0,
+  "applicationType": "stb",
+  "rule": {
+    "condition": {
+      "freeArg": "model",
+      "operation": "IS",
+      "fixedArg": "STB_MODEL_Y"
+    }
+  }
+}
+\\\
+</details>
+
+<details>
+<summary><strong>Response Body:</strong> Created DCM Formula object</summary>
+
+\\\json
+{
+  "id": "formula-002",
+  "name": "New STB Configuration Rule",
+  "description": "New configuration for STB devices",
+  "priority": 2,
+  "ruleExpression": "model == 'STB_MODEL_Y'",
+  "percentage": 75,
+  "percentageL1": 40.0,
+  "percentageL2": 35.0,
+  "percentageL3": 25.0,
+  "applicationType": "stb",
+  "rule": {
+    "condition": {
+      "freeArg": "model",
+      "operation": "IS",
+      "fixedArg": "STB_MODEL_Y"
+    }
+  }
+}
+\\\
+</details>
+
+Response Codes: 201, 400, 401
+
+---
+
+### Get All Device Settings
+Get all device settings:
+
+**GET** \/dcm/deviceSettings\
+
+<details>
+<summary><strong>Response Body:</strong> Array of Device Settings objects</summary>
+
+\\\json
+[
+  {
+    "id": "device-settings-001",
+    "name": "STB Device Settings",
+    "checkOnReboot": true,
+    "settingsAreActive": true,
+    "schedule": {
+      "type": "CronExpression",
+      "expression": "0 2 * * *",
+      "timeWindowMinutes": 60,
+      "startDate": "2025-01-01",
+      "endDate": "2025-12-31"
+    },
+    "configData": {
+      "logLevel": "INFO",
+      "uploadOnReboot": true
+    }
+  }
+]
+\\\
+</details>
+
+Response Codes: 200, 401
+
+---
+
+### Get All Log Upload Settings
+Get all log upload settings:
+
+**GET** \/dcm/logUploadSettings\
+
+<details>
+<summary><strong>Response Body:</strong> Array of Log Upload Settings objects</summary>
+
+\\\json
+[
+  {
+    "id": "log-upload-001",
+    "name": "Production Log Upload",
+    "uploadOnReboot": true,
+    "numberOfDays": 7,
+    "areSettingsActive": true,
+    "modeToGetLogFiles": "LogFiles",
+    "schedule": {
+      "type": "CronExpression",
+      "expression": "0 3 * * *",
+      "timeWindowMinutes": 120
+    },
+    "logFiles": [
+      {
+        "name": "system.log",
+        "logFileName": "/var/log/system.log"
+      }
+    ],
+    "logUploadSettings": {
+      "uploadRepositoryName": "prod-repo",
+      "uploadProtocol": "HTTPS"
+    }
+  }
+]
+\\\
+</details>
+
+Response Codes: 200, 401
+
+---
+
+### Get All VOD Settings
+Get all Video On Demand settings:
+
+**GET** \/dcm/vodsettings\
+
+<details>
+<summary><strong>Response Body:</strong> Array of VOD Settings objects</summary>
+
+\\\json
+[
+  {
+    "id": "vod-settings-001", 
+    "name": "Production VOD Settings",
+    "locationsURL": "https://vod.example.com/locations",
+    "srmIPList": ["192.168.1.10", "192.168.1.11"],
+    "ipNames": ["SRM-1", "SRM-2"],
+    "ipList": ["192.168.1.10", "192.168.1.11"]
+  }
+]
+\\\
+</details>
+
+Response Codes: 200, 401
+
+---
+
+### Get All Upload Repositories
+Get all upload repository settings:
+
+**GET** \/dcm/uploadRepository\
+
+<details>
+<summary><strong>Response Body:</strong> Array of Upload Repository objects</summary>
+
+\\\json
+[
+  {
+    "id": "repo-001",
+    "name": "Production Repository",
+    "description": "Production log upload repository",
+    "url": "https://logs.example.com/upload",
+    "protocol": "HTTPS",
+    "applicationType": "stb"
+  }
+]
+\\\
+</details>
+
+Response Codes: 200, 401
