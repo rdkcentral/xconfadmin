@@ -2093,16 +2093,6 @@ The JsonConfig field of a Telemetry 2.0 Profile is validated using the following
 
 ## Change v2 API
 
-### Approve by entity id (not supported in golang implementation)
-
-To approve all changes by entity id
-
-**GET** `http://<host>:<port>/change/v2/approve/byEntityId/{id}`
-
-**Response Codes:** 200, 404, 409
-
-**Response Body:** Change id - error message object. If change successfully approve an empty object is returned
-
 ### Cancel change
 
 **GET** `http://<host>:<port>/change/v2/cancel/{changeId}`
