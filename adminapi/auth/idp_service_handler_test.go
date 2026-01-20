@@ -1,3 +1,20 @@
+/**
+ * Copyright 2025 Comcast Cable Communications Management, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package auth
 
 import (
@@ -13,6 +30,26 @@ import (
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 )
+
+// setupTestEnv sets all required environment variables for tests
+func setupTestEnv() {
+	os.Setenv("SECURITY_TOKEN_KEY", "testSecurityTokenKey")
+	os.Setenv("XPC_KEY", "testXpcKey")
+	os.Setenv("SAT_CLIENT_ID", "test-sat-client")
+	os.Setenv("SAT_CLIENT_SECRET", "test-sat-secret")
+	os.Setenv("IDP_CLIENT_ID", "test-idp-client")
+	os.Setenv("IDP_CLIENT_SECRET", "test-idp-secret")
+}
+
+// cleanupTestEnv removes all test environment variables
+func cleanupTestEnv() {
+	os.Unsetenv("SECURITY_TOKEN_KEY")
+	os.Unsetenv("XPC_KEY")
+	os.Unsetenv("SAT_CLIENT_ID")
+	os.Unsetenv("SAT_CLIENT_SECRET")
+	os.Unsetenv("IDP_CLIENT_ID")
+	os.Unsetenv("IDP_CLIENT_SECRET")
+}
 
 // fake idp connector
 type fakeIdp struct {
@@ -90,6 +127,9 @@ func TestGetAdminUIUrlFromCookies_FallbackAndSuccess(t *testing.T) {
 }
 
 func TestLoginUrlHandler_SetsUrl(t *testing.T) {
+	setupTestEnv()
+	defer cleanupTestEnv()
+
 	fidp := &fakeIdp{tokenReturn: "tok"}
 	WebServerInjection(makeWs(fidp))
 	// cookie defines admin UI base
@@ -108,6 +148,9 @@ func TestLoginUrlHandler_SetsUrl(t *testing.T) {
 }
 
 func TestLogoutHandler_SuccessAndError(t *testing.T) {
+	setupTestEnv()
+	defer cleanupTestEnv()
+
 	// success
 	fidp := &fakeIdp{}
 	WebServerInjection(makeWs(fidp))
@@ -129,6 +172,9 @@ func TestLogoutHandler_SuccessAndError(t *testing.T) {
 }
 
 func TestLogoutAfterHandler_Redirect(t *testing.T) {
+	setupTestEnv()
+	defer cleanupTestEnv()
+
 	fidp := &fakeIdp{}
 	WebServerInjection(makeWs(fidp))
 	r := httptest.NewRequest("GET", "/logoutafter", nil)
@@ -146,6 +192,9 @@ func TestLogoutAfterHandler_Redirect(t *testing.T) {
 // CodeHandler branches: missing code, idp returns empty token, invalid token, valid token
 // For invalid token we inject a token that ValidateAndGetLoginToken will reject (use plain text)
 func TestCodeHandler_Branches(t *testing.T) {
+	setupTestEnv()
+	defer cleanupTestEnv()
+
 	// missing code
 	fidp := &fakeIdp{}
 	WebServerInjection(makeWs(fidp))
