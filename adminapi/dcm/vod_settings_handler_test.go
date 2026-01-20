@@ -55,6 +55,7 @@ func TestGetVodSettingExportHandler_Success(t *testing.T) {
 
 // TestGetVodSettingExportHandler_EmptyResult tests export with no data
 func TestGetVodSettingExportHandler_EmptyResult(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -80,6 +81,7 @@ func TestGetVodSettingExportHandler_EmptyResult(t *testing.T) {
 
 // TestGetVodSettingExportHandler_WithDcmFormulas tests export with DCM formulas
 func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -134,6 +136,7 @@ func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
 
 // TestGetVodSettingExportHandler_ApplicationTypeFilter tests that export respects application type
 func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -188,6 +191,7 @@ func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 
 // TestGetVodSettingExportHandler_MissingVodSettings tests formulas without corresponding VOD settings
 func TestGetVodSettingExportHandler_MissingVodSettings(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -263,6 +267,7 @@ func TestGetVodSettingExportHandler_MissingAuthCookie(t *testing.T) {
 
 // TestGetVodSettingExportHandler_DifferentApplicationTypes tests export for different application types
 func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -320,6 +325,7 @@ func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
 
 // TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings tests mixed scenario
 func TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -370,6 +376,7 @@ func TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings(t *testin
 
 // TestGetVodSettingExportHandler_ValidateResponseStructure tests the structure of the response
 func TestGetVodSettingExportHandler_ValidateResponseStructure(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 

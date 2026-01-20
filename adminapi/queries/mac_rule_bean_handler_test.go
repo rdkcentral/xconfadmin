@@ -39,6 +39,7 @@ import (
 )
 
 func TestGetMacRuleBeansWithoutVersionParam(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 
 	macList := createAndSaveMacList()
@@ -62,6 +63,7 @@ func TestGetMacRuleBeansWithoutVersionParam(t *testing.T) {
 }
 
 func TestGetMacRuleBeansWithVersionParams(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 
 	macList := createAndSaveMacList()
@@ -111,14 +113,14 @@ func createAndSaveMacList() *shared.GenericNamespacedList {
 	macList := shared.NewMacList()
 	macList.ID = "TEST_MAC_LIST"
 	macList.Data = []string{"AA:AA:AA:AA:AA:AA", "BB:BB:BB:BB:BB:BB"}
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, macList.ID, macList)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, macList.ID, macList)
 	return macList
 }
 
 func createAndSaveMacRuleTemplate(macListId string) *corefw.FirmwareRuleTemplate {
 	macRule := estbfirmware.NewMacRule(macListId)
 	mrt := admin_corefw.NewFirmwareRuleTemplate(corefw.MAC_RULE, macRule, []string{}, 1)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_FIRMWARE_RULE_TEMPLATE, mrt.ID, mrt)
+	SetOneInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE, mrt.ID, mrt)
 	return mrt
 }
 

@@ -41,8 +41,8 @@ import (
 )
 
 func TestCreateTelemetryTwoNoopRule(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	DeleteTelemetryEntities()
+	defer DeleteTelemetryEntities()
 
 	telemetryTwoRule := createTelemetryTwoRule(true, []string{})
 
@@ -57,7 +57,7 @@ func TestCreateTelemetryTwoNoopRule(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, rr.Code)
 
 	profile := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, profile.ID, profile)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profile.ID, profile)
 }
 
 func TestTelemetryTwoRuleNotCreateInNoOpValidationFails(t *testing.T) {
@@ -86,8 +86,8 @@ func TestTelemetryTwoRuleNotCreateInNoOpValidationFails(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			DeleteAllEntities()
-			defer DeleteAllEntities()
+			DeleteTelemetryEntities()
+			defer DeleteTelemetryEntities()
 
 			telemetryTwoRule := createTelemetryTwoRule(tt.noOp, tt.profiles)
 
@@ -105,7 +105,7 @@ func TestTelemetryTwoRuleNotCreateInNoOpValidationFails(t *testing.T) {
 			json.Unmarshal(rr.Body.Bytes(), &err)
 			assert.Equal(t, tt.errMsg, err.Message)
 
-			savedTelemetryRule, _ := ds.GetCachedSimpleDao().GetOne(ds.TABLE_TELEMETRY_TWO_RULES, telemetryTwoRule.ID)
+			savedTelemetryRule, _ := GetOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, telemetryTwoRule.ID)
 			assert.Nil(t, savedTelemetryRule)
 		})
 	}
@@ -134,16 +134,16 @@ func createTelemetryTwoRule(noOp bool, profiles []string) *xwlogupload.Telemetry
 // Additional tests for telemetry_v2_rule_handler.go
 
 func TestGetTelemetryTwoRulesAllExport_EmptyAndHeader(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/v2/rule?applicationType=stb", nil)
 	rr := ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Body.String(), "[]")
 	// create one rule to test export header path
 	prof := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
 	rule := createTelemetryTwoRule(false, []string{prof.ID})
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
 	r = httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/v2/rule?applicationType=stb&export=true", nil)
 	rr = ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -152,11 +152,11 @@ func TestGetTelemetryTwoRulesAllExport_EmptyAndHeader(t *testing.T) {
 }
 
 func TestGetTelemetryTwoRuleById_SuccessExportAndNotFound(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	prof := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
 	rule := createTelemetryTwoRule(false, []string{prof.ID})
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
 	// success normal
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/rule/%s?applicationType=stb", rule.ID)
 	r := httptest.NewRequest(http.MethodGet, url, nil)
@@ -176,11 +176,11 @@ func TestGetTelemetryTwoRuleById_SuccessExportAndNotFound(t *testing.T) {
 }
 
 func TestDeleteOneTelemetryTwoRuleHandler_SuccessAndNotFound(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	prof := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
 	rule := createTelemetryTwoRule(false, []string{prof.ID})
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/rule/%s?applicationType=stb", rule.ID)
 	r := httptest.NewRequest(http.MethodDelete, url, nil)
 	rr := ExecuteRequest(r, router)
@@ -193,9 +193,9 @@ func TestDeleteOneTelemetryTwoRuleHandler_SuccessAndNotFound(t *testing.T) {
 }
 
 func TestCreateTelemetryTwoRulesPackageHandler_Mixed(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	prof := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
 	valid := createTelemetryTwoRule(false, []string{prof.ID})
 	invalid := createTelemetryTwoRule(false, []string{}) // no profiles -> validation failure
 	entities := []*xwlogupload.TelemetryTwoRule{valid, invalid}
@@ -207,11 +207,11 @@ func TestCreateTelemetryTwoRulesPackageHandler_Mixed(t *testing.T) {
 }
 
 func TestUpdateTelemetryTwoRuleHandler_SuccessConflict(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	prof := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
 	rule := createTelemetryTwoRule(false, []string{prof.ID})
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
 	rule.Name = "UpdatedName"
 	b, _ := json.Marshal(rule)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/rule?applicationType=stb", bytes.NewReader(b))
@@ -226,13 +226,13 @@ func TestUpdateTelemetryTwoRuleHandler_SuccessConflict(t *testing.T) {
 }
 
 func TestUpdateTelemetryTwoRulesPackageHandler_Mixed(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	prof := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
 	a := createTelemetryTwoRule(false, []string{prof.ID})
 	bRule := createTelemetryTwoRule(false, []string{prof.ID})
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, a.ID, a)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, bRule.ID, bRule)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_RULES, a.ID, a)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_RULES, bRule.ID, bRule)
 	a.Name = "AUpdated"             // valid
 	bRule.ApplicationType = "wrong" // conflict
 	entities := []*xwlogupload.TelemetryTwoRule{a, bRule}
@@ -244,13 +244,13 @@ func TestUpdateTelemetryTwoRulesPackageHandler_Mixed(t *testing.T) {
 }
 
 func TestGetTelemetryTwoRulesFilteredWithPage_PagingAndInvalid(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	prof := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
 	for i := 0; i < 12; i++ {
 		rule := createTelemetryTwoRule(false, []string{prof.ID})
 		rule.Name = fmt.Sprintf("Rule_%02d", i)
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
+		SetOneInDao(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
 	}
 	// page 2 size 5
 	bodyMap := map[string]string{}
@@ -288,7 +288,7 @@ func TestGetTelemetryTwoRuleById_BlankIdError(t *testing.T) {
 }
 
 func TestGetTelemetryTwoRuleById_EntityNotFoundError(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	// Test WriteAdminErrorResponse path when entity doesn't exist
 	nonExistentId := uuid.NewString()
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/rule/%s?applicationType=stb", nonExistentId)
@@ -300,7 +300,7 @@ func TestGetTelemetryTwoRuleById_EntityNotFoundError(t *testing.T) {
 
 func TestDeleteOneTelemetryTwoRuleHandler_AuthError(t *testing.T) {
 	// Test when entity doesn't exist - triggers error response
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/v2/rule/nonexistent-id?applicationType=stb", nil)
 	rr := ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -341,7 +341,7 @@ func TestCreateTelemetryTwoRuleHandler_InvalidJsonError(t *testing.T) {
 
 func TestCreateTelemetryTwoRuleHandler_AuthError(t *testing.T) {
 	// Test validation error path that triggers xhttp.AdminError
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	invalidRule := createTelemetryTwoRule(false, []string{})
 	invalidRule.Name = "" // Invalid name
 	b, _ := json.Marshal(invalidRule)
@@ -352,7 +352,7 @@ func TestCreateTelemetryTwoRuleHandler_AuthError(t *testing.T) {
 }
 
 func TestCreateTelemetryTwoRuleHandler_ValidationError(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	// Test xhttp.AdminError in Create validation
 	invalidRule := createTelemetryTwoRule(false, []string{}) // No profiles - will fail validation
 	b, _ := json.Marshal(invalidRule)
@@ -395,14 +395,14 @@ func TestUpdateTelemetryTwoRuleHandler_InvalidJsonError(t *testing.T) {
 }
 
 func TestUpdateTelemetryTwoRuleHandler_ValidationError(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	// Test xhttp.AdminError in Update validation
 	prof := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
 
 	// Create and save a valid rule first
 	rule := createTelemetryTwoRule(false, []string{prof.ID})
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
 
 	// Now update with invalid data
 	rule.BoundTelemetryIDs = []string{} // Empty profiles will fail validation

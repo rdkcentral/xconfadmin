@@ -93,6 +93,7 @@ func TestGetLogUploadSettingsByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 
 // TestGetLogUploadSettingsByIdHandler_Success tests successful retrieval
 func TestGetLogUploadSettingsByIdHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -131,6 +132,7 @@ func TestGetLogUploadSettingsByIdHandler_Success(t *testing.T) {
 
 // TestGetLogUploadSettingsHandler_EmptyList tests handling when no settings exist (nil condition)
 func TestGetLogUploadSettingsHandler_EmptyList(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -148,6 +150,7 @@ func TestGetLogUploadSettingsHandler_EmptyList(t *testing.T) {
 
 // TestGetLogUploadSettingsHandler_FilterByApplicationType tests filtering by application type
 func TestGetLogUploadSettingsHandler_FilterByApplicationType(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -188,6 +191,7 @@ func TestGetLogUploadSettingsHandler_FilterByApplicationType(t *testing.T) {
 
 // TestGetLogUploadSettingsSizeHandler_ZeroCount tests size handler with no settings (nil condition)
 func TestGetLogUploadSettingsSizeHandler_ZeroCount(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -205,6 +209,7 @@ func TestGetLogUploadSettingsSizeHandler_ZeroCount(t *testing.T) {
 
 // TestGetLogUploadSettingsSizeHandler_NonZeroCount tests size handler with settings
 func TestGetLogUploadSettingsSizeHandler_NonZeroCount(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -243,6 +248,7 @@ func TestGetLogUploadSettingsSizeHandler_NonZeroCount(t *testing.T) {
 
 // TestGetLogUploadSettingsNamesHandler_EmptyList tests names handler with no settings (nil condition)
 func TestGetLogUploadSettingsNamesHandler_EmptyList(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -260,6 +266,7 @@ func TestGetLogUploadSettingsNamesHandler_EmptyList(t *testing.T) {
 
 // TestGetLogUploadSettingsNamesHandler_WithNames tests names handler with settings
 func TestGetLogUploadSettingsNamesHandler_WithNames(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -326,6 +333,7 @@ func TestDeleteLogUploadSettingsByIdHandler_NonExistent(t *testing.T) {
 
 // TestDeleteLogUploadSettingsByIdHandler_Success tests successful delete
 func TestDeleteLogUploadSettingsByIdHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -393,6 +401,7 @@ func TestCreateLogUploadSettingsHandler_EmptyBody(t *testing.T) {
 
 // TestCreateLogUploadSettingsHandler_DuplicateID tests create with duplicate ID (error path)
 func TestCreateLogUploadSettingsHandler_DuplicateID(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -475,6 +484,7 @@ func TestUpdateLogUploadSettingsHandler_InvalidJSON(t *testing.T) {
 
 // TestUpdateLogUploadSettingsHandler_NonExistent tests update of non-existent settings (error path)
 func TestUpdateLogUploadSettingsHandler_NonExistent(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -501,6 +511,7 @@ func TestUpdateLogUploadSettingsHandler_NonExistent(t *testing.T) {
 
 // TestUpdateLogUploadSettingsHandler_Success tests successful update
 func TestUpdateLogUploadSettingsHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -542,6 +553,7 @@ func TestUpdateLogUploadSettingsHandler_Success(t *testing.T) {
 
 // TestPostLogUploadSettingsFilteredWithParamsHandler_EmptyBody tests filtered search with empty body (nil condition)
 func TestPostLogUploadSettingsFilteredWithParamsHandler_EmptyBody(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 

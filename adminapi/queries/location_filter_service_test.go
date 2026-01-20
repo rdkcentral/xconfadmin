@@ -79,6 +79,7 @@ func TestUpdateLocationFilter_LocationValidation(t *testing.T) {
 }
 
 func TestUpdateLocationFilter_SuccessAndDelete(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
 
 	// Pre-cleanup: remove any models/environments from other tests

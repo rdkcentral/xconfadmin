@@ -24,6 +24,7 @@ func makeFirmwareReportXW(obj any) (*httptest.ResponseRecorder, *xwhttp.XRespons
 }
 
 func TestPostFirmwareRuleReportPageHandler_ResponseWriterCastError(t *testing.T) {
+	SkipIfMockDatabase(t)
 	r := httptest.NewRequest(http.MethodPost, "/firmware/report", nil)
 	rr := httptest.NewRecorder()
 	PostFirmwareRuleReportPageHandler(rr, r)
@@ -31,6 +32,7 @@ func TestPostFirmwareRuleReportPageHandler_ResponseWriterCastError(t *testing.T)
 }
 
 func TestPostFirmwareRuleReportPageHandler_BadJSON(t *testing.T) {
+	SkipIfMockDatabase(t)
 	r := httptest.NewRequest(http.MethodPost, "/firmware/report", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -40,13 +42,14 @@ func TestPostFirmwareRuleReportPageHandler_BadJSON(t *testing.T) {
 }
 
 func TestGetMacAddresses(t *testing.T) {
+	SkipIfMockDatabase(t)
 	listId := "macList1"
 	macA := "AA:BB:CC:DD:EE:01"
 	macB := "AA:BB:CC:DD:EE:02"
 	macSingle := "AA:BB:CC:DD:EE:FF"
 	// Persist list
 	namedList := shared.NewGenericNamespacedList(listId, shared.MacList, []string{macA, macB})
-	_ = shared.CreateGenericNamedListOneDB(namedList)
+	_ = SetOneInDao(shared.TableGenericNSList, namedList.ID, namedList)
 
 	// Build firmware rule JSON with two compound parts: one IN_LIST (listId) and one IS (macSingle)
 	ruleJSON := `{
@@ -79,6 +82,7 @@ func TestGetMacAddresses(t *testing.T) {
 }
 
 func TestPostFirmwareRuleReportPageHandler_SuccessEmptyRules(t *testing.T) {
+	SkipIfMockDatabase(t)
 	// empty list -> should still 200 with headers after writing empty report
 	rr, xw := makeFirmwareReportXW([]string{})
 	r := httptest.NewRequest(http.MethodPost, "/firmware/report", nil)

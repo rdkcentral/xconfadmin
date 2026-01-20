@@ -45,7 +45,7 @@ func setupFirmwareRuleTemplates() {
 		SupportedModelIds: []string{"TEST-MODEL"},
 		FirmwareFilename:  "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, testConfig.ID, testConfig)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, testConfig.ID, testConfig)
 	db.GetCacheManager().ForceSyncChanges()
 }
 
@@ -94,6 +94,7 @@ func createTestFirmwareRuleWithMAC(id, name, appType, macAddress string) *firmwa
 
 // TestPostFirmwareRuleHandler_Success tests successful firmware rule creation
 func TestPostFirmwareRuleHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupFirmwareRuleTemplates()
 	defer DeleteAllEntities()
@@ -121,12 +122,13 @@ func TestPostFirmwareRuleHandler_Success(t *testing.T) {
 
 // TestPostFirmwareRuleHandler_DuplicateID tests duplicate rule ID validation
 func TestPostFirmwareRuleHandler_DuplicateID(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
 	// Create first rule
 	rule1 := createTestFirmwareRule("duplicate-id", "First Rule", "stb")
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
 
 	// Try to create second rule with same ID
 	rule2 := createTestFirmwareRule("duplicate-id", "Second Rule", "stb")
@@ -144,6 +146,7 @@ func TestPostFirmwareRuleHandler_DuplicateID(t *testing.T) {
 
 // TestPostFirmwareRuleHandler_InvalidJSON tests invalid JSON handling
 func TestPostFirmwareRuleHandler_InvalidJSON(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -161,13 +164,14 @@ func TestPostFirmwareRuleHandler_InvalidJSON(t *testing.T) {
 
 // TestPutFirmwareRuleHandler_Success tests successful firmware rule update
 func TestPutFirmwareRuleHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupFirmwareRuleTemplates()
 	defer DeleteAllEntities()
 
 	// Create initial rule
 	rule := createTestFirmwareRule("rule-to-update", "Original Name", "stb")
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
 	db.GetCacheManager().ForceSyncChanges() // Ensure cache is synchronized before update
 
 	// Update the rule
@@ -190,6 +194,7 @@ func TestPutFirmwareRuleHandler_Success(t *testing.T) {
 
 // TestPutFirmwareRuleHandler_NotFound tests updating non-existent rule
 func TestPutFirmwareRuleHandler_NotFound(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -208,12 +213,13 @@ func TestPutFirmwareRuleHandler_NotFound(t *testing.T) {
 
 // TestDeleteFirmwareRuleByIdHandler_Success tests successful deletion
 func TestDeleteFirmwareRuleByIdHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
 	// Create rule to delete
 	rule := createTestFirmwareRule("rule-to-delete", "To Be Deleted", "stb")
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
 	db.GetCacheManager().ForceSyncChanges() // Ensure rule is available before deletion
 
 	req, err := http.NewRequest("DELETE", "/xconfAdminService/firmwarerule/rule-to-delete", nil)
@@ -231,6 +237,7 @@ func TestDeleteFirmwareRuleByIdHandler_Success(t *testing.T) {
 
 // TestDeleteFirmwareRuleByIdHandler_NotFound tests deleting non-existent rule
 func TestDeleteFirmwareRuleByIdHandler_NotFound(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -245,12 +252,13 @@ func TestDeleteFirmwareRuleByIdHandler_NotFound(t *testing.T) {
 
 // TestDeleteFirmwareRuleByIdHandler_ApplicationTypeMismatch tests app type validation
 func TestDeleteFirmwareRuleByIdHandler_ApplicationTypeMismatch(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
 	// Create rule with xhome app type
 	rule := createTestFirmwareRule("rule-app-mismatch", "App Mismatch Rule", "xhome")
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
 	db.GetCacheManager().ForceSyncChanges() // Ensure rule is available before deletion attempt
 
 	// Try to delete with stb app type
@@ -265,11 +273,12 @@ func TestDeleteFirmwareRuleByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 
 // TestGetFirmwareRuleByIdHandler_Success tests getting rule by ID
 func TestGetFirmwareRuleByIdHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
 	rule := createTestFirmwareRule("rule-get-by-id", "Get By ID Test", "stb")
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/rule-get-by-id", nil)
 	assert.NilError(t, err)
@@ -287,11 +296,12 @@ func TestGetFirmwareRuleByIdHandler_Success(t *testing.T) {
 
 // TestGetFirmwareRuleByIdHandler_WithExport tests export functionality
 func TestGetFirmwareRuleByIdHandler_WithExport(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
 	rule := createTestFirmwareRule("rule-export-test", "Export Test", "stb")
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/rule-export-test?export", nil)
 	assert.NilError(t, err)
@@ -308,6 +318,7 @@ func TestGetFirmwareRuleByIdHandler_WithExport(t *testing.T) {
 
 // TestGetFirmwareRuleByIdHandler_NotFound tests non-existent rule
 func TestGetFirmwareRuleByIdHandler_NotFound(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -322,11 +333,12 @@ func TestGetFirmwareRuleByIdHandler_NotFound(t *testing.T) {
 
 // TestGetFirmwareRuleByIdHandler_ApplicationTypeMismatch tests app type validation
 func TestGetFirmwareRuleByIdHandler_ApplicationTypeMismatch(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
 	rule := createTestFirmwareRule("rule-get-mismatch", "Get Mismatch Test", "xhome")
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/rule-get-mismatch", nil)
 	assert.NilError(t, err)
@@ -339,14 +351,15 @@ func TestGetFirmwareRuleByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 
 // TestGetFirmwareRuleHandler_Success tests getting all rules
 func TestGetFirmwareRuleHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
 	// Create test rules
 	rule1 := createTestFirmwareRule("rule-all-1", "All Rules Test 1", "stb")
 	rule2 := createTestFirmwareRule("rule-all-2", "All Rules Test 2", "stb")
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule", nil)
 	assert.NilError(t, err)
@@ -363,11 +376,12 @@ func TestGetFirmwareRuleHandler_Success(t *testing.T) {
 
 // TestGetFirmwareRuleHandler_WithExport tests export all functionality
 func TestGetFirmwareRuleHandler_WithExport(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
 	rule := createTestFirmwareRule("rule-export-all", "Export All Test", "stb")
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule?export", nil)
 	assert.NilError(t, err)
@@ -384,6 +398,7 @@ func TestGetFirmwareRuleHandler_WithExport(t *testing.T) {
 
 // TestGetFirmwareRuleFilteredHandler tests filtering functionality
 func TestGetFirmwareRuleFilteredHandler(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -392,8 +407,8 @@ func TestGetFirmwareRuleFilteredHandler(t *testing.T) {
 	rule1.Type = firmware.MAC_RULE
 	rule2 := createTestFirmwareRule("rule-filter-2", "Filter Test 2", "stb")
 	rule2.Type = firmware.ENV_MODEL_RULE
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/filtered", nil)
 	assert.NilError(t, err)
@@ -410,14 +425,15 @@ func TestGetFirmwareRuleFilteredHandler(t *testing.T) {
 
 // TestPostFirmwareRuleFilteredHandler_Success tests POST filtered endpoint
 func TestPostFirmwareRuleFilteredHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
 	// Create test rules
 	rule1 := createTestFirmwareRule("rule-post-filter-1", "POST Filter 1", "stb")
 	rule2 := createTestFirmwareRule("rule-post-filter-2", "POST Filter 2", "stb")
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
 
 	filterContext := map[string]string{}
 	body, _ := json.Marshal(filterContext)
@@ -434,6 +450,7 @@ func TestPostFirmwareRuleFilteredHandler_Success(t *testing.T) {
 
 // TestPostFirmwareRuleFilteredHandler_InvalidPageNumber tests invalid pagination
 func TestPostFirmwareRuleFilteredHandler_InvalidPageNumber(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -452,6 +469,7 @@ func TestPostFirmwareRuleFilteredHandler_InvalidPageNumber(t *testing.T) {
 
 // TestGetFirmwareRuleByTypeNamesHandler_Success tests getting rule names by type
 func TestGetFirmwareRuleByTypeNamesHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -460,8 +478,8 @@ func TestGetFirmwareRuleByTypeNamesHandler_Success(t *testing.T) {
 	rule1.Type = firmware.MAC_RULE
 	rule2 := createTestFirmwareRule("rule-type-2", "Type Test 2", "stb")
 	rule2.Type = firmware.MAC_RULE
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/MAC_RULE/names", nil)
 	assert.NilError(t, err)
@@ -478,6 +496,7 @@ func TestGetFirmwareRuleByTypeNamesHandler_Success(t *testing.T) {
 
 // TestGetFirmwareRuleByTemplateNamesHandler tests byTemplate/names endpoint
 func TestGetFirmwareRuleByTemplateNamesHandler(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -493,6 +512,7 @@ func TestGetFirmwareRuleByTemplateNamesHandler(t *testing.T) {
 
 // TestPostFirmwareRuleEntitiesHandler_Success tests batch creation
 func TestPostFirmwareRuleEntitiesHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupFirmwareRuleTemplates()
 	defer DeleteAllEntities()
@@ -521,12 +541,13 @@ func TestPostFirmwareRuleEntitiesHandler_Success(t *testing.T) {
 
 // TestPostFirmwareRuleEntitiesHandler_DuplicateEntity tests duplicate detection
 func TestPostFirmwareRuleEntitiesHandler_DuplicateEntity(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
 	// Create existing rule
 	existing := createTestFirmwareRule("duplicate-batch", "Existing Rule", "stb")
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, existing.ID, existing)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, existing.ID, existing)
 
 	// Try to create batch with duplicate
 	entities := []*firmware.FirmwareRule{
@@ -550,6 +571,7 @@ func TestPostFirmwareRuleEntitiesHandler_DuplicateEntity(t *testing.T) {
 
 // TestPutFirmwareRuleEntitiesHandler_Success tests batch update
 func TestPutFirmwareRuleEntitiesHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupFirmwareRuleTemplates()
 	defer DeleteAllEntities()
@@ -558,8 +580,8 @@ func TestPutFirmwareRuleEntitiesHandler_Success(t *testing.T) {
 	rule1 := createTestFirmwareRuleWithMAC("batch-update-1", "Original 1", "stb", "AA:BB:CC:DD:EE:01")
 	rule2 := createTestFirmwareRuleWithMAC("batch-update-2", "Original 2", "stb", "AA:BB:CC:DD:EE:02")
 
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
 	db.GetCacheManager().ForceSyncChanges()
 
 	// Update the rules
@@ -586,6 +608,7 @@ func TestPutFirmwareRuleEntitiesHandler_Success(t *testing.T) {
 
 // TestPutFirmwareRuleEntitiesHandler_NonExistent tests updating non-existent rules
 func TestPutFirmwareRuleEntitiesHandler_NonExistent(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -610,6 +633,7 @@ func TestPutFirmwareRuleEntitiesHandler_NonExistent(t *testing.T) {
 
 // TestObsoleteGetFirmwareRulePageHandler tests pagination endpoint
 func TestObsoleteGetFirmwareRulePageHandler(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -617,7 +641,7 @@ func TestObsoleteGetFirmwareRulePageHandler(t *testing.T) {
 	// This test verifies that the endpoint returns NotImplemented status
 	for i := 1; i <= 5; i++ {
 		rule := createTestFirmwareRule("page-rule-"+string(rune('0'+i)), "Page Rule "+string(rune('0'+i)), "stb")
-		db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+		SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
 	}
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/page?pageNumber=1&pageSize=3", nil)
@@ -631,11 +655,12 @@ func TestObsoleteGetFirmwareRulePageHandler(t *testing.T) {
 
 // TestGetFirmwareRuleExportAllTypesHandler tests export all types
 func TestGetFirmwareRuleExportAllTypesHandler(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
 	rule := createTestFirmwareRule("export-all-types", "Export All Types Test", "stb")
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/export/allTypes?exportAll", nil)
 	assert.NilError(t, err)
@@ -652,12 +677,13 @@ func TestGetFirmwareRuleExportAllTypesHandler(t *testing.T) {
 
 // TestGetFirmwareRuleExportByTypeHandler_Success tests export by type
 func TestGetFirmwareRuleExportByTypeHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
 	rule := createTestFirmwareRule("export-by-type", "Export By Type Test", "stb")
 	rule.ApplicableAction.ActionType = "RULE"
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/export/byType?exportAll&type=RULE", nil)
 	assert.NilError(t, err)
@@ -674,6 +700,7 @@ func TestGetFirmwareRuleExportByTypeHandler_Success(t *testing.T) {
 
 // TestGetFirmwareRuleExportByTypeHandler_MissingType tests missing type param
 func TestGetFirmwareRuleExportByTypeHandler_MissingType(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -688,6 +715,7 @@ func TestGetFirmwareRuleExportByTypeHandler_MissingType(t *testing.T) {
 
 // TestPostFirmwareRuleImportAllHandler_Success tests import functionality
 func TestPostFirmwareRuleImportAllHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -709,6 +737,7 @@ func TestPostFirmwareRuleImportAllHandler_Success(t *testing.T) {
 
 // TestPostFirmwareRuleImportAllHandler_ApplicationTypeMixing tests app type mixing
 func TestPostFirmwareRuleImportAllHandler_ApplicationTypeMixing(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -732,6 +761,7 @@ func TestPostFirmwareRuleImportAllHandler_ApplicationTypeMixing(t *testing.T) {
 
 // TestConvertToMapKey tests the convertToMapKey function
 func TestConvertToMapKey(t *testing.T) {
+	SkipIfMockDatabase(t)
 	rule := createTestFirmwareRule("test-map-key", "Test Map Key", "stb")
 
 	// Test with simple rule
@@ -744,6 +774,7 @@ func TestConvertToMapKey(t *testing.T) {
 
 // TestDuplicateFrFound tests the duplicateFrFound function
 func TestDuplicateFrFound(t *testing.T) {
+	SkipIfMockDatabase(t)
 	rule1 := createTestFirmwareRule("dup-test-1", "Duplicate Test 1", "stb")
 	rule2 := createTestFirmwareRule("dup-test-2", "Duplicate Test 1", "stb") // Same name
 
@@ -759,6 +790,7 @@ func TestDuplicateFrFound(t *testing.T) {
 
 // TestFindAndDeleteFR tests the findAndDeleteFR function
 func TestFindAndDeleteFR(t *testing.T) {
+	SkipIfMockDatabase(t)
 	rule1 := createTestFirmwareRule("find-del-1", "Find Delete 1", "stb")
 	rule2 := createTestFirmwareRule("find-del-2", "Find Delete 2", "stb")
 	rule3 := createTestFirmwareRule("find-del-3", "Find Delete 3", "stb")
@@ -775,6 +807,7 @@ func TestFindAndDeleteFR(t *testing.T) {
 
 // TestPopulateContext tests the populateContext function
 func TestPopulateContext(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -791,6 +824,7 @@ func TestPopulateContext(t *testing.T) {
 
 // ObsoleteGetFirmwareRulePageHandler - Error paths
 func TestObsoleteGetFirmwareRulePageHandler_ErrorGettingRules(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -801,6 +835,7 @@ func TestObsoleteGetFirmwareRulePageHandler_ErrorGettingRules(t *testing.T) {
 }
 
 func TestObsoleteGetFirmwareRulePageHandler_InvalidPageNumber(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -809,6 +844,7 @@ func TestObsoleteGetFirmwareRulePageHandler_InvalidPageNumber(t *testing.T) {
 }
 
 func TestObsoleteGetFirmwareRulePageHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -818,6 +854,7 @@ func TestObsoleteGetFirmwareRulePageHandler_Success(t *testing.T) {
 
 // GetFirmwareRuleExportAllTypesHandler - Error paths
 func TestGetFirmwareRuleExportAllTypesHandler_MissingExportAllParam(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -831,6 +868,7 @@ func TestGetFirmwareRuleExportAllTypesHandler_MissingExportAllParam(t *testing.T
 }
 
 func TestGetFirmwareRuleExportAllTypesHandler_ErrorGettingRules(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -845,6 +883,7 @@ func TestGetFirmwareRuleExportAllTypesHandler_ErrorGettingRules(t *testing.T) {
 }
 
 func TestGetFirmwareRuleExportAllTypesHandler_SuccessWithRules(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -853,8 +892,8 @@ func TestGetFirmwareRuleExportAllTypesHandler_SuccessWithRules(t *testing.T) {
 	rule1.Type = firmware.MAC_RULE
 	rule2 := createTestFirmwareRule("export-all-2", "Export All 2", "stb")
 	rule2.Type = firmware.ENV_MODEL_RULE
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/export/allTypes?exportAll", nil)
 	assert.NilError(t, err)
@@ -875,6 +914,7 @@ func TestGetFirmwareRuleExportAllTypesHandler_SuccessWithRules(t *testing.T) {
 
 // GetFirmwareRuleByTemplateByTemplateIdNamesHandler - Error paths
 func TestGetFirmwareRuleByTemplateByTemplateIdNamesHandler_MissingTemplateId(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -891,6 +931,7 @@ func TestGetFirmwareRuleByTemplateByTemplateIdNamesHandler_MissingTemplateId(t *
 }
 
 func TestGetFirmwareRuleByTemplateByTemplateIdNamesHandler_ErrorGettingRules(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -905,14 +946,15 @@ func TestGetFirmwareRuleByTemplateByTemplateIdNamesHandler_ErrorGettingRules(t *
 }
 
 func TestGetFirmwareRuleByTemplateByTemplateIdNamesHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
 	// Create rules with template IDs
 	rule1 := createTestFirmwareRule("template-rule-1", "Template Rule 1", "stb")
 	rule2 := createTestFirmwareRule("template-rule-2", "Template Rule 2", "stb")
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/byTemplate/some-template-id/names", nil)
 	assert.NilError(t, err)

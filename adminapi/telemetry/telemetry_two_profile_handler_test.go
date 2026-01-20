@@ -43,7 +43,7 @@ const changedTelemetryJsonConfig = "{\n    \"Description\":\"Changed Name Json D
 
 func TestTelemetryTwoProfileCreateHandler(t *testing.T) {
 
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
 
@@ -66,7 +66,7 @@ func TestTelemetryTwoProfileCreateHandler(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileCreateChangeHandlerAndApproveIt(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
 
@@ -105,10 +105,10 @@ func TestTelemetryTwoProfileCreateChangeHandlerAndApproveIt(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileUpdateHandler(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	changedProfile, _ := p.Clone()
 	changedProfile.Jsonconfig = changedTelemetryJsonConfig
@@ -133,10 +133,10 @@ func TestTelemetryTwoProfileUpdateHandler(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileUpdateChangeHandler(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	changedProfile, _ := p.Clone()
 	changedProfile.Jsonconfig = changedTelemetryJsonConfig
@@ -177,10 +177,10 @@ func TestTelemetryTwoProfileUpdateChangeHandler(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileDeleteHandler(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
 		{"applicationType", "stb"},
@@ -198,10 +198,10 @@ func TestTelemetryTwoProfileDeleteHandler(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileDeleteChangeHandler(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
 		{"applicationType", "stb"},
@@ -268,10 +268,10 @@ func createTelemetryTwoProfile() *logupload.TelemetryTwoProfile {
 // Additional tests to improve coverage for telemetry_two_profile_handler.go without duplicating logic.
 
 func TestTelemetryTwoProfileListExport(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}, {"export", "true"}})
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile?%v", queryParams)
@@ -285,9 +285,9 @@ func TestTelemetryTwoProfileListExport(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileGetByIdExport(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	p := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}, {"export", "true"}})
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/%s?%v", p.ID, queryParams)
@@ -298,13 +298,13 @@ func TestTelemetryTwoProfileGetByIdExport(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileFilteredSuccess(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	p1 := createTelemetryTwoProfile()
 	p1.Name = "Alpha"
 	p2 := createTelemetryTwoProfile()
 	p2.Name = "Beta"
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}, {"pageNumber", "1"}, {"pageSize", "10"}})
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/filtered?%v", queryParams)
@@ -316,11 +316,11 @@ func TestTelemetryTwoProfileFilteredSuccess(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileByIdListSuccess(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	p1 := createTelemetryTwoProfile()
 	p2 := createTelemetryTwoProfile()
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}})
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/byIdList?%v", queryParams)
@@ -335,7 +335,7 @@ func TestTelemetryTwoProfileByIdListSuccess(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileEntitiesBatchCreate(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	p1 := createTelemetryTwoProfile()
 	p2 := createTelemetryTwoProfile()
 	// Make second invalid by stripping required JSON (will fail validation)
@@ -355,14 +355,14 @@ func TestTelemetryTwoProfileEntitiesBatchCreate(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileEntitiesBatchUpdate(t *testing.T) {
-	DeleteAllEntities()
+	DeleteTelemetryEntities()
 	p1 := createTelemetryTwoProfile()
 	p2 := createTelemetryTwoProfile()
 	// Set applicationType for both and store
 	p1.ApplicationType = "stb"
 	p2.ApplicationType = "stb"
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
+	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
 	// Update p1 normally
 	p1.Jsonconfig = changedTelemetryJsonConfig
 	// Force failure for p2 by changing applicationType (conflict)

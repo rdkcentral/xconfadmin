@@ -64,9 +64,9 @@ func TestTelemetryTwoHandlerSampleData(t *testing.T) {
 	assert.NilError(t, err)
 	for _, v := range t2Rules {
 		t2Rule := v
-		err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID, &t2Rule)
+		err = SetOneInDao(ds.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID, &t2Rule)
 		assert.NilError(t, err)
-		itf, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID)
+		itf, err := GetOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID)
 		assert.NilError(t, err)
 		fetchedT2Rule, ok := itf.(*logupload.TelemetryTwoRule)
 		assert.Assert(t, ok)
@@ -80,10 +80,10 @@ func TestTelemetryTwoHandlerSampleData(t *testing.T) {
 		var srcT2Profile logupload.TelemetryTwoProfile
 		err = json.Unmarshal([]byte(sp1), &srcT2Profile)
 		assert.NilError(t, err)
-		err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &srcT2Profile)
+		err = SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &srcT2Profile)
 		assert.NilError(t, err)
 		// get a t2profile
-		itf, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
+		itf, err := GetOneFromDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
 		assert.NilError(t, err)
 		tgtT2Profile, ok := itf.(*logupload.TelemetryTwoProfile)
 		assert.Assert(t, ok)
@@ -178,6 +178,9 @@ func TestTelemetryTwoHandlerSampleData(t *testing.T) {
 }
 
 func TestTelemetryTwoHandlerMac(t *testing.T) {
+	// Skip this integration test in mock mode - tests external library behavior
+	SkipIfMockDatabase(t)
+
 	// setup env
 	log.SetLevel(log.WarnLevel)
 
@@ -199,9 +202,9 @@ func TestTelemetryTwoHandlerMac(t *testing.T) {
 		"11:11:22:22:33:07",
 	}
 	srcGnl := shared.NewGenericNamespacedList(namedlistKey, shared.MacList, macList1)
-	err := ds.GetCachedSimpleDao().SetOne(shared.TableGenericNSList, srcGnl.ID, srcGnl)
+	err := SetOneInDao(shared.TableGenericNSList, srcGnl.ID, srcGnl)
 	assert.NilError(t, err)
-	itf, err := ds.GetCachedSimpleDao().GetOne(shared.TableGenericNSList, srcGnl.ID)
+	itf, err := GetOneFromDao(shared.TableGenericNSList, srcGnl.ID)
 	assert.NilError(t, err)
 	readGnl, ok := itf.(*shared.GenericNamespacedList)
 	assert.Assert(t, ok)
@@ -213,10 +216,10 @@ func TestTelemetryTwoHandlerMac(t *testing.T) {
 	var srcT2Rule logupload.TelemetryTwoRule
 	err = json.Unmarshal([]byte(sr2), &srcT2Rule)
 	assert.NilError(t, err)
-	err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, srcT2Rule.ID, &srcT2Rule)
+	err = SetOneInDao(ds.TABLE_TELEMETRY_TWO_RULES, srcT2Rule.ID, &srcT2Rule)
 	assert.NilError(t, err)
 	// get a t2rule
-	itf, err = ds.GetCachedSimpleDao().GetOne(ds.TABLE_TELEMETRY_TWO_RULES, ruleUuid)
+	itf, err = GetOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, ruleUuid)
 	tgtT2Rule, ok := itf.(*logupload.TelemetryTwoRule)
 	assert.Assert(t, ok)
 	assert.Assert(t, srcT2Rule.Equals(tgtT2Rule))
@@ -226,10 +229,10 @@ func TestTelemetryTwoHandlerMac(t *testing.T) {
 	var srcT2Profile logupload.TelemetryTwoProfile
 	err = json.Unmarshal([]byte(sp1), &srcT2Profile)
 	assert.NilError(t, err)
-	err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &srcT2Profile)
+	err = SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &srcT2Profile)
 	assert.NilError(t, err)
 	// get a t2profile
-	itf, err = ds.GetCachedSimpleDao().GetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
+	itf, err = GetOneFromDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
 	tgtT2Profile, ok := itf.(*logupload.TelemetryTwoProfile)
 	assert.Assert(t, ok)
 	assert.DeepEqual(t, &srcT2Profile, tgtT2Profile)
@@ -293,6 +296,9 @@ func TestTelemetryTwoHandlerMac(t *testing.T) {
 }
 
 func TestTelemetryTwoHandlerIpRange(t *testing.T) {
+	// Skip this integration test in mock mode - tests external library behavior
+	SkipIfMockDatabase(t)
+
 	// setup env
 	log.SetLevel(log.WarnLevel)
 
@@ -317,9 +323,9 @@ func TestTelemetryTwoHandlerIpRange(t *testing.T) {
 		"33.44.55.66/20",
 	}
 	srcGnl := shared.NewGenericNamespacedList(namedlistKey, shared.IpList, ipList1)
-	err := ds.GetCachedSimpleDao().SetOne(shared.TableGenericNSList, srcGnl.ID, srcGnl)
+	err := SetOneInDao(shared.TableGenericNSList, srcGnl.ID, srcGnl)
 	assert.NilError(t, err)
-	itf, err := ds.GetCachedSimpleDao().GetOne(shared.TableGenericNSList, srcGnl.ID)
+	itf, err := GetOneFromDao(shared.TableGenericNSList, srcGnl.ID)
 	assert.NilError(t, err)
 	readGnl, ok := itf.(*shared.GenericNamespacedList)
 	assert.Assert(t, ok)
@@ -331,10 +337,10 @@ func TestTelemetryTwoHandlerIpRange(t *testing.T) {
 	var srcT2Rule logupload.TelemetryTwoRule
 	err = json.Unmarshal([]byte(sr3), &srcT2Rule)
 	assert.NilError(t, err)
-	err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_RULES, srcT2Rule.ID, &srcT2Rule)
+	err = SetOneInDao(ds.TABLE_TELEMETRY_TWO_RULES, srcT2Rule.ID, &srcT2Rule)
 	assert.NilError(t, err)
 	// get a t2rule
-	itf, err = ds.GetCachedSimpleDao().GetOne(ds.TABLE_TELEMETRY_TWO_RULES, ruleUuid)
+	itf, err = GetOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, ruleUuid)
 	tgtT2Rule, ok := itf.(*logupload.TelemetryTwoRule)
 	assert.Assert(t, ok)
 	assert.Assert(t, srcT2Rule.Equals(tgtT2Rule))
@@ -344,10 +350,10 @@ func TestTelemetryTwoHandlerIpRange(t *testing.T) {
 	var srcT2Profile logupload.TelemetryTwoProfile
 	err = json.Unmarshal([]byte(sp1), &srcT2Profile)
 	assert.NilError(t, err)
-	err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &srcT2Profile)
+	err = SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &srcT2Profile)
 	assert.NilError(t, err)
 	// get a t2profile
-	itf, err = ds.GetCachedSimpleDao().GetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
+	itf, err = GetOneFromDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
 	tgtT2Profile, ok := itf.(*logupload.TelemetryTwoProfile)
 	assert.Assert(t, ok)
 	assert.DeepEqual(t, &srcT2Profile, tgtT2Profile)

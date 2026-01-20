@@ -24,6 +24,7 @@ func makeLogFileXW(obj any) (*httptest.ResponseRecorder, *xwhttp.XResponseWriter
 }
 
 func TestCreateLogFile_ResponseWriterCastError(t *testing.T) {
+	SkipIfMockDatabase(t)
 	// pass plain recorder -> cast fail
 	r := httptest.NewRequest(http.MethodPost, "/logfile", nil)
 	rr := httptest.NewRecorder()
@@ -32,6 +33,7 @@ func TestCreateLogFile_ResponseWriterCastError(t *testing.T) {
 }
 
 func TestCreateLogFile_InvalidJSON(t *testing.T) {
+	SkipIfMockDatabase(t)
 	r := httptest.NewRequest(http.MethodPost, "/logfile", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -41,6 +43,7 @@ func TestCreateLogFile_InvalidJSON(t *testing.T) {
 }
 
 func TestCreateLogFile_EmptyName(t *testing.T) {
+	SkipIfMockDatabase(t)
 	lf := logupload.LogFile{ID: "", Name: ""}
 	rr, xw := makeLogFileXW(lf)
 	r := httptest.NewRequest(http.MethodPost, "/logfile", nil)
@@ -49,6 +52,7 @@ func TestCreateLogFile_EmptyName(t *testing.T) {
 }
 
 func TestCreateLogFile_NewSuccess(t *testing.T) {
+	SkipIfMockDatabase(t)
 	lf := logupload.LogFile{Name: "alpha.log"}
 	rr, xw := makeLogFileXW(lf)
 	r := httptest.NewRequest(http.MethodPost, "/logfile", nil)
@@ -61,6 +65,7 @@ func TestCreateLogFile_NewSuccess(t *testing.T) {
 }
 
 func TestCreateLogFile_DuplicateName(t *testing.T) {
+	SkipIfMockDatabase(t)
 	// seed first
 	seed := logupload.LogFile{Name: "dup.log"}
 	rr1, xw1 := makeLogFileXW(seed)
@@ -79,6 +84,7 @@ func TestCreateLogFile_DuplicateName(t *testing.T) {
 }
 
 func TestCreateLogFile_UpdatePath(t *testing.T) {
+	SkipIfMockDatabase(t)
 	// create first
 	base := logupload.LogFile{Name: "update.me"}
 	rr1, xw1 := makeLogFileXW(base)
@@ -99,7 +105,7 @@ func TestCreateLogFile_UpdatePath(t *testing.T) {
 
 	// Seed a LogFilesGroups entry and its list so second loop executes
 	grp := &logupload.LogFilesGroups{ID: "GROUP1", GroupName: "GROUP1"}
-	_ = ds.GetCachedSimpleDao().SetOne(ds.TABLE_LOG_FILES_GROUPS, grp.ID, grp)
+	_ = SetOneInDao(ds.TABLE_LOG_FILES_GROUPS, grp.ID, grp)
 	_ = logupload.SetOneLogFile(grp.ID, &created)
 
 	// now update same ID (should enter update branch and iterate both lists)

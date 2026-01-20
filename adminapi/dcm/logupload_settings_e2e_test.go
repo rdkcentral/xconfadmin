@@ -34,12 +34,13 @@ func ImportLogUploadTableData(data []string, tabletype logupload.LogUploadSettin
 	var err error
 	for _, row := range data {
 		err = json.Unmarshal([]byte(row), &tabletype)
-		err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_LOG_UPLOAD_SETTINGS, tabletype.ID, &tabletype)
+		err = setOneInDao(ds.TABLE_LOG_UPLOAD_SETTINGS, tabletype.ID, &tabletype)
 	}
 	return err
 }
 
 func TestAllLogUploadSettingsApis(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test: requires external package data retrieval
 
 	//GET ALL LOG REPO SETTINGS
 	DeleteAllEntities()

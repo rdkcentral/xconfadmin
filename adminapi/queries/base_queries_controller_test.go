@@ -101,7 +101,8 @@ func CreateRuleKeyValue(key string, value string) *re.Rule {
 
 func CreateAndSaveFirmwareRule(id string, templateId string, applicationType string, action *corefw.ApplicableAction, rule *re.Rule) *corefw.FirmwareRule {
 	firmwareRule := CreateFirmwareRule(id, templateId, applicationType, action, rule)
-	corefw.CreateFirmwareRuleOneDB(firmwareRule)
+	// Use helper instead of service function to work with mock
+	SetOneInDao(ds.TABLE_FIRMWARE_RULE, firmwareRule.ID, firmwareRule)
 	return firmwareRule
 }
 
@@ -210,7 +211,7 @@ func CreateAndSaveModel(id string) *shared.Model {
 	model := shared.NewModel(id, "ModelDescription")
 	//jsonData, _ := json.Marshal(model)
 
-	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_MODEL, model.ID, model)
+	err := SetOneInDao(ds.TABLE_MODEL, model.ID, model)
 	if err != nil {
 		return nil
 	}
@@ -222,7 +223,7 @@ func CreateAndSaveEnvironment(id string) *shared.Environment {
 	env := shared.NewEnvironment(id, "ENV_MODEL_RULE_ENVIRONMENT_ID")
 	//jsonData, _ := json.Marshal(env)
 
-	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_ENVIRONMENT, env.ID, env)
+	err := SetOneInDao(ds.TABLE_ENVIRONMENT, env.ID, env)
 	if err != nil {
 		return nil
 	}
@@ -234,7 +235,7 @@ func CreateAndSaveGenericNamespacedList(name string, ttype string, data string) 
 	namespacedList := CreateGenericNamespacedList(name, ttype, data)
 	//jsonData, _ := json.Marshal(namespacedList)
 
-	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, namespacedList.ID, namespacedList)
+	err := SetOneInDao(ds.TABLE_GENERIC_NS_LIST, namespacedList.ID, namespacedList)
 	if err != nil {
 		return nil
 	}
@@ -266,7 +267,8 @@ func CreateAndSaveFirmwareConfig(firmwareVersion string, modelId string, firmwar
 }
 
 func SetFirmwareConfig(firmwareConfig *coreef.FirmwareConfig) error {
-	err := coreef.CreateFirmwareConfigOneDB(firmwareConfig)
+	// Use helper instead of service function to work with mock
+	err := SetOneInDao(ds.TABLE_FIRMWARE_CONFIG, firmwareConfig.ID, firmwareConfig)
 	if err != nil {
 		return err
 	}
@@ -299,7 +301,8 @@ func CreatePercentageBeanPB(name string, envId string, modelId string, whitelist
 
 func CreateAndSaveFirmwareRuleTemplate(id string, rule *re.Rule, applicableAction *corefw.TemplateApplicableAction) *corefw.FirmwareRuleTemplate {
 	template := CreateFirmwareRuleTemplate(id, rule, applicableAction)
-	if err := corefw.CreateFirmwareRuleTemplateOneDB(template); err != nil {
+	// Use helper instead of service function to work with mock
+	if err := SetOneInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template.ID, template); err != nil {
 		panic(err)
 	}
 	return template
@@ -322,7 +325,7 @@ func CreateAndSaveEnvModelFirmwareRule(name string, firmwareConfigId string, env
 	envModelRule.Type = "ENV_MODEL_RULE"
 	envModelRule.Rule = *CreateEnvModelRule(envId, modelId, macListId)
 	//jsonData, _ := json.Marshal(envModelRule)
-	err := corefw.CreateFirmwareRuleOneDB(envModelRule)
+	err := SetOneInDao(ds.TABLE_FIRMWARE_RULE, envModelRule.ID, envModelRule)
 	if err != nil {
 		return nil
 	}

@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	"gotest.tools/assert"
@@ -378,7 +379,7 @@ func TestCreateFirmwareRT_DuplicateName(t *testing.T) {
 
 	// Create first template
 	template1 := createTestFirmwareRuleTemplateService(uuid.New().String(), "DuplicateTest", 1, "RULE_TEMPLATE")
-	firmware.CreateFirmwareRuleTemplateOneDB(template1)
+	SetOneInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template1.ID, template1)
 
 	// Try to create second template with same name but different rule
 	// The function checks for duplicate names, so this should fail
@@ -431,6 +432,7 @@ func TestGetFirmwareRuleTemplateExportName(t *testing.T) {
 
 // Test importOrUpdateAllFirmwareRTs
 func TestImportOrUpdateAllFirmwareRTs_CreateNew(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()

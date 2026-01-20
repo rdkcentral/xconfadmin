@@ -38,6 +38,7 @@ import (
 	// Don't import adminapi to avoid circular dependency
 	// "github.com/rdkcentral/xconfadmin/adminapi"
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	"github.com/rdkcentral/xconfadmin/adminapi/dcm/mocks"
 	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
 	"github.com/rdkcentral/xconfadmin/common"
 	oshttp "github.com/rdkcentral/xconfadmin/http"
@@ -646,6 +647,80 @@ func SetupDCMRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	}
 }
 
+// SetupDCMRoutesForMock sets up routes without middleware for mock testing
+func SetupDCMRoutesForMock(r *mux.Router) {
+	// Register DCM formula routes
+	dcmFormulaPath := r.PathPrefix("/xconfAdminService/dcm/formula").Subrouter()
+	dcmFormulaPath.HandleFunc("", GetDcmFormulaHandler).Methods("GET")
+	dcmFormulaPath.HandleFunc("", CreateDcmFormulaHandler).Methods("POST")
+	dcmFormulaPath.HandleFunc("", UpdateDcmFormulaHandler).Methods("PUT")
+	dcmFormulaPath.HandleFunc("/filtered", PostDcmFormulaFilteredWithParamsHandler).Methods("POST")
+	dcmFormulaPath.HandleFunc("/size", GetDcmFormulaSizeHandler).Methods("GET")
+	dcmFormulaPath.HandleFunc("/names", GetDcmFormulaNamesHandler).Methods("GET")
+	dcmFormulaPath.HandleFunc("/formulasAvailability", DcmFormulasAvailabilitygHandler).Methods("POST")
+	dcmFormulaPath.HandleFunc("/settingsAvailability", DcmFormulaSettingsAvailabilitygHandler).Methods("POST")
+	dcmFormulaPath.HandleFunc("/import/{overwrite}", ImportDcmFormulaWithOverwriteHandler).Methods("POST")
+	dcmFormulaPath.HandleFunc("/import/all", ImportDcmFormulasHandler).Methods("POST")
+	dcmFormulaPath.HandleFunc("/entities", PostDcmFormulaListHandler).Methods("POST")
+	dcmFormulaPath.HandleFunc("/entities", PutDcmFormulaListHandler).Methods("PUT")
+	dcmFormulaPath.HandleFunc("/{id}", GetDcmFormulaByIdHandler).Methods("GET")
+	dcmFormulaPath.HandleFunc("/{id}", DeleteDcmFormulaByIdHandler).Methods("DELETE")
+	dcmFormulaPath.HandleFunc("/{id}/priority/{newPriority}", DcmFormulaChangePriorityHandler).Methods("POST")
+
+	dcmDeviceSettingsPath := r.PathPrefix("/xconfAdminService/dcm/deviceSettings").Subrouter()
+	dcmDeviceSettingsPath.HandleFunc("", GetDeviceSettingsHandler).Methods("GET")
+	dcmDeviceSettingsPath.HandleFunc("", CreateDeviceSettingsHandler).Methods("POST")
+	dcmDeviceSettingsPath.HandleFunc("", UpdateDeviceSettingsHandler).Methods("PUT")
+	dcmDeviceSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET")
+	dcmDeviceSettingsPath.HandleFunc("/size", GetDeviceSettingsSizeHandler).Methods("GET")
+	dcmDeviceSettingsPath.HandleFunc("/names", GetDeviceSettingsNamesHandler).Methods("GET")
+	dcmDeviceSettingsPath.HandleFunc("/filtered", PostDeviceSettingsFilteredWithParamsHandler).Methods("POST")
+	dcmDeviceSettingsPath.HandleFunc("/export", GetDeviceSettingsExportHandler).Methods("GET")
+	dcmDeviceSettingsPath.HandleFunc("/{id}", DeleteDeviceSettingsByIdHandler).Methods("DELETE")
+	dcmDeviceSettingsPath.HandleFunc("/{id}", GetDeviceSettingsByIdHandler).Methods("GET")
+
+	dcmVodSettingsPath := r.PathPrefix("/xconfAdminService/dcm/vodsettings").Subrouter()
+	dcmVodSettingsPath.HandleFunc("", GetVodSettingsHandler).Methods("GET")
+	dcmVodSettingsPath.HandleFunc("", CreateVodSettingsHandler).Methods("POST")
+	dcmVodSettingsPath.HandleFunc("", UpdateVodSettingsHandler).Methods("PUT")
+	dcmVodSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET")
+	dcmVodSettingsPath.HandleFunc("/size", GetVodSettingsSizeHandler).Methods("GET")
+	dcmVodSettingsPath.HandleFunc("/names", GetVodSettingsNamesHandler).Methods("GET")
+	dcmVodSettingsPath.HandleFunc("/filtered", PostVodSettingsFilteredWithParamsHandler).Methods("POST")
+	dcmVodSettingsPath.HandleFunc("/export", GetVodSettingExportHandler).Methods("GET")
+	dcmVodSettingsPath.HandleFunc("/{id}", DeleteVodSettingsByIdHandler).Methods("DELETE")
+	dcmVodSettingsPath.HandleFunc("/{id}", GetVodSettingsByIdHandler).Methods("GET")
+
+	dcmUploadRepositoryPath := r.PathPrefix("/xconfAdminService/dcm/uploadRepository").Subrouter()
+	dcmUploadRepositoryPath.HandleFunc("", GetLogRepoSettingsHandler).Methods("GET")
+	dcmUploadRepositoryPath.HandleFunc("", CreateLogRepoSettingsHandler).Methods("POST")
+	dcmUploadRepositoryPath.HandleFunc("", UpdateLogRepoSettingsHandler).Methods("PUT")
+	dcmUploadRepositoryPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET")
+	dcmUploadRepositoryPath.HandleFunc("/entities", PostLogRepoSettingsEntitiesHandler).Methods("POST")
+	dcmUploadRepositoryPath.HandleFunc("/entities", PutLogRepoSettingsEntitiesHandler).Methods("PUT")
+	dcmUploadRepositoryPath.HandleFunc("/size", GetLogRepoSettingsSizeHandler).Methods("GET")
+	dcmUploadRepositoryPath.HandleFunc("/names", GetLogRepoSettingsNamesHandler).Methods("GET")
+	dcmUploadRepositoryPath.HandleFunc("/filtered", PostLogRepoSettingsFilteredWithParamsHandler).Methods("POST")
+	dcmUploadRepositoryPath.HandleFunc("/{id}", DeleteLogRepoSettingsByIdHandler).Methods("DELETE")
+	dcmUploadRepositoryPath.HandleFunc("/{id}", GetLogRepoSettingsByIdHandler).Methods("GET")
+	dcmUploadRepositoryPath.HandleFunc("/export", GetLogRepoSettingsExportHandler).Methods("GET")
+
+	dcmLogUploadSettingsPath := r.PathPrefix("/xconfAdminService/dcm/logUploadSettings").Subrouter()
+	dcmLogUploadSettingsPath.HandleFunc("", GetLogUploadSettingsHandler).Methods("GET")
+	dcmLogUploadSettingsPath.HandleFunc("", CreateLogUploadSettingsHandler).Methods("POST")
+	dcmLogUploadSettingsPath.HandleFunc("", UpdateLogUploadSettingsHandler).Methods("PUT")
+	dcmLogUploadSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET")
+	dcmLogUploadSettingsPath.HandleFunc("/size", GetLogUploadSettingsSizeHandler).Methods("GET")
+	dcmLogUploadSettingsPath.HandleFunc("/names", GetLogUploadSettingsNamesHandler).Methods("GET")
+	dcmLogUploadSettingsPath.HandleFunc("/filtered", PostLogUploadSettingsFilteredWithParamsHandler).Methods("POST")
+	dcmLogUploadSettingsPath.HandleFunc("/export", GetLogRepoSettingsExportHandler).Methods("GET")
+	dcmLogUploadSettingsPath.HandleFunc("/{id}", DeleteLogUploadSettingsByIdHandler).Methods("DELETE")
+	dcmLogUploadSettingsPath.HandleFunc("/{id}", GetLogUploadSettingsByIdHandler).Methods("GET")
+
+	// DCM test page
+	r.HandleFunc("/xconfAdminService/dcm/testpage", DcmTestPageHandler).Methods("POST")
+}
+
 type apiUnitTest struct {
 	t        *testing.T
 	router   *mux.Router
@@ -655,9 +730,59 @@ type apiUnitTest struct {
 func TestMain(m *testing.M) {
 	fmt.Printf("in TestMain\n")
 
+	// Check if we should use mock database (set via environment variable or default to true for speed)
+	useMock := os.Getenv("USE_MOCK_DB")
+	if useMock == "" || useMock == "true" || useMock == "1" {
+		fmt.Printf("Using MOCK database for fast unit tests\n")
+
+		// Initialize mock database client to prevent distributed lock panics
+		mockDbClient := mocks.NewMockDatabaseClient()
+		db.SetDatabaseClient(mockDbClient)
+
+		// Register table configurations to avoid "Table configuration not found" errors
+		db.RegisterTableConfigSimple(db.TABLE_DCM_RULE, logupload.NewDCMGenericRuleInf)
+		db.RegisterTableConfigSimple(db.TABLE_LOG_FILE, logupload.NewLogFileInf)
+		db.RegisterTableConfigSimple(db.TABLE_LOG_FILE_LIST, logupload.NewLogFileListInf)
+		db.RegisterTableConfigSimple(db.TABLE_LOG_UPLOAD_SETTINGS, logupload.NewLogUploadSettingsInf)
+		db.RegisterTableConfigSimple(db.TABLE_DEVICE_SETTINGS, logupload.NewDeviceSettingsInf)
+		db.RegisterTableConfigSimple(db.TABLE_VOD_SETTINGS, logupload.NewVodSettingsInf)
+		db.RegisterTableConfigSimple(db.TABLE_UPLOAD_REPOSITORY, logupload.NewUploadRepositoryInf)
+		db.RegisterTableConfigSimple(db.TABLE_XCONF_CHANGED_KEYS, db.NewChangedDataInf)
+
+		// Initialize mock database
+		mockDaoInstance = InitMockDatabase()
+
+		// Set up minimal environment variables needed
+		os.Setenv("SECURITY_TOKEN_KEY", "testSecurityTokenKey")
+		os.Setenv("XPC_KEY", "testXpcKey")
+		os.Setenv("SAT_CLIENT_ID", "foo")
+		os.Setenv("SAT_CLIENT_SECRET", "bar")
+		os.Setenv("IDP_CLIENT_ID", "foo")
+		os.Setenv("IDP_CLIENT_SECRET", "bar")
+		os.Setenv("X1_SSR_KEYS", "test-key-1;test-key-2;test-key3")
+		os.Setenv("PARTNER_KEYS", "test")
+
+		// Create minimal router and set up routes
+		router = mux.NewRouter()
+
+		// Set up DCM routes without middleware (for mock mode)
+		SetupDCMRoutesForMock(router)
+
+		// Initialize common package settings
+		common.AuthProvider = "local"
+		common.ApplicationTypes = []string{"stb", "xhome"}
+
+		globAut = newApiUnitTest(nil)
+		returnCode := m.Run()
+		globAut.t = nil
+
+		os.Exit(returnCode)
+	} // Original path for integration tests with real database
+	fmt.Printf("Using REAL database for integration tests\n")
+
 	testConfigFile = "/app/xconfadmin/xconfadmin.conf"
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
-		testConfigFile = "../config/sample_xconfadmin.conf"
+		testConfigFile = "../../config/sample_xconfadmin.conf"
 		if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
 			panic(fmt.Errorf("config file problem %v", err))
 		}
@@ -796,11 +921,34 @@ func GetTestWebConfigServer(testConfigFile string) (*oshttp.WebconfigServer, *mu
 
 func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRecorder { // restored local version
 	recorder := httptest.NewRecorder()
-	handler.ServeHTTP(recorder, r)
+
+	// Wrap the response writer with XResponseWriter to match production behavior
+	xw := xwhttp.NewXResponseWriter(recorder, r)
+
+	// Read and set the request body on XResponseWriter (mimics middleware behavior)
+	if r.Method == "POST" || r.Method == "PUT" {
+		if r.Body != nil {
+			if rbytes, err := ioutil.ReadAll(r.Body); err == nil {
+				xw.SetBody(string(rbytes))
+			}
+		} else {
+			xw.SetBody("")
+		}
+	}
+
+	handler.ServeHTTP(xw, r)
 	return recorder
 }
 
 func DeleteAllEntities() {
+	// If using mock database, clear it instantly
+	// Note: No mutex lock here to avoid deadlock with saveFormula
+	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
+		mockDaoInstance.Clear()
+		return
+	}
+
+	// Original implementation for real database
 	for _, tableInfo := range db.GetAllTableInfo() {
 		if err := truncateTable(tableInfo.TableName); err != nil {
 			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
@@ -822,7 +970,14 @@ func truncateTable(tableName string) error {
 
 func CreateAndSaveModel(id string) *core.Model {
 	model := core.NewModel(id, "ModelDescription")
-	err := db.GetCachedSimpleDao().SetOne(db.TABLE_MODEL, model.ID, model)
+
+	var err error
+	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
+		err = mockDaoInstance.SetOne(db.TABLE_MODEL, model.ID, model)
+	} else {
+		err = db.GetCachedSimpleDao().SetOne(db.TABLE_MODEL, model.ID, model)
+	}
+
 	if err != nil {
 		return nil
 	}
@@ -843,14 +998,51 @@ func unmarshalXconfError(b []byte) *common.XconfError {
 	return xconfError
 }
 
+// Helper functions to work with either mock or real DAO
+func getDaoForTest() interface{} {
+	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
+		return mockDaoInstance
+	}
+	return db.GetCachedSimpleDao()
+}
+
+func setOneInDao(tableName string, rowKey string, entity interface{}) error {
+	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
+		return mockDaoInstance.SetOne(tableName, rowKey, entity)
+	}
+	return db.GetCachedSimpleDao().SetOne(tableName, rowKey, entity)
+}
+
+func getOneFromDao(tableName string, rowKey string) (interface{}, error) {
+	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
+		return mockDaoInstance.GetOne(tableName, rowKey)
+	}
+	return db.GetCachedSimpleDao().GetOne(tableName, rowKey)
+}
+
+func getAllAsListFromDao(tableName string, maxResults int) ([]interface{}, error) {
+	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
+		return mockDaoInstance.GetAllAsList(tableName, maxResults)
+	}
+	return db.GetCachedSimpleDao().GetAllAsList(tableName, maxResults)
+}
+
+func deleteOneFromDao(tableName string, rowKey string) error {
+	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
+		return mockDaoInstance.DeleteOne(tableName, rowKey)
+	}
+	return db.GetCachedSimpleDao().DeleteOne(tableName, rowKey)
+}
+
 func TestDfAllApi(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	//t.Skip("TODO: cpatel550 - need to move this test under adminapi")
 	//config := GetTestConfig()
 	//_, router := GetTestWebConfigServer(config)
 	dfrule := logupload.DCMGenericRule{}
 	err := json.Unmarshal([]byte(jsondfCreateData), &dfrule)
 	assert.NilError(t, err)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, dfrule.ID, &dfrule)
+	setOneInDao(ds.TABLE_DCM_RULE, dfrule.ID, &dfrule)
 
 	// create entry
 	url := fmt.Sprintf("%s", DF_URL)
@@ -1157,6 +1349,7 @@ func TestDfAllApi(t *testing.T) {
 // }
 
 func TestChangeFormulaPriorityWithNotValidValue_ExceptionIsThrown(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	formula := createFormula("MODEL_ID", 0)
 	saveFormula(formula, t)
@@ -1188,7 +1381,8 @@ func createFormula(modelId string, testIndex int) *logupload.DCMGenericRule {
 	model := CreateAndSaveModel(strings.ToUpper(fmt.Sprintf(modelId+"%v", testIndex)))
 	formula := logupload.DCMGenericRule{}
 	formula.ID = uuid.New().String()
-	formula.Name = fmt.Sprintf("TEST_FORMULA_%v", testIndex)
+	// Add UUID to formula name to prevent duplicate names when tests run in parallel
+	formula.Name = fmt.Sprintf("TEST_FORMULA_%v_%s", testIndex, formula.ID[:8])
 	formula.Description = fmt.Sprintf("TEST_DESCRIPTION_%v", testIndex)
 	formula.ApplicationType = core.STB
 	formula.Rule = *CreateRule(rulesengine.RelationAnd, *coreef.RuleFactoryMODEL, rulesengine.StandardOperationIs, model.ID)
@@ -1204,6 +1398,9 @@ func saveFormula(formula *logupload.DCMGenericRule, t *testing.T) {
 	formulaJson, _ := json.Marshal(formula)
 	r := httptest.NewRequest("POST", url, bytes.NewReader(formulaJson))
 	rr := ExecuteRequest(r, router)
+	if rr.Code != http.StatusCreated {
+		t.Logf("saveFormula failed with status %d, body: %s", rr.Code, rr.Body.String())
+	}
 	assert.Equal(t, http.StatusCreated, rr.Code)
 }
 
@@ -1552,6 +1749,7 @@ func TestImportDcmFormulaWithOverwriteHandler_InvalidJSON(t *testing.T) {
 
 // Test GetDcmFormulaByIdHandler - Application Type Mismatch
 func TestGetDcmFormulaByIdHandler_AppTypeMismatch(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	formula := createFormula("MODEL_APP_MISMATCH", 0)
 	saveFormula(formula, t)
@@ -1564,6 +1762,7 @@ func TestGetDcmFormulaByIdHandler_AppTypeMismatch(t *testing.T) {
 
 // Test GetDcmFormulaByIdHandler - Export with settings
 func TestGetDcmFormulaByIdHandler_ExportWithSettings(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	formula := createFormula("MODEL_EXPORT_SETTINGS", 0)
 	saveFormula(formula, t)
@@ -1603,6 +1802,7 @@ func TestCreateDcmFormulaHandler_Success(t *testing.T) {
 
 // Test UpdateDcmFormulaHandler - Success case
 func TestUpdateDcmFormulaHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	formula := createFormula("MODEL_UPDATE_SUCCESS", 0)
 	saveFormula(formula, t)
@@ -1619,6 +1819,7 @@ func TestUpdateDcmFormulaHandler_Success(t *testing.T) {
 
 // Test GetDcmFormulaNamesHandler - Empty list
 func TestGetDcmFormulaNamesHandler_EmptyList(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	url := "/xconfAdminService/dcm/formula/names?applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
@@ -1632,6 +1833,7 @@ func TestGetDcmFormulaNamesHandler_EmptyList(t *testing.T) {
 
 // Test GetDcmFormulaSizeHandler - Multiple formulas
 func TestGetDcmFormulaSizeHandler_MultipleFormulas(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	for i := 0; i < 5; i++ {
 		formula := createFormula(fmt.Sprintf("MODEL_SIZE_%d", i), i)
@@ -1670,6 +1872,7 @@ func TestDcmFormulaSettingsAvailabilitygHandler_Success(t *testing.T) {
 
 // Test DcmFormulasAvailabilitygHandler - Success with multiple IDs
 func TestDcmFormulasAvailabilitygHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	formula1 := createFormula("MODEL_AVAIL_1", 0)
 	saveFormula(formula1, t)
@@ -1691,6 +1894,7 @@ func TestDcmFormulasAvailabilitygHandler_Success(t *testing.T) {
 
 // Test PostDcmFormulaFilteredWithParamsHandler - Success with empty context
 func TestPostDcmFormulaFilteredWithParamsHandler_EmptyContext(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	formula := createFormula("MODEL_FILTERED", 0)
 	saveFormula(formula, t)
@@ -1706,6 +1910,7 @@ func TestPostDcmFormulaFilteredWithParamsHandler_EmptyContext(t *testing.T) {
 
 // Test PostDcmFormulaFilteredWithParamsHandler - With pagination
 func TestPostDcmFormulaFilteredWithParamsHandler_WithPagination(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	for i := 0; i < 10; i++ {
 		formula := createFormula(fmt.Sprintf("MODEL_PAGE_%d", i), i)
@@ -1730,7 +1935,7 @@ func TestDcmFormulaChangePriorityHandler_AppTypeMismatch(t *testing.T) {
 	formula := createFormula("MODEL_PRIO_MISMATCH", 0)
 	formula.ApplicationType = "xhome"
 	formulaJson, _ := json.Marshal(formula)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formula.ID, formulaJson)
+	setOneInDao(db.TABLE_DCM_RULE, formula.ID, formulaJson)
 
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s/priority/2?applicationType=stb", formula.ID)
 	req := httptest.NewRequest("POST", url, nil)
@@ -1755,6 +1960,7 @@ func TestDcmFormulaChangePriorityHandler_Success(t *testing.T) {
 
 // Test ImportDcmFormulaWithOverwriteHandler - Success with overwrite=true
 func TestImportDcmFormulaWithOverwriteHandler_OverwriteTrue(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	formula := createFormula("MODEL_OVERWRITE", 0)
 	saveFormula(formula, t)
@@ -1815,6 +2021,7 @@ func TestPostDcmFormulaListHandler_MultipleFormulas(t *testing.T) {
 
 // Test PutDcmFormulaListHandler - Multiple formulas update
 func TestPutDcmFormulaListHandler_MultipleFormulas(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	formula1 := createFormula("MODEL_PUT_M1", 0)
 	formula2 := createFormula("MODEL_PUT_M2", 1)
@@ -2119,6 +2326,7 @@ func TestPostDcmFormulaListHandler_InvalidFormula(t *testing.T) {
 // ========== Comprehensive Coverage Tests for PutDcmFormulaListHandler ==========
 
 func TestPutDcmFormulaListHandler_UpdateWithAllSettings(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	formula := createFormula("MODEL_PUT_ALL_SETTINGS", 1)
 	saveFormula(formula, t)
@@ -2225,6 +2433,7 @@ func TestPutDcmFormulaListHandler_MixedResults(t *testing.T) {
 }
 
 func TestPutDcmFormulaListHandler_UpdatePriority(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	formula := createFormula("MODEL_PUT_PRIORITY", 1)
 	saveFormula(formula, t)
@@ -2242,6 +2451,7 @@ func TestPutDcmFormulaListHandler_UpdatePriority(t *testing.T) {
 }
 
 func TestPutDcmFormulaListHandler_PartialSettings(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 	formula := createFormula("MODEL_PUT_PARTIAL", 1)
 	saveFormula(formula, t)
@@ -2635,6 +2845,7 @@ func TestImportFormulas_Success(t *testing.T) {
 
 // TestImportFormulas_SortByPriority tests that formulas are sorted by priority before import
 func TestImportFormulas_SortByPriority(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 
 	// Create formulas with different priorities (out of order)
@@ -2695,6 +2906,7 @@ func TestImportFormulas_EmptyList(t *testing.T) {
 
 // TestImportFormulas_Overwrite tests overwrite functionality
 func TestImportFormulas_Overwrite(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
 
 	// Create formula with settings once
@@ -2777,10 +2989,10 @@ func testImportFormula(fws *logupload.FormulaWithSettings, overwrite bool, appTy
 	// Only save the DCM rule if we're doing an update (overwrite=true) and it doesn't exist yet
 	if overwrite && fws.Formula != nil {
 		// Check if it already exists
-		_, err := db.GetCachedSimpleDao().GetOne(db.TABLE_DCM_RULE, fws.Formula.ID)
+		_, err := getOneFromDao(db.TABLE_DCM_RULE, fws.Formula.ID)
 		if err != nil {
 			// Doesn't exist, so save it
-			err = db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, fws.Formula.ID, fws.Formula)
+			err = setOneInDao(db.TABLE_DCM_RULE, fws.Formula.ID, fws.Formula)
 			if err != nil {
 				return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 			}

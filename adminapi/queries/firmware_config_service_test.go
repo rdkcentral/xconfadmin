@@ -23,6 +23,7 @@ import (
 
 	"gotest.tools/assert"
 
+	ds "github.com/rdkcentral/xconfwebconfig/db"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
@@ -39,7 +40,7 @@ func createTestFirmwareConfigForService(id string, version string, modelIds []st
 		FirmwareFilename:         "test.bin",
 		FirmwareLocation:         "http://test.com/test.bin",
 	}
-	coreef.CreateFirmwareConfigOneDB(fc)
+	SetOneInDao(ds.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 	return fc
 }
 
@@ -79,11 +80,12 @@ func createEnvModelFirmwareRule(id string, name string, model string, configId s
 
 	var rule corefw.FirmwareRule
 	json.Unmarshal([]byte(ruleJSON), &rule)
-	corefw.CreateFirmwareRuleOneDB(&rule)
+	SetOneInDao(ds.TABLE_FIRMWARE_RULE, rule.ID, &rule)
 	return &rule
 }
 
 func TestIsValidFirmwareConfigByModelIdList(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -121,6 +123,7 @@ func TestIsValidFirmwareConfigByModelIdList(t *testing.T) {
 }
 
 func TestIsValidFirmwareConfigByModelIds(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -234,7 +237,7 @@ func TestGetSupportedConfigsByEnvModelRuleName_NoMatchingModel(t *testing.T) {
 
 	var rule corefw.FirmwareRule
 	json.Unmarshal([]byte(ruleJSON), &rule)
-	corefw.CreateFirmwareRuleOneDB(&rule)
+	SetOneInDao(ds.TABLE_FIRMWARE_RULE, rule.ID, &rule)
 
 	// Test - should not find config because model doesn't match
 	result := getSupportedConfigsByEnvModelRuleName("NoMatchRule", "stb")

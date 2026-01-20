@@ -56,6 +56,7 @@ func TestGetPercentageBeanFilterFieldValues_Error(t *testing.T) {
 
 // Test getGlobalPercentageFields
 func TestGetGlobalPercentageFields(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 
 	// Test with a valid field name
@@ -94,6 +95,7 @@ func TestGetPercentageBeanFieldValues_Error(t *testing.T) {
 
 // Test getPartnerOptionalCondition - Success case
 func TestGetPartnerOptionalCondition_Success(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	// Create a basic percentage bean without optional conditions
 	bean := &coreef.PercentageBean{
 		Name:   "testBean",
@@ -110,6 +112,7 @@ func TestGetPartnerOptionalCondition_Success(t *testing.T) {
 
 // Test getPartnerOptionalCondition - Error case
 func TestGetPartnerOptionalCondition_InvalidPartner(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	// This test verifies the function handles beans without partner conditions
 	bean := &coreef.PercentageBean{
 		Name:   "testBean",
@@ -175,6 +178,8 @@ func TestCreateWakeupPoolList_Error(t *testing.T) {
 
 // Test getGlobalPercentageFields - Multiple field types
 func TestGetGlobalPercentageFields_DifferentFields(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 
 	// Test with percentage field (should have default 100)
@@ -350,6 +355,7 @@ func TestGetStructFieldValues_NonExistentField(t *testing.T) {
 
 // Test getPartnerOptionalCondition - With valid partner in optional conditions
 func TestGetPartnerOptionalCondition_WithValidPartner(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	// Create bean with optional conditions containing valid partnerId
 	// This is a complex scenario requiring proper Rule structure setup
 	bean := &coreef.PercentageBean{
@@ -365,6 +371,7 @@ func TestGetPartnerOptionalCondition_WithValidPartner(t *testing.T) {
 
 // Test getPartnerOptionalCondition - Nil optional conditions
 func TestGetPartnerOptionalCondition_NilOptionalConditions(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	bean := &coreef.PercentageBean{
 		Name:               "testBean",
 		Active:             true,
@@ -413,6 +420,7 @@ func TestCreateCanaries_CanaryCreationDisabled(t *testing.T) {
 
 // Test ResponseEntity error paths - Conflict
 func TestCreatePercentageBean_ResponseEntity_Conflict(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 
 	// Create first bean

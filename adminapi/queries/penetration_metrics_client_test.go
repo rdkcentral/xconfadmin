@@ -30,6 +30,7 @@ import (
 )
 
 func TestGetPenetrationMetrics(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	truncateTable("PenetrationMetrics")
 	err := createPenetrationSampleData()
 	assert.NilError(t, err)

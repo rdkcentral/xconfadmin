@@ -41,7 +41,7 @@ func makeFeatureForService(name string, app string) *xwrfc.Feature {
 		EffectiveImmediate: true,
 		ConfigData:         map[string]string{"key": "value"},
 	}
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_XCONF_FEATURE, f.ID, f)
+	SetOneInDao(ds.TABLE_XCONF_FEATURE, f.ID, f)
 	return f
 }
 
@@ -77,20 +77,20 @@ func makeFeatureRuleForService(featureIds []string, app string, priority int, na
 		Priority:        priority,
 		Rule:            makeRuleForService(),
 	}
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, fr.Id, fr)
+	SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr.Id, fr)
 	return fr
 }
 
 func cleanupServiceTest() {
 	tables := []string{ds.TABLE_FEATURE_CONTROL_RULE, ds.TABLE_XCONF_FEATURE}
 	for _, tbl := range tables {
-		list, _ := ds.GetCachedSimpleDao().GetAllAsList(tbl, 0)
+		list, _ := GetAllAsListFromDao(tbl, 0)
 		for _, inst := range list {
 			switch v := inst.(type) {
 			case *xwrfc.FeatureRule:
-				ds.GetCachedSimpleDao().DeleteOne(tbl, v.Id)
+				DeleteOneFromDao(tbl, v.Id)
 			case *xwrfc.Feature:
-				ds.GetCachedSimpleDao().DeleteOne(tbl, v.ID)
+				DeleteOneFromDao(tbl, v.ID)
 			}
 		}
 		ds.GetCachedSimpleDao().RefreshAll(tbl)
@@ -275,6 +275,7 @@ func TestAddNewFeatureRuleAndReorganize(t *testing.T) {
 
 // Test FindFeatureRuleByContext
 func TestFindFeatureRuleByContext(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	cleanupServiceTest()
 
 	f1 := makeFeatureForService("SearchFeature1", "stb")
@@ -297,7 +298,7 @@ func TestFindFeatureRuleByContext(t *testing.T) {
 		Priority:        3,
 		Rule:            ruleWithCollection,
 	}
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, fr4.Id, fr4)
+	SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr4.Id, fr4)
 
 	t.Run("FilterByApplicationType_STB", func(t *testing.T) {
 		context := map[string]string{xshared.APPLICATION_TYPE: "stb"}
@@ -415,6 +416,7 @@ func TestFindFeatureRuleByContext(t *testing.T) {
 
 // Test ValidateFeatureRule
 func TestValidateFeatureRule(t *testing.T) {
+	SkipIfMockDatabase(t) // Requires DB validation via rfc.GetOneFeature
 	cleanupServiceTest()
 
 	f := makeFeatureForService("ValidateFeature", "stb")
@@ -688,6 +690,7 @@ func TestParsePercentRange(t *testing.T) {
 
 // Test validateAllFeatureRule
 func TestValidateAllFeatureRule(t *testing.T) {
+	SkipIfMockDatabase(t) // Requires DB validation via rfc.GetFeatureRuleListForAS
 	cleanupServiceTest()
 
 	f := makeFeatureForService("Feature1", "stb")
@@ -828,6 +831,7 @@ func TestGetPercentRanges(t *testing.T) {
 
 // Test UpdateFeatureRule
 func TestUpdateFeatureRule(t *testing.T) {
+	SkipIfMockDatabase(t) // Requires DB validation
 	cleanupServiceTest()
 
 	f := makeFeatureForService("UpdateFeature", "stb")
@@ -886,7 +890,7 @@ func TestUpdateFeatureRule(t *testing.T) {
 		assert.Contains(t, err.Error(), "ApplicationType cannot be changed")
 
 		// Cleanup
-		ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_XCONF_FEATURE, fRdkCloud.ID)
+		DeleteOneFromDao(ds.TABLE_XCONF_FEATURE, fRdkCloud.ID)
 	})
 
 	t.Run("UpdateWithSamePriority", func(t *testing.T) {
@@ -908,7 +912,7 @@ func TestUpdateFeatureRule(t *testing.T) {
 		// Reset existingRule to priority 1 and save it
 		existingRule.Priority = 1
 		existingRule.Name = "UpdateRule" // Reset name in case it was changed
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, existingRule.Id, existingRule)
+		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, existingRule.Id, existingRule)
 
 		// Create an additional rule at priority 2
 		fr2 := &xwrfc.FeatureRule{
@@ -925,7 +929,7 @@ func TestUpdateFeatureRule(t *testing.T) {
 				),
 			},
 		}
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, fr2.Id, fr2)
+		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr2.Id, fr2)
 
 		// Now update existingRule from priority 1 to priority 2
 		// This will swap the priorities
@@ -945,7 +949,7 @@ func TestUpdateFeatureRule(t *testing.T) {
 		}
 
 		// Cleanup
-		ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_FEATURE_CONTROL_RULE, fr2.Id)
+		DeleteOneFromDao(ds.TABLE_FEATURE_CONTROL_RULE, fr2.Id)
 	})
 
 	t.Run("ValidationError", func(t *testing.T) {
@@ -1027,6 +1031,7 @@ func TestUpdateFeatureRuleByPriorityAndReorganize(t *testing.T) {
 
 // Test importOrUpdateAllFeatureRule
 func TestImportOrUpdateAllFeatureRule(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	cleanupServiceTest()
 
 	f := makeFeatureForService("ImportFeature", "stb")
@@ -1147,6 +1152,7 @@ func TestImportOrUpdateAllFeatureRule(t *testing.T) {
 
 // Test ChangeFeatureRulePriorities
 func TestChangeFeatureRulePriorities(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	cleanupServiceTest()
 
 	f := makeFeatureForService("PriorityFeature", "stb")
@@ -1173,9 +1179,9 @@ func TestChangeFeatureRulePriorities(t *testing.T) {
 		fr1.Priority = 1
 		fr2.Priority = 2
 		fr3.Priority = 3
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, fr1.Id, fr1)
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, fr2.Id, fr2)
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, fr3.Id, fr3)
+		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr1.Id, fr1)
+		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr2.Id, fr2)
+		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr3.Id, fr3)
 
 		result, err := ChangeFeatureRulePriorities(fr3.Id, 1, "stb")
 		assert.Nil(t, err)
@@ -1188,9 +1194,9 @@ func TestChangeFeatureRulePriorities(t *testing.T) {
 		fr1.Priority = 1
 		fr2.Priority = 2
 		fr3.Priority = 3
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, fr1.Id, fr1)
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, fr2.Id, fr2)
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, fr3.Id, fr3)
+		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr1.Id, fr1)
+		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr2.Id, fr2)
+		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr3.Id, fr3)
 
 		result, err := ChangeFeatureRulePriorities(fr2.Id, 1, "stb")
 		assert.Nil(t, err)
@@ -1202,9 +1208,9 @@ func TestChangeFeatureRulePriorities(t *testing.T) {
 		fr1.Priority = 1
 		fr2.Priority = 2
 		fr3.Priority = 3
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, fr1.Id, fr1)
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, fr2.Id, fr2)
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, fr3.Id, fr3)
+		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr1.Id, fr1)
+		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr2.Id, fr2)
+		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr3.Id, fr3)
 
 		result, err := ChangeFeatureRulePriorities(fr2.Id, 3, "")
 		assert.Nil(t, err)

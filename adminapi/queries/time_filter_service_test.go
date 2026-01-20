@@ -27,7 +27,7 @@ func seedEnvModelRule(modelId, envId, appType string) *coreef.EnvModelRuleBean {
 	fwRule.Type = corefw.ENV_MODEL_RULE
 	fwRule.Rule = envModelRule
 	fwRule.ApplicationType = appType
-	corefw.CreateFirmwareRuleOneDB(fwRule)
+	SetOneInDao(ds.TABLE_FIRMWARE_RULE, fwRule.ID, fwRule)
 	return &coreef.EnvModelRuleBean{Id: fwRule.ID, ModelId: modelId, EnvironmentId: envId, Name: fwRule.Name}
 }
 
@@ -47,7 +47,7 @@ func newValidTimeFilter(name string) *coreef.TimeFilter {
 // 	// seed IP whitelist group so IsChangedIpAddressGroup returns false
 // 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_OK", "G_OK", []string{"10.0.0.1"})
 // 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-// 	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+// 	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 // 	// need RawIpAddresses populated to mirror stored list
 // 	ipGrp.RawIpAddresses = []string{"10.0.0.1"}
 // 	tf := newValidTimeFilter("TF1")
@@ -103,7 +103,7 @@ func TestUpdateTimeFilter_EnvModelMissing(t *testing.T) {
 	// add a valid stored IP group to bypass IsChangedIpAddressGroup and avoid nil deref chain
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_TMP", "G_TMP", []string{"10.1.1.1"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.1.1.1"}
 	tf.IpWhiteList = ipGrp
 	assert.Equal(t, 400, UpdateTimeFilter("stb", tf).Status)
@@ -115,7 +115,7 @@ func TestDeleteTimeFilter_Paths(t *testing.T) {
 	tf := newValidTimeFilter("DELTF")
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_OK2", "G_OK2", []string{"10.0.0.2"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.2"}
 	tf.IpWhiteList = ipGrp
 	// directly persist a TIME_FILTER firmware rule to exercise delete paths without relying on UpdateTimeFilter validations
@@ -125,7 +125,7 @@ func TestDeleteTimeFilter_Paths(t *testing.T) {
 		fr.ID = uuid.New().String()
 		tf.Id = fr.ID
 	}
-	corefw.CreateFirmwareRuleOneDB(fr)
+	SetOneInDao(ds.TABLE_FIRMWARE_RULE, fr.ID, fr)
 	// delete existing
 	assert.Equal(t, 204, DeleteTimeFilter("DELTF", "stb").Status)
 	// delete non-existing
@@ -141,7 +141,7 @@ func TestUpdateTimeFilter_ApplicationTypeValidation(t *testing.T) {
 	// Setup valid IP group to bypass earlier checks
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_VAL", "G_VAL", []string{"10.0.0.5"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.5"}
 
 	tf := newValidTimeFilter("TFAPP")
@@ -165,7 +165,7 @@ func TestUpdateTimeFilter_CreateFirmwareRuleError(t *testing.T) {
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_CRT", "G_CRT", []string{"10.0.0.6"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.6"}
 
 	tf := newValidTimeFilter("TFCREATE")
@@ -189,7 +189,7 @@ func TestUpdateTimeFilter_IdAssignment(t *testing.T) {
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_ID", "G_ID", []string{"10.0.0.7"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.7"}
 
 	tf := newValidTimeFilter("TFID")
@@ -213,7 +213,7 @@ func TestUpdateTimeFilter_UppercaseConversion(t *testing.T) {
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_UP", "G_UP", []string{"10.0.0.8"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.8"}
 
 	tf := newValidTimeFilter("TFUPPER")
@@ -256,7 +256,7 @@ func TestUpdateTimeFilter_UppercaseConversion_MixedCase(t *testing.T) {
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_MIXED", "G_MIXED", []string{"10.0.0.15"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.15"}
 
 	tf := newValidTimeFilter("TFMIXED")
@@ -293,7 +293,7 @@ func TestUpdateTimeFilter_ConvertTimeFilterToFirmwareRule(t *testing.T) {
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_CONVERT", "G_CONVERT", []string{"10.0.0.20"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.20"}
 
 	tf := newValidTimeFilter("TFCONVERT")
@@ -337,7 +337,7 @@ func TestUpdateTimeFilter_ApplicationTypeAssignment_NonBlank(t *testing.T) {
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_APPTYPE", "G_APPTYPE", []string{"10.0.0.21"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.21"}
 
 	tf := newValidTimeFilter("TFAPPTYPE")
@@ -363,7 +363,7 @@ func TestUpdateTimeFilter_SecondValidateApplicationType_Error(t *testing.T) {
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_VAL2", "G_VAL2", []string{"10.0.0.22"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.22"}
 
 	tf := newValidTimeFilter("TFVAL2")
@@ -392,7 +392,7 @@ func TestUpdateTimeFilter_CreateFirmwareRuleOneDB_Success(t *testing.T) {
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_CREATE2", "G_CREATE2", []string{"10.0.0.23"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.23"}
 
 	tf := newValidTimeFilter("TFCREATE2")
@@ -423,7 +423,7 @@ func TestUpdateTimeFilter_IdAssignment_EmptyId(t *testing.T) {
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_IDASSIGN", "G_IDASSIGN", []string{"10.0.0.24"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.24"}
 
 	tf := newValidTimeFilter("TFIDASSIGN")
@@ -454,7 +454,7 @@ func TestUpdateTimeFilter_IdAssignment_NonEmptyId(t *testing.T) {
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_IDEXIST", "G_IDEXIST", []string{"10.0.0.25"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.25"}
 
 	tf := newValidTimeFilter("TFIDEXIST")
@@ -486,7 +486,7 @@ func TestUpdateTimeFilter_SuccessReturn(t *testing.T) {
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_SUCCESS2", "G_SUCCESS2", []string{"10.0.0.26"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.26"}
 
 	tf := newValidTimeFilter("TFSUCCESS2")
@@ -524,7 +524,7 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 		emBean := seedEnvModelRule("UPPER", "UPPER", "stb")
 		ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_UPPER", "G_UPPER", []string{"10.0.0.100"})
 		nl := shared.ConvertFromIpAddressGroup(ipGrp)
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+		SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 		ipGrp.RawIpAddresses = []string{"10.0.0.100"}
 
 		tf := newValidTimeFilter("TFUPPER")
@@ -548,7 +548,7 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 		emBean := seedEnvModelRule("CONVERT", "CONVERT", "stb")
 		ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_CONVERT", "G_CONVERT", []string{"10.0.0.101"})
 		nl := shared.ConvertFromIpAddressGroup(ipGrp)
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+		SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 		ipGrp.RawIpAddresses = []string{"10.0.0.101"}
 
 		tf := newValidTimeFilter("TFCONVERT")
@@ -570,7 +570,7 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 		emBean := seedEnvModelRule("APPTYPE", "APPTYPE", "stb")
 		ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_APPTYPE", "G_APPTYPE", []string{"10.0.0.102"})
 		nl := shared.ConvertFromIpAddressGroup(ipGrp)
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+		SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 		ipGrp.RawIpAddresses = []string{"10.0.0.102"}
 
 		tf := newValidTimeFilter("TFAPPTYPE")
@@ -592,7 +592,7 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 		emBean := seedEnvModelRule("VALIDATE", "VALIDATE", "stb")
 		ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_VALIDATE", "G_VALIDATE", []string{"10.0.0.103"})
 		nl := shared.ConvertFromIpAddressGroup(ipGrp)
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+		SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 		ipGrp.RawIpAddresses = []string{"10.0.0.103"}
 
 		tf := newValidTimeFilter("TFVALIDATE")
@@ -614,7 +614,7 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 		emBean := seedEnvModelRule("CREATE", "CREATE", "stb")
 		ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_CREATE", "G_CREATE", []string{"10.0.0.104"})
 		nl := shared.ConvertFromIpAddressGroup(ipGrp)
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+		SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 		ipGrp.RawIpAddresses = []string{"10.0.0.104"}
 
 		tf := newValidTimeFilter("TFCREATE")
@@ -636,7 +636,7 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 		emBean := seedEnvModelRule("IDASSIGN", "IDASSIGN", "stb")
 		ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_IDASSIGN", "G_IDASSIGN", []string{"10.0.0.105"})
 		nl := shared.ConvertFromIpAddressGroup(ipGrp)
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+		SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 		ipGrp.RawIpAddresses = []string{"10.0.0.105"}
 
 		tf := newValidTimeFilter("TFIDASSIGN")
@@ -659,7 +659,7 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 		emBean := seedEnvModelRule("SUCCESS", "SUCCESS", "stb")
 		ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_SUCCESS", "G_SUCCESS", []string{"10.0.0.106"})
 		nl := shared.ConvertFromIpAddressGroup(ipGrp)
-		ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+		SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 		ipGrp.RawIpAddresses = []string{"10.0.0.106"}
 
 		tf := newValidTimeFilter("TFSUCCESS")
@@ -688,7 +688,7 @@ func TestUpdateTimeFilter_BlankApplicationType(t *testing.T) {
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_BLANK", "G_BLANK", []string{"10.0.0.10"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.10"}
 
 	tf := newValidTimeFilter("TFBLANK")
@@ -727,7 +727,7 @@ func TestDeleteTimeFilter_DeleteOneFirmwareRuleError(t *testing.T) {
 	tf := newValidTimeFilter("TFDELERR")
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_DEL", "G_DEL", []string{"10.0.0.11"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.11"}
 	tf.IpWhiteList = ipGrp
 	tf.EnvModelRuleBean.ModelId = "M5"
@@ -737,7 +737,7 @@ func TestDeleteTimeFilter_DeleteOneFirmwareRuleError(t *testing.T) {
 	fr.ApplicationType = "stb"
 	fr.ID = uuid.New().String()
 	tf.Id = fr.ID
-	corefw.CreateFirmwareRuleOneDB(fr)
+	SetOneInDao(ds.TABLE_FIRMWARE_RULE, fr.ID, fr)
 
 	resp := DeleteTimeFilter("TFDELERR", "stb")
 

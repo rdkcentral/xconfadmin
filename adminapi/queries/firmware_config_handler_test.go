@@ -40,12 +40,13 @@ func setupTestModels() {
 		{ID: "TEST-MODEL-3", Description: "Test Model 3"},
 	}
 	for _, model := range models {
-		db.GetCachedSimpleDao().SetOne(db.TABLE_MODEL, model.ID, &model)
+		SetOneInDao(db.TABLE_MODEL, model.ID, &model)
 	}
 }
 
 // TestPostFirmwareConfigEntitiesHandler_Success tests successful batch creation
 func TestPostFirmwareConfigEntitiesHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -87,6 +88,7 @@ func TestPostFirmwareConfigEntitiesHandler_Success(t *testing.T) {
 
 // TestPostFirmwareConfigEntitiesHandler_DuplicateEntity tests duplicate detection
 func TestPostFirmwareConfigEntitiesHandler_DuplicateEntity(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -100,7 +102,7 @@ func TestPostFirmwareConfigEntitiesHandler_DuplicateEntity(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 
 	// Try to create duplicate
 	entities := []estbfirmware.FirmwareConfig{*fc}
@@ -122,6 +124,7 @@ func TestPostFirmwareConfigEntitiesHandler_DuplicateEntity(t *testing.T) {
 
 // TestPostFirmwareConfigEntitiesHandler_DuplicateDescription tests duplicate description detection
 func TestPostFirmwareConfigEntitiesHandler_DuplicateDescription(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -135,7 +138,7 @@ func TestPostFirmwareConfigEntitiesHandler_DuplicateDescription(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
 
 	// Try to create entity with same description
 	entities := []estbfirmware.FirmwareConfig{
@@ -165,6 +168,7 @@ func TestPostFirmwareConfigEntitiesHandler_DuplicateDescription(t *testing.T) {
 
 // TestPostFirmwareConfigEntitiesHandler_ApplicationTypeMismatch tests app type validation
 func TestPostFirmwareConfigEntitiesHandler_ApplicationTypeMismatch(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -201,6 +205,7 @@ func TestPostFirmwareConfigEntitiesHandler_ApplicationTypeMismatch(t *testing.T)
 
 // TestPostFirmwareConfigEntitiesHandler_InvalidJSON tests invalid JSON handling
 func TestPostFirmwareConfigEntitiesHandler_InvalidJSON(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -220,6 +225,7 @@ func TestPostFirmwareConfigEntitiesHandler_InvalidJSON(t *testing.T) {
 
 // TestPutFirmwareConfigEntitiesHandler_Success tests successful batch update
 func TestPutFirmwareConfigEntitiesHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -240,8 +246,8 @@ func TestPutFirmwareConfigEntitiesHandler_Success(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-2"}, FirmwareFilename: "test2.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
 
 	// Update entities
 	updatedEntities := []estbfirmware.FirmwareConfig{
@@ -280,6 +286,7 @@ func TestPutFirmwareConfigEntitiesHandler_Success(t *testing.T) {
 
 // TestPutFirmwareConfigEntitiesHandler_NonExistentEntity tests updating non-existent entity
 func TestPutFirmwareConfigEntitiesHandler_NonExistentEntity(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -312,6 +319,7 @@ func TestPutFirmwareConfigEntitiesHandler_NonExistentEntity(t *testing.T) {
 
 // TestPutFirmwareConfigEntitiesHandler_MixedSuccessAndFailure tests mixed batch update
 func TestPutFirmwareConfigEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -325,7 +333,7 @@ func TestPutFirmwareConfigEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
 
 	// Update one existing and one non-existent
 	entities := []estbfirmware.FirmwareConfig{
@@ -364,6 +372,7 @@ func TestPutFirmwareConfigEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 
 // TestObsoleteGetFirmwareConfigPageHandler tests pagination endpoint
 func TestObsoleteGetFirmwareConfigPageHandler(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -378,7 +387,7 @@ func TestObsoleteGetFirmwareConfigPageHandler(t *testing.T) {
 			ApplicationType:   "stb",
 			SupportedModelIds: []string{"MODEL" + string(rune('0'+i))},
 		}
-		db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+		SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 	}
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig/page?pageNumber=1&pageSize=3", nil)
@@ -394,6 +403,7 @@ func TestObsoleteGetFirmwareConfigPageHandler(t *testing.T) {
 
 // TestObsoleteGetFirmwareConfigPageHandler_InvalidPageNumber tests invalid pagination params
 func TestObsoleteGetFirmwareConfigPageHandler_InvalidPageNumber(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -412,6 +422,7 @@ func TestObsoleteGetFirmwareConfigPageHandler_InvalidPageNumber(t *testing.T) {
 
 // TestPostFirmwareConfigBySupportedModelsHandler_Success tests getting configs by models
 func TestPostFirmwareConfigBySupportedModelsHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -432,8 +443,8 @@ func TestPostFirmwareConfigBySupportedModelsHandler_Success(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"MODELC"},
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
 
 	modelIds := []string{"MODELA", "MODELC"}
 	body, _ := json.Marshal(modelIds)
@@ -454,6 +465,7 @@ func TestPostFirmwareConfigBySupportedModelsHandler_Success(t *testing.T) {
 
 // TestPostFirmwareConfigBySupportedModelsHandler_InvalidJSON tests invalid JSON
 func TestPostFirmwareConfigBySupportedModelsHandler_InvalidJSON(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -473,6 +485,7 @@ func TestPostFirmwareConfigBySupportedModelsHandler_InvalidJSON(t *testing.T) {
 
 // TestGetFirmwareConfigFirmwareConfigMapHandler_Success tests getting config map
 func TestGetFirmwareConfigFirmwareConfigMapHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -486,7 +499,7 @@ func TestGetFirmwareConfigFirmwareConfigMapHandler_Success(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig/firmwareConfigMap", nil)
 	assert.NilError(t, err)
@@ -504,6 +517,7 @@ func TestGetFirmwareConfigFirmwareConfigMapHandler_Success(t *testing.T) {
 
 // TestPostFirmwareConfigGetSortedFirmwareVersionsIfExistOrNotHandler_Success tests sorting versions
 func TestPostFirmwareConfigGetSortedFirmwareVersionsIfExistOrNotHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -524,8 +538,8 @@ func TestPostFirmwareConfigGetSortedFirmwareVersionsIfExistOrNotHandler_Success(
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
 
 	fcData := FirmwareConfigData{
 		Versions: []string{"1.0.0", "2.0.0", "3.0.0"},
@@ -545,6 +559,7 @@ func TestPostFirmwareConfigGetSortedFirmwareVersionsIfExistOrNotHandler_Success(
 
 // TestPostFirmwareConfigFilteredHandler_Success tests filtered search
 func TestPostFirmwareConfigFilteredHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -565,8 +580,8 @@ func TestPostFirmwareConfigFilteredHandler_Success(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-2"}, FirmwareFilename: "test2.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
 
 	filterContext := map[string]string{}
 	body, _ := json.Marshal(filterContext)
@@ -587,6 +602,7 @@ func TestPostFirmwareConfigFilteredHandler_Success(t *testing.T) {
 
 // TestPostFirmwareConfigFilteredHandler_InvalidPageNumber tests invalid pagination
 func TestPostFirmwareConfigFilteredHandler_InvalidPageNumber(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -607,6 +623,7 @@ func TestPostFirmwareConfigFilteredHandler_InvalidPageNumber(t *testing.T) {
 
 // TestGetFirmwareConfigByIdHandler_Success tests getting config by ID
 func TestGetFirmwareConfigByIdHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -619,7 +636,7 @@ func TestGetFirmwareConfigByIdHandler_Success(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig/fc-byid-test", nil)
 	assert.NilError(t, err)
@@ -633,6 +650,7 @@ func TestGetFirmwareConfigByIdHandler_Success(t *testing.T) {
 
 // TestGetFirmwareConfigByIdHandler_NotFound tests non-existent ID
 func TestGetFirmwareConfigByIdHandler_NotFound(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -650,6 +668,7 @@ func TestGetFirmwareConfigByIdHandler_NotFound(t *testing.T) {
 
 // TestGetFirmwareConfigByIdHandler_WithExport tests export functionality
 func TestGetFirmwareConfigByIdHandler_WithExport(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -662,7 +681,7 @@ func TestGetFirmwareConfigByIdHandler_WithExport(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig/fc-export-test?export", nil)
 	assert.NilError(t, err)
@@ -680,6 +699,7 @@ func TestGetFirmwareConfigByIdHandler_WithExport(t *testing.T) {
 
 // TestGetFirmwareConfigByIdHandler_ApplicationTypeMismatch tests app type conflict
 func TestGetFirmwareConfigByIdHandler_ApplicationTypeMismatch(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -692,7 +712,7 @@ func TestGetFirmwareConfigByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 		ApplicationType:   "xhome",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig/fc-app-conflict", nil)
 	assert.NilError(t, err)
@@ -706,6 +726,7 @@ func TestGetFirmwareConfigByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 
 // TestGetFirmwareConfigHandler_Success tests getting all configs
 func TestGetFirmwareConfigHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -725,8 +746,8 @@ func TestGetFirmwareConfigHandler_Success(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-2"}, FirmwareFilename: "test2.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig", nil)
 	assert.NilError(t, err)
@@ -740,6 +761,7 @@ func TestGetFirmwareConfigHandler_Success(t *testing.T) {
 
 // TestGetFirmwareConfigHandler_WithExport tests export all functionality
 func TestGetFirmwareConfigHandler_WithExport(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -752,7 +774,7 @@ func TestGetFirmwareConfigHandler_WithExport(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig?export", nil)
 	assert.NilError(t, err)
@@ -770,6 +792,7 @@ func TestGetFirmwareConfigHandler_WithExport(t *testing.T) {
 
 // TestGetFirmwareConfigHandler_EmptyResult tests empty result
 func TestGetFirmwareConfigHandler_EmptyResult(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -787,6 +810,7 @@ func TestGetFirmwareConfigHandler_EmptyResult(t *testing.T) {
 
 // TestPostFirmwareConfigHandler_Success tests successful creation
 func TestPostFirmwareConfigHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -813,6 +837,7 @@ func TestPostFirmwareConfigHandler_Success(t *testing.T) {
 
 // TestPostFirmwareConfigHandler_Error tests error case with invalid JSON
 func TestPostFirmwareConfigHandler_Error(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -830,6 +855,7 @@ func TestPostFirmwareConfigHandler_Error(t *testing.T) {
 
 // TestPutFirmwareConfigHandler_Success tests successful update
 func TestPutFirmwareConfigHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -843,7 +869,7 @@ func TestPutFirmwareConfigHandler_Success(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 
 	// Update config
 	fc.Description = "Updated Description"
@@ -861,6 +887,7 @@ func TestPutFirmwareConfigHandler_Success(t *testing.T) {
 
 // TestPutFirmwareConfigHandler_Error tests error case with invalid JSON
 func TestPutFirmwareConfigHandler_Error(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -878,6 +905,7 @@ func TestPutFirmwareConfigHandler_Error(t *testing.T) {
 
 // TestObsoleteGetFirmwareConfigPageHandler_Error tests error case
 func TestObsoleteGetFirmwareConfigPageHandler_Error(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -895,6 +923,7 @@ func TestObsoleteGetFirmwareConfigPageHandler_Error(t *testing.T) {
 
 // TestGetSupportedConfigsByEnvModelRuleName_Success tests successful retrieval
 func TestGetSupportedConfigsByEnvModelRuleName_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -908,7 +937,7 @@ func TestGetSupportedConfigsByEnvModelRuleName_Success(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig/bySupportedModels/TEST_RULE", nil)
 	assert.NilError(t, err)
@@ -923,6 +952,7 @@ func TestGetSupportedConfigsByEnvModelRuleName_Success(t *testing.T) {
 
 // TestGetSupportedConfigsByEnvModelRuleName_Error tests error case with missing rule name
 func TestGetSupportedConfigsByEnvModelRuleName_Error(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -940,6 +970,7 @@ func TestGetSupportedConfigsByEnvModelRuleName_Error(t *testing.T) {
 
 // TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_Success tests successful retrieval
 func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -953,7 +984,7 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_Success(t *testing
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/byEnvModelRuleName/TEST_RULE", nil)
 	assert.NilError(t, err)
@@ -968,6 +999,7 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_Success(t *testing
 
 // TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_Error tests error case
 func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_Error(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -985,6 +1017,7 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_Error(t *testing.T
 
 // TestXHttpAdminError tests xhttp.AdminError function
 func TestXHttpAdminError(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -1002,6 +1035,7 @@ func TestXHttpAdminError(t *testing.T) {
 
 // TestWriteAdminErrorResponse tests xhttp.WriteAdminErrorResponse function
 func TestWriteAdminErrorResponse(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -1022,6 +1056,7 @@ func TestWriteAdminErrorResponse(t *testing.T) {
 
 // TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ApplicationTypeMismatch tests app type mismatch
 func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ApplicationTypeMismatch(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1035,7 +1070,7 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ApplicationTypeMis
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/byEnvModelRuleName/fc-rule-mismatch", nil)
 	assert.NilError(t, err)
@@ -1050,6 +1085,7 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ApplicationTypeMis
 
 // TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_NullConfig tests null config response
 func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_NullConfig(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1067,6 +1103,7 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_NullConfig(t *test
 
 // TestGetSupportedConfigsByEnvModelRuleName_NotFound tests when no configs match
 func TestGetSupportedConfigsByEnvModelRuleName_NotFound(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1083,6 +1120,7 @@ func TestGetSupportedConfigsByEnvModelRuleName_NotFound(t *testing.T) {
 
 // TestGetSupportedConfigsByEnvModelRuleName_MultipleConfigs tests returning multiple configs
 func TestGetSupportedConfigsByEnvModelRuleName_MultipleConfigs(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1104,8 +1142,8 @@ func TestGetSupportedConfigsByEnvModelRuleName_MultipleConfigs(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-2"},
 		FirmwareFilename:  "test2.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/supportedConfigsByEnvModelRuleName/TEST_RULE", nil)
 	assert.NilError(t, err)
@@ -1120,6 +1158,7 @@ func TestGetSupportedConfigsByEnvModelRuleName_MultipleConfigs(t *testing.T) {
 
 // TestObsoleteGetFirmwareConfigPageHandler_WithFilters tests pagination with filter context
 func TestObsoleteGetFirmwareConfigPageHandler_WithFilters(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1141,8 +1180,8 @@ func TestObsoleteGetFirmwareConfigPageHandler_WithFilters(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-2"},
 		FirmwareFilename:  "test2.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/page?pageNumber=1&pageSize=10&description=Filter", nil)
 	assert.NilError(t, err)
@@ -1157,6 +1196,7 @@ func TestObsoleteGetFirmwareConfigPageHandler_WithFilters(t *testing.T) {
 
 // TestObsoleteGetFirmwareConfigPageHandler_EmptyResult tests empty result set
 func TestObsoleteGetFirmwareConfigPageHandler_EmptyResult(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1173,6 +1213,7 @@ func TestObsoleteGetFirmwareConfigPageHandler_EmptyResult(t *testing.T) {
 
 // TestObsoleteGetFirmwareConfigPageHandler_LargePage tests large page size
 func TestObsoleteGetFirmwareConfigPageHandler_LargePage(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1187,7 +1228,7 @@ func TestObsoleteGetFirmwareConfigPageHandler_LargePage(t *testing.T) {
 			SupportedModelIds: []string{"MODEL" + string(rune('0'+i))},
 			FirmwareFilename:  "test.bin",
 		}
-		db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+		SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 	}
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/page?pageNumber=1&pageSize=100", nil)
@@ -1202,6 +1243,7 @@ func TestObsoleteGetFirmwareConfigPageHandler_LargePage(t *testing.T) {
 
 // TestPutFirmwareConfigHandler_NonExistentConfig tests updating non-existent config
 func TestPutFirmwareConfigHandler_NonExistentConfig(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1229,6 +1271,7 @@ func TestPutFirmwareConfigHandler_NonExistentConfig(t *testing.T) {
 
 // TestPutFirmwareConfigHandler_ApplicationTypeMismatch tests app type mismatch on update
 func TestPutFirmwareConfigHandler_ApplicationTypeMismatch(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1242,7 +1285,7 @@ func TestPutFirmwareConfigHandler_ApplicationTypeMismatch(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 
 	// Try to update with different app type in cookie
 	body, _ := json.Marshal(fc)
@@ -1258,6 +1301,7 @@ func TestPutFirmwareConfigHandler_ApplicationTypeMismatch(t *testing.T) {
 
 // TestPostFirmwareConfigHandler_InvalidApplicationType tests invalid app type
 func TestPostFirmwareConfigHandler_InvalidApplicationType(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1283,6 +1327,7 @@ func TestPostFirmwareConfigHandler_InvalidApplicationType(t *testing.T) {
 
 // TestPostFirmwareConfigHandler_EmptyDescription tests empty description
 func TestPostFirmwareConfigHandler_EmptyDescription(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1308,6 +1353,7 @@ func TestPostFirmwareConfigHandler_EmptyDescription(t *testing.T) {
 
 // TestPostFirmwareConfigHandler_DuplicateDescription tests duplicate description
 func TestPostFirmwareConfigHandler_DuplicateDescription(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1321,7 +1367,7 @@ func TestPostFirmwareConfigHandler_DuplicateDescription(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
 
 	// Try to create another with same description
 	fc2 := &estbfirmware.FirmwareConfig{
@@ -1345,6 +1391,7 @@ func TestPostFirmwareConfigHandler_DuplicateDescription(t *testing.T) {
 
 // TestObsoleteGetFirmwareConfigPageHandler_SortingOrder tests sorting
 func TestObsoleteGetFirmwareConfigPageHandler_SortingOrder(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1374,9 +1421,9 @@ func TestObsoleteGetFirmwareConfigPageHandler_SortingOrder(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-3"},
 		FirmwareFilename:  "test3.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc3.ID, fc3)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc3.ID, fc3)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/page?pageNumber=1&pageSize=10", nil)
 	assert.NilError(t, err)
@@ -1390,6 +1437,7 @@ func TestObsoleteGetFirmwareConfigPageHandler_SortingOrder(t *testing.T) {
 
 // TestGetSupportedConfigsByEnvModelRuleName_InvalidRuleName tests missing rule name param
 func TestGetSupportedConfigsByEnvModelRuleName_InvalidRuleName(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1407,6 +1455,7 @@ func TestGetSupportedConfigsByEnvModelRuleName_InvalidRuleName(t *testing.T) {
 
 // TestPutFirmwareConfigHandler_InvalidFirmwareVersion tests invalid firmware version
 func TestPutFirmwareConfigHandler_InvalidFirmwareVersion(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1420,7 +1469,7 @@ func TestPutFirmwareConfigHandler_InvalidFirmwareVersion(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 
 	// Try to update with empty version
 	fc.FirmwareVersion = ""
@@ -1437,6 +1486,7 @@ func TestPutFirmwareConfigHandler_InvalidFirmwareVersion(t *testing.T) {
 
 // TestPostFirmwareConfigHandler_NoPermissions tests without permissions
 func TestPostFirmwareConfigHandler_NoPermissions(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1462,6 +1512,7 @@ func TestPostFirmwareConfigHandler_NoPermissions(t *testing.T) {
 
 // TestPutFirmwareConfigHandler_NoPermissions tests update without permissions
 func TestPutFirmwareConfigHandler_NoPermissions(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1488,6 +1539,7 @@ func TestPutFirmwareConfigHandler_NoPermissions(t *testing.T) {
 
 // TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ValidRuleWithMatchingConfig tests valid scenario
 func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ValidRuleWithMatchingConfig(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1501,7 +1553,7 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ValidRuleWithMatch
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/byEnvModelRuleName/fc-valid-rule-match", nil)
 	assert.NilError(t, err)
@@ -1515,6 +1567,7 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ValidRuleWithMatch
 
 // TestGetSupportedConfigsByEnvModelRuleName_EmptyResult tests empty result handling
 func TestGetSupportedConfigsByEnvModelRuleName_EmptyResult(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1531,6 +1584,7 @@ func TestGetSupportedConfigsByEnvModelRuleName_EmptyResult(t *testing.T) {
 
 // TestObsoleteGetFirmwareConfigPageHandler_WithContextFiltering tests context filtering
 func TestObsoleteGetFirmwareConfigPageHandler_WithContextFiltering(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1552,8 +1606,8 @@ func TestObsoleteGetFirmwareConfigPageHandler_WithContextFiltering(t *testing.T)
 		SupportedModelIds: []string{"TEST-MODEL-2"},
 		FirmwareFilename:  "test2.bin",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/page?pageNumber=1&pageSize=10&firmwareVersion=1.0.0", nil)
 	assert.NilError(t, err)

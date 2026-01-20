@@ -28,6 +28,7 @@ import (
 
 	"github.com/google/uuid"
 
+	ds "github.com/rdkcentral/xconfwebconfig/db"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
 	assert "gotest.tools/assert"
@@ -157,6 +158,7 @@ func (aut *apiUnitTest) firmwareRuleTemplateResponseValidator(tcase apiUnitTestC
 }
 
 func TestGetFirmwareRuleTemplateFromQueryParams(t *testing.T) {
+	SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	testCases := []apiUnitTestCase{
 		// Invalid Param ignored
@@ -169,6 +171,7 @@ func TestGetFirmwareRuleTemplateFromQueryParams(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateFilteredFromQueryParams(t *testing.T) {
+	SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	testCases := []apiUnitTestCase{
 		// Happy path
@@ -223,6 +226,7 @@ func TestGetFirmwareRuleTemplateFilteredFromQueryParams(t *testing.T) {
 }
 
 func TestPostFirmwareRuleTemplateFilteredFromQueryParams(t *testing.T) {
+	SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	testCases := []apiUnitTestCase{
 		// invalid parameters are ignored
@@ -261,6 +265,7 @@ func TestPostFirmwareRuleTemplateFilteredFromQueryParams(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateIdsWithParam(t *testing.T) {
+	SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId1 := uuid.New().String()
 	sysGenId2 := uuid.New().String()
@@ -283,6 +288,7 @@ func TestGetFirmwareRuleTemplateIdsWithParam(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateById(t *testing.T) {
+	SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -298,6 +304,7 @@ func TestGetFirmwareRuleTemplateById(t *testing.T) {
 	aut.run(testCases)
 }
 func TestFirmwareRuleTemplateCRUD(t *testing.T) {
+	SkipIfMockDatabase(t)
 	sysGenId := uuid.New().String()
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	testCases := []apiUnitTestCase{
@@ -318,6 +325,7 @@ func TestFirmwareRuleTemplateCRUD(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateByIdWithParam(t *testing.T) {
+	SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -334,6 +342,7 @@ func TestGetFirmwareRuleTemplateByIdWithParam(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateExportWithParam(t *testing.T) {
+	SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -352,6 +361,7 @@ func TestGetFirmwareRuleTemplateExportWithParam(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateAllByType(t *testing.T) {
+	SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -370,6 +380,7 @@ func TestGetFirmwareRuleTemplateAllByType(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateByTypeByEditable(t *testing.T) {
+	SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -443,6 +454,7 @@ func TestGetFirmwareRuleTemplateByTypeByEditable(t *testing.T) {
 // }
 
 func TestGetFirmwareRuleTemplateWithParam(t *testing.T) {
+	SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -461,6 +473,7 @@ func TestGetFirmwareRuleTemplateWithParam(t *testing.T) {
 }
 
 func TestFirmwareRuleTemplateEndPoints(t *testing.T) {
+	SkipIfMockDatabase(t)
 	// Clean up any existing "stb" firmware rule templates before test
 	//DeleteAllEntities()
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
@@ -533,6 +546,7 @@ func TestFirmwareRuleTemplateEndPoints(t *testing.T) {
 }
 
 func TestPostFirmwareRuleTemplateImportAllFromBodyParams(t *testing.T) {
+	SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	testCases := []apiUnitTestCase{
 		{FRT_API, "[simple_duplicate]", NO_PRETERMS, nil, "POST", "/importAll", http.StatusOK, "imported=0&not_imported=1", aut.apiImportValidator},
@@ -559,6 +573,7 @@ func TestPostFirmwareRuleTemplateImportAllFromBodyParams(t *testing.T) {
 // Additional comprehensive tests for uncovered code paths
 
 func TestPostFirmwareRuleTemplateFilteredHandler_ErrorPaths(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -596,18 +611,22 @@ func TestPostFirmwareRuleTemplateFilteredHandler_ErrorPaths(t *testing.T) {
 }
 
 func TestPostFirmwareRuleTemplateImportHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	t.Skip("Import handler route not registered - test skipped")
 }
 
 func TestPostFirmwareRuleTemplateImportHandler_Overwrite(t *testing.T) {
+	SkipIfMockDatabase(t)
 	t.Skip("Import handler route not registered - test skipped")
 }
 
 func TestPostFirmwareRuleTemplateImportHandler_ErrorPaths(t *testing.T) {
+	SkipIfMockDatabase(t)
 	t.Skip("Import handler route not registered - test skipped")
 }
 
 func TestPostChangePriorityHandler_ErrorPaths(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -635,7 +654,7 @@ func TestPostChangePriorityHandler_ErrorPaths(t *testing.T) {
 	}`
 	var frt corefw.FirmwareRuleTemplate
 	json.Unmarshal([]byte(templateJSON), &frt)
-	corefw.CreateFirmwareRuleTemplateOneDB(&frt)
+	SetOneInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE, frt.ID, &frt)
 
 	// Test with invalid priority (0)
 	req, err := http.NewRequest("POST", "/xconfAdminService/firmwareruletemplate/PRIORITY_TEST/priority/0", nil)
@@ -679,6 +698,7 @@ func TestPostChangePriorityHandler_ErrorPaths(t *testing.T) {
 }
 
 func TestPostChangePriorityHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -707,7 +727,7 @@ func TestPostChangePriorityHandler_Success(t *testing.T) {
 		}`
 		var frt corefw.FirmwareRuleTemplate
 		json.Unmarshal([]byte(templateJSON), &frt)
-		corefw.CreateFirmwareRuleTemplateOneDB(&frt)
+		SetOneInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE, frt.ID, &frt)
 	}
 
 	// Change priority
@@ -722,6 +742,7 @@ func TestPostChangePriorityHandler_Success(t *testing.T) {
 }
 
 func TestPostFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -789,7 +810,7 @@ func TestPostFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
 	}`
 	var frt corefw.FirmwareRuleTemplate
 	json.Unmarshal([]byte(templateJSON), &frt)
-	corefw.CreateFirmwareRuleTemplateOneDB(&frt)
+	SetOneInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE, frt.ID, &frt)
 
 	templateData2 := `{
 		"id": "DUPLICATE_ID",
@@ -823,6 +844,7 @@ func TestPostFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
 }
 
 func TestDeleteFirmwareRuleTemplateByIdHandler_ErrorPaths(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -842,6 +864,7 @@ func TestDeleteFirmwareRuleTemplateByIdHandler_ErrorPaths(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateByIdHandler_ErrorPaths(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -858,14 +881,17 @@ func TestGetFirmwareRuleTemplateByIdHandler_ErrorPaths(t *testing.T) {
 }
 
 func TestObsoleteGetFirmwareRuleTemplatePageHandler_ErrorPaths(t *testing.T) {
+	SkipIfMockDatabase(t)
 	t.Skip("Obsolete handler returns 501 NotImplemented - test skipped")
 }
 
 func TestObsoleteGetFirmwareRuleTemplatePageHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	t.Skip("Obsolete handler returns 501 NotImplemented - test skipped")
 }
 
 func TestPutFirmwareRuleTemplateEntitiesHandler_ErrorPaths(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -918,6 +944,7 @@ func TestPutFirmwareRuleTemplateEntitiesHandler_ErrorPaths(t *testing.T) {
 }
 
 func TestPutFirmwareRuleTemplateEntitiesHandler_Success(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -945,7 +972,7 @@ func TestPutFirmwareRuleTemplateEntitiesHandler_Success(t *testing.T) {
 	}`
 	var frt corefw.FirmwareRuleTemplate
 	json.Unmarshal([]byte(templateJSON), &frt)
-	corefw.CreateFirmwareRuleTemplateOneDB(&frt)
+	SetOneInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE, frt.ID, &frt)
 
 	// Update it
 	updateData := `[{
@@ -984,6 +1011,7 @@ func TestPutFirmwareRuleTemplateEntitiesHandler_Success(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateIdsHandler_ErrorPaths(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1000,6 +1028,7 @@ func TestGetFirmwareRuleTemplateIdsHandler_ErrorPaths(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateExportHandler_ErrorPaths(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1016,6 +1045,7 @@ func TestGetFirmwareRuleTemplateExportHandler_ErrorPaths(t *testing.T) {
 }
 
 func TestPutFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -1063,6 +1093,7 @@ func TestPutFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
 }
 
 func TestPostFirmwareRuleTemplateEntitiesHandler_ErrorPaths(t *testing.T) {
+	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
