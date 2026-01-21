@@ -115,7 +115,6 @@ func TestBucketDistribution(t *testing.T) {
 		assert.True(t, count <= 5, "No bucket should have more than 5 members for this test")
 	}
 }
-
 func TestBatchSizeValidation(t *testing.T) {
 	// Test empty members list
 	err := AddMembers("test-tag", []string{})

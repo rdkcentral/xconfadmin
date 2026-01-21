@@ -72,7 +72,10 @@ func GetLockdownSettings() (*common.LockdownSettings, error) {
 	if err != nil {
 		return nil, err
 	}
+	return ProcessLockdownSettings(settings)
+}
 
+func ProcessLockdownSettings(settings map[string]interface{}) (*common.LockdownSettings, error) {
 	lockdownsettings := common.LockdownSettings{}
 	if v, ok := settings[common.PROP_LOCKDOWN_ENABLED]; ok {
 		if value, ok := v.(bool); ok {

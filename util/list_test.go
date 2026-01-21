@@ -84,3 +84,71 @@ func TestStringCopySlice(t *testing.T) {
 	c2 := StringCopySlice(c1)
 	assert.Assert(t, StringElementsMatch(c1, c2))
 }
+
+func TestPutIfValuePresent(t *testing.T) {
+	m := make(map[string]interface{})
+
+	// Test with non-empty string
+	PutIfValuePresent(m, "key1", "value1")
+	assert.Equal(t, m["key1"], "value1")
+
+	// Test with empty string - should not be added
+	PutIfValuePresent(m, "key2", "")
+	_, exists := m["key2"]
+	assert.Assert(t, !exists)
+
+	// Test with nil value - should not be added
+	PutIfValuePresent(m, "key3", nil)
+	_, exists = m["key3"]
+	assert.Assert(t, !exists)
+
+	// Test with non-empty slice
+	PutIfValuePresent(m, "key4", []string{"a", "b"})
+	assert.Equal(t, len(m["key4"].([]string)), 2)
+
+	// Test with empty slice - should not be added
+	PutIfValuePresent(m, "key5", []string{})
+	_, exists = m["key5"]
+	assert.Assert(t, !exists)
+
+	// Test with integer
+	PutIfValuePresent(m, "key6", 42)
+	assert.Equal(t, m["key6"], 42)
+}
+
+func TestStringArrayContains(t *testing.T) {
+	collection := []string{"apple", "banana", "cherry"}
+
+	// Test with value containing element
+	assert.Assert(t, StringArrayContains(collection, "I like bananas"))
+
+	// Test with value not containing any element
+	assert.Assert(t, !StringArrayContains(collection, "I like oranges"))
+
+	// Test with exact match
+	assert.Assert(t, StringArrayContains(collection, "apple"))
+
+	// Test with empty collection
+	assert.Assert(t, !StringArrayContains([]string{}, "test"))
+}
+
+func TestNewStringSet(t *testing.T) {
+	// Test with normal collection
+	collection := []string{"a", "b", "c", "a"}
+	set := NewStringSet(collection)
+	assert.Equal(t, len(set), 3) // "a" is duplicated
+	_, exists := set["a"]
+	assert.Assert(t, exists)
+	_, exists = set["b"]
+	assert.Assert(t, exists)
+	_, exists = set["c"]
+	assert.Assert(t, exists)
+
+	// Test with nil collection
+	nilSet := NewStringSet(nil)
+	assert.Assert(t, nilSet == nil)
+
+	// Test with empty collection
+	emptySet := NewStringSet([]string{})
+	assert.Equal(t, len(emptySet), 0)
+}
