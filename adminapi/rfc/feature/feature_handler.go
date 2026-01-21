@@ -19,7 +19,6 @@ package feature
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -27,6 +26,7 @@ import (
 	"strings"
 
 	xwutil "github.com/rdkcentral/xconfadmin/util"
+	log "github.com/sirupsen/logrus"
 
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
@@ -42,6 +42,7 @@ import (
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
+	xwdataapi "github.com/rdkcentral/xconfwebconfig/dataapi"
 )
 
 func GetFeaturesHandler(w http.ResponseWriter, r *http.Request) {
@@ -379,16 +380,33 @@ func GetPreprocessedFeaturesHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	features, xconfError := GetXconfConnector().GetPreprocessedFeatures(estbMac, fields)
-	if xconfError != nil {
-		statusCode := http.StatusInternalServerError
-		var remoteErr xwcommon.RemoteHttpErrorAS
-		if errors.As(xconfError, &remoteErr) {
-			statusCode = remoteErr.StatusCode
-		}
-		xhttp.WriteAdminErrorResponse(w, statusCode, xconfError.Error())
+	preprocessedData := xwdataapi.GetPreprocessedRfcData(xhttp.WebConfServer.XW_XconfServer, contextMap, fields)
+
+	featureControl := &xwrfc.FeatureControl{}
+
+	if preprocessedData == nil || len(preprocessedData.RfcHash) == 0 {
+		log.WithFields(fields).Infof("No preprocessed featureControl data found")
+		xhttp.WriteXconfResponse(w, http.StatusNotFound, []byte("No preprocessed featureControl data found"))
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	xwhttp.WriteXconfResponse(w, http.StatusOK, []byte(features))
+
+	preprocessedRulesEngineResponse := xwdataapi.GetPreprocessedRfcRulesEngineResponse(preprocessedData.RfcRulesEngineHash, fields)
+	if preprocessedData.RfcPostProcessingHash != "" {
+		preprocessedPostProcessingResponse := xwdataapi.GetPreprocessedRfcPostProcessResponse(preprocessedData.RfcPostProcessingHash, fields)
+		if preprocessedPostProcessingResponse != nil {
+			featureControl.FeatureResponses = append(featureControl.FeatureResponses, *preprocessedPostProcessingResponse...)
+		}
+	}
+
+	if preprocessedRulesEngineResponse != nil {
+		preprocessedResponseList := make([]xwrfc.FeatureResponse, 0, len(*preprocessedRulesEngineResponse))
+		preprocessedResponseList = append(preprocessedResponseList, *preprocessedRulesEngineResponse...)
+		featureControl.FeatureResponses = preprocessedResponseList
+	}
+
+	featureControlMap := map[string]*xwrfc.FeatureControl{
+		"featureControl": featureControl,
+	}
+	response, _ := util.XConfJSONMarshal(featureControlMap, true)
+	xwhttp.WriteXconfResponse(w, http.StatusOK, []byte(response))
 }

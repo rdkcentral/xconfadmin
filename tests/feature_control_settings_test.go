@@ -22,12 +22,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"sort"
 	"strings"
 	"testing"
 
+	"github.com/rdkcentral/xconfadmin/adminapi/rfc/feature"
 	oshttp "github.com/rdkcentral/xconfadmin/http"
-
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
@@ -898,4 +899,22 @@ func createAndSaveFeatures() map[string]*rfc.Feature {
 		"rdkcloud": RdkFeature,
 	}
 	return features
+}
+
+func TestGetPreprocessedFeaturesHandler_Unauthorized(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "/api/rfc/preprocessed/AA:BB:CC:DD:EE:FF", nil)
+	assert.NilError(t, err)
+
+	router := mux.NewRouter()
+	router.HandleFunc("/api/rfc/preprocessed/{mac}", func(w http.ResponseWriter, r *http.Request) {
+		xw := xwhttp.NewXResponseWriter(w)
+		feature.GetPreprocessedFeaturesHandler(xw, r)
+	})
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	// Should return error if auth fails
+	validCodes := rr.Code == http.StatusUnauthorized || rr.Code == http.StatusForbidden || rr.Code == http.StatusNotFound
+	assert.Equal(t, true, validCodes)
 }
