@@ -9,9 +9,8 @@ import (
 )
 
 const (
-	defaultXconfHost              = "http://test.net:8080"
-	xconfUrlTemplate              = "%s/loguploader/getTelemetryProfiles?%s"
-	ProcessedFeaturesPathTemplate = "%s/preprocess/rfc/%s"
+	defaultXconfHost = "http://test.net:8080"
+	xconfUrlTemplate = "%s/loguploader/getTelemetryProfiles?%s"
 )
 
 type XconfConnector struct {
@@ -48,15 +47,6 @@ func (c *XconfConnector) GetProfiles(urlSuffix string, fields log.Fields) ([]byt
 	rbytes, err := c.DoWithRetries("GET", url, nil, nil, fields, c.ServiceName())
 	if err != nil {
 		return rbytes, err
-	}
-	return rbytes, nil
-}
-
-func (c *XconfConnector) GetPreprocessedFeatures(estbmac string, fields log.Fields) ([]byte, error) {
-	url := fmt.Sprintf(ProcessedFeaturesPathTemplate, c.Host(), estbmac)
-	rbytes, err := c.DoWithRetries("GET", url, nil, nil, fields, c.ServiceName())
-	if err != nil {
-		return nil, err
 	}
 	return rbytes, nil
 }
