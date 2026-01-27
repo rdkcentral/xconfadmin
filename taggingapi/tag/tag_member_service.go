@@ -399,61 +399,73 @@ func max(a, b int) int {
 }
 
 // AddMembersWithXdas adds members to both XDAS and Cassandra (XDAS-first approach)
-func AddMembersWithXdas(tagId string, members []string) error {
+// Returns the count of members actually stored to Cassandra.
+func AddMembersWithXdas(tagId string, members []string) (int, error) {
 	if len(members) == 0 {
-		return fmt.Errorf("member list is empty")
+		return 0, fmt.Errorf("member list is empty")
 	}
 
 	if len(members) > MaxBatchSizeV2 {
-		return fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
+		return 0, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
 
 	savedToXdasMembers, err := addMembersToXdas(tagId, members)
 	if err != nil {
-		return fmt.Errorf("XDAS operation failed: %w", err)
+		return 0, fmt.Errorf("XDAS operation failed: %w", err)
 	}
 
-	if len(savedToXdasMembers) > 0 {
+	xdasAccepted := len(savedToXdasMembers)
+	cassandraStored := 0
+
+	if xdasAccepted > 0 {
 		if err := AddMembers(tagId, savedToXdasMembers); err != nil {
-			// Log error but don't remove from XDAS to maintain consistency
 			log.Errorf("Critical: XDAS succeeded but Cassandra V2 failed for tag %s: %v", tagId, err)
-			return fmt.Errorf("cassandra V2 storage failed after XDAS success: %w", err)
+			log.Infof("AddMembers summary for tag '%s': requested=%d, xdasAccepted=%d, cassandraStored=%d", tagId, len(members), xdasAccepted, cassandraStored)
+			return cassandraStored, fmt.Errorf("cassandra V2 storage failed after XDAS success: %w", err)
 		}
+		cassandraStored = xdasAccepted
 	}
 
-	log.Infof("Successfully added %d members to tag %s (V2+XDAS)", len(savedToXdasMembers), tagId)
-	return nil
+	log.Infof("AddMembers summary for tag '%s': requested=%d, xdasAccepted=%d, cassandraStored=%d", tagId, len(members), xdasAccepted, cassandraStored)
+	return cassandraStored, nil
 }
 
 // RemoveMembersWithXdas removes members from both XDAS and Cassandra (XDAS-first approach)
-func RemoveMembersWithXdas(tagId string, members []string) error {
+// Returns the count of members actually removed from Cassandra.
+func RemoveMembersWithXdas(tagId string, members []string) (int, error) {
 	if len(members) == 0 {
-		return fmt.Errorf("member list is empty")
+		return 0, fmt.Errorf("member list is empty")
 	}
 
 	if len(members) > MaxBatchSizeV2 {
-		return fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
+		return 0, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
 
 	successfulRemovals, err := removeMembersFromXDAS(tagId, members)
 	if err != nil {
-		return fmt.Errorf("XDAS removal failed: %w", err)
+		return 0, fmt.Errorf("XDAS removal failed: %w", err)
 	}
 
-	if len(successfulRemovals) > 0 {
+	xdasRemoved := len(successfulRemovals)
+	cassandraRemoved := 0
+
+	if xdasRemoved > 0 {
 		if err := RemoveMembers(tagId, successfulRemovals); err != nil {
 			log.Errorf("Critical: XDAS removal succeeded but Cassandra V2 failed for tag %s: %v", tagId, err)
-			return fmt.Errorf("cassandra V2 removal failed after XDAS success: %w", err)
+			log.Infof("RemoveMembers summary for tag '%s': requested=%d, xdasRemoved=%d, cassandraRemoved=%d", tagId, len(members), xdasRemoved, cassandraRemoved)
+			return cassandraRemoved, fmt.Errorf("cassandra V2 removal failed after XDAS success: %w", err)
 		}
+		cassandraRemoved = xdasRemoved
 	}
 
-	log.Infof("Successfully removed %d members from tag %s (V2+XDAS)", len(successfulRemovals), tagId)
-	return nil
+	log.Infof("RemoveMembers summary for tag '%s': requested=%d, xdasRemoved=%d, cassandraRemoved=%d", tagId, len(members), xdasRemoved, cassandraRemoved)
+	return cassandraRemoved, nil
 }
 
 // RemoveMemberWithXdas removes a single member from both XDAS and Cassandra V2
 func RemoveMemberWithXdas(tagId string, member string) error {
-	return RemoveMembersWithXdas(tagId, []string{member})
+	_, err := RemoveMembersWithXdas(tagId, []string{member})
+	return err
 }
 
 // addMembersToXdas adds members to Xdas using concurrent workers (similar to V1 pattern)
