@@ -26,7 +26,7 @@ const (
 const (
 	BucketCount             = 1000
 	DefaultPageSizeV2       = 500
-	MaxPageSizeV2           = 100000
+	MaxPageSizeV2           = 200000
 	MaxBatchSizeV2          = 5000
 	MaxWorkersV2            = 100
 	MaxMembersInTagResponse = 100000 // Max members returned in GetTagById
