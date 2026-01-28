@@ -653,7 +653,7 @@ func addMembersToXdas(tagId string, members []string) ([]string, error) {
 	if config != nil {
 		baseWorkers := config.WorkerCount
 		scaledWorkers := min(max(len(members)/100, baseWorkers), MaxWorkersV2)
-		numOfWorkers = scaledWorkers
+		numOfWorkers = min(scaledWorkers, len(members)) // Never spawn more workers than members
 	}
 	for i := 0; i < numOfWorkers; i++ {
 		wg.Add(1)
@@ -697,7 +697,7 @@ func removeMembersFromXDAS(tagId string, members []string) ([]string, error) {
 	if config != nil {
 		baseWorkers := config.WorkerCount
 		scaledWorkers := min(max(len(members)/100, baseWorkers), MaxWorkersV2)
-		numOfWorkers = scaledWorkers
+		numOfWorkers = min(scaledWorkers, len(members)) // Never spawn more workers than members
 	}
 	for i := 0; i < numOfWorkers; i++ {
 		wg.Add(1)
