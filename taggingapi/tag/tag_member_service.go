@@ -115,8 +115,6 @@ func AddMembers(tagId string, members []string) error {
 			len(members)-successCount, len(members), strings.Join(allErrors, "; "))
 	}
 
-	log.Infof("Successfully added %d members to tag %s across %d buckets",
-		successCount, tagId, len(bucketGroups))
 	return nil
 }
 
@@ -184,8 +182,6 @@ func RemoveMembers(tagId string, members []string) error {
 			len(members)-successCount, len(members), strings.Join(allErrors, "; "))
 	}
 
-	log.Infof("Successfully removed %d members from tag %s across %d buckets",
-		successCount, tagId, len(bucketGroups))
 	return nil
 }
 

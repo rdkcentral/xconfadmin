@@ -134,7 +134,7 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Infof("AddMembers request: tag=%s, memberCount=%d", tagId, len(members))
+	log.Debugf("AddMembers request: tag=%s, memberCount=%d", tagId, len(members))
 
 	stored, err := AddMembersWithXdas(tagId, members)
 	if err != nil {
@@ -186,7 +186,7 @@ func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Infof("RemoveMembers request: tag=%s, memberCount=%d", id, len(members))
+	log.Debugf("RemoveMembers request: tag=%s, memberCount=%d", id, len(members))
 
 	removed, err := RemoveMembersWithXdas(id, members)
 	if err != nil {
