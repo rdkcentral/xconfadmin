@@ -24,10 +24,9 @@ const (
 )
 
 const (
-	TableTagMembersBucketed = "TagMembersBucketed"
 	BucketCount             = 1000
 	DefaultPageSizeV2       = 500
-	MaxPageSizeV2           = 5000
+	MaxPageSizeV2           = 50000
 	MaxBatchSizeV2          = 5000
 	MaxWorkersV2            = 100
 	MaxMembersInTagResponse = 100000 // Max members returned in GetTagById
