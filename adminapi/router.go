@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/rdkcentral/xconfadmin/adminapi/applicationtype"
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	"github.com/rdkcentral/xconfadmin/adminapi/canary"
 	"github.com/rdkcentral/xconfadmin/adminapi/change"
@@ -112,6 +113,15 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	urlPath := r.Path("/xconfAdminService" + s.IdpUrlPath).Subrouter()
 	urlPath.HandleFunc("", auth.LoginUrlHandler).Methods("GET").Name("Auth-Xerxes")
 	authPaths = append(authPaths, urlPath)
+
+	//Application Type APIs
+	applicationTypePath := r.PathPrefix("/xconfAdminService/application-types").Subrouter()
+	applicationTypePath.HandleFunc("", applicationtype.CreateApplicationTypeHandler).Methods("POST").Name("Application-Type")
+	applicationTypePath.HandleFunc("", applicationtype.GetAllApplicationTypeHandler).Methods("GET").Name("Application-Type")
+	applicationTypePath.HandleFunc("/{id}", applicationtype.GetApplicationTypeHandler).Methods("GET").Name("Application-Type")
+	applicationTypePath.HandleFunc("/{id}", applicationtype.DeleteApplicationTypeHandler).Methods("DELETE").Name("Application-Type")
+	applicationTypePath.HandleFunc("/{id}", applicationtype.UpdateApplicationTypeHandler).Methods("PUT").Name("Application-Type")
+	paths = append(paths, applicationTypePath)
 
 	// DataService bypass APIs
 	dsBypassPathPrefix := r.PathPrefix("/xconfAdminService/dataService").Subrouter()

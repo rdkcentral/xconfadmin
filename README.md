@@ -93,7 +93,7 @@ bin/xconfadmin-linux-amd64 -f config/xconfadmin.conf
 Test the server is running:
 
 ```bash
-curl http://localhost:9001/api/v1/version
+curl http://localhost:9001/api/version
 ```
 
 Expected response:
