@@ -134,13 +134,25 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := AddMembersWithXdas(tagId, members)
+	log.Debugf("AddMembers request: tag=%s, memberCount=%d", tagId, len(members))
+
+	stored, err := AddMembersWithXdas(tagId, members)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
 
-	xhttp.WriteXconfResponse(w, http.StatusAccepted, nil)
+	response := map[string]int{
+		"requested": len(members),
+		"stored":    stored,
+	}
+	respBytes, err := json.Marshal(response)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+
+	xhttp.WriteXconfResponse(w, http.StatusAccepted, respBytes)
 }
 
 // RemoveMembersFromTagHandler - Updated with bucketed implementation
@@ -174,13 +186,25 @@ func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = RemoveMembersWithXdas(id, members)
+	log.Debugf("RemoveMembers request: tag=%s, memberCount=%d", id, len(members))
+
+	removed, err := RemoveMembersWithXdas(id, members)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
 
-	xhttp.WriteXconfResponse(w, http.StatusAccepted, nil)
+	response := map[string]int{
+		"requested": len(members),
+		"removed":   removed,
+	}
+	respBytes, err := json.Marshal(response)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+
+	xhttp.WriteXconfResponse(w, http.StatusAccepted, respBytes)
 }
 
 // RemoveMemberFromTagHandler - Updated with bucketed implementation
