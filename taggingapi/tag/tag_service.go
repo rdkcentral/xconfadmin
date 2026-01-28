@@ -80,14 +80,27 @@ func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<-
 
 func removeTagMembersFromXdas(id string, members <-chan string, removedMembers chan<- string, wg *sync.WaitGroup) {
 	defer wg.Done()
+
+	successCount := 0
+	failCount := 0
+
 	for member := range members {
 		normalizedEcm := ToNormalizedEcm(member)
 		err := GetGroupServiceSyncConnector().RemoveGroupMembers(normalizedEcm, id)
 		if err != nil {
-			log.Errorf("xdas error removing %s member from %s group: %s", id, normalizedEcm, err.Error())
+			failCount++
+			log.Errorf("xdas error removing member from %s group: ecm=%s, error=%s", id, normalizedEcm, err.Error())
 		} else {
+			successCount++
 			removedMembers <- member
 		}
+	}
+
+	// Worker summary log (one line per worker)
+	if failCount > 0 {
+		log.Warnf("XDAS remove worker completed for tag %s: success=%d, failed=%d", id, successCount, failCount)
+	} else {
+		log.Debugf("XDAS remove worker completed for tag %s: success=%d", id, successCount)
 	}
 }
 

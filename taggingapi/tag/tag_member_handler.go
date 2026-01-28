@@ -186,6 +186,8 @@ func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Infof("RemoveMembers request: tag=%s, memberCount=%d", id, len(members))
+
 	removed, err := RemoveMembersWithXdas(id, members)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)

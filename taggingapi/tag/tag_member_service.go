@@ -594,6 +594,8 @@ func AddMembersWithXdas(tagId string, members []string) (int, error) {
 // RemoveMembersWithXdas removes members from both XDAS and Cassandra (XDAS-first approach)
 // Returns the count of members actually removed from Cassandra.
 func RemoveMembersWithXdas(tagId string, members []string) (int, error) {
+	startTime := time.Now()
+
 	if len(members) == 0 {
 		return 0, fmt.Errorf("member list is empty")
 	}
@@ -612,14 +614,16 @@ func RemoveMembersWithXdas(tagId string, members []string) (int, error) {
 
 	if xdasRemoved > 0 {
 		if err := RemoveMembers(tagId, successfulRemovals); err != nil {
+			duration := time.Since(startTime)
 			log.Errorf("Critical: XDAS removal succeeded but Cassandra V2 failed for tag %s: %v", tagId, err)
-			log.Infof("RemoveMembers summary for tag '%s': requested=%d, xdasRemoved=%d, cassandraRemoved=%d", tagId, len(members), xdasRemoved, cassandraRemoved)
+			log.Infof("RemoveMembers summary for tag '%s': requested=%d, xdasRemoved=%d, cassandraRemoved=%d, duration=%v", tagId, len(members), xdasRemoved, cassandraRemoved, duration)
 			return cassandraRemoved, fmt.Errorf("cassandra V2 removal failed after XDAS success: %w", err)
 		}
 		cassandraRemoved = xdasRemoved
 	}
 
-	log.Infof("RemoveMembers summary for tag '%s': requested=%d, xdasRemoved=%d, cassandraRemoved=%d", tagId, len(members), xdasRemoved, cassandraRemoved)
+	duration := time.Since(startTime)
+	log.Infof("RemoveMembers summary for tag '%s': requested=%d, xdasRemoved=%d, cassandraRemoved=%d, duration=%v", tagId, len(members), xdasRemoved, cassandraRemoved, duration)
 	return cassandraRemoved, nil
 }
 
