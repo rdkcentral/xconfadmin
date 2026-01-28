@@ -54,14 +54,27 @@ func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<-
 	xdasMembers := proto.XdasHashes{
 		Fields: map[string]string{id: ""},
 	}
+
+	successCount := 0
+	failCount := 0
+
 	for member := range members {
 		normalizedEcm := ToNormalizedEcm(member)
 		err := GetGroupServiceSyncConnector().AddMembersToTag(normalizedEcm, &xdasMembers)
 		if err != nil {
-			log.Errorf("xdas error adding %s member to %s group: %s", id, normalizedEcm, err.Error())
+			failCount++
+			log.Errorf("xdas error adding member to %s group: ecm=%s, error=%s", id, normalizedEcm, err.Error())
 		} else {
+			successCount++
 			savedMembers <- member
 		}
+	}
+
+	// Worker summary log (one line per worker)
+	if failCount > 0 {
+		log.Warnf("XDAS worker completed for tag %s: success=%d, failed=%d", id, successCount, failCount)
+	} else {
+		log.Debugf("XDAS worker completed for tag %s: success=%d", id, successCount)
 	}
 }
 

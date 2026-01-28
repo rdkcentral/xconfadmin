@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
@@ -557,6 +558,8 @@ func fetchMembersFromBucketsConcurrent(tagId string, bucketIds []int, totalLimit
 // AddMembersWithXdas adds members to both XDAS and Cassandra (XDAS-first approach)
 // Returns the count of members actually stored to Cassandra.
 func AddMembersWithXdas(tagId string, members []string) (int, error) {
+	startTime := time.Now()
+
 	if len(members) == 0 {
 		return 0, fmt.Errorf("member list is empty")
 	}
@@ -575,14 +578,16 @@ func AddMembersWithXdas(tagId string, members []string) (int, error) {
 
 	if xdasAccepted > 0 {
 		if err := AddMembers(tagId, savedToXdasMembers); err != nil {
+			duration := time.Since(startTime)
 			log.Errorf("Critical: XDAS succeeded but Cassandra V2 failed for tag %s: %v", tagId, err)
-			log.Infof("AddMembers summary for tag '%s': requested=%d, xdasAccepted=%d, cassandraStored=%d", tagId, len(members), xdasAccepted, cassandraStored)
+			log.Infof("AddMembers summary for tag '%s': requested=%d, xdasAccepted=%d, cassandraStored=%d, duration=%v", tagId, len(members), xdasAccepted, cassandraStored, duration)
 			return cassandraStored, fmt.Errorf("cassandra V2 storage failed after XDAS success: %w", err)
 		}
 		cassandraStored = xdasAccepted
 	}
 
-	log.Infof("AddMembers summary for tag '%s': requested=%d, xdasAccepted=%d, cassandraStored=%d", tagId, len(members), xdasAccepted, cassandraStored)
+	duration := time.Since(startTime)
+	log.Infof("AddMembers summary for tag '%s': requested=%d, xdasAccepted=%d, cassandraStored=%d, duration=%v", tagId, len(members), xdasAccepted, cassandraStored, duration)
 	return cassandraStored, nil
 }
 
