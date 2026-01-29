@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	defaultXconfHost = "http://qa2.xconfds.coast.xcal.tv:8080"
+	defaultXconfHost = "http://test.net:8080"
 	xconfUrlTemplate = "%s/loguploader/getTelemetryProfiles?%s"
 )
 
@@ -20,7 +20,7 @@ type XconfConnector struct {
 }
 
 func NewXconfConnector(conf *configuration.Config, serviceName string, tlsConfig *tls.Config) *XconfConnector {
-	confKey := fmt.Sprintf("webconfig.%v.host", serviceName)
+	confKey := fmt.Sprintf("xconfwebconfig.%v.dataservice_host", serviceName)
 	host := conf.GetString(confKey, defaultXconfHost)
 
 	return &XconfConnector{

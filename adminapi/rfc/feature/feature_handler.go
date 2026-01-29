@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	xwutil "github.com/rdkcentral/xconfadmin/util"
+	log "github.com/sirupsen/logrus"
 
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
@@ -41,6 +42,7 @@ import (
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
+	xwdataapi "github.com/rdkcentral/xconfwebconfig/dataapi"
 )
 
 func GetFeaturesHandler(w http.ResponseWriter, r *http.Request) {
@@ -345,4 +347,66 @@ func GetFeaturesByIdListHandler(w http.ResponseWriter, r *http.Request) {
 	features := GetFeaturesByIdList(featureIdList)
 	response, _ := util.JSONMarshal(features)
 	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
+}
+
+func GetXconfConnector() *xhttp.XconfConnector {
+	return xhttp.WebConfServer.XconfConnector
+}
+
+func GetPreprocessedFeaturesHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanRead(r, auth.DCM_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+	xw, ok := w.(*xwhttp.XResponseWriter)
+	if !ok {
+		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "responsewriter cast error")
+		return
+	}
+
+	fields := xw.Audit()
+	params := mux.Vars(r)
+	mac := params["mac"]
+	estbMac := strings.ToUpper(mac)
+	contextMap := make(map[string]string)
+	if estbMac != "" {
+		normalizedEstbMac, err := util.MacAddrComplexFormat(estbMac)
+		if err == nil {
+			contextMap[xcommon.ESTB_MAC_ADDRESS] = normalizedEstbMac
+		} else {
+			xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("invalid MAC address format"))
+			return
+		}
+	}
+
+	preprocessedData := xwdataapi.GetPreprocessedRfcData(xhttp.WebConfServer.XW_XconfServer, contextMap, fields)
+
+	featureControl := &xwrfc.FeatureControl{}
+
+	if preprocessedData == nil || len(preprocessedData.RfcHash) == 0 {
+		log.WithFields(fields).Infof("No preprocessed featureControl data found")
+		xhttp.WriteXconfResponse(w, http.StatusNotFound, []byte("No preprocessed featureControl data found"))
+		return
+	}
+
+	preprocessedRulesEngineResponse := xwdataapi.GetPreprocessedRfcRulesEngineResponse(preprocessedData.RfcRulesEngineHash, fields)
+	if preprocessedData.RfcPostProcessingHash != "" {
+		preprocessedPostProcessingResponse := xwdataapi.GetPreprocessedRfcPostProcessResponse(preprocessedData.RfcPostProcessingHash, fields)
+		if preprocessedPostProcessingResponse != nil {
+			featureControl.FeatureResponses = append(featureControl.FeatureResponses, *preprocessedPostProcessingResponse...)
+		}
+	}
+
+	if preprocessedRulesEngineResponse != nil {
+		preprocessedResponseList := make([]xwrfc.FeatureResponse, 0, len(*preprocessedRulesEngineResponse))
+		preprocessedResponseList = append(preprocessedResponseList, *preprocessedRulesEngineResponse...)
+		featureControl.FeatureResponses = preprocessedResponseList
+	}
+
+	featureControlMap := map[string]*xwrfc.FeatureControl{
+		"featureControl": featureControl,
+	}
+	response, _ := util.XConfJSONMarshal(featureControlMap, true)
+	xwhttp.WriteXconfResponse(w, http.StatusOK, []byte(response))
 }
