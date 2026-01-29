@@ -60,20 +60,43 @@ func ChangePrioritizablePriorities(prioritizable core.Prioritizable, newPriority
 }
 
 func reorganizePrioritizablePriorities(sortedItemsList []core.Prioritizable, oldPriority int, newPriority int) []core.Prioritizable {
-	if newPriority < 1 || int(newPriority) > len(sortedItemsList) {
+	// Guard against empty list
+	if len(sortedItemsList) == 0 {
+		return sortedItemsList
+	}
+
+	// Clamp/normalize requested new priority into the current list bounds
+	if newPriority < 1 || newPriority > len(sortedItemsList) {
 		newPriority = len(sortedItemsList)
 	}
-	item := sortedItemsList[oldPriority-1]
+
+	// Old priority might be stale (e.g. after deletions the stored priority can be > len(list)).
+	// Find the actual index of the item whose GetPriority() == oldPriority; if not found, assume last element.
+	actualIndex := -1
+	for i, it := range sortedItemsList {
+		if it.GetPriority() == oldPriority {
+			actualIndex = i
+			break
+		}
+	}
+	if actualIndex == -1 { // fallback: treat target as last element
+		actualIndex = len(sortedItemsList) - 1
+		oldPriority = actualIndex + 1
+	}
+
+	item := sortedItemsList[actualIndex]
 	item.SetPriority(newPriority)
+
+	// Re-pack priorities between old and new positions.
 	if oldPriority < newPriority {
-		for i := oldPriority; i <= newPriority-1; i++ {
+		for i := actualIndex + 1; i <= newPriority-1; i++ { // shift items upward
 			buf := sortedItemsList[i]
 			buf.SetPriority(i)
 			sortedItemsList[i-1] = buf
 		}
 	}
 	if oldPriority > newPriority {
-		for i := oldPriority - 2; i >= newPriority-1; i-- {
+		for i := actualIndex - 1; i >= newPriority-1; i-- { // shift items downward
 			buf := sortedItemsList[i]
 			buf.SetPriority(i + 2)
 			sortedItemsList[i+1] = buf
@@ -104,17 +127,27 @@ func UpdatePrioritizablePriorityAndReorganize(newItem core.Prioritizable, itemsL
 	sort.Slice(itemsList, func(i, j int) bool {
 		return itemsList[i].GetPriority() < itemsList[j].GetPriority()
 	})
+	actualOldPriority := priority
+	newPriority := newItem.GetPriority()
+	itemFound := false
 	if len(itemsList) > 0 {
 		for i, item := range itemsList {
 			if item.GetID() == newItem.GetID() {
+				// Save the actual priority before replacement
+				actualOldPriority = item.GetPriority()
+				// Temporarily set new item to old priority for reorganization logic
+				newItem.SetPriority(actualOldPriority)
 				itemsList[i] = newItem
+				itemFound = true
 				break
 			}
 		}
-	} else {
+	}
+	if !itemFound {
+		// New item being added - don't modify its priority
 		itemsList = append(itemsList, newItem)
 	}
-	return reorganizePrioritizablePriorities(itemsList, priority, newItem.GetPriority())
+	return reorganizePrioritizablePriorities(itemsList, actualOldPriority, newPriority)
 }
 
 func UpdatePrioritizablesPriorities(itemsList []core.Prioritizable, oldPriority int, newPriority int) []core.Prioritizable {

@@ -2,6 +2,7 @@ package util
 
 import (
 	"net/http"
+	"net/url"
 	"testing"
 
 	"gotest.tools/assert"
@@ -200,4 +201,61 @@ func TestContainsIgnoreCase(t *testing.T) {
 
 	containsIgnoreCase = ContainsIgnoreCase("Hella Hot Hot Sauce", "hello")
 	assert.Equal(t, containsIgnoreCase, false)
+}
+
+func TestGenerateRandomCpeMac(t *testing.T) {
+	mac := GenerateRandomCpeMac()
+	assert.Equal(t, len(mac), 12)
+	// Check all characters are uppercase hex digits
+	for _, c := range mac {
+		assert.Assert(t, (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'))
+	}
+}
+
+func TestValidatePokeQuery(t *testing.T) {
+	// Valid query with "doc" parameter
+	values := url.Values{}
+	values.Set("doc", "telemetry")
+	doc, err := ValidatePokeQuery(values)
+	assert.NilError(t, err)
+	assert.Equal(t, doc, "telemetry")
+
+	// No "doc" parameter returns default "primary"
+	emptyValues := url.Values{}
+	doc, err = ValidatePokeQuery(emptyValues)
+	assert.NilError(t, err)
+	assert.Equal(t, doc, "primary")
+}
+
+func TestGetEcmMacAddress(t *testing.T) {
+	// Valid MAC address (no colons) - subtracts 2 from hex value
+	ecmMac := GetEcmMacAddress("AABBCCDDEEFF")
+	assert.Equal(t, ecmMac, "AABBCCDDEEFD")
+
+	// Another valid MAC
+	ecmMac = GetEcmMacAddress("112233445567")
+	assert.Equal(t, ecmMac, "112233445565")
+}
+
+func TestRemoveOneElementFromList(t *testing.T) {
+	list := []string{"apple", "banana", "cherry"}
+	result := RemoveOneElementFromList(list, "banana")
+	assert.Equal(t, len(result), 2)
+	assert.Equal(t, result[0], "apple")
+	assert.Equal(t, result[1], "cherry")
+
+	// Element not in list
+	result = RemoveOneElementFromList(list, "grape")
+	assert.Equal(t, len(result), 3)
+}
+
+func TestStringSliceContains(t *testing.T) {
+	// Sorted slice
+	sortedList := []string{"apple", "banana", "cherry", "date"}
+	assert.Equal(t, StringSliceContains(sortedList, "banana"), true)
+	assert.Equal(t, StringSliceContains(sortedList, "grape"), false)
+
+	// Empty slice
+	emptyList := []string{}
+	assert.Equal(t, StringSliceContains(emptyList, "apple"), false)
 }
