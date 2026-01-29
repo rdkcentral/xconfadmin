@@ -10,6 +10,6 @@ type TaggingApiConfig struct {
 func NewTaggingApiConfig(conf *configuration.Config) *TaggingApiConfig {
 	return &TaggingApiConfig{
 		BatchLimit:  int(conf.GetInt32("webconfig.xconf.tag_members_batch_limit", 2000)),
-		WorkerCount: int(conf.GetInt32("webconfig.xconf.tag_update_worker_count", 10)),
+		WorkerCount: int(conf.GetInt32("webconfig.xconf.tag_update_worker_count", 20)),
 	}
 }

@@ -23,33 +23,29 @@ import (
 	"net/http"
 	"sort"
 	"strings"
-
-	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
-	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
-	xutil "github.com/rdkcentral/xconfwebconfig/util"
+	"sync"
 
 	"github.com/rdkcentral/xconfadmin/common"
 	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
 	"github.com/rdkcentral/xconfadmin/util"
-
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
-	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
-	firmware "github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
-
+	xutil "github.com/rdkcentral/xconfwebconfig/util"
 	log "github.com/sirupsen/logrus"
 )
 
 var ruleTables = []string{
-	ds.TABLE_DCM_RULE,
-	ds.TABLE_FIRMWARE_RULE,
-	ds.TABLE_FIRMWARE_RULE_TEMPLATE,
-	ds.TABLE_TELEMETRY_RULES,
-	ds.TABLE_TELEMETRY_TWO_RULES,
-	ds.TABLE_FEATURE_CONTROL_RULE,
-	ds.TABLE_SETTING_RULES,
+	db.TABLE_DCM_RULE,
+	db.TABLE_FIRMWARE_RULE,
+	db.TABLE_FIRMWARE_RULE_TEMPLATE,
+	db.TABLE_TELEMETRY_RULES,
+	db.TABLE_TELEMETRY_TWO_RULES,
+	db.TABLE_FEATURE_CONTROL_RULE,
+	db.TABLE_SETTING_RULES,
 }
 
 const (
@@ -58,6 +54,9 @@ const (
 	IP_LIST     = "IP_LIST"
 	RI_MAC_LIST = "RI_MAC_LIST"
 )
+
+var namedListTableMutex sync.Mutex
+var namedListTableLock = db.NewDistributedLock(db.TABLE_GENERIC_NS_LIST, 5)
 
 func GetNamespacedListIdsByType(typeName string) []string {
 	var list []*shared.GenericNamespacedList
@@ -202,6 +201,7 @@ func GeneratePageNamespacedLists(list []*shared.GenericNamespacedList, page int,
 func IsValidType(stype string) bool {
 	return STRING == stype || MAC_LIST == stype || IP_LIST == stype || RI_MAC_LIST == stype
 }
+
 func ValidateListDataForAdmin(typeName string, listData []string) error {
 	if !IsValidType(typeName) {
 		return errors.New("Type is invalid")
@@ -241,9 +241,6 @@ func AddNamespacedListData(listType string, listId string, stringListWrapper *sh
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
-
-	shared.LockGenericNamespacedList()
-	defer shared.UnlockGenericNamespacedList()
 
 	listToUpdate, err := shared.GetGenericNamedListOneByTypeNonCached(listId, listType)
 	if err != nil {
@@ -293,9 +290,6 @@ func RemoveNamespacedListData(listType string, listId string, stringListWrapper 
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
-
-	shared.LockGenericNamespacedList()
-	defer shared.UnlockGenericNamespacedList()
 
 	listToUpdate, err := shared.GetGenericNamedListOneByTypeNonCached(listId, listType)
 	if err != nil {
@@ -427,7 +421,7 @@ func UpdateNamespacedList(namespacedList *shared.GenericNamespacedList, newId st
 }
 
 func DeleteNamespacedList(typeName string, id string) *xwhttp.ResponseEntity {
-	ds.GetCacheManager().ForceSyncChanges()
+	db.GetCacheManager().ForceSyncChanges()
 	var namespacedList *shared.GenericNamespacedList
 	if typeName == "" {
 		namespacedList = GetNamespacedListById(id)
@@ -457,28 +451,28 @@ func DeleteNamespacedList(typeName string, id string) *xwhttp.ResponseEntity {
 // Return usage info if NamespacedList is used by a rule, empty string otherwise
 func validateUsageForNamespacedList(id string) (string, error) {
 	for _, tableName := range ruleTables {
-		ruleList, err := ds.GetCachedSimpleDao().GetAllAsList(tableName, 0)
+		ruleList, err := db.GetCachedSimpleDao().GetAllAsList(tableName, 0)
 		if err != nil {
 			return "", err
 		}
 
 		for _, v := range ruleList {
-			xrule, ok := v.(ru.XRule)
+			xrule, ok := v.(re.XRule)
 			if !ok {
 				return "", fmt.Errorf("Failed to assert %s as XRule type", tableName)
 			}
 
-			ids := ru.GetFixedArgsFromRuleByOperation(xrule.GetRule(), re.StandardOperationInList)
+			ids := re.GetFixedArgsFromRuleByOperation(xrule.GetRule(), re.StandardOperationInList)
 			if xutil.Contains(ids, id) {
 				return fmt.Sprintf("List is used by %s %s", xrule.GetRuleType(), xrule.GetName()), nil
 			}
 
-			if tableName == ds.TABLE_FIRMWARE_RULE {
+			if tableName == db.TABLE_FIRMWARE_RULE {
 				firmwareRule, ok := v.(*firmware.FirmwareRule)
 				if !ok {
 					return "", fmt.Errorf("Failed to parse Firmware Rule")
 				}
-				if id == firmwareRule.ApplicableAction.Whitelist && firmwareRule.Type == corefw.ENV_MODEL_RULE {
+				if id == firmwareRule.ApplicableAction.Whitelist && firmwareRule.Type == firmware.ENV_MODEL_RULE {
 					return fmt.Sprintf("%v is used in a Percentage Filter %v", id, firmwareRule.Name), nil
 				}
 			}
@@ -496,16 +490,16 @@ func validateUsageForNamespacedList(id string) (string, error) {
 
 func renameNamespacedListInUsedEntities(oldNamespacedListId string, newNamespacedListId string) error {
 	for _, tableName := range ruleTables {
-		ruleList, err := ds.GetCachedSimpleDao().GetAllAsList(tableName, 0)
+		ruleList, err := db.GetCachedSimpleDao().GetAllAsList(tableName, 0)
 		if err != nil {
 			return err
 		}
 
 		for _, v := range ruleList {
-			if xrule, ok := v.(ru.XRule); ok {
+			if xrule, ok := v.(re.XRule); ok {
 				rule := xrule.GetRule()
-				if ru.ChangeFixedArgToNewValue(oldNamespacedListId, newNamespacedListId, *rule, re.StandardOperationInList) {
-					if err := ds.GetCachedSimpleDao().SetOne(tableName, xrule.GetId(), v); err != nil {
+				if re.ChangeFixedArgToNewValue(oldNamespacedListId, newNamespacedListId, *rule, re.StandardOperationInList) {
+					if err := db.GetCachedSimpleDao().SetOne(tableName, xrule.GetId(), v); err != nil {
 						return err
 					}
 				}

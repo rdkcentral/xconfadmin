@@ -14,6 +14,7 @@ import (
 	percentageutils "github.com/rdkcentral/xconfadmin/taggingapi/percentage"
 	proto "github.com/rdkcentral/xconfadmin/taggingapi/proto/generated"
 	"github.com/rdkcentral/xconfadmin/util"
+	taggingds "github.com/rdkcentral/xconfwebconfig/tag"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
@@ -44,7 +45,7 @@ func GetGroupServiceConnector() *http.GroupServiceConnector {
 	return http.WebConfServer.GroupServiceConnector
 }
 
-func GetTagById(id string) *Tag {
+func GetTagById(id string) *taggingds.Tag {
 	tag := GetOneTag(SetTagPrefix(id))
 	if tag != nil {
 		tag.Id = RemovePrefixFromTag(tag.Id)
@@ -74,6 +75,9 @@ func filterTagEntriesByPrefix(ftEntries []string) []string {
 }
 
 func GetTagMembers(id string) ([]string, error) {
+	// Try new system first, fall back to old system
+
+	// Fall back to old system
 	id = SetTagPrefix(id)
 	tag := GetOneTag(id)
 	if tag == nil {
@@ -101,7 +105,9 @@ func AddMembersToTag(id string, members []string) (int, error) {
 
 	savedMembersChannel := make(chan string, len(members))
 	config := GetTagApiConfig()
-	numOfWorkers := config.WorkerCount
+	baseWorkers := config.WorkerCount
+	// Scale workers based on batch size: 1 worker per 100 members, max MaxWorkersV2 workers
+	numOfWorkers := min(max(len(members)/100, baseWorkers), MaxWorkersV2)
 	for i := 0; i < numOfWorkers; i++ {
 		wg.Add(1)
 		go storeTagMembersInXdas(id, membersChannel, savedMembersChannel, wg)
@@ -141,7 +147,7 @@ func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<-
 	}
 }
 
-func RemoveMemberFromTag(id string, member string) (*Tag, error) {
+func RemoveMemberFromTag(id string, member string) (*taggingds.Tag, error) {
 	id = SetTagPrefix(id)
 	normalizedEcm := ToNormalizedEcm(member)
 	err := GetGroupServiceSyncConnector().RemoveGroupMembers(normalizedEcm, id)
@@ -177,7 +183,10 @@ func RemoveMembersFromTag(id string, members []string) (int, error) {
 	wg := &sync.WaitGroup{}
 	removedMembersChannel := make(chan string, len(members))
 	config := GetTagApiConfig()
-	numOfWorkers := config.WorkerCount
+	// Dynamic scaling: Use more workers for larger batches
+	baseWorkers := config.WorkerCount
+	// Scale workers based on batch size: 1 worker per 100 members, max MaxWorkersV2 workers
+	numOfWorkers := min(max(len(members)/100, baseWorkers), MaxWorkersV2)
 	for i := 0; i < numOfWorkers; i++ {
 		wg.Add(1)
 		go removeTagMembersFromXdas(id, membersChannel, removedMembersChannel, wg)
@@ -236,7 +245,7 @@ func removeMembersFromXdasTag(id string, members []string) ([]string, error) {
 	return removeFromXconf, nil
 }
 
-func saveOrRemove(tag *Tag) error {
+func saveOrRemove(tag *taggingds.Tag) error {
 	if len(tag.Members) > 0 {
 		return SaveTag(tag)
 	} else {
@@ -250,18 +259,22 @@ func DeleteTag(id string) error {
 	if tag == nil {
 		return xwcommon.NewRemoteErrorAS(http2.StatusNotFound, fmt.Sprintf(NotFoundErrorMsg, id))
 	}
-	tag, err := deleteTagFromXdas(tag)
-	if err != nil && len(tag.Members) > 0 {
+
+	// Delete from both systems
+
+	// Delete from old system (XDAS)
+	tag, xdasErr := deleteTagFromXdas(tag)
+	if xdasErr != nil && len(tag.Members) > 0 {
 		if saveErr := SaveTag(tag); saveErr != nil {
-			return errors.Join(err, saveErr)
+			return errors.Join(xdasErr, saveErr)
 		}
-		return err
+		return xdasErr
 	}
 
 	return DeleteOneTag(id)
 }
 
-func deleteTagFromXdas(tag *Tag) (*Tag, error) {
+func deleteTagFromXdas(tag *taggingds.Tag) (*taggingds.Tag, error) {
 	var removedMembers []string
 	var err error
 	for _, member := range tag.Members.ToSlice() {

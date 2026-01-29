@@ -5,8 +5,9 @@ import (
 	"math"
 
 	ds "github.com/rdkcentral/xconfwebconfig/db"
+	taggingds "github.com/rdkcentral/xconfwebconfig/tag"
 
-	"github.com/rdkcentral/xconfadmin/util"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -15,11 +16,11 @@ const (
 	CloneErrorMsg = "error cloning %s tag"
 )
 
-func GetAllTags() ([]*Tag, error) {
+func GetAllTags() ([]*taggingds.Tag, error) {
 	insts, err := ds.GetCachedSimpleDao().GetAllAsList(ds.TABLE_TAG, math.MaxInt)
-	tags := make([]*Tag, len(insts))
+	tags := make([]*taggingds.Tag, len(insts))
 	for i, inst := range insts {
-		tag := inst.(*Tag)
+		tag := inst.(*taggingds.Tag)
 		cloned, _ := tag.Clone()
 		cloned.Id = RemovePrefixFromTag(cloned.Id)
 		tags[i] = cloned
@@ -39,13 +40,13 @@ func GetAllTagIds() ([]string, error) {
 	return tags, nil
 }
 
-func GetOneTag(id string) *Tag {
+func GetOneTag(id string) *taggingds.Tag {
 	inst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_TAG, id)
 	if err != nil {
 		log.Warn(fmt.Sprintf(NotFoundErrorMsg, id))
 		return nil
 	}
-	tag := inst.(*Tag)
+	tag := inst.(*taggingds.Tag)
 	clone, err := tag.Clone()
 	if err != nil {
 		log.Error(fmt.Sprintf(CloneErrorMsg, id))
@@ -54,7 +55,7 @@ func GetOneTag(id string) *Tag {
 	return clone
 }
 
-func SaveTag(tag *Tag) error {
+func SaveTag(tag *taggingds.Tag) error {
 	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_TAG, tag.Id, tag)
 	if err != nil {
 		return err
@@ -70,18 +71,18 @@ func DeleteOneTag(id string) error {
 	return nil
 }
 
-func AddMembersToXconfTag(id string, members []string) *Tag {
+func AddMembersToXconfTag(id string, members []string) *taggingds.Tag {
 	tag := GetOneTag(id)
 	if tag == nil {
 		memberSet := util.Set{}
 		memberSet.Add(members...)
-		return &Tag{Id: id, Members: memberSet, Updated: util.GetTimestamp()}
+		return &taggingds.Tag{Id: id, Members: memberSet, Updated: util.GetTimestamp()}
 	}
 	tag.Members.Add(members...)
 	return tag
 }
 
-func removeMembersFromXconfTag(tag *Tag, members []string) *Tag {
+func removeMembersFromXconfTag(tag *taggingds.Tag, members []string) *taggingds.Tag {
 	for _, member := range members {
 		tag.Members.Remove(member)
 	}

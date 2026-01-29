@@ -26,26 +26,22 @@ import (
 	"strings"
 	"sync"
 
-	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	"github.com/rdkcentral/xconfwebconfig/dataapi/featurecontrol"
-	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
-
+	"github.com/google/uuid"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
-	core "github.com/rdkcentral/xconfadmin/shared"
 	xshared "github.com/rdkcentral/xconfadmin/shared"
-
 	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
 	"github.com/rdkcentral/xconfadmin/util"
-	"github.com/rdkcentral/xconfwebconfig/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/dataapi/featurecontrol"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
-
-	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
 
-var featureRuleUpdateMutex sync.Mutex
+var featureRuleTableMutex sync.Mutex
+var featureRuleTableLock = db.NewDistributedLock(db.TABLE_FEATURE_CONTROL_RULE, 10)
 
 func GetAllFeatureRulesByType(applicationType string) []*rfc.FeatureRule {
 	ruleList := rfc.GetFeatureRuleListForAS()
@@ -82,7 +78,7 @@ func FindFeatureRuleByContext(searchContext map[string]string) []*rfc.FeatureRul
 		if featureRule == nil {
 			continue
 		}
-		if applicationType, ok := util.FindEntryInContext(searchContext, common.APPLICATION_TYPE, false); ok {
+		if applicationType, ok := util.FindEntryInContext(searchContext, xwcommon.APPLICATION_TYPE, false); ok {
 			if featureRule.ApplicationType != applicationType && featureRule.ApplicationType != shared.ALL {
 				continue
 			}
@@ -110,7 +106,7 @@ func FindFeatureRuleByContext(searchContext map[string]string) []*rfc.FeatureRul
 		}
 		if key, ok := util.FindEntryInContext(searchContext, xcommon.FREE_ARG, false); ok {
 			keyMatch := false
-			for _, condition := range ru.ToConditions(featureRule.Rule) {
+			for _, condition := range rulesengine.ToConditions(featureRule.Rule) {
 				if strings.Contains(strings.ToLower(condition.GetFreeArg().Name), strings.ToLower(key)) {
 					keyMatch = true
 					break
@@ -122,7 +118,7 @@ func FindFeatureRuleByContext(searchContext map[string]string) []*rfc.FeatureRul
 		}
 		if fixedArgValue, ok := util.FindEntryInContext(searchContext, xcommon.FIXED_ARG, false); ok {
 			valueMatch := false
-			for _, condition := range ru.ToConditions(featureRule.Rule) {
+			for _, condition := range rulesengine.ToConditions(featureRule.Rule) {
 				if condition.GetFixedArg() != nil && condition.GetFixedArg().IsCollectionValue() {
 					fixedArgs := condition.GetFixedArg().GetValue().([]string)
 					for _, fixedArg := range fixedArgs {
@@ -160,9 +156,7 @@ func CreateFeatureRule(featureRule rfc.FeatureRule, applicationType string) (*rf
 	if err != nil {
 		return nil, err
 	}
-	contextMap := map[string]string{core.APPLICATION_TYPE: featureRule.ApplicationType}
-	featureRuleUpdateMutex.Lock()
-	defer featureRuleUpdateMutex.Unlock()
+	contextMap := map[string]string{xshared.APPLICATION_TYPE: featureRule.ApplicationType}
 	prioritizableRules := FeatureRulesToPrioritizables(FindFeatureRuleByContext(contextMap))
 	featureRules := AddNewPrioritizableAndReorganizePriorities(&featureRule, prioritizableRules)
 	if err = SaveFeatureRules(featureRules); err != nil {
@@ -235,7 +229,7 @@ func beforeSaving(featureRule *rfc.FeatureRule, applicationType string) error {
 		}
 	}
 	if featureRule.Rule != nil {
-		ru.NormalizeConditions(featureRule.Rule)
+		rulesengine.NormalizeConditions(featureRule.Rule)
 	}
 	err := ValidateFeatureRule(featureRule, applicationType)
 	if err != nil {
@@ -321,7 +315,7 @@ func ValidateFeatureRule(featureRule *rfc.FeatureRule, applicationType string) e
 
 func getPercentRanges(rule *rulesengine.Rule) ([]rfc.PercentRange, error) {
 	percentRanges := []rfc.PercentRange{}
-	for _, condition := range ru.ToConditions(rule) {
+	for _, condition := range rulesengine.ToConditions(rule) {
 		if rulesengine.StandardOperationRange == condition.GetOperation() && condition.GetFixedArg() != nil && condition.GetFixedArg().IsStringValue() {
 			percentRangeString := *condition.FixedArg.Bean.Value.JLString
 			percentRange, err := parsePercentRange(percentRangeString)
@@ -384,8 +378,6 @@ func UpdateFeatureRule(featureRule rfc.FeatureRule, applicationType string) (*rf
 	if err := beforeSaving(&featureRule, applicationType); err != nil {
 		return nil, err
 	}
-	featureRuleUpdateMutex.Lock()
-	defer featureRuleUpdateMutex.Unlock()
 
 	featureRuleToUpdate := GetOne(featureRule.Id)
 	if featureRuleToUpdate == nil {
@@ -402,7 +394,7 @@ func UpdateFeatureRule(featureRule rfc.FeatureRule, applicationType string) (*rf
 		return &featureRule, nil
 	}
 
-	contextMap := map[string]string{common.APPLICATION_TYPE: featureRule.ApplicationType}
+	contextMap := map[string]string{xwcommon.APPLICATION_TYPE: featureRule.ApplicationType}
 	prioritizableRules := FeatureRulesToPrioritizables(FindFeatureRuleByContext(contextMap))
 	featureRules := UpdatePrioritizablePriorityAndReorganize(&featureRule, prioritizableRules, featureRuleToUpdate.Priority)
 
@@ -434,7 +426,7 @@ func updateFeatureRuleByPriorityAndReorganize(newItem *rfc.FeatureRule, itemsLis
 	return reorganizeFeatureRulePriorities(itemsList, priority, newItem.GetPriority())
 }
 
-func ImportOrUpdateAllFeatureRule(featureRuleList []rfc.FeatureRule, applicationType string) map[string][]string {
+func importOrUpdateAllFeatureRule(featureRuleList []rfc.FeatureRule, applicationType string) map[string][]string {
 	importResult := make(map[string][]string, 2)
 	imported := []string{}
 	notImported := []string{}
@@ -516,21 +508,21 @@ func ProcessFeatureRules(context map[string]string, fields log.Fields) map[strin
 	result := make(map[string]interface{})
 
 	featureControlRuleBase := featurecontrol.NewFeatureControlRuleBase()
-	matchedRules := featureControlRuleBase.ProcessFeatureRules(context, context[common.APPLICATION_TYPE])
+	matchedRules := featureControlRuleBase.ProcessFeatureRules(context, context[xwcommon.APPLICATION_TYPE])
 	if len(matchedRules) > 0 {
 		result["result"] = map[string]interface{}{"": matchedRules}
 	} else {
 		result["result"] = nil
 	}
-	featureControl, _ := featureControlRuleBase.Eval(context, context[common.APPLICATION_TYPE], fields)
+	featureControl, _ := featureControlRuleBase.Eval(context, context[xwcommon.APPLICATION_TYPE], fields)
 	result["featureControl"] = featureControl
 	result["context"] = context
 
 	return result
 }
 
-func FeatureRulesToPrioritizables(featureRules []*rfc.FeatureRule) []core.Prioritizable {
-	prioritizables := make([]core.Prioritizable, len(featureRules))
+func FeatureRulesToPrioritizables(featureRules []*rfc.FeatureRule) []xshared.Prioritizable {
+	prioritizables := make([]xshared.Prioritizable, len(featureRules))
 	for i, item := range featureRules {
 		itemCopy := *item
 		prioritizables[i] = &itemCopy
@@ -538,7 +530,7 @@ func FeatureRulesToPrioritizables(featureRules []*rfc.FeatureRule) []core.Priori
 	return prioritizables
 }
 
-func SaveFeatureRules(itemList []core.Prioritizable) error {
+func SaveFeatureRules(itemList []xshared.Prioritizable) error {
 	log.Debugf("SaveFeatureRules: begin saving %v entries.", len(itemList))
 	for _, item := range itemList {
 		fr := item.(*rfc.FeatureRule)
