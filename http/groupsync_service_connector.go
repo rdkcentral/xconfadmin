@@ -66,19 +66,31 @@ func (c *GroupServiceSyncConnector) AddMembersToTag(groupId string, members *pro
 	}
 	headers := protobufHeaders()
 	headers[TtlHeader] = OneYearTtl
-	_, err = c.DoRequest("POST", url, headers, data)
+	rbytes, err := c.DoRequest("POST", url, headers, data)
 	if err != nil {
 		return err
 	}
+
+	// Log response for visibility into XDAS behavior
+	if len(rbytes) > 0 {
+		log.Debugf("XDAS AddMembersToTag response: groupId=%s, body=%s", groupId, string(rbytes))
+	}
+
 	return nil
 }
 
 func (c *GroupServiceSyncConnector) RemoveGroupMembers(groupId string, member string) error {
 	url := fmt.Sprintf(RemoveGroupMember, c.GetGroupServiceSyncHost(), groupId, member)
-	_, err := c.DoRequest("DELETE", url, protobufHeaders(), nil)
+	rbytes, err := c.DoRequest("DELETE", url, protobufHeaders(), nil)
 	if err != nil {
 		return err
 	}
+
+	// Log response for visibility into XDAS behavior
+	if len(rbytes) > 0 {
+		log.Debugf("XDAS RemoveGroupMembers response: groupId=%s, member=%s, body=%s", groupId, member, string(rbytes))
+	}
+
 	return nil
 }
 
