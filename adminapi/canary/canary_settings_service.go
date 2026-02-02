@@ -70,10 +70,8 @@ func GetCanarySettings() (*common.CanarySettings, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ProcessCanarySettings(settings)
-}
 
-func ProcessCanarySettings(settings map[string]interface{}) (*common.CanarySettings, error) {
+	// Note: json.Unmarshal numbers into float64 when target type is of type interface{}
 	intValue := func(v interface{}) *int {
 		var value int
 		if val, ok := v.(float64); ok {
