@@ -111,7 +111,7 @@ func BenchmarkAddMembersV2(b *testing.B) {
 		// In a real benchmark, you'd set up a test database here
 		b.StartTimer()
 
-		// AddMembersV2(tagId, members)
+		// AddMembers(tagId, members)
 		// Placeholder - actual implementation would call the function
 		_ = tagId
 		_ = members
@@ -132,7 +132,7 @@ func BenchmarkAddMembersV2Small(b *testing.B) {
 		// This would require proper database setup
 		b.StartTimer()
 
-		// AddMembersV2(tagId, members)
+		// AddMembers(tagId, members)
 		_ = tagId
 		_ = members
 	}
@@ -152,7 +152,7 @@ func BenchmarkAddMembersV2Large(b *testing.B) {
 		// This would require proper database setup
 		b.StartTimer()
 
-		// AddMembersV2(tagId, members)
+		// AddMembers(tagId, members)
 		_ = tagId
 		_ = members
 	}
@@ -172,7 +172,7 @@ func BenchmarkRemoveMembersV2(b *testing.B) {
 		// This would require proper database setup and pre-populated data
 		b.StartTimer()
 
-		// RemoveMembersV2(tagId, members)
+		// RemoveMembers(tagId, members)
 		_ = tagId
 		_ = members
 	}
@@ -191,7 +191,7 @@ func BenchmarkGetMembersV2Paginated(b *testing.B) {
 		// This would require proper database setup and pre-populated data
 		b.StartTimer()
 
-		// GetMembersV2Paginated(tagId, 500, "")
+		// GetMembersPaginated(tagId, 500, "")
 		_ = tagId
 	}
 }
@@ -210,7 +210,7 @@ func BenchmarkGetMembersV2PaginatedWithCursor(b *testing.B) {
 		// This would require proper database setup and pre-populated data
 		b.StartTimer()
 
-		// GetMembersV2Paginated(tagId, 500, cursor)
+		// GetMembersPaginated(tagId, 500, cursor)
 		_ = tagId
 		_ = cursor
 	}
