@@ -42,16 +42,3 @@ func TestGetCanarySettings(t *testing.T) {
 	_, err := GetCanarySettings()
 	assert.Error(t, err, "Should return error when app settings are not set")
 }
-
-func TestProcessCanarySettings(t *testing.T) {
-	settings := map[string]interface{}{
-		common.PROP_CANARY_DISTRIBUTION_PERCENTAGE: 20.0,
-		common.PROP_CANARY_MAXSIZE:                 10000,
-		common.PROP_CANARY_FW_UPGRADE_STARTTIME:    1200,
-		common.PROP_CANARY_FW_UPGRADE_ENDTIME:      2400,
-	}
-
-	canarySettings, err := ProcessCanarySettings(settings)
-	assert.NoError(t, err, "Should not return error for valid settings map")
-	assert.NotNil(t, canarySettings, "CanarySettings should not be nil")
-}

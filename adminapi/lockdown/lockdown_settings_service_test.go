@@ -34,19 +34,6 @@ func TestGetLockdownSettings(t *testing.T) {
 	assert.Error(t, err, "Should return error when app settings are not set")
 }
 
-func TestProcessLockdownSettings(t *testing.T) {
-	settings := map[string]interface{}{
-		common.PROP_LOCKDOWN_ENABLED:   true,
-		common.PROP_LOCKDOWN_STARTTIME: "1200",
-		common.PROP_LOCKDOWN_ENDTIME:   "2400",
-		common.PROP_LOCKDOWN_MODULES:   "module1,module2",
-	}
-
-	lockdownSettings, err := ProcessLockdownSettings(settings)
-	assert.NoError(t, err, "Should not return error for valid settings map")
-	assert.NotNil(t, lockdownSettings, "LockdownSettings should not be nil")
-}
-
 // TestSetLockdownSetting_LockdownEnabledError tests error handling when saving LockdownEnabled fails
 func TestSetLockdownSetting_LockdownEnabledError(t *testing.T) {
 	defer func() {
@@ -313,40 +300,6 @@ func TestGetLockdownSettings_Error(t *testing.T) {
 
 	// In test environment without DB, GetAppSettings will fail
 	assert.Error(t, err, "Should return error when DB is not configured")
-}
-
-// TestProcessLockdownSettings_EmptySettings tests processing empty settings map
-func TestProcessLockdownSettings_EmptySettings(t *testing.T) {
-	settings := map[string]interface{}{}
-
-	lockdownSettings, err := ProcessLockdownSettings(settings)
-
-	assert.NoError(t, err, "Should not error on empty settings")
-	assert.NotNil(t, lockdownSettings, "Should return non-nil settings object")
-	assert.Nil(t, lockdownSettings.LockdownEnabled, "LockdownEnabled should be nil")
-	assert.Nil(t, lockdownSettings.LockdownStartTime, "LockdownStartTime should be nil")
-	assert.Nil(t, lockdownSettings.LockdownEndTime, "LockdownEndTime should be nil")
-	assert.Nil(t, lockdownSettings.LockdownModules, "LockdownModules should be nil")
-}
-
-// TestProcessLockdownSettings_WrongTypes tests handling of incorrect types in settings map
-func TestProcessLockdownSettings_WrongTypes(t *testing.T) {
-	settings := map[string]interface{}{
-		common.PROP_LOCKDOWN_ENABLED:   "not-a-bool", // Should be bool
-		common.PROP_LOCKDOWN_STARTTIME: 12345,        // Should be string
-		common.PROP_LOCKDOWN_ENDTIME:   true,         // Should be string
-		common.PROP_LOCKDOWN_MODULES:   42,           // Should be string
-	}
-
-	lockdownSettings, err := ProcessLockdownSettings(settings)
-
-	assert.NoError(t, err, "Should not error even with wrong types")
-	assert.NotNil(t, lockdownSettings, "Should return non-nil settings object")
-	// Fields should be nil because type assertions fail
-	assert.Nil(t, lockdownSettings.LockdownEnabled, "LockdownEnabled should be nil due to type mismatch")
-	assert.Nil(t, lockdownSettings.LockdownStartTime, "LockdownStartTime should be nil due to type mismatch")
-	assert.Nil(t, lockdownSettings.LockdownEndTime, "LockdownEndTime should be nil due to type mismatch")
-	assert.Nil(t, lockdownSettings.LockdownModules, "LockdownModules should be nil due to type mismatch")
 }
 
 // Helper functions

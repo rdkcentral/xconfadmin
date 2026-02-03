@@ -2696,16 +2696,10 @@ func TestImportFormula_EmptyTimeZone(t *testing.T) {
 
 	respEntity := testImportFormula(fws, false, core.STB)
 
-	// Should succeed with TimeZone defaulted to UTC
-	if respEntity.Status != http.StatusOK {
-		t.Logf("Import failed with status %d and error: %v", respEntity.Status, respEntity.Error)
-	}
-	assert.Equal(t, http.StatusOK, respEntity.Status)
-	assert.Assert(t, respEntity.Error == nil)
-
-	// Verify TimeZone was set to UTC
-	result := respEntity.Data.(*logupload.FormulaWithSettings)
-	assert.Equal(t, logupload.UTC, result.DeviceSettings.Schedule.TimeZone)
+	// Should fail validation when TimeZone is empty
+	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
+	assert.Assert(t, respEntity.Error != nil)
+	assert.Assert(t, strings.Contains(respEntity.Error.Error(), "TimeZone must be set"))
 }
 
 // TestImportFormula_DeviceSettingsValidationError tests validation error path
