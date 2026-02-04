@@ -307,7 +307,7 @@ func (c *HttpClient) DoWithRetries(method string, url string, inHeaders map[stri
 		}
 	}
 
-	if WebConfServer.metricsEnabled && WebConfServer.XW_XconfServer.AppMetrics != nil {
+	if WebConfServer != nil && WebConfServer.metricsEnabled && WebConfServer.XW_XconfServer.AppMetrics != nil {
 		WebConfServer.XW_XconfServer.AppMetrics.UpdateExternalAPIMetrics(loggerName, method, statusCode, startTimeForAllRetries)
 	}
 

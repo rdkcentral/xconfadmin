@@ -28,13 +28,13 @@ build: ## Build a version
 	go build -v -ldflags="-X ${REPO}/common.BinaryBranch=${BRANCH} -X ${REPO}/common.BinaryVersion=${Version} -X ${REPO}/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfadmin-${GOOS}-${GOARCH} main.go
 
 test:
-	ulimit -n 10000 ; go test ./... -cover -count=1
+	ulimit -n 10000 ; go test ./... -p 1 -parallel 1 -cover -count=1 -timeout=45m
 
 localtest:
 	export RUN_IN_LOCAL=true ; go test ./... -cover -count=1 -failfast
 
 cover:
-	go test ./... -count=1 -coverprofile=coverage.out
+	go test ./... -count=1 -coverprofile=coverage.out -timeout=45m
 
 html:
 	go tool cover -html=coverage.out
