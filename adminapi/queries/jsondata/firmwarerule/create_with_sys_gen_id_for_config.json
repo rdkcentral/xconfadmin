@@ -1,0 +1,56 @@
+{
+	"id":"SYSTEM_GENERATED_UNIQUE_IDENTIFIER",
+	"name":"aawrule2",
+  "rule": {
+    "negated": false,
+    "compoundParts": [
+      {
+        "negated": false,
+        "condition": {
+          "freeArg": {
+            "type": "STRING",
+            "name": "env"
+          },
+          "operation": "IS",
+          "fixedArg": {
+            "bean": {
+              "value": {
+                "java.lang.String": "TEST"
+              }
+            }
+          }
+        }
+      },
+      {
+        "negated": false,
+        "relation": "AND",
+        "condition": {
+          "freeArg": {
+            "type": "STRING",
+            "name": "model"
+          },
+          "operation": "IS",
+          "fixedArg": {
+            "bean": {
+              "value": {
+                "java.lang.String": "SYSTEM_GENERATED_UNIQUE_MODEL_ID"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+		"applicableAction":
+		{
+			"type":".RuleAction",
+			"actionType":"RULE",
+			"configId":"SYSTEM_GENERATED_UNIQUE_CONFIG_ID",
+			"active":true,
+			"firmwareCheckRequired":false,
+			"rebootImmediately":false
+		},
+		"type":"ENV_MODEL_RULE",
+		"active":true,
+		"applicationType":"stb"
+	}
