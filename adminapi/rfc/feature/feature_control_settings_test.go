@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package tests
+package feature_test
 
 import (
 	"encoding/json"
@@ -27,20 +27,20 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/rdkcentral/xconfadmin/adminapi/rfc/feature"
 	oshttp "github.com/rdkcentral/xconfadmin/http"
-	"github.com/rdkcentral/xconfwebconfig/dataapi"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
 	xutils "github.com/rdkcentral/xconfwebconfig/util"
-
-	"github.com/google/uuid"
-	"github.com/gorilla/mux"
-	"gotest.tools/assert"
 )
 
 const (
@@ -618,7 +618,7 @@ func verifyPercentRangeRuleApplying(t *testing.T, server *oshttp.WebconfigServer
 
 	url := fmt.Sprintf("/featureControl/getSettings?estbMacAddress=%s", macAddress)
 	req, err := http.NewRequest("GET", url, nil)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 	res := ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	compareFeatureControlResponses(t, res, expectedFeatures)
@@ -631,7 +631,7 @@ func assertConfigSetHashChange(t *testing.T, server *oshttp.WebconfigServer, rou
 	url := fmt.Sprintf("/featureControl/getSettings?model=%s&env=%s", strings.ToUpper(defaultModelId), strings.ToUpper(defaultEnvironmentId))
 	req, err := http.NewRequest("GET", url, nil)
 	req.Header.Set("configSetHash", "")
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 	res := ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	assert.Equal(t, res.Header["configSetHash"][0], configSetHash)
@@ -645,7 +645,7 @@ func assertNotMofifiedStatus(t *testing.T, server *oshttp.WebconfigServer, route
 	url := fmt.Sprintf("/featureControl/getSettings?model=%s&env=%s", strings.ToUpper(defaultModelId), strings.ToUpper(defaultEnvironmentId))
 	req, err := http.NewRequest("GET", url, nil)
 	req.Header.Set("configSetHash", configSetHash)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 	res := ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusNotModified)
 	assert.Equal(t, res.Header["configSetHash"][0], configSetHash)
@@ -658,14 +658,14 @@ func performGetSettingsRequestAndVerifyFeatureControlInstanceName(t *testing.T, 
 
 	url := fmt.Sprintf("/featureControl/getSettings%s", extraUrl)
 	req, err := http.NewRequest("GET", url, nil)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 	res := ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err := ioutil.ReadAll(res.Body)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 	actualResponse := map[string]rfc.FeatureControl{}
 	err = json.Unmarshal(body, &actualResponse)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, actualResponse["featureControl"].FeatureResponses[0]["featureInstance"], expectedFeature.FeatureName)
 	res.Body.Close()
 }
@@ -679,7 +679,7 @@ func performGetSettingsRequestAndVerifyFeatureControl(t *testing.T, server *osht
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 	res := ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	compareFeatureControlResponses(t, res, expectedFeatures)
@@ -692,10 +692,10 @@ func performGetSettingsRequestAndVerify500ErrorWithNonEmptyConfigSetHash(t *test
 	url := fmt.Sprintf("/featureControl/getSettings%s", extraUrl)
 	req, err := http.NewRequest("GET", url, nil)
 	req.Header.Set("configSetHash", "nonEmptyValue")
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 	res := ExecuteRequest(req, router).Result()
 	body, err := ioutil.ReadAll(res.Body)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, res.StatusCode, http.StatusInternalServerError)
 	assert.Equal(t, strings.Contains(string(body), "Error Msg"), true)
 	res.Body.Close()
@@ -703,10 +703,10 @@ func performGetSettingsRequestAndVerify500ErrorWithNonEmptyConfigSetHash(t *test
 
 func compareFeatureControlResponses(t *testing.T, res *http.Response, expectedFeatures []rfc.FeatureResponse) {
 	body, err := ioutil.ReadAll(res.Body)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 	actualResponse := map[string]rfc.FeatureControl{}
 	err = json.Unmarshal(body, &actualResponse)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 	actualFeatureControl, ok := actualResponse["featureControl"]
 	assert.Equal(t, ok, true)
 	actualFeatures := actualFeatureControl.FeatureResponses
@@ -903,7 +903,7 @@ func createAndSaveFeatures() map[string]*rfc.Feature {
 
 func TestGetPreprocessedFeaturesHandler_Unauthorized(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "/api/rfc/preprocessed/AA:BB:CC:DD:EE:FF", nil)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 
 	router := mux.NewRouter()
 	router.HandleFunc("/api/rfc/preprocessed/{mac}", func(w http.ResponseWriter, r *http.Request) {
