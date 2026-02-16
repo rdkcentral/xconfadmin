@@ -26,6 +26,7 @@ import (
 	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
 	common "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xapptype "github.com/rdkcentral/xconfadmin/shared/applicationtype"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -52,11 +53,9 @@ func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 		common.WakeupPoolTagName = "t_canary_wakeup"
 	} else {
 		common.AuthProvider = ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.authprovider")
-		applicationTypeString := ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.application_types")
-		if applicationTypeString == "" {
-			applicationTypeString = "stb"
+		if len(common.ApplicationTypes) == 0 {
+			common.ApplicationTypes = []string{"stb"}
 		}
-		common.ApplicationTypes = strings.Split(applicationTypeString, ",")
 		common.CacheUpdateWindowSize = ws.XW_XconfServer.ServerConfig.GetInt64("xconfwebconfig.xconf.cache_update_window_size")
 		common.SatOn = ws.XW_XconfServer.ServerConfig.GetBoolean("xconfwebconfig.sat.SAT_ON")
 		common.AllowedNumberOfFeatures = int(ws.XW_XconfServer.ServerConfig.GetInt32("xconfwebconfig.xconf.allowedNumberOfFeatures", 100))
@@ -115,8 +114,22 @@ func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 func initDB() {
 	queries.CreateFirmwareRuleTemplates() // Initialize FirmwareRule templates
 	initAppSettings()                     // Initialize Application settings
+	loadApplicationTypes()                // Load Application Types from DB
 }
 
+func loadApplicationTypes() {
+	appTypes, err := xapptype.GetAllApplicationTypeAsList()
+	if err != nil {
+		log.Errorf("Error loading application types from DB: %v", err)
+		return
+	}
+	var appTypeNames []string
+	for _, appType := range appTypes {
+		appTypeNames = append(appTypeNames, appType.Name)
+	}
+	common.ApplicationTypes = appTypeNames
+	log.Info("Loaded application types from DB")
+}
 func initAppSettings() {
 	settings, err := common.GetAppSettings()
 	if err != nil {
