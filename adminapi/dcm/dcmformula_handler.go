@@ -196,6 +196,8 @@ func DeleteDcmFormulaByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(owner); err != nil {
@@ -211,8 +213,6 @@ func DeleteDcmFormulaByIdHandler(w http.ResponseWriter, r *http.Request) {
 		dcmRuleTableMutex.Lock()
 		defer dcmRuleTableMutex.Unlock()
 	}
-
-	db.GetCacheManager().ForceSyncChanges()
 
 	respEntity := DeleteDcmFormulabyId(id, appType)
 	if respEntity.Error != nil {
@@ -243,6 +243,8 @@ func CreateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(owner); err != nil {
@@ -258,7 +260,6 @@ func CreateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 		dcmRuleTableMutex.Lock()
 		defer dcmRuleTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	respEntity := CreateDcmRule(&newdfrule, appType)
 	if respEntity.Error != nil {
@@ -295,6 +296,8 @@ func UpdateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(owner); err != nil {
@@ -310,7 +313,6 @@ func UpdateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 		dcmRuleTableMutex.Lock()
 		defer dcmRuleTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	respEntity := UpdateDcmRule(&newdfrule, appType)
 	if respEntity.Error != nil {
@@ -473,6 +475,8 @@ func DcmFormulaChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(owner); err != nil {
@@ -488,7 +492,6 @@ func DcmFormulaChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 		dcmRuleTableMutex.Lock()
 		defer dcmRuleTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	formulaToUpdate := logupload.GetOneDCMGenericRule(id)
 	if formulaToUpdate == nil {
@@ -557,6 +560,8 @@ func ImportDcmFormulaWithOverwriteHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(owner); err != nil {
@@ -572,7 +577,6 @@ func ImportDcmFormulaWithOverwriteHandler(w http.ResponseWriter, r *http.Request
 		dcmRuleTableMutex.Lock()
 		defer dcmRuleTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	respEntity := importFormula(&formulaWithSettings, overwrite, appType)
 	if respEntity.Error != nil {
@@ -614,6 +618,8 @@ func ImportDcmFormulasHandler(w http.ResponseWriter, r *http.Request) {
 	failedToImport := []string{}
 	successfulImportIds := []string{}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(owner); err != nil {
@@ -629,7 +635,6 @@ func ImportDcmFormulasHandler(w http.ResponseWriter, r *http.Request) {
 		dcmRuleTableMutex.Lock()
 		defer dcmRuleTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	for _, formulaWithSettings := range formulaWithSettingsList {
 		formulaWithSettings := formulaWithSettings
@@ -676,6 +681,8 @@ func PostDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(owner); err != nil {
@@ -691,7 +698,6 @@ func PostDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 		dcmRuleTableMutex.Lock()
 		defer dcmRuleTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	result := importFormulas(formulaWithSettingsList, appType, false)
 
@@ -724,6 +730,8 @@ func PutDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(owner); err != nil {
@@ -739,7 +747,6 @@ func PutDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 		dcmRuleTableMutex.Lock()
 		defer dcmRuleTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	result := importFormulas(formulaWithSettingsList, appType, true)
 
