@@ -421,7 +421,6 @@ func UpdateNamespacedList(namespacedList *shared.GenericNamespacedList, newId st
 }
 
 func DeleteNamespacedList(typeName string, id string) *xwhttp.ResponseEntity {
-	db.GetCacheManager().ForceSyncChanges()
 	var namespacedList *shared.GenericNamespacedList
 	if typeName == "" {
 		namespacedList = GetNamespacedListById(id)

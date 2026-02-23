@@ -263,6 +263,8 @@ func CreateFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := featureRuleTableLock.Lock(owner); err != nil {
@@ -278,7 +280,6 @@ func CreateFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 		featureRuleTableMutex.Lock()
 		defer featureRuleTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	createdFeatureRule, err := CreateFeatureRule(featureRule, applicationType)
 	if err != nil {
@@ -300,6 +301,8 @@ func UpdateFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := featureRuleTableLock.Lock(owner); err != nil {
@@ -315,7 +318,6 @@ func UpdateFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 		featureRuleTableMutex.Lock()
 		defer featureRuleTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	updatedFeatureRule, err := UpdateFeatureRule(featureRule, applicationType)
 	if err != nil {
@@ -366,6 +368,8 @@ func ImportAllFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 		return featureRules[i].Priority < featureRules[j].Priority
 	})
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := featureRuleTableLock.Lock(owner); err != nil {
@@ -381,7 +385,6 @@ func ImportAllFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 		featureRuleTableMutex.Lock()
 		defer featureRuleTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	importResult := importOrUpdateAllFeatureRule(featureRules, determinedAppType)
 	response, err := util.JSONMarshal(importResult)
@@ -398,6 +401,8 @@ func DeleteOneFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := featureRuleTableLock.Lock(owner); err != nil {
@@ -413,7 +418,6 @@ func DeleteOneFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 		featureRuleTableMutex.Lock()
 		defer featureRuleTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	featureRuleToDelete := GetOne(id)
 	if featureRuleToDelete == nil {
@@ -485,6 +489,8 @@ func ChangeFeatureRulePrioritiesHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := featureRuleTableLock.Lock(owner); err != nil {
@@ -500,7 +506,6 @@ func ChangeFeatureRulePrioritiesHandler(w http.ResponseWriter, r *http.Request) 
 		featureRuleTableMutex.Lock()
 		defer featureRuleTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	featureRuleToUpdate := GetOne(id)
 	if featureRuleToUpdate == nil {
@@ -573,6 +578,8 @@ func UpdateFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 		return entities[i].Priority < entities[j].Priority
 	})
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := featureRuleTableLock.Lock(owner); err != nil {
@@ -588,7 +595,6 @@ func UpdateFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 		featureRuleTableMutex.Lock()
 		defer featureRuleTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
@@ -635,6 +641,8 @@ func CreateFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 		return entities[i].Priority < entities[j].Priority
 	})
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := featureRuleTableLock.Lock(owner); err != nil {
@@ -650,7 +658,6 @@ func CreateFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 		featureRuleTableMutex.Lock()
 		defer featureRuleTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {

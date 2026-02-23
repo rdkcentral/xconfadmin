@@ -191,6 +191,8 @@ func PostFirmwareRuleTemplateImportAllHandler(w http.ResponseWriter, r *http.Req
 		}
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
@@ -206,7 +208,6 @@ func PostFirmwareRuleTemplateImportAllHandler(w http.ResponseWriter, r *http.Req
 		fwRuleTemplateTableMutex.Lock()
 		defer fwRuleTemplateTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	result := importOrUpdateAllFirmwareRTs(firmwareRTs, successTag, failedTag)
 	response, err := xhttp.ReturnJsonResponse(result, r)
@@ -253,6 +254,8 @@ func PostFirmwareRuleTemplateImportHandler(w http.ResponseWriter, r *http.Reques
 		return wrappedFrts[i].Entity.ID < wrappedFrts[j].Entity.ID
 	})
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
@@ -268,7 +271,6 @@ func PostFirmwareRuleTemplateImportHandler(w http.ResponseWriter, r *http.Reques
 		fwRuleTemplateTableMutex.Lock()
 		defer fwRuleTemplateTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	for _, wrapped := range wrappedFrts {
 		entity := wrapped.Entity
@@ -335,6 +337,8 @@ func PostChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
@@ -350,7 +354,6 @@ func PostChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 		fwRuleTemplateTableMutex.Lock()
 		defer fwRuleTemplateTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	//TODO: basically this is the same action get all and filtered by action type
 	allTemplates, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS("")
@@ -399,6 +402,8 @@ func PostFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
@@ -414,7 +419,6 @@ func PostFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		fwRuleTemplateTableMutex.Lock()
 		defer fwRuleTemplateTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	_, err := corefw.GetFirmwareRuleTemplateOneDB(firmwareRT.ID)
 	if err == nil {
@@ -454,6 +458,8 @@ func PutFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
@@ -469,7 +475,6 @@ func PutFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		fwRuleTemplateTableMutex.Lock()
 		defer fwRuleTemplateTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	entityOnDb, err := corefw.GetFirmwareRuleTemplateOneDB(firmwareRT.ID)
 	if err == nil {
@@ -517,6 +522,8 @@ func DeleteFirmwareRuleTemplateByIdHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
@@ -532,7 +539,6 @@ func DeleteFirmwareRuleTemplateByIdHandler(w http.ResponseWriter, r *http.Reques
 		fwRuleTemplateTableMutex.Lock()
 		defer fwRuleTemplateTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	templateToDelete, err := corefw.GetFirmwareRuleTemplateOneDBWithId(id)
 	if err == nil {
@@ -649,6 +655,8 @@ func PostFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Requ
 		return entities[i].Priority < entities[j].Priority
 	})
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
@@ -664,7 +672,6 @@ func PostFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Requ
 		fwRuleTemplateTableMutex.Lock()
 		defer fwRuleTemplateTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
@@ -723,6 +730,8 @@ func PutFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Reque
 		return entities[i].Priority < entities[j].Priority
 	})
 
+	db.GetCacheManager().ForceSyncChanges()
+
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
@@ -738,7 +747,6 @@ func PutFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Reque
 		fwRuleTemplateTableMutex.Lock()
 		defer fwRuleTemplateTableMutex.Unlock()
 	}
-	db.GetCacheManager().ForceSyncChanges()
 
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
