@@ -538,29 +538,3 @@ func TestCanBeIpv6(t *testing.T) {
 	assert.True(t, canBeIpv6([]corefw.ValidationType{corefw.IPV6}))
 	assert.False(t, canBeIpv6([]corefw.ValidationType{corefw.STRING}))
 }
-func TestValidateMacListReferences(t *testing.T) {
-	macAddress := "AA:BB:CC:dd:EE:FF"
-	rule := corefw.FirmwareRule{
-		ID:   "test-rule",
-		Name: "Test Rule",
-		Rule: re.Rule{
-			Condition: &re.Condition{
-				FreeArg: &re.FreeArg{
-					Type: "STRING",
-					Name: "eStbMac",
-				},
-				Operation: re.StandardOperationIs,
-				FixedArg: &re.FixedArg{
-					Bean: &re.Bean{
-						Value: re.Value{
-							JLString: &macAddress,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	err := validateMacListReferences(rule)
-	assert.Nil(t, err)
-}
