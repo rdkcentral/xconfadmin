@@ -931,9 +931,13 @@ func validateMacListReferences(firmwareRule corefw.FirmwareRule) error {
 	macListIds := re.GetFixedArgsFromRuleByFreeArgAndOperation(*firmwareRule.GetRule(), "eStbMac", re.StandardOperationInList)
 	for _, macListId := range macListIds {
 		macList, err := shared.GetGenericNamedListOneByTypeNonCached(macListId, shared.MAC_LIST)
-		if err != nil || macList == nil {
+		if err != nil && !strings.Contains(err.Error(), "not found") {
+			return xwcommon.NewRemoteErrorAS(http.StatusInternalServerError,
+				fmt.Sprintf("%s (id=%s): Error retrieving MAC list '%s': %v", firmwareRule.Name, firmwareRule.ID, macListId, err))
+		}
+		if macList == nil {
 			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest,
-				firmwareRule.Name+": Referenced MAC list '"+macListId+"' does not exist")
+				fmt.Sprintf("%s (id=%s): Referenced MAC list '%s' does not exist", firmwareRule.Name, firmwareRule.ID, macListId))
 		}
 	}
 	return nil
