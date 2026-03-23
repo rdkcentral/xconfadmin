@@ -408,6 +408,11 @@ func validateOneFirmewareRule(firmwareRule corefw.FirmwareRule) error {
 		return err
 	}
 
+	err = validateMacListReferences(firmwareRule)
+	if err != nil {
+		return err
+	}
+
 	return xshared.ValidateApplicationType(firmwareRule.ApplicationType)
 }
 
@@ -916,4 +921,24 @@ func GetFirmwareRuleById(id string) *corefw.FirmwareRule {
 		return nil
 	}
 	return fr
+}
+
+// validateMacListReferences validates that all MAC lists referenced in the firmware rule exist
+func validateMacListReferences(firmwareRule corefw.FirmwareRule) error {
+	if firmwareRule.GetRule() == nil {
+		return nil
+	}
+	macListIds := re.GetFixedArgsFromRuleByFreeArgAndOperation(*firmwareRule.GetRule(), "eStbMac", re.StandardOperationInList)
+	for _, macListId := range macListIds {
+		macList, err := shared.GetGenericNamedListOneByTypeNonCached(macListId, shared.MAC_LIST)
+		if err != nil && !strings.Contains(err.Error(), "not found") {
+			return xwcommon.NewRemoteErrorAS(http.StatusInternalServerError,
+				fmt.Sprintf("%s (id=%s): Error retrieving MAC list '%s': %v", firmwareRule.Name, firmwareRule.ID, macListId, err))
+		}
+		if macList == nil {
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest,
+				fmt.Sprintf("%s (id=%s): Referenced MAC list '%s' does not exist", firmwareRule.Name, firmwareRule.ID, macListId))
+		}
+	}
+	return nil
 }
