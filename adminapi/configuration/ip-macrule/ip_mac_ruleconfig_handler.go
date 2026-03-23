@@ -8,6 +8,8 @@ import (
 	"github.com/rdkcentral/xconfadmin/common"
 	ccommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func GetIpMacRuleConfigurationHandler(w http.ResponseWriter, r *http.Request) {
@@ -24,6 +26,7 @@ func GetIpMacRuleConfigurationHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write(b)
 	} else {
+		log.WithFields(log.Fields{"error": err}).Error("failed to marshal ip mac rule config")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 	}
