@@ -1,0 +1,77 @@
+{
+"id": "dupConditions",
+"rule": {
+    "negated": false,
+    "compoundParts": [
+	{
+	    "negated": false,
+	    "condition": {
+		"freeArg": {
+		    "type": "STRING",
+		    "name": "model"
+		},
+		"operation": "IS",
+		"fixedArg": {
+		    "bean": {
+			"value": {
+			    "java.lang.String": ""
+			}
+		    }
+		}
+	    },
+	    "compoundParts": []
+	},
+	{
+	    "negated": false,
+	    "relation": "AND",
+	    "condition": {
+		"freeArg": {
+		    "type": "STRING",
+		    "name": "model"
+		},
+		"operation": "IS",
+		"fixedArg": {
+		    "bean": {
+			"value": {
+			    "java.lang.String": ""
+			}
+		    }
+		}
+	    },
+	    "compoundParts": []
+	},
+	{
+	    "negated": false,
+	    "relation": "AND",
+	    "condition": {
+		"freeArg": {
+		    "type": "STRING",
+		    "name": "partnerId"
+		},
+		"operation": "IS",
+		"fixedArg": {
+		    "bean": {
+			"value": {
+			    "java.lang.String": ""
+			}
+		    }
+		}
+	    },
+	    "compoundParts": []
+	}
+    ]
+},
+"applicableAction": {
+    "type": ".DefinePropertiesTemplateAction",
+    "ttlMap": {},
+    "actionType": "DEFINE_PROPERTIES_TEMPLATE",
+    "properties": {},
+    "byPassFilters": [],
+    "firmwareVersionRegExs": []
+},
+"priority": 1,
+"requiredFields": [],
+"byPassFilters": [],
+"editable": true
+}
+

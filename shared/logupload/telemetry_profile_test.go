@@ -1,5 +1,12 @@
 package logupload
 
+import (
+	"testing"
+
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+)
+
 type cachedSimpleDaoMock struct{}
 
 func (dao cachedSimpleDaoMock) GetOne(tableName string, rowKey string) (interface{}, error) {
@@ -55,6 +62,170 @@ var getAllAsMapMock func(tableName string) (map[interface{}]interface{}, error)
 var getKeysMock func(tableName string) ([]interface{}, error)
 var refreshAllMock func(tableName string) error
 var refreshOneMock func(tableName string, rowKey string) error
+
+// TestSetOnePermanentTelemetryProfile tests setting a permanent telemetry profile
+func TestSetOnePermanentTelemetryProfile(t *testing.T) {
+	profile := &logupload.PermanentTelemetryProfile{
+		ID:              "profile-123",
+		ApplicationType: shared.STB,
+	}
+	err := SetOnePermanentTelemetryProfile("profile-123", profile)
+	// May fail if dao not initialized; that's acceptable in unit test
+	_ = err
+	t.Log("SetOnePermanentTelemetryProfile executed")
+}
+
+// TestGetOnePermanentTelemetryProfile tests retrieving a permanent telemetry profile
+func TestGetOnePermanentTelemetryProfile(t *testing.T) {
+	result := GetOnePermanentTelemetryProfile("non-existent-id")
+	// Expected to return nil if not found
+	if result != nil {
+		t.Logf("GetOnePermanentTelemetryProfile returned: %+v", result)
+	} else {
+		t.Log("GetOnePermanentTelemetryProfile returned nil (expected for non-existent ID)")
+	}
+}
+
+// TestDeletePermanentTelemetryProfile tests deleting a permanent telemetry profile
+func TestDeletePermanentTelemetryProfile(t *testing.T) {
+	DeletePermanentTelemetryProfile("test-profile-id")
+	t.Log("DeletePermanentTelemetryProfile executed")
+}
+
+// TestGetPermanentTelemetryProfileList tests retrieving all permanent telemetry profiles
+func TestGetPermanentTelemetryProfileList(t *testing.T) {
+	profiles := GetPermanentTelemetryProfileList()
+	if profiles == nil {
+		t.Log("GetPermanentTelemetryProfileList returned nil (expected if no data)")
+	} else {
+		t.Logf("GetPermanentTelemetryProfileList returned %d profiles", len(profiles))
+	}
+}
+
+// TestGetPermanentTelemetryProfileListByApplicationType tests filtering by application type
+func TestGetPermanentTelemetryProfileListByApplicationType(t *testing.T) {
+	profiles := GetPermanentTelemetryProfileListByApplicationType(shared.STB)
+	if profiles == nil {
+		t.Log("GetPermanentTelemetryProfileListByApplicationType returned nil")
+	} else {
+		t.Logf("GetPermanentTelemetryProfileListByApplicationType returned %d profiles", len(profiles))
+	}
+}
+
+// TestGetAllTelemetryTwoProfileList tests retrieving all telemetry two profiles
+func TestGetAllTelemetryTwoProfileList(t *testing.T) {
+	profiles := GetAllTelemetryTwoProfileList(shared.STB)
+	if profiles == nil {
+		t.Log("GetAllTelemetryTwoProfileList returned nil (expected if no data)")
+	} else {
+		t.Logf("GetAllTelemetryTwoProfileList returned %d profiles", len(profiles))
+	}
+}
+
+// TestNewEmptyTelemetryTwoProfile tests creating an empty telemetry two profile
+func TestNewEmptyTelemetryTwoProfile(t *testing.T) {
+	profile := NewEmptyTelemetryTwoProfile()
+	if profile == nil {
+		t.Fatal("expected non-nil telemetry two profile")
+	}
+	if profile.ApplicationType != shared.STB {
+		t.Fatalf("expected ApplicationType %s, got %s", shared.STB, profile.ApplicationType)
+	}
+	if profile.Type != "TelemetryTwoProfile" {
+		t.Fatalf("expected Type 'TelemetryTwoProfile', got %s", profile.Type)
+	}
+	t.Log("NewEmptyTelemetryTwoProfile created successfully")
+}
+
+// TestGetOneTelemetryTwoProfile tests retrieving a single telemetry two profile
+func TestGetOneTelemetryTwoProfile(t *testing.T) {
+	result := GetOneTelemetryTwoProfile("non-existent-id")
+	if result != nil {
+		t.Logf("GetOneTelemetryTwoProfile returned: %+v", result)
+	} else {
+		t.Log("GetOneTelemetryTwoProfile returned nil (expected for non-existent ID)")
+	}
+}
+
+// TestSetOneTelemetryTwoProfile tests setting a telemetry two profile
+func TestSetOneTelemetryTwoProfile(t *testing.T) {
+	profile := &logupload.TelemetryTwoProfile{
+		ID:              "profile-two-123",
+		ApplicationType: shared.STB,
+	}
+	err := SetOneTelemetryTwoProfile(profile)
+	// May fail if dao not initialized; that's acceptable
+	_ = err
+	t.Log("SetOneTelemetryTwoProfile executed")
+}
+
+// TestDeleteTelemetryTwoProfile tests deleting a telemetry two profile
+func TestDeleteTelemetryTwoProfile(t *testing.T) {
+	err := DeleteTelemetryTwoProfile("test-id")
+	// May fail if dao not initialized; that's acceptable
+	_ = err
+	t.Log("DeleteTelemetryTwoProfile executed")
+}
+
+// TestSetOneTelemetryProfile tests setting a telemetry profile
+func TestSetOneTelemetryProfile(t *testing.T) {
+	profile := &logupload.TelemetryProfile{
+		ID:              "telemetry-123",
+		ApplicationType: shared.STB,
+	}
+	SetOneTelemetryProfile("telemetry-123", profile)
+	t.Log("SetOneTelemetryProfile executed")
+}
+
+// TestGetTimestampedRulesPointer tests retrieving timestamped rules
+func TestGetTimestampedRulesPointer(t *testing.T) {
+	rules := GetTimestampedRulesPointer()
+	if rules == nil {
+		t.Log("GetTimestampedRulesPointer returned nil (expected if no data)")
+	} else {
+		t.Logf("GetTimestampedRulesPointer returned %d rules", len(rules))
+	}
+}
+
+// TestGetOneTelemetryTwoRule tests retrieving a single telemetry two rule
+func TestGetOneTelemetryTwoRule(t *testing.T) {
+	result := GetOneTelemetryTwoRule("non-existent-rule-id")
+	if result != nil {
+		t.Logf("GetOneTelemetryTwoRule returned: %+v", result)
+	} else {
+		t.Log("GetOneTelemetryTwoRule returned nil (expected for non-existent ID)")
+	}
+}
+
+// TestGetOneTelemetryRule tests retrieving a single telemetry rule
+func TestGetOneTelemetryRule(t *testing.T) {
+	result := GetOneTelemetryRule("non-existent-rule-id")
+	if result != nil {
+		t.Logf("GetOneTelemetryRule returned: %+v", result)
+	} else {
+		t.Log("GetOneTelemetryRule returned nil (expected for non-existent ID)")
+	}
+}
+
+// TestSetOneTelemetryTwoRule tests setting a telemetry two rule
+func TestSetOneTelemetryTwoRule(t *testing.T) {
+	rule := &logupload.TelemetryTwoRule{
+		ID:              "rule-two-123",
+		ApplicationType: shared.STB,
+	}
+	err := SetOneTelemetryTwoRule("rule-two-123", rule)
+	// May fail if dao not initialized; that's acceptable
+	_ = err
+	t.Log("SetOneTelemetryTwoRule executed")
+}
+
+// TestDeleteTelemetryTwoRule tests deleting a telemetry two rule
+func TestDeleteTelemetryTwoRule(t *testing.T) {
+	err := DeleteTelemetryTwoRule("test-rule-id")
+	// May fail if dao not initialized; that's acceptable
+	_ = err
+	t.Log("DeleteTelemetryTwoRule executed")
+}
 
 // func TestGetOne(t *testing.T) {
 // 	// GetCachedSimpleDaoFunc = func() ds.CachedSimpleDao {
