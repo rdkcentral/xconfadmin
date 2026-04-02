@@ -334,6 +334,9 @@ func DeletePercentageBean(id string, app string) *xwhttp.ResponseEntity {
 }
 
 func validatePercentageBeanReferences(bean *coreef.PercentageBean) error {
+	if xutil.IsBlank(bean.Model) {
+		return errors.New("Model is empty")
+	}
 	if !common.IsExistModel(bean.Model) {
 		return fmt.Errorf("Model: %s does not exist", bean.Model)
 	}
