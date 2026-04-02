@@ -183,11 +183,25 @@ func checkFixedArgValue(condition re.Condition, fp func(string) bool) error {
 				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Incorrect Collection Value")
 			}
 		}
+	} else if re.StandardOperationInList == operation {
+		fixedArgValue := condition.GetFixedArg().GetValue().(string)
+		freeArgName := condition.GetFreeArg().GetName()
+		if freeArgName == xwcommon.IP_ADDRESS || freeArgName == logupload.EstbIp {
+			if GetNamespacedListByIdAndType(fixedArgValue, shared.IP_LIST) == nil {
+				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "IP list does not exist: "+fixedArgValue)
+			}
+		}
 	} else if re.StandardOperationIs == operation {
 		fixedArgValue := condition.GetFixedArg().GetValue().(string)
 		//fixedArgValue := coreef.trimSingleQuote (condition.GetFixedArg().String())
 		if !fp(fixedArgValue) {
 			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, condition.FreeArg.GetName()+" is invalid: "+fixedArgValue)
+		}
+		freeArgName := condition.GetFreeArg().GetName()
+		if freeArgName == xwcommon.MODEL || freeArgName == logupload.Model {
+			if !xcommon.IsExistModel(fixedArgValue) {
+				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Model does not exist: "+fixedArgValue)
+			}
 		}
 	} else if re.StandardOperationPercent == operation {
 		ret, err := checkPercentOperation(condition)

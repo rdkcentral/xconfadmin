@@ -234,6 +234,10 @@ func CreatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s ApplicationType doesn't match", bean.ID), nil)
 	}
 
+	if err := validatePercentageBeanReferences(bean); err != nil {
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
+	}
+
 	if err := firmware.ValidateRuleName(bean.ID, bean.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
@@ -280,6 +284,10 @@ func UpdatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("ApplicationType cannot be changed: Existing value:%s New Value: %s", fRule.ApplicationType, bean.ApplicationType), nil)
 	}
 
+	if err := validatePercentageBeanReferences(bean); err != nil {
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
+	}
+
 	if err := firmware.ValidateRuleName(bean.ID, bean.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
@@ -323,6 +331,24 @@ func DeletePercentageBean(id string, app string) *xwhttp.ResponseEntity {
 	}
 
 	return xwhttp.NewResponseEntity(http.StatusNoContent, nil, nil)
+}
+
+func validatePercentageBeanReferences(bean *coreef.PercentageBean) error {
+	if !common.IsExistModel(bean.Model) {
+		return fmt.Errorf("Model: %s does not exist", bean.Model)
+	}
+
+	if !xutil.IsBlank(bean.Whitelist) && GetNamespacedListByIdAndType(bean.Whitelist, shared.IP_LIST) == nil {
+		return fmt.Errorf("IP address list '%s' does not exist", bean.Whitelist)
+	}
+
+	if bean.OptionalConditions != nil && len(re.ToConditions(bean.OptionalConditions)) > 0 {
+		if err := RunGlobalValidation(*bean.OptionalConditions, GetFirmwareRuleAllowedOperations); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func createCanaries(newBean *coreef.PercentageBean, oldRule *firmware.FirmwareRule, fields log.Fields) {
