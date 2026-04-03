@@ -339,7 +339,7 @@ func validatePercentageBeanReferences(bean *coreef.PercentageBean) error {
 	}
 	normalizedModel := strings.ToUpper(strings.TrimSpace(bean.Model))
 	if !common.IsExistModel(normalizedModel) {
-		return fmt.Errorf("Model: %s does not exist", bean.Model)
+		return fmt.Errorf("Model: %s does not exist", normalizedModel)
 	}
 
 	if !xutil.IsBlank(bean.Whitelist) && GetNamespacedListByIdAndType(bean.Whitelist, shared.IP_LIST) == nil {

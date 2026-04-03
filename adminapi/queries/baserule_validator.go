@@ -201,7 +201,7 @@ func checkFixedArgValue(condition re.Condition, fp func(string) bool) error {
 		if freeArgName == xwcommon.MODEL || freeArgName == logupload.Model {
 			normalizedModel := strings.ToUpper(strings.TrimSpace(fixedArgValue))
 			if !xcommon.IsExistModel(normalizedModel) {
-				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Model does not exist: "+fixedArgValue)
+				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Model does not exist: "+normalizedModel)
 			}
 		}
 	} else if re.StandardOperationPercent == operation {
