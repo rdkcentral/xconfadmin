@@ -38,7 +38,6 @@ import (
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
-	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
@@ -258,7 +257,7 @@ func CreatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 	firmware.SortConfigEntry(bean.Distributions)
 
 	fRule := coreef.ConvertPercentageBeanToFirmwareRule(*bean)
-	ru.NormalizeConditions(&fRule.Rule)
+	re.NormalizeConditions(&fRule.Rule)
 	if err := firmware.CreateFirmwareRuleOneDB(fRule); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -308,7 +307,7 @@ func UpdatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 	firmware.SortConfigEntry(bean.Distributions)
 
 	newRule := coreef.ConvertPercentageBeanToFirmwareRule(*bean)
-	ru.NormalizeConditions(&newRule.Rule)
+	re.NormalizeConditions(&newRule.Rule)
 	if err := firmware.CreateFirmwareRuleOneDB(newRule); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
