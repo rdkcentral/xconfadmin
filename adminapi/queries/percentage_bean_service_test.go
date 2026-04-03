@@ -563,6 +563,7 @@ func TestValidatePercentageBeanReferences_InvalidModel(t *testing.T) {
 }
 
 func TestValidatePercentageBeanReferences_ValidModel(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 
 	// Create a valid model first
@@ -586,6 +587,7 @@ func TestValidatePercentageBeanReferences_ValidModel(t *testing.T) {
 }
 
 func TestValidatePercentageBeanReferences_InvalidIPList(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 
 	// Create a valid model first
@@ -612,6 +614,7 @@ func TestValidatePercentageBeanReferences_InvalidIPList(t *testing.T) {
 }
 
 func TestValidatePercentageBeanReferences_ValidIPList(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 
 	// Create a valid model
@@ -640,6 +643,7 @@ func TestValidatePercentageBeanReferences_ValidIPList(t *testing.T) {
 }
 
 func TestValidatePercentageBeanReferences_BlankWhitelist(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 
 	// Create a valid model
@@ -664,6 +668,7 @@ func TestValidatePercentageBeanReferences_BlankWhitelist(t *testing.T) {
 }
 
 func TestValidatePercentageBeanReferences_InvalidOptionalConditions(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 
 	// Create a valid model
