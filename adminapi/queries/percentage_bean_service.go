@@ -347,7 +347,12 @@ func validatePercentageBeanReferences(bean *coreef.PercentageBean) error {
 	}
 
 	if bean.OptionalConditions != nil && len(re.ToConditions(bean.OptionalConditions)) > 0 {
-		if err := RunGlobalValidation(*bean.OptionalConditions, GetFirmwareRuleAllowedOperations); err != nil {
+		err := ValidateRuleStructure(bean.OptionalConditions)
+		if err != nil {
+			return err
+		}
+		err = RunGlobalValidation(*bean.OptionalConditions, GetFeatureRuleAllowedOperations)
+		if err != nil {
 			return err
 		}
 	}
