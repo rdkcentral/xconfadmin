@@ -23,7 +23,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	logupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
 func TestEqualFreeArgNames_Equal(t *testing.T) {
@@ -1272,4 +1275,123 @@ func TestRunGlobalValidation_InvalidOperation(t *testing.T) {
 
 	err := RunGlobalValidation(rule, GetAllowedOperations)
 	assert.Error(t, err)
+}
+
+// Tests for new validation logic - IN_LIST operation on IP_ADDRESS field
+
+func TestCheckFixedArgValue_InListOperationOnIPAddress_MissingIPList(t *testing.T) {
+	condition := re.Condition{
+		FreeArg:   &re.FreeArg{Name: xwcommon.IP_ADDRESS},
+		Operation: re.StandardOperationInList,
+		FixedArg:  re.NewFixedArg("NONEXISTENT_IP_LIST"),
+	}
+
+	err := checkFixedArgValue(condition, isNotBlank)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "IP list does not exist")
+}
+
+func TestCheckFixedArgValue_InListOperationOnIPAddress_ValidIPList(t *testing.T) {
+	DeleteAllEntities()
+
+	// Create a valid IP list using the package-level helper and service function
+	ipList := makeGenericList("TEST_IP_LIST", shared.IP_LIST, []string{"192.168.1.0/24"})
+	CreateNamespacedList(ipList, false)
+
+	condition := re.Condition{
+		FreeArg:   &re.FreeArg{Name: xwcommon.IP_ADDRESS},
+		Operation: re.StandardOperationInList,
+		FixedArg:  re.NewFixedArg("TEST_IP_LIST"),
+	}
+
+	err := checkFixedArgValue(condition, isNotBlank)
+	assert.NoError(t, err)
+
+	DeleteAllEntities()
+}
+
+func TestCheckFixedArgValue_InListOperationOnEstbIp_MissingIPList(t *testing.T) {
+	condition := re.Condition{
+		FreeArg:   &re.FreeArg{Name: logupload.EstbIp},
+		Operation: re.StandardOperationInList,
+		FixedArg:  re.NewFixedArg("MISSING_LIST_ID"),
+	}
+
+	err := checkFixedArgValue(condition, isNotBlank)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "IP list does not exist")
+}
+
+func TestCheckFixedArgValue_InListOperationOnNonIPField_NoListValidation(t *testing.T) {
+	// For non-IP fields, IN_LIST should not validate IP list existence
+	condition := re.Condition{
+		FreeArg:   &re.FreeArg{Name: "model"},
+		Operation: re.StandardOperationInList,
+		FixedArg:  re.NewFixedArg("ANYTHING"),
+	}
+
+	// Non-IP field: no IP list validation should occur
+	err := checkFixedArgValue(condition, isNotBlank)
+	assert.NoError(t, err)
+}
+
+// Tests for new validation logic - IS operation on MODEL field
+
+func TestCheckFixedArgValue_IsOperationOnModel_MissingModel(t *testing.T) {
+	condition := re.Condition{
+		FreeArg:   &re.FreeArg{Name: xwcommon.MODEL},
+		Operation: re.StandardOperationIs,
+		FixedArg:  re.NewFixedArg("NONEXISTENT_MODEL_XYZ_123"),
+	}
+
+	err := checkFixedArgValue(condition, isNotBlank)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Model does not exist")
+}
+
+func TestCheckFixedArgValue_IsOperationOnModel_ValidModel(t *testing.T) {
+	DeleteAllEntities()
+
+	// Create a valid model using the service function
+	model := &shared.Model{
+		ID:          "TEST_MODEL",
+		Description: "Test Model",
+	}
+	CreateModel(model)
+
+	condition := re.Condition{
+		FreeArg:   &re.FreeArg{Name: xwcommon.MODEL},
+		Operation: re.StandardOperationIs,
+		FixedArg:  re.NewFixedArg("TEST_MODEL"),
+	}
+
+	err := checkFixedArgValue(condition, isNotBlank)
+	assert.NoError(t, err)
+
+	DeleteAllEntities()
+}
+
+func TestCheckFixedArgValue_IsOperationOnLoguploadModel_MissingModel(t *testing.T) {
+	condition := re.Condition{
+		FreeArg:   &re.FreeArg{Name: logupload.Model},
+		Operation: re.StandardOperationIs,
+		FixedArg:  re.NewFixedArg("MISSING_MODEL_ID"),
+	}
+
+	err := checkFixedArgValue(condition, isNotBlank)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Model does not exist")
+}
+
+func TestCheckFixedArgValue_IsOperationOnNonModelField_NoModelValidation(t *testing.T) {
+	// For non-MODEL fields, IS should not validate model existence
+	condition := re.Condition{
+		FreeArg:   &re.FreeArg{Name: "environment"},
+		Operation: re.StandardOperationIs,
+		FixedArg:  re.NewFixedArg("ANYTHING"),
+	}
+
+	// Non-MODEL field: no model validation should occur
+	err := checkFixedArgValue(condition, isNotBlank)
+	assert.NoError(t, err)
 }
