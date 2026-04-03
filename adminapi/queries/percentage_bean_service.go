@@ -337,7 +337,8 @@ func validatePercentageBeanReferences(bean *coreef.PercentageBean) error {
 	if xutil.IsBlank(bean.Model) {
 		return errors.New("Model is empty")
 	}
-	if !common.IsExistModel(bean.Model) {
+	normalizedModel := strings.ToUpper(strings.TrimSpace(bean.Model))
+	if !common.IsExistModel(normalizedModel) {
 		return fmt.Errorf("Model: %s does not exist", bean.Model)
 	}
 
