@@ -20,14 +20,14 @@ const (
 	ApplicationProtobufHeader = "application/x-protobuf"
 	TtlHeader                 = "Xttl"
 	OneYearTtl                = "31536000"
-
-	AddGroupMember    = "%s/ft/%s"
-	RemoveGroupMember = "%s/ft/%s?field=%s"
 )
 
 type GroupServiceSyncConnector struct {
-	BaseURL string
-	Client  *HttpClient
+	BaseURL                   string
+	Client                    *HttpClient
+	addGroupMemberTemplate    string
+	removeGroupMemberTemplate string
+	grpSyncServiceTemplate    string
 }
 
 func NewGroupServiceSyncConnector(conf *configuration.Config, tlsConfig *tls.Config) *GroupServiceSyncConnector {
@@ -39,9 +39,18 @@ func NewGroupServiceSyncConnector(conf *configuration.Config, tlsConfig *tls.Con
 	}
 	confKey = fmt.Sprintf("xconfwebconfig.%v.path", groupServiceSyncServiceName)
 	path := conf.GetString(confKey, "")
+
+	// Read path configurations with defaults
+	addGroupMemberTemplate := conf.GetString(
+		fmt.Sprintf("xconfwebconfig.%v.addGroupMemberTemplate", groupServiceSyncServiceName))
+	removeGroupMemberTemplate := conf.GetString(
+		fmt.Sprintf("xconfwebconfig.%v.removeGroupMemberTemplate", groupServiceSyncServiceName))
+
 	return &GroupServiceSyncConnector{
-		BaseURL: host + path,
-		Client:  NewHttpClient(conf, groupServiceSyncServiceName, tlsConfig),
+		BaseURL:                   host + path,
+		Client:                    NewHttpClient(conf, groupServiceSyncServiceName, tlsConfig),
+		addGroupMemberTemplate:    addGroupMemberTemplate,
+		removeGroupMemberTemplate: removeGroupMemberTemplate,
 	}
 }
 
@@ -59,7 +68,7 @@ func (c *GroupServiceSyncConnector) DoRequest(method string, url string, headers
 }
 
 func (c *GroupServiceSyncConnector) AddMembersToTag(groupId string, members *proto2.XdasHashes) error {
-	url := fmt.Sprintf(AddGroupMember, c.GetGroupServiceSyncHost(), groupId)
+	url := fmt.Sprintf(c.addGroupMemberTemplate, c.GetGroupServiceSyncHost(), groupId)
 	data, err := proto.Marshal(members)
 	if err != nil {
 		return err
@@ -80,7 +89,7 @@ func (c *GroupServiceSyncConnector) AddMembersToTag(groupId string, members *pro
 }
 
 func (c *GroupServiceSyncConnector) RemoveGroupMembers(groupId string, member string) error {
-	url := fmt.Sprintf(RemoveGroupMember, c.GetGroupServiceSyncHost(), groupId, member)
+	url := fmt.Sprintf(c.removeGroupMemberTemplate, c.GetGroupServiceSyncHost(), groupId, member)
 	rbytes, err := c.DoRequest("DELETE", url, protobufHeaders(), nil)
 	if err != nil {
 		return err
