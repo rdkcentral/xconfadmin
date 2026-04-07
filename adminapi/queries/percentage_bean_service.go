@@ -234,7 +234,7 @@ func CreatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 	}
 
 	if err := validatePercentageBeanReferences(bean); err != nil {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("%s : %s", bean.Name, err.Error()), nil)
 	}
 
 	if err := firmware.ValidateRuleName(bean.ID, bean.Name, applicationType); err != nil {
@@ -284,7 +284,7 @@ func UpdatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 	}
 
 	if err := validatePercentageBeanReferences(bean); err != nil {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("%s : %s", bean.Name, err.Error()), nil)
 	}
 
 	if err := firmware.ValidateRuleName(bean.ID, bean.Name, applicationType); err != nil {
@@ -338,11 +338,11 @@ func validatePercentageBeanReferences(bean *coreef.PercentageBean) error {
 	}
 	normalizedModel := strings.ToUpper(strings.TrimSpace(bean.Model))
 	if !common.IsExistModel(normalizedModel) {
-		return fmt.Errorf("Model: %s does not exist", normalizedModel)
+		return fmt.Errorf("Model does not exist: %s", normalizedModel)
 	}
 
 	if !xutil.IsBlank(bean.Whitelist) && GetNamespacedListByIdAndType(bean.Whitelist, shared.IP_LIST) == nil {
-		return fmt.Errorf("IP address list '%s' does not exist", bean.Whitelist)
+		return fmt.Errorf("IP list does not exist: %s", bean.Whitelist)
 	}
 
 	if bean.OptionalConditions != nil && len(re.ToConditions(bean.OptionalConditions)) > 0 {

@@ -162,7 +162,7 @@ func dcmRuleValidate(dfrule *logupload.DCMGenericRule) *xwhttp.ResponseEntity {
 	}
 	err = queries.RunGlobalValidation(*dfrule.GetRule(), queries.GetFirmwareRuleAllowedOperations)
 	if err != nil {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("%s: %s", dfrule.Name, err.Error()), nil)
 	}
 	err = validatePercentage(dfrule)
 	if err != nil {

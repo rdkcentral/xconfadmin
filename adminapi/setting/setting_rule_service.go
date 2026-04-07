@@ -160,7 +160,7 @@ func validateSettingRule(r *http.Request, entity *logupload.SettingRule) error {
 		return err
 	}
 	if err := queries.RunGlobalValidation(entity.Rule, queries.GetAllowedOperations); err != nil {
-		return err
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, entity.Name+": "+err.Error())
 	}
 	return nil
 }

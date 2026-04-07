@@ -220,7 +220,11 @@ func validateOneFirmwareRT(frt corefw.FirmwareRuleTemplate) error {
 	if !found {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Invalid action type "+string(frt.ApplicableAction.ActionType)+" in "+frt.GetName())
 	}
-	return validateRule(frt.GetRule(), frt.ApplicableAction)
+	err := validateRule(frt.GetRule(), frt.ApplicableAction)
+	if err != nil {
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, frt.GetName()+": "+err.Error())
+	}
+	return nil
 }
 
 func validateAgainstFirmwareRTs(frt *corefw.FirmwareRuleTemplate, entities []*corefw.FirmwareRuleTemplate) error {
