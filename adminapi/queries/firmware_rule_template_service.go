@@ -193,6 +193,12 @@ func validateRule(fr *re.Rule, action *corefw.TemplateApplicableAction) error {
 		if err := checkOperationName(c, GetFirmwareRuleAllowedOperations); err != nil {
 			return err
 		}
+		if (equalOperations(c.GetOperation(), re.StandardOperationIs) && c.GetFreeArg().GetName() == xwcommon.MODEL) ||
+			(equalOperations(c.GetOperation(), re.StandardOperationInList) && c.GetFreeArg().GetName() == xwcommon.IP_ADDRESS) {
+			if err := checkFixedArgValue(*c, isNotBlank); err != nil {
+				return err
+			}
+		}
 	}
 	return validateProperties(action)
 }

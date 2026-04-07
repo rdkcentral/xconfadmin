@@ -372,6 +372,78 @@ func TestCreateFirmwareRT_ValidationError(t *testing.T) {
 	assert.ErrorContains(t, err, "Missing applicable action type")
 }
 
+func TestCreateFirmwareRT_ModelReferenceDoesNotExist(t *testing.T) {
+	DeleteAllEntities()
+	setupTestModels()
+	defer DeleteAllEntities()
+
+	templateJSON := `{
+		"id": "` + uuid.New().String() + `",
+		"name": "MissingModelRef",
+		"priority": 1,
+		"editable": true,
+		"rule": {
+			"condition": {
+				"freeArg": {"type": "STRING", "name": "model"},
+				"operation": "IS",
+				"fixedArg": {
+					"bean": {
+						"value": {"java.lang.String": "NON_EXISTENT_MODEL_FOR_FRT"}
+					}
+				}
+			}
+		},
+		"applicableAction": {
+			"type": ".RuleAction",
+			"actionType": "RULE_TEMPLATE"
+		}
+	}`
+
+	var template firmware.FirmwareRuleTemplate
+	json.Unmarshal([]byte(templateJSON), &template)
+
+	result, err := createFirmwareRT(template)
+	assert.Assert(t, err != nil)
+	assert.Assert(t, result == nil)
+	assert.ErrorContains(t, err, "Model does not exist")
+}
+
+func TestCreateFirmwareRT_IPListReferenceDoesNotExist(t *testing.T) {
+	DeleteAllEntities()
+	setupTestModels()
+	defer DeleteAllEntities()
+
+	templateJSON := `{
+		"id": "` + uuid.New().String() + `",
+		"name": "MissingIPListRef",
+		"priority": 1,
+		"editable": true,
+		"rule": {
+			"condition": {
+				"freeArg": {"type": "STRING", "name": "ipAddress"},
+				"operation": "IN_LIST",
+				"fixedArg": {
+					"bean": {
+						"value": {"java.lang.String": "NON_EXISTENT_IP_LIST_FOR_FRT"}
+					}
+				}
+			}
+		},
+		"applicableAction": {
+			"type": ".RuleAction",
+			"actionType": "RULE_TEMPLATE"
+		}
+	}`
+
+	var template firmware.FirmwareRuleTemplate
+	json.Unmarshal([]byte(templateJSON), &template)
+
+	result, err := createFirmwareRT(template)
+	assert.Assert(t, err != nil)
+	assert.Assert(t, result == nil)
+	assert.ErrorContains(t, err, "IP list does not exist")
+}
+
 func TestCreateFirmwareRT_DuplicateName(t *testing.T) {
 	DeleteAllEntities()
 	setupTestModels()
