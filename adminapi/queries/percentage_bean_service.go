@@ -234,7 +234,7 @@ func CreatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 	}
 
 	if err := validatePercentageBeanReferences(bean); err != nil {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("%s : %s", bean.Name, err.Error()), nil)
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("%s: %s", bean.Name, err.Error()), nil)
 	}
 
 	if err := firmware.ValidateRuleName(bean.ID, bean.Name, applicationType); err != nil {
@@ -284,7 +284,7 @@ func UpdatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 	}
 
 	if err := validatePercentageBeanReferences(bean); err != nil {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("%s : %s", bean.Name, err.Error()), nil)
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("%s: %s", bean.Name, err.Error()), nil)
 	}
 
 	if err := firmware.ValidateRuleName(bean.ID, bean.Name, applicationType); err != nil {
