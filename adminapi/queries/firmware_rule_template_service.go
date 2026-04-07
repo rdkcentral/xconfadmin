@@ -190,11 +190,23 @@ func validateRule(fr *re.Rule, action *corefw.TemplateApplicableAction) error {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FirmwareRuleTemplate "+fr.Id()+" should have a minimum one condition")
 	}
 	for _, c := range conditions {
+		if c == nil {
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Condition is null")
+		}
+		if err := checkConditionNullsOrBlanks(*c); err != nil {
+			return err
+		}
+		if err := checkDuplicateFixedArgListItems(*c); err != nil {
+			return err
+		}
 		if err := checkOperationName(c, GetFirmwareRuleAllowedOperations); err != nil {
 			return err
 		}
 		if (equalOperations(c.GetOperation(), re.StandardOperationIs) && c.GetFreeArg().GetName() == xwcommon.MODEL) ||
 			(equalOperations(c.GetOperation(), re.StandardOperationInList) && c.GetFreeArg().GetName() == xwcommon.IP_ADDRESS) {
+			if _, ok := c.GetFixedArg().GetValue().(string); !ok {
+				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FixedArg value should be string")
+			}
 			if err := checkFixedArgValue(*c, isNotBlank); err != nil {
 				return err
 			}
