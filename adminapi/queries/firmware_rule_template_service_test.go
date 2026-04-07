@@ -400,7 +400,8 @@ func TestCreateFirmwareRT_ModelReferenceDoesNotExist(t *testing.T) {
 	}`
 
 	var template firmware.FirmwareRuleTemplate
-	json.Unmarshal([]byte(templateJSON), &template)
+	err := json.Unmarshal([]byte(templateJSON), &template)
+	assert.NilError(t, err)
 
 	result, err := createFirmwareRT(template)
 	assert.Assert(t, err != nil)
@@ -436,7 +437,8 @@ func TestCreateFirmwareRT_IPListReferenceDoesNotExist(t *testing.T) {
 	}`
 
 	var template firmware.FirmwareRuleTemplate
-	json.Unmarshal([]byte(templateJSON), &template)
+	err := json.Unmarshal([]byte(templateJSON), &template)
+	assert.NilError(t, err)
 
 	result, err := createFirmwareRT(template)
 	assert.Assert(t, err != nil)
