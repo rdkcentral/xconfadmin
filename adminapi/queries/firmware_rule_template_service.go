@@ -205,7 +205,15 @@ func validateRule(fr *re.Rule, action *corefw.TemplateApplicableAction) error {
 		if (equalOperations(c.GetOperation(), re.StandardOperationIs) && c.GetFreeArg().GetName() == xwcommon.MODEL) ||
 			(equalOperations(c.GetOperation(), re.StandardOperationInList) && c.GetFreeArg().GetName() == xwcommon.IP_ADDRESS) {
 			if _, ok := c.GetFixedArg().GetValue().(string); !ok {
-				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FixedArg value should be string")
+				return xwcommon.NewRemoteErrorAS(
+					http.StatusBadRequest,
+					fmt.Sprintf(
+						"FixedArg value should be string for freeArg '%s' with operation '%s', got %T",
+						c.GetFreeArg().GetName(),
+						c.GetOperation(),
+						c.GetFixedArg().GetValue(),
+					),
+				)
 			}
 			if err := checkFixedArgValue(*c, isNotBlank); err != nil {
 				return err
