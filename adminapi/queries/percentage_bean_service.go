@@ -352,7 +352,7 @@ func validatePercentageBeanReferences(bean *coreef.PercentageBean) error {
 		}
 		err = RunGlobalValidation(*bean.OptionalConditions, GetFeatureRuleAllowedOperations)
 		if err != nil {
-			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, bean.Name+": "+err.Error())
+			return err
 		}
 	}
 
