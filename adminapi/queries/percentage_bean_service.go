@@ -342,7 +342,7 @@ func validatePercentageBeanReferences(bean *coreef.PercentageBean) error {
 	}
 
 	if !xutil.IsBlank(bean.Whitelist) && GetNamespacedListByIdAndType(bean.Whitelist, shared.IP_LIST) == nil {
-		return fmt.Errorf("IP list does not exist: %s", bean.Whitelist)
+		return fmt.Errorf("IP address list does not exist: %s", bean.Whitelist)
 	}
 
 	if bean.OptionalConditions != nil && len(re.ToConditions(bean.OptionalConditions)) > 0 {
@@ -352,7 +352,7 @@ func validatePercentageBeanReferences(bean *coreef.PercentageBean) error {
 		}
 		err = RunGlobalValidation(*bean.OptionalConditions, GetFeatureRuleAllowedOperations)
 		if err != nil {
-			return err
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, bean.Name+": "+err.Error())
 		}
 	}
 
