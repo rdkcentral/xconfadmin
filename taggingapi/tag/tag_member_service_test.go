@@ -117,7 +117,7 @@ func TestBucketDistribution(t *testing.T) {
 }
 func TestBatchSizeValidation(t *testing.T) {
 	// Test empty members list
-	err := AddMembers("test-tag", []string{})
+	err := AddMembers("test-tag", TagTypeMac, []string{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "member list is empty")
 
@@ -131,7 +131,7 @@ func TestBatchSizeValidation(t *testing.T) {
 		largeMembers[i] = fmt.Sprintf("member-%d", i)
 	}
 
-	err = AddMembers("test-tag", largeMembers)
+	err = AddMembers("test-tag", TagTypeMac, largeMembers)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "batch size")
 	assert.Contains(t, err.Error(), "exceeds maximum")

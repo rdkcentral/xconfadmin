@@ -28,15 +28,23 @@ func GetGroupServiceConnector() *http.GroupServiceConnector {
 	return http.WebConfServer.GroupServiceConnector
 }
 
-func GetTagsByMember(member string) ([]string, error) {
-	member = ToNormalizedEcm(member)
-	tagsAsHashes, err := GetGroupServiceConnector().GetGroupsMemberBelongsTo(member)
+func GetTagsByMember(member string, tagType string) ([]string, error) {
+	keyspace := keyspaceForTagType(tagType)
+	normalized := NormalizeMember(member, tagType)
+	tagsAsHashes, err := GetGroupServiceConnector().GetGroupsMemberBelongsToWithKeyspace(keyspace, normalized)
 	if err != nil {
-		log.Errorf("xdas error getting members by %s group: %s", member, err.Error())
+		log.Errorf("xdas error getting members by %s group: %s", normalized, err.Error())
 		return []string{}, err
 	}
 	tagsMap := util.StringMap(tagsAsHashes.GetFields())
 	return filterTagEntriesByPrefix(tagsMap.Keys()), err
+}
+
+func keyspaceForTagType(tagType string) string {
+	if tagType == TagTypeAccount {
+		return "ada"
+	}
+	return "ft"
 }
 
 func filterTagEntriesByPrefix(ftEntries []string) []string {
@@ -49,21 +57,22 @@ func filterTagEntriesByPrefix(ftEntries []string) []string {
 	return tags
 }
 
-func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<- string, wg *sync.WaitGroup) {
+func storeTagMembersInXdas(id string, tagType string, members <-chan string, savedMembers chan<- string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	xdasMembers := proto.XdasHashes{
 		Fields: map[string]string{id: ""},
 	}
 
+	keyspace := keyspaceForTagType(tagType)
 	successCount := 0
 	failCount := 0
 
 	for member := range members {
-		normalizedEcm := ToNormalizedEcm(member)
-		err := GetGroupServiceSyncConnector().AddMembersToTag(normalizedEcm, &xdasMembers)
+		normalized := NormalizeMember(member, tagType)
+		err := GetGroupServiceSyncConnector().AddMembersToTagWithKeyspace(keyspace, normalized, &xdasMembers)
 		if err != nil {
 			failCount++
-			log.Errorf("xdas error adding member to %s group: ecm=%s, error=%s", id, normalizedEcm, err.Error())
+			log.Errorf("xdas error adding member to %s group: member=%s, error=%s", id, normalized, err.Error())
 		} else {
 			successCount++
 			savedMembers <- member
@@ -78,18 +87,19 @@ func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<-
 	}
 }
 
-func removeTagMembersFromXdas(id string, members <-chan string, removedMembers chan<- string, wg *sync.WaitGroup) {
+func removeTagMembersFromXdas(id string, tagType string, members <-chan string, removedMembers chan<- string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
+	keyspace := keyspaceForTagType(tagType)
 	successCount := 0
 	failCount := 0
 
 	for member := range members {
-		normalizedEcm := ToNormalizedEcm(member)
-		err := GetGroupServiceSyncConnector().RemoveGroupMembers(normalizedEcm, id)
+		normalized := NormalizeMember(member, tagType)
+		err := GetGroupServiceSyncConnector().RemoveGroupMembersWithKeyspace(keyspace, normalized, id)
 		if err != nil {
 			failCount++
-			log.Errorf("xdas error removing member from %s group: ecm=%s, error=%s", id, normalizedEcm, err.Error())
+			log.Errorf("xdas error removing member from %s group: member=%s, error=%s", id, normalized, err.Error())
 		} else {
 			successCount++
 			removedMembers <- member

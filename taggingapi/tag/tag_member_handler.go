@@ -57,6 +57,13 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// tagType is not needed for reading members from Cassandra (reads by tag_id),
+	// but we validate it if present
+	if _, err := getTagType(r); err != nil {
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
+		return
+	}
+
 	query := r.URL.Query()
 	isPaginatedRequest := query.Has("limit") || query.Has("cursor")
 
@@ -111,6 +118,12 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tagType, err := getTagType(r)
+	if err != nil {
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
+		return
+	}
+
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
 		xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(ResponseWriterCastErrorMsg))
@@ -134,9 +147,18 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Debugf("AddMembers request: tag=%s, memberCount=%d", tagId, len(members))
+	if tagType == TagTypeAccount {
+		for _, member := range members {
+			if err := ValidateAccountId(member); err != nil {
+				xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(InvalidAccountIdErrorMsg, member)))
+				return
+			}
+		}
+	}
 
-	stored, err := AddMembersWithXdas(tagId, members)
+	log.Debugf("AddMembers request: tag=%s, tagType=%s, memberCount=%d", tagId, tagType, len(members))
+
+	stored, err := AddMembersWithXdas(tagId, tagType, members)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -163,6 +185,12 @@ func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tagType, err := getTagType(r)
+	if err != nil {
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
+		return
+	}
+
 	var members []string
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -186,9 +214,9 @@ func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Debugf("RemoveMembers request: tag=%s, memberCount=%d", id, len(members))
+	log.Debugf("RemoveMembers request: tag=%s, tagType=%s, memberCount=%d", id, tagType, len(members))
 
-	removed, err := RemoveMembersWithXdas(id, members)
+	removed, err := RemoveMembersWithXdas(id, tagType, members)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -221,7 +249,13 @@ func RemoveMemberFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := RemoveMemberWithXdas(id, member)
+	tagType, err := getTagType(r)
+	if err != nil {
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
+		return
+	}
+
+	err = RemoveMemberWithXdas(id, tagType, member)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -232,7 +266,17 @@ func RemoveMemberFromTagHandler(w http.ResponseWriter, r *http.Request) {
 
 // GetAllTagsHandler returns all tag IDs from V2 storage
 func GetAllTagsHandler(w http.ResponseWriter, r *http.Request) {
-	tagIds, err := GetAllTagIds()
+	tagTypeFilter := mux.Vars(r)[common.TagType]
+	if tagTypeFilter == "" {
+		tagTypeFilter = r.URL.Query().Get(common.TagType)
+	}
+	if tagTypeFilter != "" {
+		if err := ValidateTagType(tagTypeFilter); err != nil {
+			xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
+			return
+		}
+	}
+	tagIds, err := GetAllTagIds(tagTypeFilter)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -298,6 +342,12 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tagType, err := getTagType(r)
+	if err != nil {
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
+		return
+	}
+
 	populatedBuckets, err := getPopulatedBuckets(id)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
@@ -309,11 +359,11 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go func(tagId string) {
-		if err := DeleteTag(tagId); err != nil {
+	go func(tagId string, tt string) {
+		if err := DeleteTag(tagId, tt); err != nil {
 			log.Errorf("Background deletion failed for tag '%s': %v", tagId, err)
 		}
-	}(id)
+	}(id, tagType)
 
 	response := map[string]string{
 		"status":  "accepted",

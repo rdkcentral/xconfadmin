@@ -15,8 +15,9 @@ import (
 var groupServiceName string
 
 const (
-	GetGroupsMembers = "%s/v2/ft/%s"
-	GetAllGroups     = "%s/v2/ft"
+	GetGroupsMembers    = "%s/v2/ft/%s"
+	GetAllGroups        = "%s/v2/ft"
+	GetGroupsMembersAda = "%s/v2/ada/%s"
 )
 
 type GroupServiceConnector struct {
@@ -49,6 +50,19 @@ func NewGroupServiceConnector(conf *configuration.Config, tlsConfig *tls.Config)
 func (c *GroupServiceConnector) DoRequest(method string, url string, headers map[string]string, body []byte) ([]byte, error) {
 	rbytes, err := c.Client.DoWithRetries(method, url, headers, body, log.Fields{}, groupServiceName)
 	return rbytes, err
+}
+
+func (c *GroupServiceConnector) GetGroupsMemberBelongsToWithKeyspace(keyspace string, memberId string) (*proto2.XdasHashes, error) {
+	urlTemplate := GetGroupsMembers
+	if keyspace == "ada" {
+		urlTemplate = GetGroupsMembersAda
+	}
+	url := fmt.Sprintf(urlTemplate, c.GetGroupServiceHost(), memberId)
+	rbytes, err := c.DoRequest(HttpGet, url, protobufHeaders(), nil)
+	if err != nil {
+		return nil, err
+	}
+	return unmarshalXdasHashes(rbytes)
 }
 
 func (c *GroupServiceConnector) GetGroupsMemberBelongsTo(memberId string) (*proto2.XdasHashes, error) {

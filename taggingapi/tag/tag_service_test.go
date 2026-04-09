@@ -147,7 +147,7 @@ func TestGetTagsByMember(t *testing.T) {
 	}
 
 	for _, member := range testMembers {
-		tags, err := GetTagsByMember(member)
+		tags, err := GetTagsByMember(member, TagTypeMac)
 		// Without real connector, expect error or empty result
 		if err != nil {
 			t.Logf("GetTagsByMember(%s) returned error: %v (expected without connector)", member, err)

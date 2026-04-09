@@ -33,15 +33,16 @@ const (
 	MaxMembersInTagResponse = 100000 // Max members returned in GetTagById
 	MemberFetchChunkSize    = 1000   // Chunk size for memory-safe pagination
 
-	QueryAddMemberBucketed       = `INSERT INTO "TagMembersBucketed" (tag_id, bucket_id, member, created) VALUES (?, ?, ?, ?)`
+	QueryAddMemberBucketed       = `INSERT INTO "TagMembersBucketed" (tag_id, bucket_id, member, created, tag_type) VALUES (?, ?, ?, ?, ?)`
 	QueryRemoveMemberBucketed    = `DELETE FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ? AND member = ?`
 	QueryGetMembersByBucket      = `SELECT member FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ? AND member > ? LIMIT ?`
 	QueryGetMembersCountByBucket = `SELECT count(*) FROM "TagMembersBucketed" WHERE tag_id = ? and bucket_id = ?`
 	QueryGetMembersByBucketFirst = `SELECT member FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ? LIMIT ?`
 
 	QueryGetPopulatedBuckets  = `SELECT bucket_id FROM "TagBucketMetadata" WHERE tag_id = ?`
-	QueryAddBucketMetadata    = `INSERT INTO "TagBucketMetadata" (tag_id, bucket_id) VALUES (?, ?)`
-	QueryGetAllTagIds         = `SELECT tag_id FROM "TagBucketMetadata"`
+	QueryAddBucketMetadata    = `INSERT INTO "TagBucketMetadata" (tag_id, bucket_id, tag_type) VALUES (?, ?, ?)`
+	QueryGetAllTagIds         = `SELECT tag_id, tag_type FROM "TagBucketMetadata"`
+	QueryGetAllTagIdsByType   = `SELECT tag_id FROM "TagBucketMetadata" WHERE tag_type = ?`
 	QueryDeleteBucketMembers  = `DELETE FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ?`
 	QueryDeleteBucketMetadata = `DELETE FROM "TagBucketMetadata" WHERE tag_id = ? AND bucket_id = ?`
 
@@ -78,7 +79,7 @@ func getBucketId(member string) int {
 	return int(hash.Sum32()) % BucketCount
 }
 
-func AddMembers(tagId string, members []string) error {
+func AddMembers(tagId string, tagType string, members []string) error {
 	if len(members) > MaxBatchSizeV2 {
 		return fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
@@ -99,7 +100,7 @@ func AddMembers(tagId string, members []string) error {
 	successCount := 0
 
 	for bucketId, bucketMembers := range bucketGroups {
-		if err := addMembersToBucket(tagId, bucketId, bucketMembers, created); err != nil {
+		if err := addMembersToBucket(tagId, tagType, bucketId, bucketMembers, created); err != nil {
 			allErrors = append(allErrors, fmt.Sprintf("bucket %d: %v", bucketId, err))
 			log.Errorf("Failed to add %d members to bucket %d for tag %s: %v",
 				len(bucketMembers), bucketId, tagId, err)
@@ -118,16 +119,21 @@ func AddMembers(tagId string, members []string) error {
 	return nil
 }
 
-func addMembersToBucket(tagId string, bucketId int, members []string, created string) error {
+func addMembersToBucket(tagId string, tagType string, bucketId int, members []string, created string) error {
 	batch := ds.GetSimpleDao().NewBatch(UnloggedBatch)
+
+	tagTypeValue := tagType
+	if tagType == TagTypeMac {
+		tagTypeValue = ""
+	}
 
 	// Add member records
 	for _, member := range members {
-		batch.Query(QueryAddMemberBucketed, tagId, strconv.Itoa(bucketId), member, created)
+		batch.Query(QueryAddMemberBucketed, tagId, strconv.Itoa(bucketId), member, created, tagTypeValue)
 	}
 
 	// Add metadata record for this bucket (will be ignored if already exists)
-	batch.Query(QueryAddBucketMetadata, tagId, strconv.Itoa(bucketId))
+	batch.Query(QueryAddBucketMetadata, tagId, strconv.Itoa(bucketId), tagTypeValue)
 
 	return ds.GetSimpleDao().ExecuteBatch(batch)
 }
@@ -553,7 +559,7 @@ func fetchMembersFromBucketsConcurrent(tagId string, bucketIds []int, totalLimit
 
 // AddMembersWithXdas adds members to both XDAS and Cassandra (XDAS-first approach)
 // Returns the count of members actually stored to Cassandra.
-func AddMembersWithXdas(tagId string, members []string) (int, error) {
+func AddMembersWithXdas(tagId string, tagType string, members []string) (int, error) {
 	startTime := time.Now()
 
 	if len(members) == 0 {
@@ -564,7 +570,7 @@ func AddMembersWithXdas(tagId string, members []string) (int, error) {
 		return 0, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
 
-	savedToXdasMembers, err := addMembersToXdas(tagId, members)
+	savedToXdasMembers, err := addMembersToXdas(tagId, tagType, members)
 	if err != nil {
 		return 0, fmt.Errorf("XDAS operation failed: %w", err)
 	}
@@ -573,7 +579,7 @@ func AddMembersWithXdas(tagId string, members []string) (int, error) {
 	cassandraStored := 0
 
 	if xdasAccepted > 0 {
-		if err := AddMembers(tagId, savedToXdasMembers); err != nil {
+		if err := AddMembers(tagId, tagType, savedToXdasMembers); err != nil {
 			duration := time.Since(startTime)
 			log.Errorf("Critical: XDAS succeeded but Cassandra V2 failed for tag %s: %v", tagId, err)
 			log.Infof("AddMembers summary for tag '%s': requested=%d, xdasAccepted=%d, cassandraStored=%d, duration=%v", tagId, len(members), xdasAccepted, cassandraStored, duration)
@@ -589,7 +595,7 @@ func AddMembersWithXdas(tagId string, members []string) (int, error) {
 
 // RemoveMembersWithXdas removes members from both XDAS and Cassandra (XDAS-first approach)
 // Returns the count of members actually removed from Cassandra.
-func RemoveMembersWithXdas(tagId string, members []string) (int, error) {
+func RemoveMembersWithXdas(tagId string, tagType string, members []string) (int, error) {
 	startTime := time.Now()
 
 	if len(members) == 0 {
@@ -600,7 +606,7 @@ func RemoveMembersWithXdas(tagId string, members []string) (int, error) {
 		return 0, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
 
-	successfulRemovals, err := removeMembersFromXDAS(tagId, members)
+	successfulRemovals, err := removeMembersFromXDAS(tagId, tagType, members)
 	if err != nil {
 		return 0, fmt.Errorf("XDAS removal failed: %w", err)
 	}
@@ -624,13 +630,13 @@ func RemoveMembersWithXdas(tagId string, members []string) (int, error) {
 }
 
 // RemoveMemberWithXdas removes a single member from both XDAS and Cassandra V2
-func RemoveMemberWithXdas(tagId string, member string) error {
-	_, err := RemoveMembersWithXdas(tagId, []string{member})
+func RemoveMemberWithXdas(tagId string, tagType string, member string) error {
+	_, err := RemoveMembersWithXdas(tagId, tagType, []string{member})
 	return err
 }
 
 // addMembersToXdas adds members to Xdas using concurrent workers (similar to V1 pattern)
-func addMembersToXdas(tagId string, members []string) ([]string, error) {
+func addMembersToXdas(tagId string, tagType string, members []string) ([]string, error) {
 	tagId = SetTagPrefix(tagId)
 
 	membersChannel := make(chan string, len(members))
@@ -653,7 +659,7 @@ func addMembersToXdas(tagId string, members []string) ([]string, error) {
 	}
 	for i := 0; i < numOfWorkers; i++ {
 		wg.Add(1)
-		go storeTagMembersInXdas(tagId, membersChannel, savedMembersChannel, wg)
+		go storeTagMembersInXdas(tagId, tagType, membersChannel, savedMembersChannel, wg)
 	}
 
 	go func() {
@@ -674,7 +680,7 @@ func addMembersToXdas(tagId string, members []string) ([]string, error) {
 }
 
 // removeMembersFromXDAS removes members from XDAS using concurrent workers
-func removeMembersFromXDAS(tagId string, members []string) ([]string, error) {
+func removeMembersFromXDAS(tagId string, tagType string, members []string) ([]string, error) {
 	tagId = SetTagPrefix(tagId)
 
 	membersChannel := make(chan string, len(members))
@@ -697,7 +703,7 @@ func removeMembersFromXDAS(tagId string, members []string) ([]string, error) {
 	}
 	for i := 0; i < numOfWorkers; i++ {
 		wg.Add(1)
-		go removeTagMembersFromXdas(tagId, membersChannel, removedMembersChannel, wg)
+		go removeTagMembersFromXdas(tagId, tagType, membersChannel, removedMembersChannel, wg)
 	}
 
 	go func() {
@@ -717,9 +723,18 @@ func removeMembersFromXDAS(tagId string, members []string) ([]string, error) {
 	return removedMembers, nil
 }
 
-// GetAllTagIds returns all tag IDs from V2 tables
-func GetAllTagIds() ([]string, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryGetAllTagIds)
+// GetAllTagIds returns all tag IDs from V2 tables, optionally filtered by tag type
+func GetAllTagIds(tagType string) ([]string, error) {
+	var rows []map[string]interface{}
+	var err error
+
+	if tagType == TagTypeAccount {
+		// account tags are stored with explicit tag_type, use secondary index
+		rows, err = ds.GetSimpleDao().Query(QueryGetAllTagIdsByType, TagTypeAccount)
+	} else {
+		// mac tags are stored as NULL (legacy) or "", so query all and filter out account
+		rows, err = ds.GetSimpleDao().Query(QueryGetAllTagIds)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tag IDs: %w", err)
 	}
@@ -728,6 +743,10 @@ func GetAllTagIds() ([]string, error) {
 
 	tagIdSet := make(map[string]bool)
 	for _, row := range rows {
+		rowTagType, _ := row["tag_type"].(string)
+		if tagType == TagTypeMac && rowTagType == TagTypeAccount {
+			continue
+		}
 		if tagId, ok := row["tag_id"].(string); ok {
 			cleanTagId := RemovePrefixFromTag(tagId)
 			tagIdSet[cleanTagId] = true
@@ -769,7 +788,7 @@ func GetTagById(tagId string) ([]string, bool, error) {
 
 // DeleteTag deletes a tag completely from V2 storage (XDAS and Cassandra)
 // Uses memory-safe chunked deletion to handle tags with millions of members
-func DeleteTag(tagId string) error {
+func DeleteTag(tagId string, tagType string) error {
 	populatedBuckets, err := getPopulatedBuckets(tagId)
 	if err != nil {
 		return fmt.Errorf("failed to get populated buckets: %w", err)
@@ -788,7 +807,7 @@ func DeleteTag(tagId string) error {
 	for _, bucketId := range populatedBuckets {
 		log.Debugf("Processing bucket %d for tag '%s'", bucketId, tagId)
 
-		membersDeleted, err := deleteBucketMembers(tagId, bucketId)
+		membersDeleted, err := deleteBucketMembers(tagId, tagType, bucketId)
 		if err != nil {
 			log.Errorf("Failed to delete bucket %d for tag '%s': %v", bucketId, tagId, err)
 			// Return error with partial progress saved
@@ -809,7 +828,7 @@ func DeleteTag(tagId string) error {
 
 // deleteBucketMembers deletes all members from a single bucket (XDAS first, then Cassandra)
 // Returns number of members deleted
-func deleteBucketMembers(tagId string, bucketId int) (int, error) {
+func deleteBucketMembers(tagId string, tagType string, bucketId int) (int, error) {
 	totalDeleted := 0
 	lastMember := ""
 
@@ -826,7 +845,7 @@ func deleteBucketMembers(tagId string, bucketId int) (int, error) {
 		log.Debugf("Fetched %d members from bucket %d for tag '%s' (total deleted so far: %d)",
 			len(chunk), bucketId, tagId, totalDeleted)
 
-		removedFromXdas, err := removeMembersFromXDAS(tagId, chunk)
+		removedFromXdas, err := removeMembersFromXDAS(tagId, tagType, chunk)
 		if err != nil {
 			return totalDeleted, fmt.Errorf("XDAS deletion failed: %w", err)
 		}

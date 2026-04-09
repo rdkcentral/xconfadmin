@@ -2,6 +2,7 @@ package tag
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/rdkcentral/xconfadmin/util"
@@ -12,7 +13,33 @@ import (
 const (
 	Prefix   = "t_"
 	Template = "%s%s"
+
+	TagTypeMac     = "mac"
+	TagTypeAccount = "account"
 )
+
+var accountIdRegex = regexp.MustCompile(`^[0-9]+$`)
+
+func ValidateTagType(tagType string) error {
+	if tagType != TagTypeMac && tagType != TagTypeAccount {
+		return fmt.Errorf("invalid tag type: %s, must be '%s' or '%s'", tagType, TagTypeMac, TagTypeAccount)
+	}
+	return nil
+}
+
+func ValidateAccountId(accountId string) error {
+	if !accountIdRegex.MatchString(accountId) {
+		return fmt.Errorf("invalid account ID: %s, must contain only digits", accountId)
+	}
+	return nil
+}
+
+func NormalizeMember(member string, tagType string) string {
+	if tagType == TagTypeAccount {
+		return strings.TrimSpace(member)
+	}
+	return ToNormalizedEcm(member)
+}
 
 func ToNormalizedEcm(member string) string {
 	member = strings.TrimSpace(member)

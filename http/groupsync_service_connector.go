@@ -23,6 +23,9 @@ const (
 
 	AddGroupMember    = "%s/ft/%s"
 	RemoveGroupMember = "%s/ft/%s?field=%s"
+
+	AddGroupMemberAda    = "%s/ada/%s"
+	RemoveGroupMemberAda = "%s/ada/%s?field=%s"
 )
 
 type GroupServiceSyncConnector struct {
@@ -58,6 +61,28 @@ func (c *GroupServiceSyncConnector) DoRequest(method string, url string, headers
 	return rbytes, err
 }
 
+func (c *GroupServiceSyncConnector) AddMembersToTagWithKeyspace(keyspace string, groupId string, members *proto2.XdasHashes) error {
+	urlTemplate := AddGroupMember
+	if keyspace == "ada" {
+		urlTemplate = AddGroupMemberAda
+	}
+	url := fmt.Sprintf(urlTemplate, c.GetGroupServiceSyncHost(), groupId)
+	data, err := proto.Marshal(members)
+	if err != nil {
+		return err
+	}
+	headers := protobufHeaders()
+	headers[TtlHeader] = OneYearTtl
+	rbytes, err := c.DoRequest("POST", url, headers, data)
+	if err != nil {
+		return err
+	}
+	if len(rbytes) > 0 {
+		log.Debugf("XDAS AddMembersToTag response: keyspace=%s, groupId=%s, body=%s", keyspace, groupId, string(rbytes))
+	}
+	return nil
+}
+
 func (c *GroupServiceSyncConnector) AddMembersToTag(groupId string, members *proto2.XdasHashes) error {
 	url := fmt.Sprintf(AddGroupMember, c.GetGroupServiceSyncHost(), groupId)
 	data, err := proto.Marshal(members)
@@ -76,6 +101,22 @@ func (c *GroupServiceSyncConnector) AddMembersToTag(groupId string, members *pro
 		log.Debugf("XDAS AddMembersToTag response: groupId=%s, body=%s", groupId, string(rbytes))
 	}
 
+	return nil
+}
+
+func (c *GroupServiceSyncConnector) RemoveGroupMembersWithKeyspace(keyspace string, groupId string, member string) error {
+	urlTemplate := RemoveGroupMember
+	if keyspace == "ada" {
+		urlTemplate = RemoveGroupMemberAda
+	}
+	url := fmt.Sprintf(urlTemplate, c.GetGroupServiceSyncHost(), groupId, member)
+	rbytes, err := c.DoRequest("DELETE", url, protobufHeaders(), nil)
+	if err != nil {
+		return err
+	}
+	if len(rbytes) > 0 {
+		log.Debugf("XDAS RemoveGroupMembers response: keyspace=%s, groupId=%s, member=%s, body=%s", keyspace, groupId, member, string(rbytes))
+	}
 	return nil
 }
 
