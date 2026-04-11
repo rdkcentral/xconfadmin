@@ -226,7 +226,7 @@ func TestGetTelemetryRuleByIdHandler_AllErrorCases(t *testing.T) {
 		assert.Assert(t, bytes.Contains(rr.Body.Bytes(), []byte("not found")))
 	})
 
-	t.Run("WrongApplicationType_WriteAdminErrorResponse_404", func(t *testing.T) {
+	t.Run("WrongApplicationType_WriteAdminErrorResponse_400", func(t *testing.T) {
 		perm := buildPermanentTelemetryProfile()
 		rule := buildTelemetryRule("test-rule", "stb", perm.ID)
 		_ = SetOneInDao(ds.TABLE_TELEMETRY_RULES, rule.ID, rule)
@@ -235,7 +235,7 @@ func TestGetTelemetryRuleByIdHandler_AllErrorCases(t *testing.T) {
 		url := fmt.Sprintf("/xconfAdminService/telemetry/rule/%s?applicationType=xhome", rule.ID)
 		r := httptest.NewRequest(http.MethodGet, url, nil)
 		rr := ExecuteRequest(r, router)
-		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 }
 

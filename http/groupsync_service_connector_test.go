@@ -63,7 +63,7 @@ func TestGroupServiceSyncConnector_AddMembersToTag(t *testing.T) {
 		}
 
 		// Verify path
-		if r.URL.Path != "/ft/test-group-id" {
+		if r.URL.Path != "/test-group-id" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 
@@ -83,8 +83,10 @@ func TestGroupServiceSyncConnector_AddMembersToTag(t *testing.T) {
 	httpClient := newTestHttpClientSync(server)
 
 	connector := &GroupServiceSyncConnector{
-		BaseURL: server.URL,
-		Client:  httpClient,
+		BaseURL:                   server.URL,
+		Client:                    httpClient,
+		addGroupMemberTemplate:    "%s/%s",
+		removeGroupMemberTemplate: "%s/path/%s?test=%s",
 	}
 
 	members := &proto2.XdasHashes{
@@ -136,14 +138,14 @@ func TestGroupServiceSyncConnector_RemoveGroupMembers(t *testing.T) {
 		}
 
 		// Verify path contains group ID and member
-		expectedPath := "/ft/test-group-id"
+		expectedPath := "/dummy/test-group-id"
 		if r.URL.Path != expectedPath {
 			t.Errorf("expected path '%s', got '%s'", expectedPath, r.URL.Path)
 		}
 
 		// Verify query parameter
-		if r.URL.Query().Get("field") != "test-member-id" {
-			t.Errorf("expected field parameter 'test-member-id', got '%s'", r.URL.Query().Get("field"))
+		if r.URL.Query().Get("test") != "test-member-id" {
+			t.Errorf("expected field parameter 'test-member-id', got '%s'", r.URL.Query().Get("test"))
 		}
 
 		// Verify headers
@@ -158,8 +160,9 @@ func TestGroupServiceSyncConnector_RemoveGroupMembers(t *testing.T) {
 	httpClient := newTestHttpClientSync(server)
 
 	connector := &GroupServiceSyncConnector{
-		BaseURL: server.URL,
-		Client:  httpClient,
+		BaseURL:                   server.URL,
+		Client:                    httpClient,
+		removeGroupMemberTemplate: "%s/dummy/%s?test=%s",
 	}
 
 	err := connector.RemoveGroupMembers("test-group-id", "test-member-id")

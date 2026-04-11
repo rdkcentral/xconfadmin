@@ -90,6 +90,30 @@ func (c *CanaryMgrConnector) SetCanaryMgrHost(host string) {
 	c.host = host
 }
 
+func (c *CanaryMgrConnector) GetCanaryPath() string {
+	return c.createCanaryPath
+}
+
+func (c *CanaryMgrConnector) SetCanaryPath(path string) {
+	c.createCanaryPath = path
+}
+
+func (c *CanaryMgrConnector) GetWakeupPoolPath() string {
+	return c.createWakeupPoolPath
+}
+
+func (c *CanaryMgrConnector) SetWakeupPoolPath(path string) {
+	c.createWakeupPoolPath = path
+}
+
+func (c *CanaryMgrConnector) GetWakeupPoolGroupPath() string {
+	return c.createWakeupPoolGroupPath
+}
+
+func (c *CanaryMgrConnector) SetWakeupPoolGroupPath(path string) {
+	c.createWakeupPoolGroupPath = path
+}
+
 func (c *CanaryMgrConnector) CreateCanary(canaryRequestBody *CanaryRequestBody, isDeepSleepVideoDevice bool, fields log.Fields) error {
 	pathTemplate := c.createCanaryPath
 	if isDeepSleepVideoDevice {

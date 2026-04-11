@@ -186,3 +186,8 @@ func (m *MockDatabaseClient) NewBatch(size int) db.BatchOperation {
 func (m *MockDatabaseClient) QueryXconfDataRows(tableName string, rowKeys ...string) ([]map[string]interface{}, error) {
 	return nil, nil
 }
+
+// GetSecurityTokenFields retrieves security token device info (stub for tests)
+func (m *MockDatabaseClient) GetSecurityTokenFields(estbMac string) (*db.SecurityTokenDeviceInfo, error) {
+	return nil, nil
+}

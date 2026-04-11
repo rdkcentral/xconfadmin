@@ -15,10 +15,10 @@ import (
 var groupServiceName string
 
 type GroupServiceConnector struct {
-	BaseURL              string
-	Client               *HttpClient
-	getGroupsMembersPath string
-	getAllGroupsPath     string
+	BaseURL                  string
+	Client                   *HttpClient
+	getGroupsMembersTemplate string
+	getAllGroupsTemplate     string
 }
 
 func (c *GroupServiceConnector) GetGroupServiceHost() string {
@@ -37,16 +37,16 @@ func NewGroupServiceConnector(conf *configuration.Config, tlsConfig *tls.Config)
 		panic(fmt.Errorf("%s is required", confKey))
 	}
 
-	getGroupsMembersPath := conf.GetString(
-		fmt.Sprintf("xconfwebconfig.%v.getGroupsMembersPath", groupServiceName))
-	getAllGroupsPath := conf.GetString(
-		fmt.Sprintf("xconfwebconfig.%v.getAllGroupsPath", groupServiceName))
+	getGroupsMembersTemplate := conf.GetString(
+		fmt.Sprintf("xconfwebconfig.%v.getGroupsMembersTemplate", groupServiceName))
+	getAllGroupsTemplate := conf.GetString(
+		fmt.Sprintf("xconfwebconfig.%v.getAllGroupsTemplate", groupServiceName))
 
 	return &GroupServiceConnector{
-		BaseURL:              host,
-		Client:               NewHttpClient(conf, groupServiceName, tlsConfig),
-		getGroupsMembersPath: getGroupsMembersPath,
-		getAllGroupsPath:     getAllGroupsPath,
+		BaseURL:                  host,
+		Client:                   NewHttpClient(conf, groupServiceName, tlsConfig),
+		getGroupsMembersTemplate: getGroupsMembersTemplate,
+		getAllGroupsTemplate:     getAllGroupsTemplate,
 	}
 }
 
@@ -56,7 +56,7 @@ func (c *GroupServiceConnector) DoRequest(method string, url string, headers map
 }
 
 func (c *GroupServiceConnector) GetGroupsMemberBelongsTo(memberId string) (*proto2.XdasHashes, error) {
-	url := fmt.Sprintf(c.getGroupsMembersPath, c.GetGroupServiceHost(), memberId)
+	url := fmt.Sprintf(c.getGroupsMembersTemplate, c.GetGroupServiceHost(), memberId)
 	rbytes, err := c.DoRequest(HttpGet, url, protobufHeaders(), nil)
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func (c *GroupServiceConnector) GetGroupsMemberBelongsTo(memberId string) (*prot
 }
 
 func (c *GroupServiceConnector) GetAllGroups() (*proto2.XdasHashes, error) {
-	url := fmt.Sprintf(c.getAllGroupsPath, c.GetGroupServiceHost())
+	url := fmt.Sprintf(c.getAllGroupsTemplate, c.GetGroupServiceHost())
 	rbytes, err := c.DoRequest(HttpGet, url, protobufHeaders(), nil)
 	if err != nil {
 		return nil, err
