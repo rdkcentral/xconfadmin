@@ -27,7 +27,6 @@ type GroupServiceSyncConnector struct {
 	Client                    *HttpClient
 	addGroupMemberTemplate    string
 	removeGroupMemberTemplate string
-	grpSyncServiceTemplate    string
 }
 
 func NewGroupServiceSyncConnector(conf *configuration.Config, tlsConfig *tls.Config) *GroupServiceSyncConnector {

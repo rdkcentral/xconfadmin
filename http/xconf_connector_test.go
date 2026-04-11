@@ -73,7 +73,7 @@ func TestXconfConnector_GetProfiles(t *testing.T) {
 		}
 
 		// Check that the URL contains the expected path
-		if r.URL.Path != "/loguploader/getTelemetryProfiles" {
+		if r.URL.Path != "/dummy/path" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 
@@ -93,9 +93,10 @@ func TestXconfConnector_GetProfiles(t *testing.T) {
 	httpClient := newTestHttpClientXconf(server)
 
 	connector := &XconfConnector{
-		HttpClient:  httpClient,
-		host:        server.URL,
-		serviceName: "xconf-test",
+		HttpClient:       httpClient,
+		host:             server.URL,
+		serviceName:      "xconf-test",
+		xconfUrlTemplate: "%s/dummy/path?%s",
 	}
 
 	result, err := connector.GetProfiles("model=RNG150", log.Fields{})
@@ -160,9 +161,10 @@ func TestXconfConnector_GetProfiles_WithDifferentQueryParams(t *testing.T) {
 	httpClient := newTestHttpClientXconf(server)
 
 	connector := &XconfConnector{
-		HttpClient:  httpClient,
-		host:        server.URL,
-		serviceName: "xconf-test",
+		HttpClient:       httpClient,
+		host:             server.URL,
+		serviceName:      "xconf-test",
+		xconfUrlTemplate: "%s/dummy/path?%s",
 	}
 
 	// Test with different URL suffixes
