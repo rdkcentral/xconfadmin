@@ -454,6 +454,10 @@ func CreateFirmwareRuleTemplates() {
 	templ.Editable = false
 	templateList = append(templateList, templ)
 
+	rule = ruleFactory.NewTagRule()
+	templ = *xcorefw.NewFirmwareRuleTemplate(corefw.TAG_RULE, rule, []string{}, 6)
+	templateList = append(templateList, templ)
+
 	// Blocking filters
 	rule = *ruleFactory.NewGlobalPercentFilterTemplate(coreef.DEFAULT_PERCENT, coreef.EMPTY_NAME)
 	templ = *xcorefw.NewBlockingFilterTemplate(corefw.GLOBAL_PERCENT, rule, 1)
