@@ -468,7 +468,7 @@ func validateWithTagTemplate(firmwarerule *corefw.FirmwareRule) error {
 			return nil
 		}
 	}
-	return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, firmwarerule.Name+" does not belong to template "+"TAG_TEMPLATE")
+	return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, firmwarerule.Name+" does not belong to template "+"TAG_RULE")
 }
 
 func checkFreeArgExists(firmwareRule corefw.FirmwareRule) error {
