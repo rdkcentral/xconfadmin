@@ -42,8 +42,17 @@ func NewGroupServiceSyncConnector(conf *configuration.Config, tlsConfig *tls.Con
 	// Read path configurations with defaults
 	addGroupMemberTemplate := conf.GetString(
 		fmt.Sprintf("xconfwebconfig.%v.addGroupMemberTemplate", groupServiceSyncServiceName))
+
+	if util.IsBlank(addGroupMemberTemplate) {
+		log.Errorf("addGroupMemberTemplate is required")
+	}
+
 	removeGroupMemberTemplate := conf.GetString(
 		fmt.Sprintf("xconfwebconfig.%v.removeGroupMemberTemplate", groupServiceSyncServiceName))
+
+	if util.IsBlank(removeGroupMemberTemplate) {
+		log.Errorf("removeGroupMemberTemplate is required")
+	}
 
 	return &GroupServiceSyncConnector{
 		BaseURL:                   host + path,

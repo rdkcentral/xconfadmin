@@ -59,9 +59,9 @@ const (
 	URL_TAGS_ACCOUNT                             = "/path/%s"
 	URL_TAGS_PARTNER_AND_MAC_ADDRESS_AND_ACCOUNT = "/path/%s/test/%s/test/%s"
 	URL_TAGS_PARTNER_AND_ACCOUNT                 = "/path/%s/test/%s"
-	URL_ODP                                      = "/api/v1/operational/mesh-pod/%s/account"
-	URL_ACCOUNT_ESTB                             = "/devices?hostMac=%s&status=Active"
-	URL_ACCOUNT_ECM                              = "/devices?ecmMac=%s&status=Active"
+	URL_ODP                                      = "/path/%s"
+	URL_ACCOUNT_ESTB                             = "/path/%s"
+	URL_ACCOUNT_ECM                              = "/path/%s"
 )
 
 func TestFeatureSetting(t *testing.T) {

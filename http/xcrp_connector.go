@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/rdkcentral/xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/go-akka/configuration"
 	log "github.com/sirupsen/logrus"
@@ -30,7 +31,7 @@ func NewXcrpConnector(conf *configuration.Config, tlsConfig *tls.Config) *XcrpCo
 	confKey := fmt.Sprintf("xconfwebconfig.%v.canarymgr_host", xcrpServiceName)
 	var hosts []string
 	hosts = conf.GetStringList(confKey)
-	if hosts == nil || len(hosts) == 0 {
+	if len(hosts) == 0 {
 		panic(fmt.Errorf("%s is required", confKey))
 	}
 
@@ -42,10 +43,24 @@ func NewXcrpConnector(conf *configuration.Config, tlsConfig *tls.Config) *XcrpCo
 
 	precookModelPathTemplate := conf.GetString(
 		fmt.Sprintf("xconfwebconfig.%v.precookModelPathTemplate", xcrpServiceName))
+
+	if util.IsBlank(precookModelPathTemplate) {
+		log.Errorf("precookModelPathTemplate is required")
+	}
+
 	precookPartnerPathTemplate := conf.GetString(
 		fmt.Sprintf("xconfwebconfig.%v.precookPartnerPathTemplate", xcrpServiceName))
+
+	if util.IsBlank(precookPartnerPathTemplate) {
+		log.Errorf("precookPartnerPathTemplate is required")
+	}
+
 	precookStatusPathTemplate := conf.GetString(
 		fmt.Sprintf("xconfwebconfig.%v.recookStatusPathTemplate", xcrpServiceName))
+
+	if util.IsBlank(precookStatusPathTemplate) {
+		log.Errorf("precookStatusPathTemplate is required")
+	}
 
 	return &XcrpConnector{
 		HttpClient:                 NewHttpClient(conf, xcrpServiceName, tlsConfig),
