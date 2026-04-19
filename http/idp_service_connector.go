@@ -115,10 +115,24 @@ func NewIdpServiceConnector(conf *configuration.Config, externalIdpService IdpSe
 		// Read path configurations with defaults
 		getTokenUrl := conf.GetString(
 			fmt.Sprintf("xconfwebconfig.%v.getTokenUrl", idpServiceName))
+
+		if util.IsBlank(getTokenUrl) {
+			log.Errorf("getTokenUrl is required")
+		}
+
 		fullLoginUrl := conf.GetString(
 			fmt.Sprintf("xconfwebconfig.%v.fullLoginUrl", idpServiceName))
+
+		if util.IsBlank(fullLoginUrl) {
+			log.Error("fullLoginUrl is required")
+		}
+
 		fullLogoutUrl := conf.GetString(
 			fmt.Sprintf("xconfwebconfig.%v.fullLogoutUrl", idpServiceName))
+
+		if util.IsBlank(fullLogoutUrl) {
+			log.Errorf("fullLogoutUrl is required")
+		}
 
 		return &DefaultIdpService{
 			host:             host,

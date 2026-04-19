@@ -39,8 +39,17 @@ func NewGroupServiceConnector(conf *configuration.Config, tlsConfig *tls.Config)
 
 	getGroupsMembersTemplate := conf.GetString(
 		fmt.Sprintf("xconfwebconfig.%v.getGroupsMembersTemplate", groupServiceName))
+
+	if util.IsBlank(getGroupsMembersTemplate) {
+		log.Error("getGroupsMembersTemplate is required")
+	}
+
 	getAllGroupsTemplate := conf.GetString(
 		fmt.Sprintf("xconfwebconfig.%v.getAllGroupsTemplate", groupServiceName))
+
+	if util.IsBlank(getAllGroupsTemplate) {
+		log.Error("getAllGroupsTemplate is required")
+	}
 
 	return &GroupServiceConnector{
 		BaseURL:                  host,
