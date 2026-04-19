@@ -440,7 +440,12 @@ func validateTemplateConsistency(rule corefw.FirmwareRule) error {
 }
 
 func validateRuleAgainstTemplate(rule *corefw.FirmwareRule, template *corefw.FirmwareRuleTemplate) error {
-
+	if template.ID == corefw.TAG_RULE {
+		if err := validateWithTagTemplate(rule); err != nil {
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, err.Error())
+		}
+		return nil
+	}
 	ruleFreeArgs := getFreeArgList(ru.ToConditions(&rule.Rule))
 	templateFreeArgs := getFreeArgList(ru.ToConditions(template.GetRule()))
 
@@ -455,6 +460,15 @@ func validateRuleAgainstTemplate(rule *corefw.FirmwareRule, template *corefw.Fir
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, rule.Name+": "+msg+" do(es) not belong to template "+template.ID)
 	}
 	return nil
+}
+
+func validateWithTagTemplate(firmwarerule *corefw.FirmwareRule) error {
+	for _, condition := range ru.ToConditions(&firmwarerule.Rule) {
+		if re.StandardOperationExists == condition.Operation {
+			return nil
+		}
+	}
+	return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, firmwarerule.Name+" does not belong to template "+"TAG_RULE")
 }
 
 func checkFreeArgExists(firmwareRule corefw.FirmwareRule) error {

@@ -190,8 +190,34 @@ func validateRule(fr *re.Rule, action *corefw.TemplateApplicableAction) error {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FirmwareRuleTemplate "+fr.Id()+" should have a minimum one condition")
 	}
 	for _, c := range conditions {
+		if c == nil {
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Condition is null")
+		}
+		if err := checkConditionNullsOrBlanks(*c); err != nil {
+			return err
+		}
+		if err := checkDuplicateFixedArgListItems(*c); err != nil {
+			return err
+		}
 		if err := checkOperationName(c, GetFirmwareRuleAllowedOperations); err != nil {
 			return err
+		}
+		if (equalOperations(c.GetOperation(), re.StandardOperationIs) && c.GetFreeArg().GetName() == xwcommon.MODEL) ||
+			(equalOperations(c.GetOperation(), re.StandardOperationInList) && c.GetFreeArg().GetName() == xwcommon.IP_ADDRESS) {
+			if _, ok := c.GetFixedArg().GetValue().(string); !ok {
+				return xwcommon.NewRemoteErrorAS(
+					http.StatusBadRequest,
+					fmt.Sprintf(
+						"FixedArg value should be string for freeArg '%s' with operation '%s', got %T",
+						c.GetFreeArg().GetName(),
+						c.GetOperation(),
+						c.GetFixedArg().GetValue(),
+					),
+				)
+			}
+			if err := checkFixedArgValue(*c, isNotBlank); err != nil {
+				return err
+			}
 		}
 	}
 	return validateProperties(action)
@@ -452,6 +478,10 @@ func CreateFirmwareRuleTemplates() {
 	rule = ruleFactory.NewEnvModelRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME)
 	templ := *xcorefw.NewFirmwareRuleTemplate(corefw.ENV_MODEL_RULE, rule, []string{}, 5)
 	templ.Editable = false
+	templateList = append(templateList, templ)
+
+	rule = ruleFactory.NewTagRule()
+	templ = *xcorefw.NewFirmwareRuleTemplate(corefw.TAG_RULE, rule, []string{}, 6)
 	templateList = append(templateList, templ)
 
 	// Blocking filters

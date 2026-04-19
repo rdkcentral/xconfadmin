@@ -38,7 +38,6 @@ import (
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
-	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
@@ -234,6 +233,10 @@ func CreatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s ApplicationType doesn't match", bean.ID), nil)
 	}
 
+	if err := validatePercentageBeanReferences(bean); err != nil {
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("%s: %s", bean.Name, err.Error()), nil)
+	}
+
 	if err := firmware.ValidateRuleName(bean.ID, bean.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
@@ -254,7 +257,7 @@ func CreatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 	firmware.SortConfigEntry(bean.Distributions)
 
 	fRule := coreef.ConvertPercentageBeanToFirmwareRule(*bean)
-	ru.NormalizeConditions(&fRule.Rule)
+	re.NormalizeConditions(&fRule.Rule)
 	if err := firmware.CreateFirmwareRuleOneDB(fRule); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -280,6 +283,10 @@ func UpdatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("ApplicationType cannot be changed: Existing value:%s New Value: %s", fRule.ApplicationType, bean.ApplicationType), nil)
 	}
 
+	if err := validatePercentageBeanReferences(bean); err != nil {
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("%s: %s", bean.Name, err.Error()), nil)
+	}
+
 	if err := firmware.ValidateRuleName(bean.ID, bean.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
@@ -300,7 +307,7 @@ func UpdatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 	firmware.SortConfigEntry(bean.Distributions)
 
 	newRule := coreef.ConvertPercentageBeanToFirmwareRule(*bean)
-	ru.NormalizeConditions(&newRule.Rule)
+	re.NormalizeConditions(&newRule.Rule)
 	if err := firmware.CreateFirmwareRuleOneDB(newRule); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -323,6 +330,33 @@ func DeletePercentageBean(id string, app string) *xwhttp.ResponseEntity {
 	}
 
 	return xwhttp.NewResponseEntity(http.StatusNoContent, nil, nil)
+}
+
+func validatePercentageBeanReferences(bean *coreef.PercentageBean) error {
+	if xutil.IsBlank(bean.Model) {
+		return errors.New("Model is empty")
+	}
+	normalizedModel := strings.ToUpper(strings.TrimSpace(bean.Model))
+	if !common.IsExistModel(normalizedModel) {
+		return fmt.Errorf("Model does not exist: %s", normalizedModel)
+	}
+
+	if !xutil.IsBlank(bean.Whitelist) && GetNamespacedListByIdAndType(bean.Whitelist, shared.IP_LIST) == nil {
+		return fmt.Errorf("IP address list does not exist: %s", bean.Whitelist)
+	}
+
+	if bean.OptionalConditions != nil && len(re.ToConditions(bean.OptionalConditions)) > 0 {
+		err := ValidateRuleStructure(bean.OptionalConditions)
+		if err != nil {
+			return err
+		}
+		err = RunGlobalValidation(*bean.OptionalConditions, GetFeatureRuleAllowedOperations)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func createCanaries(newBean *coreef.PercentageBean, oldRule *firmware.FirmwareRule, fields log.Fields) {
