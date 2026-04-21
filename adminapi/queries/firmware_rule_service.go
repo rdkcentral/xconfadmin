@@ -440,21 +440,54 @@ func validateTemplateConsistency(rule corefw.FirmwareRule) error {
 }
 
 func validateRuleAgainstTemplate(rule *corefw.FirmwareRule, template *corefw.FirmwareRuleTemplate) error {
+	ruleNonExists, ruleExistsCount := splitByExists(ru.ToConditions(&rule.Rule))
+	tmplNonExists, tmplExistsCount := splitByExists(ru.ToConditions(template.GetRule()))
 
-	ruleFreeArgs := getFreeArgList(ru.ToConditions(&rule.Rule))
-	templateFreeArgs := getFreeArgList(ru.ToConditions(template.GetRule()))
-
-	for _, v := range templateFreeArgs {
-		ruleFreeArgs = remove(ruleFreeArgs, *v)
+	// EXISTS conditions are validated by presence only: their free-arg names
+	// (often a tag name) are intentionally ignored so that rules can reuse a
+	// template across different tags without creating a new template per tag.
+	if tmplExistsCount == 0 && ruleExistsCount > 0 {
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest,
+			rule.Name+": EXISTS condition is not allowed by template "+template.ID)
 	}
-	if len(ruleFreeArgs) != 0 {
+	if tmplExistsCount > 0 && ruleExistsCount == 0 {
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest,
+			rule.Name+": template "+template.ID+" requires at least one EXISTS condition")
+	}
+
+	// Non-EXISTS free args must still be a subset of the template's (matched by Name + Type).
+	remaining := ruleNonExists
+	for _, v := range tmplNonExists {
+		remaining = remove(remaining, *v)
+	}
+	if len(remaining) != 0 {
 		msg := ""
-		for _, v := range getFreeArgNames(ruleFreeArgs) {
+		for _, v := range getFreeArgNames(remaining) {
 			msg += v + ","
 		}
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, rule.Name+": "+msg+" do(es) not belong to template "+template.ID)
 	}
 	return nil
+}
+
+// splitByExists partitions conditions by operation. Returns the free args of
+// non-EXISTS conditions and the count of EXISTS conditions. Free args of
+// EXISTS conditions are intentionally discarded because the rule/template
+// consistency check treats EXISTS conditions as name-agnostic (see
+// validateRuleAgainstTemplate).
+func splitByExists(conditions []*re.Condition) (nonExistsFreeArgs []*re.FreeArg, existsCount int) {
+	nonExistsFreeArgs = make([]*re.FreeArg, 0, len(conditions))
+	for _, c := range conditions {
+		if c == nil {
+			continue
+		}
+		if c.GetOperation() == re.StandardOperationExists {
+			existsCount++
+			continue
+		}
+		nonExistsFreeArgs = append(nonExistsFreeArgs, c.GetFreeArg())
+	}
+	return nonExistsFreeArgs, existsCount
 }
 
 func checkFreeArgExists(firmwareRule corefw.FirmwareRule) error {
@@ -898,13 +931,6 @@ func remove(items []*re.FreeArg, item re.FreeArg) []*re.FreeArg {
 	}
 
 	return newitems
-}
-
-func getFreeArgList(conditions []*re.Condition) (result []*re.FreeArg) {
-	for _, cond := range conditions {
-		result = append(result, cond.GetFreeArg())
-	}
-	return result
 }
 
 func getFreeArgNames(freeArgs []*re.FreeArg) (result []string) {
