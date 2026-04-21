@@ -233,12 +233,12 @@ func CreatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s ApplicationType doesn't match", bean.ID), nil)
 	}
 
-	if err := validatePercentageBeanReferences(bean); err != nil {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("%s: %s", bean.Name, err.Error()), nil)
-	}
-
 	if err := firmware.ValidateRuleName(bean.ID, bean.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
+	}
+
+	if err := validatePercentageBeanReferences(bean); err != nil {
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("%s: %s", bean.Name, err.Error()), nil)
 	}
 
 	if err := bean.ValidateForAS(); err != nil {
@@ -283,12 +283,12 @@ func UpdatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("ApplicationType cannot be changed: Existing value: %s New Value: %s", fRule.ApplicationType, bean.ApplicationType), nil)
 	}
 
-	if err := validatePercentageBeanReferences(bean); err != nil {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("%s: %s", bean.Name, err.Error()), nil)
-	}
-
 	if err := firmware.ValidateRuleName(bean.ID, bean.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
+	}
+
+	if err := validatePercentageBeanReferences(bean); err != nil {
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("%s: %s", bean.Name, err.Error()), nil)
 	}
 
 	if err := bean.ValidateForAS(); err != nil {

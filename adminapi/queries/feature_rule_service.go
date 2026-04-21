@@ -249,6 +249,9 @@ func ValidateFeatureRule(featureRule *rfc.FeatureRule, applicationType string) e
 	if featureRule.Rule == nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Rule is empty")
 	}
+	if featureRule.Name == "" {
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FeatureRule name is blank")
+	}
 	err := ValidateRuleStructure(featureRule.Rule)
 	if err != nil {
 		return err
@@ -256,9 +259,6 @@ func ValidateFeatureRule(featureRule *rfc.FeatureRule, applicationType string) e
 	err = RunGlobalValidation(*featureRule.Rule, GetFeatureRuleAllowedOperations)
 	if err != nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, featureRule.Name+": "+err.Error())
-	}
-	if featureRule.Name == "" {
-		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FeatureRule name is blank")
 	}
 	if len(featureRule.FeatureIds) < 1 {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Features should be specified")
