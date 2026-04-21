@@ -25,6 +25,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 )
 
@@ -539,4 +542,162 @@ func TestDeletePercentageBean_ResponseEntity_AppTypeMismatch(t *testing.T) {
 	assert.NotNil(t, response)
 	assert.Equal(t, http.StatusNotFound, response.Status)
 	assert.NotNil(t, response.Error)
+}
+
+// Tests for validatePercentageBeanReferences
+
+func TestValidatePercentageBeanReferences_InvalidModel(t *testing.T) {
+	DeleteAllEntities()
+
+	bean := &coreef.PercentageBean{
+		ID:              "test-bean-id",
+		Name:            "test-bean",
+		Model:           "NONEXISTENT_MODEL_XYZ",
+		ApplicationType: "stb",
+	}
+
+	err := validatePercentageBeanReferences(bean)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Model")
+	assert.Contains(t, err.Error(), "does not exist")
+}
+
+func TestValidatePercentageBeanReferences_ValidModel(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	DeleteAllEntities()
+
+	// Create a valid model first
+	model := &shared.Model{
+		ID:          "TEST_MODEL",
+		Description: "Test Model",
+	}
+	CreateModel(model)
+
+	bean := &coreef.PercentageBean{
+		ID:              "test-bean-id",
+		Name:            "test-bean",
+		Model:           "TEST_MODEL",
+		ApplicationType: "stb",
+	}
+
+	err := validatePercentageBeanReferences(bean)
+	assert.NoError(t, err)
+
+	DeleteAllEntities()
+}
+
+func TestValidatePercentageBeanReferences_InvalidIPList(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	DeleteAllEntities()
+
+	// Create a valid model first
+	model := &shared.Model{
+		ID:          "TEST_MODEL",
+		Description: "Test Model",
+	}
+	CreateModel(model)
+
+	bean := &coreef.PercentageBean{
+		ID:              "test-bean-id",
+		Name:            "test-bean",
+		Model:           "TEST_MODEL",
+		Whitelist:       "NONEXISTENT_IP_LIST",
+		ApplicationType: "stb",
+	}
+
+	err := validatePercentageBeanReferences(bean)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "IP address list")
+	assert.Contains(t, err.Error(), "does not exist")
+
+	DeleteAllEntities()
+}
+
+func TestValidatePercentageBeanReferences_ValidIPList(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	DeleteAllEntities()
+
+	// Create a valid model
+	model := &shared.Model{
+		ID:          "TEST_MODEL",
+		Description: "Test Model",
+	}
+	CreateModel(model)
+
+	// Create a valid IP list
+	ipList := makeGenericList("TEST_IP_LIST", shared.IP_LIST, []string{"192.168.1.0/24"})
+	CreateNamespacedList(ipList, false)
+
+	bean := &coreef.PercentageBean{
+		ID:              "test-bean-id",
+		Name:            "test-bean",
+		Model:           "TEST_MODEL",
+		Whitelist:       "TEST_IP_LIST",
+		ApplicationType: "stb",
+	}
+
+	err := validatePercentageBeanReferences(bean)
+	assert.NoError(t, err)
+
+	DeleteAllEntities()
+}
+
+func TestValidatePercentageBeanReferences_BlankWhitelist(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	DeleteAllEntities()
+
+	// Create a valid model
+	model := &shared.Model{
+		ID:          "TEST_MODEL",
+		Description: "Test Model",
+	}
+	CreateModel(model)
+
+	bean := &coreef.PercentageBean{
+		ID:              "test-bean-id",
+		Name:            "test-bean",
+		Model:           "TEST_MODEL",
+		Whitelist:       "", // Blank whitelist should be allowed
+		ApplicationType: "stb",
+	}
+
+	err := validatePercentageBeanReferences(bean)
+	assert.NoError(t, err)
+
+	DeleteAllEntities()
+}
+
+func TestValidatePercentageBeanReferences_InvalidOptionalConditions(t *testing.T) {
+	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	DeleteAllEntities()
+
+	// Create a valid model
+	model := &shared.Model{
+		ID:          "TEST_MODEL",
+		Description: "Test Model",
+	}
+	CreateModel(model)
+
+	// Create optional condition referencing a model that doesn't exist
+	optionalConditions := &re.Rule{
+		Condition: &re.Condition{
+			FreeArg:   &re.FreeArg{Name: xwcommon.MODEL},
+			Operation: re.StandardOperationIs,
+			FixedArg:  re.NewFixedArg("INVALID_MODEL"),
+		},
+	}
+
+	bean := &coreef.PercentageBean{
+		ID:                 "test-bean-id",
+		Name:               "test-bean",
+		Model:              "TEST_MODEL",
+		ApplicationType:    "stb",
+		OptionalConditions: optionalConditions,
+	}
+
+	err := validatePercentageBeanReferences(bean)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Model does not exist")
+
+	DeleteAllEntities()
 }

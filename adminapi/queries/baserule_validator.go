@@ -183,11 +183,32 @@ func checkFixedArgValue(condition re.Condition, fp func(string) bool) error {
 				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Incorrect Collection Value")
 			}
 		}
+	} else if re.StandardOperationInList == operation {
+		if !condition.GetFixedArg().IsStringValue() {
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FixedArg for IN_LIST operation must be a string value")
+		}
+		fixedArgValue := strings.TrimSpace(condition.GetFixedArg().GetValue().(string))
+		freeArgName := condition.GetFreeArg().GetName()
+		if freeArgName == xwcommon.IP_ADDRESS || freeArgName == logupload.EstbIp {
+			if GetNamespacedListByIdAndType(fixedArgValue, shared.IP_LIST) == nil {
+				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "IP list does not exist: "+fixedArgValue)
+			}
+		}
 	} else if re.StandardOperationIs == operation {
-		fixedArgValue := condition.GetFixedArg().GetValue().(string)
+		if !condition.GetFixedArg().IsStringValue() {
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FixedArg for IS operation must be a string value")
+		}
+		fixedArgValue := strings.TrimSpace(condition.GetFixedArg().GetValue().(string))
 		//fixedArgValue := coreef.trimSingleQuote (condition.GetFixedArg().String())
 		if !fp(fixedArgValue) {
 			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, condition.FreeArg.GetName()+" is invalid: "+fixedArgValue)
+		}
+		freeArgName := condition.GetFreeArg().GetName()
+		if freeArgName == xwcommon.MODEL || freeArgName == logupload.Model {
+			normalizedModel := strings.ToUpper(strings.TrimSpace(fixedArgValue))
+			if !IsExistModel(normalizedModel) {
+				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Model does not exist: "+normalizedModel)
+			}
 		}
 	} else if re.StandardOperationPercent == operation {
 		ret, err := checkPercentOperation(condition)
@@ -223,6 +244,9 @@ func checkPercentOperation(condition re.Condition) (bool, error) {
 }
 
 func checkLikeOperation(condition re.Condition) error {
+	if !condition.GetFixedArg().IsStringValue() {
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FixedArg for LIKE operation must be a string value")
+	}
 	_, err := regexp.Compile(condition.GetFixedArg().GetValue().(string))
 	// _, err := regexp.Compile(coreef.trimSingleQuote (condition.GetFixedArg().String()))
 	return err
