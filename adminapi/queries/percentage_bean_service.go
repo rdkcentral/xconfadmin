@@ -341,8 +341,9 @@ func validatePercentageBeanReferences(bean *coreef.PercentageBean) error {
 		return fmt.Errorf("Model does not exist: %s", normalizedModel)
 	}
 
-	if !xutil.IsBlank(bean.Whitelist) && GetNamespacedListByIdAndType(bean.Whitelist, shared.IP_LIST) == nil {
-		return fmt.Errorf("IP address list does not exist: %s", bean.Whitelist)
+	normalizedWhitelist := strings.TrimSpace(bean.Whitelist)
+	if normalizedWhitelist != "" && GetNamespacedListByIdAndType(normalizedWhitelist, shared.IP_LIST) == nil {
+		return fmt.Errorf("IP address list does not exist: %s", normalizedWhitelist)
 	}
 
 	if bean.OptionalConditions != nil && len(re.ToConditions(bean.OptionalConditions)) > 0 {
