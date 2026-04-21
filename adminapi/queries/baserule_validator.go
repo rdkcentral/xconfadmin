@@ -187,7 +187,7 @@ func checkFixedArgValue(condition re.Condition, fp func(string) bool) error {
 		if !condition.GetFixedArg().IsStringValue() {
 			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FixedArg for IN_LIST operation must be a string value")
 		}
-		fixedArgValue := condition.GetFixedArg().GetValue().(string)
+		fixedArgValue := strings.TrimSpace(condition.GetFixedArg().GetValue().(string))
 		freeArgName := condition.GetFreeArg().GetName()
 		if freeArgName == xwcommon.IP_ADDRESS || freeArgName == logupload.EstbIp {
 			if GetNamespacedListByIdAndType(fixedArgValue, shared.IP_LIST) == nil {
@@ -198,7 +198,7 @@ func checkFixedArgValue(condition re.Condition, fp func(string) bool) error {
 		if !condition.GetFixedArg().IsStringValue() {
 			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FixedArg for IS operation must be a string value")
 		}
-		fixedArgValue := condition.GetFixedArg().GetValue().(string)
+		fixedArgValue := strings.TrimSpace(condition.GetFixedArg().GetValue().(string))
 		//fixedArgValue := coreef.trimSingleQuote (condition.GetFixedArg().String())
 		if !fp(fixedArgValue) {
 			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, condition.FreeArg.GetName()+" is invalid: "+fixedArgValue)
