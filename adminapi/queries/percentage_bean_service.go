@@ -34,7 +34,6 @@ import (
 	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfadmin/util"
 
-	xcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
@@ -723,7 +722,7 @@ func PercentageBeanFilterByContext(searchContext map[string]string, applicationT
 			}
 		}
 
-		if model, ok := util.FindEntryInContext(searchContext, xcommon.MODEL, false); ok {
+		if model, ok := util.FindEntryInContext(searchContext, common.MODEL, false); ok {
 			if !strings.Contains(strings.ToLower(pbRule.Model), strings.ToLower(model)) {
 				continue
 			}
