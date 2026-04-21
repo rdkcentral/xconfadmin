@@ -17,7 +17,7 @@
 //
 module github.com/rdkcentral/xconfadmin
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/360EntSecGroup-Skylar/excelize v1.4.1
@@ -38,6 +38,7 @@ require (
 )
 
 require (
+	github.com/google/go-cmp v0.6.0
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.9.0
 	google.golang.org/protobuf v1.34.1
@@ -56,7 +57,6 @@ require (
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
