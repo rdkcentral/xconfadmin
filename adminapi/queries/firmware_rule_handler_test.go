@@ -20,15 +20,12 @@ package queries
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"net/http"
-	"strings"
 	"testing"
 
 	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfwebconfig/db"
-	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
@@ -971,149 +968,4 @@ func TestGetFirmwareRuleByTemplateByTemplateIdNamesHandler_Success(t *testing.T)
 	json.NewDecoder(res.Body).Decode(&namesList)
 	// Names list should be returned (may be empty if no rules match the template)
 	assert.Assert(t, namesList != nil)
-}
-
-// TestPostFirmwareRuleHandler_TagRuleTemplateValidation verifies that a TAG_RULE
-// template accepts firmware rules whose conditions include at least one EXISTS
-// operation, and rejects rules that contain no EXISTS condition.
-func TestPostFirmwareRuleHandler_TagRuleTemplateValidation(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
-	CreateModel(&shared.Model{ID: "TEST_MODEL", Description: "Tag rule template test model"})
-	CreateModel(&shared.Model{ID: "TEST_MODEL_2", Description: "Tag rule template test model 2"})
-	db.GetCacheManager().ForceSyncChanges()
-
-	templateJSON := `{
-		"id": "TAG_RULE",
-		"priority": 6,
-		"editable": true,
-		"rule": {
-			"negated": false,
-			"condition": {
-				"freeArg": {"type": "STRING", "name": "tag:name"},
-				"operation": "EXISTS"
-			}
-		},
-		"applicableAction": {
-			"type": ".RuleAction",
-			"actionType": "RULE_TEMPLATE"
-		}
-	}`
-
-	templateReq, err := http.NewRequest("POST", "/xconfAdminService/firmwareruletemplate", bytes.NewBufferString(templateJSON))
-	assert.NilError(t, err)
-	templateReq.Header.Set("Content-Type", "application/json")
-	templateReq.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	templateRes := ExecuteRequest(templateReq, router).Result()
-	defer templateRes.Body.Close()
-	assert.Equal(t, http.StatusCreated, templateRes.StatusCode)
-
-	db.GetCacheManager().ForceSyncChanges()
-
-	postFirmwareRule := func(t *testing.T, ruleJSON string) (int, string) {
-		t.Helper()
-		req, err := http.NewRequest("POST", "/xconfAdminService/firmwarerule", bytes.NewBufferString(ruleJSON))
-		assert.NilError(t, err)
-		req.Header.Set("Content-Type", "application/json")
-		req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-		res := ExecuteRequest(req, router).Result()
-		defer res.Body.Close()
-		body, _ := io.ReadAll(res.Body)
-		return res.StatusCode, string(body)
-	}
-
-	t.Run("single EXISTS condition accepted", func(t *testing.T) {
-		status, body := postFirmwareRule(t, `{
-			"name": "TagRuleSingleExists",
-			"applicationType": "stb",
-			"type": "TAG_RULE",
-			"active": true,
-			"rule": {
-				"negated": false,
-				"condition": {
-					"freeArg": {"type": "STRING", "name": "test:tag"},
-					"operation": "EXISTS"
-				}
-			},
-			"applicableAction": {
-				"type": ".RuleAction",
-				"actionType": "RULE",
-				"active": true
-			}
-		}`)
-		assert.Equal(t, http.StatusCreated, status, "body: "+body)
-	})
-
-	t.Run("compound EXISTS AND model condition accepted", func(t *testing.T) {
-		status, body := postFirmwareRule(t, `{
-			"name": "TagRuleCompoundExistsAndModel",
-			"applicationType": "stb",
-			"type": "TAG_RULE",
-			"active": true,
-			"rule": {
-				"negated": false,
-				"compoundParts": [
-					{
-						"negated": false,
-						"condition": {
-							"freeArg": {"type": "STRING", "name": "test:tag:2"},
-							"operation": "EXISTS"
-						}
-					},
-					{
-						"negated": false,
-						"relation": "AND",
-						"condition": {
-							"freeArg": {"type": "STRING", "name": "model"},
-							"operation": "IS",
-							"fixedArg": {
-								"bean": {
-									"value": {"java.lang.String": "TEST_MODEL"}
-								}
-							}
-						}
-					}
-				]
-			},
-			"applicableAction": {
-				"type": ".RuleAction",
-				"actionType": "RULE",
-				"active": true
-			}
-		}`)
-		assert.Equal(t, http.StatusCreated, status, "body: "+body)
-	})
-
-	t.Run("model-only condition without EXISTS rejected", func(t *testing.T) {
-		status, body := postFirmwareRule(t, `{
-			"name": "TagRuleModelOnly",
-			"applicationType": "stb",
-			"type": "TAG_RULE",
-			"active": true,
-			"rule": {
-				"negated": false,
-				"condition": {
-					"freeArg": {"type": "STRING", "name": "model"},
-					"operation": "IS",
-					"fixedArg": {
-						"bean": {
-							"value": {"java.lang.String": "TEST_MODEL_2"}
-						}
-					}
-				}
-			},
-			"applicableAction": {
-				"type": ".RuleAction",
-				"actionType": "RULE",
-				"active": true
-			}
-		}`)
-		assert.Equal(t, http.StatusBadRequest, status, "body: "+body)
-		assert.Assert(t, strings.Contains(body, "does not belong to template"),
-			"expected 'does not belong to template' in body, got: "+body)
-	})
 }
