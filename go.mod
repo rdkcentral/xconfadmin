@@ -40,7 +40,7 @@ require (
 require (
 	github.com/google/go-cmp v0.6.0
 	github.com/rs/cors v1.11.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.11.1
 	google.golang.org/protobuf v1.34.1
 )
 
