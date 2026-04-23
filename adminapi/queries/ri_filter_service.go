@@ -34,7 +34,7 @@ import (
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
-func UpdateRebootImmediatelyFilter(applicationType string, rebootFilter *coreef.RebootImmediatelyFilter) *xwhttp.ResponseEntity {
+func UpdateRebootImmediatelyFilter(tenantId string, applicationType string, rebootFilter *coreef.RebootImmediatelyFilter) *xwhttp.ResponseEntity {
 	if util.IsBlank(rebootFilter.Name) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("Rule name is empty"), nil)
 	}
@@ -43,7 +43,7 @@ func UpdateRebootImmediatelyFilter(applicationType string, rebootFilter *coreef.
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	if err := firmware.ValidateRuleName(rebootFilter.Id, rebootFilter.Name, applicationType); err != nil {
+	if err := firmware.ValidateRuleName(tenantId, rebootFilter.Id, rebootFilter.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
@@ -55,7 +55,7 @@ func UpdateRebootImmediatelyFilter(applicationType string, rebootFilter *coreef.
 	modelIds := util.Set{}
 	for _, model := range rebootFilter.Models {
 		id := strings.ToUpper(model)
-		if !IsExistModel(id) {
+		if !IsExistModel(tenantId, id) {
 			return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("Model %s is not exist", id), nil)
 		}
 		modelIds.Add(id)
@@ -65,7 +65,7 @@ func UpdateRebootImmediatelyFilter(applicationType string, rebootFilter *coreef.
 	envIds := util.Set{}
 	for _, env := range rebootFilter.Environments {
 		id := strings.ToUpper(env)
-		if !IsExistEnvironment(id) {
+		if !IsExistEnvironment(tenantId, id) {
 			return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("Environment %s is not exist", id), nil)
 		}
 		envIds.Add(id)
@@ -74,7 +74,7 @@ func UpdateRebootImmediatelyFilter(applicationType string, rebootFilter *coreef.
 
 	if rebootFilter.IpAddressGroup != nil {
 		for _, ipAddressGroup := range rebootFilter.IpAddressGroup {
-			if ipAddressGroup != nil && IsChangedIpAddressGroup(ipAddressGroup) {
+			if ipAddressGroup != nil && IsChangedIpAddressGroup(tenantId, ipAddressGroup) {
 				return xwhttp.NewResponseEntity(http.StatusBadRequest,
 					fmt.Errorf("IP address group denoted by '%s' does not match any existing ipAddressGroup", ipAddressGroup.Name), nil)
 			}
@@ -85,7 +85,7 @@ func UpdateRebootImmediatelyFilter(applicationType string, rebootFilter *coreef.
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	filterToUpdate, err := xcoreef.RebootImmediatelyFiltersByName(applicationType, rebootFilter.Name)
+	filterToUpdate, err := xcoreef.RebootImmediatelyFiltersByName(tenantId, applicationType, rebootFilter.Name)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
@@ -96,7 +96,7 @@ func UpdateRebootImmediatelyFilter(applicationType string, rebootFilter *coreef.
 		status = http.StatusOK
 	}
 
-	firmwareRule, err := SaveRebootImmediatelyFilter(rebootFilter, applicationType)
+	firmwareRule, err := SaveRebootImmediatelyFilter(tenantId, rebootFilter, applicationType)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -108,18 +108,18 @@ func UpdateRebootImmediatelyFilter(applicationType string, rebootFilter *coreef.
 	return xwhttp.NewResponseEntity(status, nil, rebootFilter)
 }
 
-func DeleteRebootImmediatelyFilter(name string, applicationType string) *xwhttp.ResponseEntity {
+func DeleteRebootImmediatelyFilter(tenantId string, name string, applicationType string) *xwhttp.ResponseEntity {
 	if err := xshared.ValidateApplicationType(applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	rebootFilter, err := xcoreef.RebootImmediatelyFiltersByName(applicationType, name)
+	rebootFilter, err := xcoreef.RebootImmediatelyFiltersByName(tenantId, applicationType, name)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
 	if rebootFilter != nil {
-		err = corefw.DeleteOneFirmwareRule(rebootFilter.Id)
+		err = corefw.DeleteOneFirmwareRule(tenantId, rebootFilter.Id)
 		if err != nil {
 			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 		}
@@ -128,7 +128,7 @@ func DeleteRebootImmediatelyFilter(name string, applicationType string) *xwhttp.
 	return xwhttp.NewResponseEntity(http.StatusNoContent, nil, nil)
 }
 
-func SaveRebootImmediatelyFilter(filter *coreef.RebootImmediatelyFilter, applicationType string) (*corefw.FirmwareRule, error) {
+func SaveRebootImmediatelyFilter(tenantId string, filter *coreef.RebootImmediatelyFilter, applicationType string) (*corefw.FirmwareRule, error) {
 	firmwareRule, err := xcoreef.ConvertRebootFilterToFirmwareRule(filter)
 	if err != nil {
 		return nil, err
@@ -138,7 +138,7 @@ func SaveRebootImmediatelyFilter(filter *coreef.RebootImmediatelyFilter, applica
 		firmwareRule.ApplicationType = applicationType
 	}
 
-	err = corefw.CreateFirmwareRuleOneDB(firmwareRule)
+	err = corefw.CreateFirmwareRuleOneDB(tenantId, firmwareRule)
 	if err != nil {
 		return nil, err
 	}

@@ -41,14 +41,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func UpdatePercentFilterGlobal(applicationType string, globalPercentage *coreef.GlobalPercentage) *xwhttp.ResponseEntity {
+func UpdatePercentFilterGlobal(tenantId string, applicationType string, globalPercentage *coreef.GlobalPercentage) *xwhttp.ResponseEntity {
 	globalFwRule := xcoreef.ConvertGlobalPercentageIntoRule(globalPercentage, applicationType)
 	globalFwRule.ID = GetGlobalPercentageIdByApplication(applicationType)
-	ruleDb, err := firmware.GetFirmwareRuleOneDB(globalFwRule.ID)
+	ruleDb, err := firmware.GetFirmwareRuleOneDB(tenantId, globalFwRule.ID)
 	if err == nil || ruleDb != nil {
-		err = updateFirmwareRule(*globalFwRule, applicationType, false)
+		err = updateFirmwareRule(tenantId, *globalFwRule, applicationType, false)
 	} else {
-		err = createFirmwareRule(*globalFwRule, applicationType, false)
+		err = createFirmwareRule(tenantId, *globalFwRule, applicationType, false)
 	}
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
@@ -110,7 +110,8 @@ func UpdatePercentFilterGlobalHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respEntity := UpdatePercentFilterGlobal(applicationType, globalPercentage)
+	tenantId := xwhttp.GetTenantId(r, "")
+	respEntity := UpdatePercentFilterGlobal(tenantId, applicationType, globalPercentage)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -124,9 +125,9 @@ func UpdatePercentFilterGlobalHandler(w http.ResponseWriter, r *http.Request) {
 	xwhttp.WriteResponseBytes(w, res, respEntity.Status, xhttp.ContextTypeHeader(r))
 }
 
-func GetPercentFilterGlobal(applicationType string) (*coreef.GlobalPercentage, error) {
+func GetPercentFilterGlobal(tenantId string, applicationType string) (*coreef.GlobalPercentage, error) {
 	globalPercentageId := GetGlobalPercentageIdByApplication(applicationType)
-	globalPercentageRule, err := firmware.GetFirmwareRuleOneDB(globalPercentageId)
+	globalPercentageRule, err := firmware.GetFirmwareRuleOneDB(tenantId, globalPercentageId)
 	if err != nil {
 		log.Warn(fmt.Sprintf("GetPercentFilter %v", err))
 	}
@@ -147,7 +148,8 @@ func GetPercentFilterGlobalHandler(w http.ResponseWriter, r *http.Request) {
 	contextMap := make(map[string]string)
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 
-	globalpercent, err := GetPercentFilterGlobal(applicationType)
+	tenantId := xwhttp.GetTenantId(r, "")
+	globalpercent, err := GetPercentFilterGlobal(tenantId, applicationType)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("unable to get globalpercent reponse. error: %v", err))
 		return
@@ -161,7 +163,7 @@ func GetPercentFilterGlobalHandler(w http.ResponseWriter, r *http.Request) {
 	_, ok := contextMap[common.EXPORT]
 	if ok {
 		//TODO: rework with struct avoiding map type below
-		percentageBeans, err := GetAllPercentageBeansFromDB(applicationType, true, false)
+		percentageBeans, err := GetAllPercentageBeansFromDB(tenantId, applicationType, true, false)
 		if err != nil {
 			xhttp.AdminError(w, err)
 			return
@@ -181,9 +183,9 @@ func GetPercentFilterGlobalHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetGlobalPercentFilter(applicationType string) (*coreef.PercentFilterVo, error) {
+func GetGlobalPercentFilter(tenantId string, applicationType string) (*coreef.PercentFilterVo, error) {
 	globalPercentageId := GetGlobalPercentageIdByApplication(applicationType)
-	globalPercentageRule, err := firmware.GetFirmwareRuleOneDB(globalPercentageId)
+	globalPercentageRule, err := firmware.GetFirmwareRuleOneDB(tenantId, globalPercentageId)
 	if err != nil {
 		log.Warn(fmt.Sprintf("GetPercentFilter %v", err))
 	}
@@ -207,7 +209,8 @@ func GetGlobalPercentFilterHandler(w http.ResponseWriter, r *http.Request) {
 	contextMap := make(map[string]string)
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 
-	globalpercent, err := GetGlobalPercentFilter(applicationType)
+	tenantId := xwhttp.GetTenantId(r, "")
+	globalpercent, err := GetGlobalPercentFilter(tenantId, applicationType)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("unable to get globalpercent reponse. error: %v", err))
 		return
@@ -272,9 +275,9 @@ func GetCalculatedHashAndPercent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonResponse)
 }
-func GetGlobalPercentFilterAsRule(applicationType string) (*corefw.FirmwareRule, error) {
+func GetGlobalPercentFilterAsRule(tenantId string, applicationType string) (*corefw.FirmwareRule, error) {
 	globalPercentageId := GetGlobalPercentageIdByApplication(applicationType)
-	globalPercentageRule, err := firmware.GetFirmwareRuleOneDB(globalPercentageId)
+	globalPercentageRule, err := firmware.GetFirmwareRuleOneDB(tenantId, globalPercentageId)
 	if err != nil {
 		log.Warn(fmt.Sprintf("GetPercentFilter %v", err))
 		return nil, err
@@ -292,7 +295,8 @@ func GetGlobalPercentFilterAsRuleHandler(w http.ResponseWriter, r *http.Request)
 	contextMap := make(map[string]string)
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 
-	globalpercentasrule, err := GetGlobalPercentFilterAsRule(applicationType)
+	tenantId := xwhttp.GetTenantId(r, "")
+	globalpercentasrule, err := GetGlobalPercentFilterAsRule(tenantId, applicationType)
 	if err != nil {
 		globalPercentage := coreef.NewGlobalPercentage()
 		globalpercentasrule = xcoreef.ConvertGlobalPercentageIntoRule(globalPercentage, applicationType)

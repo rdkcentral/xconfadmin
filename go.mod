@@ -37,6 +37,8 @@ require (
 	gotest.tools v2.2.0+incompatible
 )
 
+replace github.com/rdkcentral/xconfwebconfig => /Users/kloder201@cable.comcast.com/Projects/xconfwebconfig
+
 require (
 	github.com/google/go-cmp v0.7.0
 	github.com/rs/cors v1.11.1
@@ -66,6 +68,7 @@ require (
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.45.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
+	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/zenazn/pkcs7pad v0.0.0-20170308005700-253a5b1f0e03 // indirect

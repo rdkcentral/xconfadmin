@@ -23,7 +23,7 @@ import (
 
 	"gotest.tools/assert"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
@@ -40,7 +40,7 @@ func createTestFirmwareConfigForService(id string, version string, modelIds []st
 		FirmwareFilename:         "test.bin",
 		FirmwareLocation:         "http://test.com/test.bin",
 	}
-	SetOneInDao(ds.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 	return fc
 }
 
@@ -80,12 +80,12 @@ func createEnvModelFirmwareRule(id string, name string, model string, configId s
 
 	var rule corefw.FirmwareRule
 	json.Unmarshal([]byte(ruleJSON), &rule)
-	SetOneInDao(ds.TABLE_FIRMWARE_RULE, rule.ID, &rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, &rule)
 	return &rule
 }
 
 func TestIsValidFirmwareConfigByModelIdList(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -98,32 +98,32 @@ func TestIsValidFirmwareConfigByModelIdList(t *testing.T) {
 
 	// Test 1: Valid config with matching model IDs
 	testModelIds := []string{"MODEL1"}
-	result := IsValidFirmwareConfigByModelIdList(&testModelIds, "stb", fc1)
+	result := IsValidFirmwareConfigByModelIdList(db.GetDefaultTenantId(), &testModelIds, "stb", fc1)
 	assert.Assert(t, result, "Should return true for valid config with matching model")
 
 	// Test 2: Valid config with multiple model IDs
 	testModelIds2 := []string{"MODEL2", "MODEL3"}
-	result2 := IsValidFirmwareConfigByModelIdList(&testModelIds2, "stb", fc1)
+	result2 := IsValidFirmwareConfigByModelIdList(db.GetDefaultTenantId(), &testModelIds2, "stb", fc1)
 	assert.Assert(t, result2, "Should return true for valid config with matching model from list")
 
 	// Test 3: Config exists but different application type
 	testModelIds3 := []string{"MODEL5"}
-	result3 := IsValidFirmwareConfigByModelIdList(&testModelIds3, "stb", fc2)
+	result3 := IsValidFirmwareConfigByModelIdList(db.GetDefaultTenantId(), &testModelIds3, "stb", fc2)
 	assert.Assert(t, !result3, "Should return false for config with non-matching model")
 
 	// Test 4: Empty model ID list
 	emptyModelIds := []string{}
-	result4 := IsValidFirmwareConfigByModelIdList(&emptyModelIds, "stb", fc1)
+	result4 := IsValidFirmwareConfigByModelIdList(db.GetDefaultTenantId(), &emptyModelIds, "stb", fc1)
 	assert.Assert(t, !result4, "Should return false for empty model ID list")
 
 	// Test 5: Non-matching model IDs
 	testModelIds5 := []string{"NONEXISTENT"}
-	result5 := IsValidFirmwareConfigByModelIdList(&testModelIds5, "stb", fc1)
+	result5 := IsValidFirmwareConfigByModelIdList(db.GetDefaultTenantId(), &testModelIds5, "stb", fc1)
 	assert.Assert(t, !result5, "Should return false for non-matching model IDs")
 }
 
 func TestIsValidFirmwareConfigByModelIds(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
@@ -133,23 +133,23 @@ func TestIsValidFirmwareConfigByModelIds(t *testing.T) {
 	fc2 := createTestFirmwareConfigForService("test-fc-2", "2.0.0", []string{"OTHERMODEL"}, "stb")
 
 	// Test 1: Config ID matches - should return true (function returns true if config ID exists)
-	result1 := IsValidFirmwareConfigByModelIds("TESTMODEL1", "stb", fc1)
+	result1 := IsValidFirmwareConfigByModelIds(db.GetDefaultTenantId(), "TESTMODEL1", "stb", fc1)
 	assert.Assert(t, result1, "Should return true when config ID exists")
 
 	// Test 2: Different config - even if model doesn't match other configs, if THIS config ID is in DB, returns true
-	result2 := IsValidFirmwareConfigByModelIds("TESTMODEL1", "stb", fc2)
+	result2 := IsValidFirmwareConfigByModelIds(db.GetDefaultTenantId(), "TESTMODEL1", "stb", fc2)
 	assert.Assert(t, result2, "Should return true because fc2 config ID exists in DB")
 
 	// Test 3: Wrong application type - but config ID still exists
-	result3 := IsValidFirmwareConfigByModelIds("TESTMODEL1", "xhome", fc1)
+	result3 := IsValidFirmwareConfigByModelIds(db.GetDefaultTenantId(), "TESTMODEL1", "xhome", fc1)
 	assert.Assert(t, result3, "Should return true when config ID exists even with wrong app type")
 
 	// Test 4: Config that exists
-	result4 := IsValidFirmwareConfigByModelIds("NONEXISTENT", "stb", fc1)
+	result4 := IsValidFirmwareConfigByModelIds(db.GetDefaultTenantId(), "NONEXISTENT", "stb", fc1)
 	assert.Assert(t, result4, "Should return true when config ID exists regardless of model match")
 
 	// Test 5: Empty application type (should not filter by app type)
-	result5 := IsValidFirmwareConfigByModelIds("TESTMODEL1", "", fc1)
+	result5 := IsValidFirmwareConfigByModelIds(db.GetDefaultTenantId(), "TESTMODEL1", "", fc1)
 	assert.Assert(t, result5, "Should return true when application type is empty")
 
 	// Test 6: Create a config that doesn't exist in DB yet
@@ -164,7 +164,7 @@ func TestIsValidFirmwareConfigByModelIds(t *testing.T) {
 		FirmwareLocation:         "http://test.com/new.bin",
 	}
 	// Don't save it to DB - just test with it
-	result6 := IsValidFirmwareConfigByModelIds("NEWMODEL", "stb", fcNew)
+	result6 := IsValidFirmwareConfigByModelIds(db.GetDefaultTenantId(), "NEWMODEL", "stb", fcNew)
 	assert.Assert(t, !result6, "Should return false when config doesn't exist in DB")
 }
 
@@ -178,14 +178,14 @@ func TestIsValidFirmwareConfigByModelIdList_EdgeCases(t *testing.T) {
 
 	// Test with empty (not nil) model IDs
 	emptyModelIds := []string{}
-	result1 := IsValidFirmwareConfigByModelIdList(&emptyModelIds, "stb", fc)
+	result1 := IsValidFirmwareConfigByModelIdList(db.GetDefaultTenantId(), &emptyModelIds, "stb", fc)
 	assert.Assert(t, !result1, "Should return false for empty model IDs")
 
 	// Test with nil firmware config would cause panic, so we skip it
 	// The function should ideally handle this gracefully but currently doesn't
 
 	// Cleanup
-	coreef.DeleteOneFirmwareConfig(fc.ID)
+	coreef.DeleteOneFirmwareConfig(db.GetDefaultTenantId(), fc.ID)
 }
 
 func TestGetFirmwareConfigsByModelIdAndApplicationType_EmptyDatabase(t *testing.T) {
@@ -193,7 +193,7 @@ func TestGetFirmwareConfigsByModelIdAndApplicationType_EmptyDatabase(t *testing.
 	defer DeleteAllEntities()
 
 	// Test with empty database
-	result := GetFirmwareConfigsByModelIdAndApplicationType("ANYMODEL", "stb")
+	result := GetFirmwareConfigsByModelIdAndApplicationType(db.GetDefaultTenantId(), "ANYMODEL", "stb")
 	assert.Equal(t, 0, len(result), "Should return empty list when database is empty")
 }
 
@@ -237,13 +237,13 @@ func TestGetSupportedConfigsByEnvModelRuleName_NoMatchingModel(t *testing.T) {
 
 	var rule corefw.FirmwareRule
 	json.Unmarshal([]byte(ruleJSON), &rule)
-	SetOneInDao(ds.TABLE_FIRMWARE_RULE, rule.ID, &rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, &rule)
 
 	// Test - should not find config because model doesn't match
-	result := getSupportedConfigsByEnvModelRuleName("NoMatchRule", "stb")
+	result := getSupportedConfigsByEnvModelRuleName(db.GetDefaultTenantId(), "NoMatchRule", "stb")
 	assert.Equal(t, 0, len(result), "Should return empty when model doesn't match")
 
 	// Cleanup
-	coreef.DeleteOneFirmwareConfig(fc.ID)
-	corefw.DeleteOneFirmwareRule(rule.ID)
+	coreef.DeleteOneFirmwareConfig(db.GetDefaultTenantId(), fc.ID)
+	corefw.DeleteOneFirmwareRule(db.GetDefaultTenantId(), rule.ID)
 }

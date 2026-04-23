@@ -20,6 +20,8 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
+
+	"github.com/rdkcentral/xconfwebconfig/db"
 )
 
 func TestValidateName(t *testing.T) {
@@ -35,7 +37,7 @@ func TestValidateName(t *testing.T) {
 		Description:     "Test Config",
 		ApplicationType: "stb",
 	}
-	err := fc.ValidateName()
+	err := fc.ValidateName(db.GetDefaultTenantId())
 	if err != nil {
 		t.Logf("DB error expected in test environment: %v", err)
 	}
@@ -49,7 +51,7 @@ func TestGetFirmwareVersion(t *testing.T) {
 		}
 	}()
 
-	version := GetFirmwareVersion("test-id")
+	version := GetFirmwareVersion(db.GetDefaultTenantId(), "test-id")
 	// Expect empty string when DB not available
 	if version != "" {
 		t.Logf("Got version: %s", version)
@@ -64,7 +66,7 @@ func TestGetFirmwareConfigAsMapDB(t *testing.T) {
 		}
 	}()
 
-	configMap, err := GetFirmwareConfigAsMapDB("stb")
+	configMap, err := GetFirmwareConfigAsMapDB(db.GetDefaultTenantId(), "stb")
 	if err != nil {
 		t.Logf("DB error expected in test environment: %v", err)
 		return
@@ -81,7 +83,7 @@ func TestGetFirmwareConfigAsListDB(t *testing.T) {
 		}
 	}()
 
-	list, err := GetFirmwareConfigAsListDB()
+	list, err := GetFirmwareConfigAsListDB(db.GetDefaultTenantId())
 	if err != nil {
 		t.Logf("DB error expected in test environment: %v", err)
 		return
@@ -99,7 +101,7 @@ func TestDeleteOneFirmwareConfig(t *testing.T) {
 		}
 	}()
 
-	err := DeleteOneFirmwareConfig("test-id")
+	err := DeleteOneFirmwareConfig(db.GetDefaultTenantId(), "test-id")
 	if err != nil {
 		t.Logf("DB error expected in test environment: %v", err)
 	}
@@ -118,7 +120,7 @@ func TestCreateFirmwareConfigOneDB(t *testing.T) {
 		FirmwareVersion: "1.0.0",
 		ApplicationType: "stb",
 	}
-	err := CreateFirmwareConfigOneDB(fc)
+	err := CreateFirmwareConfigOneDB(db.GetDefaultTenantId(), fc)
 	if err != nil {
 		t.Logf("DB error expected in test environment: %v", err)
 		return
@@ -131,7 +133,7 @@ func TestCreateFirmwareConfigOneDB(t *testing.T) {
 
 func TestGetFirmwareConfigOneDB(t *testing.T) {
 	// Test empty ID error
-	_, err := GetFirmwareConfigOneDB("")
+	_, err := GetFirmwareConfigOneDB(db.GetDefaultTenantId(), "")
 	if err == nil || err.Error() != "id is empty" {
 		t.Fatalf("expected 'id is empty' error, got: %v", err)
 	}
@@ -143,7 +145,7 @@ func TestGetFirmwareConfigOneDB(t *testing.T) {
 		}
 	}()
 
-	_, err = GetFirmwareConfigOneDB("test-id")
+	_, err = GetFirmwareConfigOneDB(db.GetDefaultTenantId(), "test-id")
 	if err != nil {
 		t.Logf("DB error expected in test environment: %v", err)
 	}

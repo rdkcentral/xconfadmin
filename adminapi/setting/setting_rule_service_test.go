@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/stretchr/testify/assert"
@@ -25,28 +26,28 @@ func getTestRequest() *http.Request {
 }
 func TestGetOneSettingRule(t *testing.T) {
 
-	settingRule, err := GetOneSettingRule("non-existent-id")
+	settingRule, err := GetOneSettingRule(db.GetDefaultTenantId(), "non-existent-id")
 	assert.Nil(t, settingRule)
 	assert.NotNil(t, err)
 }
 
 func TestDeleteSettingRuleOne(t *testing.T) {
-	DeleteSettingRuleOne("non-existent-id")
+	DeleteSettingRuleOne(db.GetDefaultTenantId(), "non-existent-id")
 	assert.True(t, true)
 }
 
 func TestSetSettingRule(t *testing.T) {
-	err := SetSettingRule("id", &logupload.SettingRule{})
+	err := SetSettingRule(db.GetDefaultTenantId(), "id", &logupload.SettingRule{})
 	assert.NotNil(t, err)
 }
 
 func TestValidateUsageSettingRule(t *testing.T) {
-	err := validateUsageSettingRule("id")
+	err := validateUsageSettingRule(db.GetDefaultTenantId(), "id")
 	assert.Nil(t, err)
 }
 
 func TestValidateAllSettingRule(t *testing.T) {
-	err := validateAllSettingRule(&logupload.SettingRule{})
+	err := validateAllSettingRule(db.GetDefaultTenantId(), &logupload.SettingRule{})
 	assert.Nil(t, err)
 }
 
@@ -60,19 +61,19 @@ func TestDeleteSettingRule_ComprehensiveCoverage(t *testing.T) {
 	}()
 
 	// Test case 1: Non-existent ID - should trigger GetOneSettingRule error path
-	result, err := DeleteSettingRule("non-existent-id", "STB")
+	result, err := DeleteSettingRule(db.GetDefaultTenantId(), "non-existent-id", "STB")
 	assert.Nil(t, result)
 	assert.NotNil(t, err, "Should return error for non-existent ID")
 
 	// Test case 2: Application type mismatch - create a mock scenario
 	// In a real test environment with database, this would test the ApplicationType check
-	result, err = DeleteSettingRule("test-id-app-mismatch", "RDKV")
+	result, err = DeleteSettingRule(db.GetDefaultTenantId(), "test-id-app-mismatch", "RDKV")
 	assert.Nil(t, result)
 	assert.NotNil(t, err, "Should return error for application type mismatch or non-existent entity")
 
 	// Test case 3: Usage validation error - test validateUsage failure
 	// This tests the err = validateUsage(id) error path
-	result, err = DeleteSettingRule("test-id-usage-error", "STB")
+	result, err = DeleteSettingRule(db.GetDefaultTenantId(), "test-id-usage-error", "STB")
 	assert.Nil(t, result)
 	assert.NotNil(t, err, "Should return error when validateUsage fails or entity doesn't exist")
 }
@@ -91,7 +92,7 @@ func TestDeleteSettingRule_SuccessPath(t *testing.T) {
 	// 4. DeleteSettingRuleOne is called
 	// Note: In test environment without proper database, this will likely fail at step 1
 
-	result, err := DeleteSettingRule("valid-id", "STB")
+	result, err := DeleteSettingRule(db.GetDefaultTenantId(), "valid-id", "STB")
 	// Should either succeed or fail with appropriate error
 	if err != nil {
 		assert.Nil(t, result, "Result should be nil when error occurs")
@@ -111,8 +112,8 @@ func TestGetSettingRulesList_ComprehensiveCoverage(t *testing.T) {
 	// This exercises the error handling path: if err == nil check
 
 	// Test case 2: Verify consistent behavior across multiple calls
-	rules1 := GetSettingRulesList()
-	rules2 := GetSettingRulesList()
+	rules1 := GetSettingRulesList(db.GetDefaultTenantId())
+	rules2 := GetSettingRulesList(db.GetDefaultTenantId())
 
 	// Both should have consistent behavior (either both nil or both non-nil)
 	if rules1 == nil {
@@ -138,7 +139,7 @@ func TestGetSettingRulesList_SuccessPath(t *testing.T) {
 	// 2. Rules are found and converted
 	// 3. settingRules slice is populated
 
-	rules := GetSettingRulesList()
+	rules := GetSettingRulesList(db.GetDefaultTenantId())
 
 	// In test environment, this will likely return nil due to no database
 	// but it exercises the code path
@@ -161,46 +162,44 @@ func TestFindByContextSettingRule_ComprehensiveCoverage(t *testing.T) {
 		}
 	}()
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
-
 	// Test case 1: Empty search context - should return all rules
 	emptyContext := map[string]string{}
-	result := FindByContextSettingRule(req, emptyContext)
+	result := FindByContextSettingRule(emptyContext)
 	assert.NotNil(t, result, "Should return non-nil slice for empty context")
 
 	// Test case 2: Application type filter
 	contextWithAppType := map[string]string{
 		xwcommon.APPLICATION_TYPE: "STB",
 	}
-	result = FindByContextSettingRule(req, contextWithAppType)
+	result = FindByContextSettingRule(contextWithAppType)
 	assert.NotNil(t, result, "Should handle application type filtering")
 
 	// Test case 3: Name filter - case insensitive matching
 	contextWithName := map[string]string{
 		xwcommon.NAME: "TestRule",
 	}
-	result = FindByContextSettingRule(req, contextWithName)
+	result = FindByContextSettingRule(contextWithName)
 	assert.NotNil(t, result, "Should handle name filtering")
 
 	// Test case 4: Name filter with partial match
 	contextWithPartialName := map[string]string{
 		xwcommon.NAME: "Test",
 	}
-	result = FindByContextSettingRule(req, contextWithPartialName)
+	result = FindByContextSettingRule(contextWithPartialName)
 	assert.NotNil(t, result, "Should handle partial name matching")
 
 	// Test case 5: Key filter - tests re.IsExistConditionByFreeArgName
 	contextWithKey := map[string]string{
 		"key": "testKey",
 	}
-	result = FindByContextSettingRule(req, contextWithKey)
+	result = FindByContextSettingRule(contextWithKey)
 	assert.NotNil(t, result, "Should handle key filtering")
 
 	// Test case 6: Value filter - tests re.IsExistConditionByFixedArgValue
 	contextWithValue := map[string]string{
 		"value": "testValue",
 	}
-	result = FindByContextSettingRule(req, contextWithValue)
+	result = FindByContextSettingRule(contextWithValue)
 	assert.NotNil(t, result, "Should handle value filtering")
 
 	// Test case 7: Multiple filters combined
@@ -209,40 +208,40 @@ func TestFindByContextSettingRule_ComprehensiveCoverage(t *testing.T) {
 		xwcommon.NAME:             "Test",
 		"key":                     "testKey",
 	}
-	result = FindByContextSettingRule(req, combinedContext)
+	result = FindByContextSettingRule(combinedContext)
 	assert.NotNil(t, result, "Should handle multiple filters")
 
 	// Test case 8: Nil rules handling - tests the rule == nil check
 	// This is handled in the loop: if rule == nil { continue }
-	result = FindByContextSettingRule(req, emptyContext)
+	result = FindByContextSettingRule(emptyContext)
 	assert.NotNil(t, result, "Should handle nil rules in iteration")
 
 	// Test case 9: Context with APPLICATION_TYPE that doesn't match any rules
 	nonMatchingContext := map[string]string{
 		xwcommon.APPLICATION_TYPE: "NONEXISTENT_APP_TYPE",
 	}
-	result = FindByContextSettingRule(req, nonMatchingContext)
+	result = FindByContextSettingRule(nonMatchingContext)
 	assert.NotNil(t, result, "Should return empty slice for non-matching application type")
 
 	// Test case 10: Case insensitive name matching
 	caseInsensitiveContext := map[string]string{
 		xwcommon.NAME: "UPPERCASE_TEST",
 	}
-	result = FindByContextSettingRule(req, caseInsensitiveContext)
+	result = FindByContextSettingRule(caseInsensitiveContext)
 	assert.NotNil(t, result, "Should handle case insensitive name matching")
 
 	// Test case 11: Test key filtering with empty key
 	emptyKeyContext := map[string]string{
 		"key": "",
 	}
-	result = FindByContextSettingRule(req, emptyKeyContext)
+	result = FindByContextSettingRule(emptyKeyContext)
 	assert.NotNil(t, result, "Should handle empty key filtering")
 
 	// Test case 12: Test value filtering with empty value
 	emptyValueContext := map[string]string{
 		"value": "",
 	}
-	result = FindByContextSettingRule(req, emptyValueContext)
+	result = FindByContextSettingRule(emptyValueContext)
 	assert.NotNil(t, result, "Should handle empty value filtering")
 }
 
@@ -260,7 +259,7 @@ func TestValidateAllSettingRule_ComprehensiveCoverage(t *testing.T) {
 		ApplicationType: "STB",
 	}
 
-	err := validateAllSettingRule(rule1)
+	err := validateAllSettingRule(db.GetDefaultTenantId(), rule1)
 	// Should pass or fail depending on database state, but exercises the code path
 	assert.True(t, err == nil || err != nil, "Should handle duplicate name validation")
 
@@ -273,7 +272,7 @@ func TestValidateAllSettingRule_ComprehensiveCoverage(t *testing.T) {
 		Rule:            *emptyRule,
 	}
 
-	err = validateAllSettingRule(rule2)
+	err = validateAllSettingRule(db.GetDefaultTenantId(), rule2)
 	assert.True(t, err == nil || err != nil, "Should handle duplicate rule validation")
 
 	// Test case 3: Same ID should be skipped in validation
@@ -283,7 +282,7 @@ func TestValidateAllSettingRule_ComprehensiveCoverage(t *testing.T) {
 		ApplicationType: "STB",
 	}
 
-	err = validateAllSettingRule(rule3)
+	err = validateAllSettingRule(db.GetDefaultTenantId(), rule3)
 	assert.True(t, err == nil || err != nil, "Should skip same ID in validation")
 
 	// Test case 4: Different application type should be skipped
@@ -293,7 +292,7 @@ func TestValidateAllSettingRule_ComprehensiveCoverage(t *testing.T) {
 		ApplicationType: "RDKV", // Different from STB
 	}
 
-	err = validateAllSettingRule(rule4)
+	err = validateAllSettingRule(db.GetDefaultTenantId(), rule4)
 	assert.True(t, err == nil || err != nil, "Should skip different application types")
 
 	// Test case 5: Empty rules list scenario
@@ -303,7 +302,7 @@ func TestValidateAllSettingRule_ComprehensiveCoverage(t *testing.T) {
 		ApplicationType: "STB",
 	}
 
-	err = validateAllSettingRule(rule5)
+	err = validateAllSettingRule(db.GetDefaultTenantId(), rule5)
 	assert.True(t, err == nil || err != nil, "Should handle empty rules list")
 }
 
@@ -315,21 +314,21 @@ func TestValidateUsageSettingRule_ComprehensiveCoverage(t *testing.T) {
 	}()
 
 	// Test case 1: No usage conflict - ID not used as BoundSettingID
-	err := validateUsageSettingRule("unused-setting-id")
+	err := validateUsageSettingRule(db.GetDefaultTenantId(), "unused-setting-id")
 	assert.True(t, err == nil || err != nil, "Should handle unused setting ID")
 
 	// Test case 2: Usage conflict - ID used as BoundSettingID
 	// This tests the error path: return xwcommon.NewRemoteErrorAS(http.StatusConflict, ...)
-	err = validateUsageSettingRule("used-setting-id")
+	err = validateUsageSettingRule(db.GetDefaultTenantId(), "used-setting-id")
 	assert.True(t, err == nil || err != nil, "Should handle used setting ID")
 
 	// Test case 3: Empty ID
-	err = validateUsageSettingRule("")
+	err = validateUsageSettingRule(db.GetDefaultTenantId(), "")
 	assert.True(t, err == nil || err != nil, "Should handle empty ID")
 
 	// Test case 4: Database error handling - GetSettingRulesList fails
 	// This exercises the error handling in the GetSettingRulesList call
-	err = validateUsageSettingRule("test-id-db-error")
+	err = validateUsageSettingRule(db.GetDefaultTenantId(), "test-id-db-error")
 	assert.True(t, err == nil || err != nil, "Should handle database errors gracefully")
 }
 
@@ -351,7 +350,7 @@ func TestUpdateSettingRule_ComprehensiveCoverage(t *testing.T) {
 		ApplicationType: "STB",
 		BoundSettingID:  "setting-id",
 	}
-	err := UpdateSettingRule(req, emptyIdEntity)
+	err := UpdateSettingRule(db.GetDefaultTenantId(), "STB", emptyIdEntity)
 	assert.NotNil(t, err, "Should return error for empty ID")
 
 	// Test case 2: beforeUpdatingSettingRule error - non-existent entity
@@ -361,7 +360,7 @@ func TestUpdateSettingRule_ComprehensiveCoverage(t *testing.T) {
 		ApplicationType: "STB",
 		BoundSettingID:  "setting-id",
 	}
-	err = UpdateSettingRule(req, nonExistentEntity)
+	err = UpdateSettingRule(db.GetDefaultTenantId(), "STB", nonExistentEntity)
 	assert.NotNil(t, err, "Should return error for non-existent entity")
 
 	// Test case 3: beforeSavingSettingRule error - validation failures
@@ -371,7 +370,7 @@ func TestUpdateSettingRule_ComprehensiveCoverage(t *testing.T) {
 		ApplicationType: "STB",
 		BoundSettingID:  "",
 	}
-	err = UpdateSettingRule(req, invalidEntity)
+	err = UpdateSettingRule(db.GetDefaultTenantId(), "STB", invalidEntity)
 	assert.NotNil(t, err, "Should return error for validation failures")
 
 	// Test case 4: SetSettingRule error - database save failure
@@ -381,7 +380,7 @@ func TestUpdateSettingRule_ComprehensiveCoverage(t *testing.T) {
 		ApplicationType: "STB",
 		BoundSettingID:  "setting-id",
 	}
-	err = UpdateSettingRule(req, validEntity)
+	err = UpdateSettingRule(db.GetDefaultTenantId(), "STB", validEntity)
 	assert.NotNil(t, err, "Should return error when database save fails")
 
 	// Test case 5: Success path - all validations pass and save succeeds
@@ -391,7 +390,7 @@ func TestUpdateSettingRule_ComprehensiveCoverage(t *testing.T) {
 		ApplicationType: "STB",
 		BoundSettingID:  "setting-id",
 	}
-	err = UpdateSettingRule(req, successEntity)
+	err = UpdateSettingRule(db.GetDefaultTenantId(), "STB", successEntity)
 	// In test environment, this will likely fail due to database issues
 	// but it exercises the success code path
 	assert.True(t, err == nil || err != nil, "Should handle success case or return appropriate error")
@@ -408,6 +407,7 @@ func TestGetSettingRulesWithConfig_ComprehensiveCoverage(t *testing.T) {
 	emptyTypes := []string{}
 	context := map[string]string{
 		"estbMacAddress": "AA:BB:CC:DD:EE:FF",
+		"tenantId":       db.GetDefaultTenantId(),
 	}
 	result := GetSettingRulesWithConfig(emptyTypes, context)
 	assert.NotNil(t, result, "Should return non-nil map for empty types")
@@ -449,6 +449,7 @@ func TestGetSettingRulesWithConfig_ComprehensiveCoverage(t *testing.T) {
 		"env":             "TestEnv",
 		"applicationType": "STB",
 		"firmwareVersion": "1.0.0",
+		"tenantId":        db.GetDefaultTenantId(),
 	}
 	result = GetSettingRulesWithConfig(settingTypes, richContext)
 	assert.NotNil(t, result, "Should handle rich context")
@@ -479,7 +480,7 @@ func TestGetSettingRulesList_ErrorHandling(t *testing.T) {
 	}()
 
 	// Test database error handling path
-	rules := GetSettingRulesList()
+	rules := GetSettingRulesList(db.GetDefaultTenantId())
 	// Should return empty slice when database fails
 	assert.True(t, rules != nil || rules == nil, "Should handle database errors gracefully")
 }
@@ -491,39 +492,37 @@ func TestFindByContextSettingRule_ErrorCases(t *testing.T) {
 		}
 	}()
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
-
 	// Test case 1: Empty search context
 	emptyContext := map[string]string{}
-	result := FindByContextSettingRule(req, emptyContext)
+	result := FindByContextSettingRule(emptyContext)
 	assert.NotNil(t, result, "Should return non-nil slice")
 
 	// Test case 2: Search with application type filter
 	contextWithAppType := map[string]string{
 		xwcommon.APPLICATION_TYPE: "STB",
 	}
-	result = FindByContextSettingRule(req, contextWithAppType)
+	result = FindByContextSettingRule(contextWithAppType)
 	assert.NotNil(t, result, "Should handle application type filtering")
 
 	// Test case 3: Search with name filter
 	contextWithName := map[string]string{
 		xwcommon.NAME: "TestRule",
 	}
-	result = FindByContextSettingRule(req, contextWithName)
+	result = FindByContextSettingRule(contextWithName)
 	assert.NotNil(t, result, "Should handle name filtering")
 
 	// Test case 4: Search with key filter
 	contextWithKey := map[string]string{
 		"key": "testKey",
 	}
-	result = FindByContextSettingRule(req, contextWithKey)
+	result = FindByContextSettingRule(contextWithKey)
 	assert.NotNil(t, result, "Should handle key filtering")
 
 	// Test case 5: Search with value filter
 	contextWithValue := map[string]string{
 		"value": "testValue",
 	}
-	result = FindByContextSettingRule(req, contextWithValue)
+	result = FindByContextSettingRule(contextWithValue)
 	assert.NotNil(t, result, "Should handle value filtering")
 }
 
@@ -542,7 +541,7 @@ func TestValidateAllSettingRule_ErrorCases(t *testing.T) {
 	}
 
 	// This will test the duplicate name validation
-	err := validateAllSettingRule(rule1)
+	err := validateAllSettingRule(db.GetDefaultTenantId(), rule1)
 	// Note: Due to database not being configured, this may not trigger the exact validation
 	// but it exercises the code path
 	assert.True(t, err == nil || err != nil, "Should handle validation")
@@ -555,7 +554,7 @@ func TestValidateAllSettingRule_ErrorCases(t *testing.T) {
 		Rule:            *rulesengine.NewEmptyRule(), // Empty rule that could match another empty rule
 	}
 
-	err = validateAllSettingRule(rule2)
+	err = validateAllSettingRule(db.GetDefaultTenantId(), rule2)
 	assert.True(t, err == nil || err != nil, "Should handle rule duplication validation")
 }
 
@@ -571,7 +570,7 @@ func TestValidateSettingRule_ErrorCases(t *testing.T) {
 	req = req.WithContext(ctx)
 
 	// Test case 1: Nil entity - this will cause a panic but we expect it
-	err := validateSettingRule(req, nil)
+	err := validateSettingRule(db.GetDefaultTenantId(), nil)
 	assert.NotNil(t, err, "Should return error for nil entity")
 
 	// Test case 2: Empty rule
@@ -582,7 +581,7 @@ func TestValidateSettingRule_ErrorCases(t *testing.T) {
 		BoundSettingID:  "setting-id",
 		Rule:            *rulesengine.NewEmptyRule(),
 	}
-	err = validateSettingRule(req, emptyRuleEntity)
+	err = validateSettingRule(db.GetDefaultTenantId(), emptyRuleEntity)
 	assert.NotNil(t, err, "Should return error for empty rule")
 
 	// Test case 3: Missing name
@@ -592,7 +591,7 @@ func TestValidateSettingRule_ErrorCases(t *testing.T) {
 		ApplicationType: "STB",
 		BoundSettingID:  "setting-id",
 	}
-	err = validateSettingRule(req, missingNameEntity)
+	err = validateSettingRule(db.GetDefaultTenantId(), missingNameEntity)
 	assert.NotNil(t, err, "Should return error for missing name")
 
 	// Test case 4: Missing bound setting ID
@@ -602,7 +601,7 @@ func TestValidateSettingRule_ErrorCases(t *testing.T) {
 		ApplicationType: "STB",
 		BoundSettingID:  "", // Empty bound setting ID
 	}
-	err = validateSettingRule(req, missingSettingEntity)
+	err = validateSettingRule(db.GetDefaultTenantId(), missingSettingEntity)
 	assert.NotNil(t, err, "Should return error for missing bound setting ID")
 }
 
@@ -615,7 +614,7 @@ func TestValidateUsageSettingRule_ErrorCases(t *testing.T) {
 
 	// Test usage validation - this exercises the loop through all rules
 	// to check if the given ID is used as a BoundSettingID
-	err := validateUsageSettingRule("some-setting-id")
+	err := validateUsageSettingRule(db.GetDefaultTenantId(), "some-setting-id")
 	// Should return nil when no conflicts found (or handle database errors gracefully)
 	assert.True(t, err == nil || err != nil, "Should handle usage validation")
 }
@@ -631,6 +630,7 @@ func TestGetSettingRulesWithConfig_ErrorCases(t *testing.T) {
 	emptyTypes := []string{}
 	context := map[string]string{
 		"estbMacAddress": "AA:BB:CC:DD:EE:FF",
+		"tenantId":       db.GetDefaultTenantId(),
 	}
 	result := GetSettingRulesWithConfig(emptyTypes, context)
 	assert.NotNil(t, result, "Should return non-nil map for empty types")
@@ -664,7 +664,7 @@ func TestUpdateSettingRule_ErrorCases(t *testing.T) {
 		ApplicationType: "STB",
 		BoundSettingID:  "setting-id",
 	}
-	err := UpdateSettingRule(req, emptyIdEntity)
+	err := UpdateSettingRule(db.GetDefaultTenantId(), "STB", emptyIdEntity)
 	assert.NotNil(t, err, "Should return error for empty ID")
 
 	// Test case 2: Valid entity but non-existent in database
@@ -674,7 +674,7 @@ func TestUpdateSettingRule_ErrorCases(t *testing.T) {
 		ApplicationType: "STB",
 		BoundSettingID:  "setting-id",
 	}
-	err = UpdateSettingRule(req, validEntity)
+	err = UpdateSettingRule(db.GetDefaultTenantId(), "STB", validEntity)
 	assert.NotNil(t, err, "Should return error for non-existent entity")
 }
 
@@ -723,7 +723,7 @@ func TestBeforeCreatingSettingRule_ErrorCases(t *testing.T) {
 		Name:            "Test Rule",
 		ApplicationType: "STB",
 	}
-	err := beforeCreatingSettingRule(req, entityWithEmptyID)
+	err := beforeCreatingSettingRule(db.GetDefaultTenantId(), "STB", entityWithEmptyID)
 	// Should succeed and generate an ID
 	assert.True(t, err == nil || err != nil, "Should handle empty ID case")
 	assert.NotEqual(t, "", entityWithEmptyID.ID, "Should generate ID when empty")
@@ -734,7 +734,7 @@ func TestBeforeCreatingSettingRule_ErrorCases(t *testing.T) {
 		Name:            "Test Rule",
 		ApplicationType: "STB",
 	}
-	err = beforeCreatingSettingRule(req, entityWithID)
+	err = beforeCreatingSettingRule(db.GetDefaultTenantId(), "STB", entityWithID)
 	// May pass or fail depending on database state
 	assert.True(t, err == nil || err != nil, "Should handle existing ID case")
 }
@@ -756,7 +756,7 @@ func TestBeforeUpdatingSettingRule_ErrorCases(t *testing.T) {
 		Name:            "Test Rule",
 		ApplicationType: "STB",
 	}
-	err := beforeUpdatingSettingRule(req, entityWithEmptyID)
+	err := beforeUpdatingSettingRule(db.GetDefaultTenantId(), "STB", entityWithEmptyID)
 	assert.NotNil(t, err, "Should return error for empty ID")
 
 	// Test case 2: Non-existent entity
@@ -765,7 +765,7 @@ func TestBeforeUpdatingSettingRule_ErrorCases(t *testing.T) {
 		Name:            "Test Rule",
 		ApplicationType: "STB",
 	}
-	err = beforeUpdatingSettingRule(req, nonExistentEntity)
+	err = beforeUpdatingSettingRule(db.GetDefaultTenantId(), "STB", nonExistentEntity)
 	assert.NotNil(t, err, "Should return error for non-existent entity")
 }
 
@@ -788,7 +788,7 @@ func TestBeforeSavingSettingRule_ErrorCases(t *testing.T) {
 		BoundSettingID:  "setting-id",
 		Rule:            *rulesengine.NewEmptyRule(),
 	}
-	err := beforeSavingSettingRule(req, entityWithEmptyAppType)
+	err := beforeSavingSettingRule(db.GetDefaultTenantId(), "STB", entityWithEmptyAppType)
 	// May succeed or fail based on auth/validation
 	assert.True(t, err == nil || err != nil, "Should handle empty application type")
 
@@ -800,7 +800,7 @@ func TestBeforeSavingSettingRule_ErrorCases(t *testing.T) {
 		BoundSettingID:  "setting-id",
 		Rule:            *rulesengine.NewEmptyRule(),
 	}
-	err = beforeSavingSettingRule(req, entityWithEmptyRule)
+	err = beforeSavingSettingRule(db.GetDefaultTenantId(), "STB", entityWithEmptyRule)
 	assert.NotNil(t, err, "Should return error for empty rule")
 }
 
@@ -822,59 +822,59 @@ func TestCreateSettingRule_ErrorCases(t *testing.T) {
 		ApplicationType: "STB",
 		BoundSettingID:  "",
 	}
-	err := CreateSettingRule(req, invalidEntity)
+	err := CreateSettingRule(db.GetDefaultTenantId(), "STB", invalidEntity)
 	assert.NotNil(t, err, "Should return error for invalid entity")
 }
 
 // TestFindByContextSettingRule_WithApplicationType tests searching with application type
 func TestFindByContextSettingRule_WithApplicationType(t *testing.T) {
-	req := getTestRequest()
 	searchContext := map[string]string{
 		"applicationType": "STB",
+		"tenantId":        db.GetDefaultTenantId(),
 	}
-	results := FindByContextSettingRule(req, searchContext)
+	results := FindByContextSettingRule(searchContext)
 	assert.NotNil(t, results)
 }
 
 // TestFindByContextSettingRule_WithName tests searching with name
 func TestFindByContextSettingRule_WithName(t *testing.T) {
-	req := getTestRequest()
 	searchContext := map[string]string{
-		"name": "test",
+		"name":     "test",
+		"tenantId": db.GetDefaultTenantId(),
 	}
-	results := FindByContextSettingRule(req, searchContext)
+	results := FindByContextSettingRule(searchContext)
 	assert.NotNil(t, results)
 }
 
 // TestFindByContextSettingRule_WithKey tests searching with key
 func TestFindByContextSettingRule_WithKey(t *testing.T) {
-	req := getTestRequest()
 	searchContext := map[string]string{
-		"key": "estbMacAddress",
+		"key":      "estbMacAddress",
+		"tenantId": db.GetDefaultTenantId(),
 	}
-	results := FindByContextSettingRule(req, searchContext)
+	results := FindByContextSettingRule(searchContext)
 	assert.NotNil(t, results)
 }
 
 // TestFindByContextSettingRule_WithValue tests searching with value
 func TestFindByContextSettingRule_WithValue(t *testing.T) {
-	req := getTestRequest()
 	searchContext := map[string]string{
-		"value": "AA:BB:CC:DD:EE:FF",
+		"value":    "AA:BB:CC:DD:EE:FF",
+		"tenantId": db.GetDefaultTenantId(),
 	}
-	results := FindByContextSettingRule(req, searchContext)
+	results := FindByContextSettingRule(searchContext)
 	assert.NotNil(t, results)
 }
 
 // TestFindByContextSettingRule_MultipleFilters tests with multiple criteria
 func TestFindByContextSettingRule_MultipleFilters(t *testing.T) {
-	req := getTestRequest()
 	searchContext := map[string]string{
 		"applicationType": "STB",
 		"name":            "rule",
 		"key":             "model",
+		"tenantId":        db.GetDefaultTenantId(),
 	}
-	results := FindByContextSettingRule(req, searchContext)
+	results := FindByContextSettingRule(searchContext)
 	assert.NotNil(t, results)
 }
 
@@ -885,7 +885,7 @@ func TestDeleteSettingRule_Success(t *testing.T) {
 
 // TestDeleteSettingRule_NonExistentID tests delete with non-existent ID
 func TestDeleteSettingRule_NonExistentID(t *testing.T) {
-	result, err := DeleteSettingRule("non-existent-rule-delete-id", "STB")
+	result, err := DeleteSettingRule(db.GetDefaultTenantId(), "non-existent-rule-delete-id", "STB")
 	assert.NotNil(t, err)
 	assert.Nil(t, result)
 }
@@ -912,7 +912,6 @@ func TestCreateSettingRule_ValidRule(t *testing.T) {
 
 // TestCreateSettingRule_EmptyBoundSettingID tests with empty BoundSettingID
 func TestCreateSettingRule_EmptyBoundSettingID(t *testing.T) {
-	req := getTestRequest()
 	rule := &logupload.SettingRule{
 		ID:              "create-rule-test-2",
 		Name:            "Create Rule Test 2",
@@ -920,7 +919,7 @@ func TestCreateSettingRule_EmptyBoundSettingID(t *testing.T) {
 		BoundSettingID:  "",
 	}
 
-	err := CreateSettingRule(req, rule)
+	err := CreateSettingRule(db.GetDefaultTenantId(), "STB", rule)
 	assert.NotNil(t, err)
 }
 
@@ -930,13 +929,13 @@ func TestValidateAllSettingRule_WithExistingRules(t *testing.T) {
 		ID:   "validate-test-1",
 		Name: "Validate Test Rule",
 	}
-	err := validateAllSettingRule(rule)
+	err := validateAllSettingRule(db.GetDefaultTenantId(), rule)
 	assert.Nil(t, err)
 }
 
 // TestValidateAllSettingRule_NilRule tests validation with nil rule
 func TestValidateAllSettingRule_NilRule(t *testing.T) {
-	err := validateAllSettingRule(nil)
+	err := validateAllSettingRule(db.GetDefaultTenantId(), nil)
 	// Should handle gracefully
 	if err != nil {
 		assert.NotNil(t, err)
@@ -945,13 +944,13 @@ func TestValidateAllSettingRule_NilRule(t *testing.T) {
 
 // TestValidateUsageSettingRule_NotUsed tests rule not in use
 func TestValidateUsageSettingRule_NotUsed(t *testing.T) {
-	err := validateUsageSettingRule("non-existent-setting-id")
+	err := validateUsageSettingRule(db.GetDefaultTenantId(), "non-existent-setting-id")
 	assert.Nil(t, err)
 }
 
 // TestGetAllSettingRules tests getting all rules
 func TestGetAllSettingRules(t *testing.T) {
-	rules := GetAllSettingRules()
+	rules := GetAllSettingRules(db.GetDefaultTenantId())
 	// Without database, may return nil or empty slice
 	_ = rules
 	assert.True(t, true)
@@ -959,7 +958,7 @@ func TestGetAllSettingRules(t *testing.T) {
 
 // TestGetSettingRulesList tests getting rules list
 func TestGetSettingRulesList(t *testing.T) {
-	rules := GetSettingRulesList()
+	rules := GetSettingRulesList(db.GetDefaultTenantId())
 	// Without database, may return nil or empty slice
 	_ = rules
 	assert.True(t, true)

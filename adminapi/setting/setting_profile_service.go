@@ -23,14 +23,13 @@ import (
 	"sort"
 	"strings"
 
-	xcommon "github.com/rdkcentral/xconfadmin/common"
-
+	"github.com/rdkcentral/xconfadmin/common"
 	"github.com/rdkcentral/xconfadmin/shared"
 	xlogupload "github.com/rdkcentral/xconfadmin/shared/logupload"
 	"github.com/rdkcentral/xconfadmin/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"github.com/google/uuid"
@@ -38,40 +37,40 @@ import (
 )
 
 func GetAll() []*xwlogupload.SettingProfiles {
-	SettingProfiles := GetSettingProfileList()
+	SettingProfiles := GetSettingProfileList(db.GetDefaultTenantId())
 	sort.Slice(SettingProfiles, func(i, j int) bool {
 		return strings.ToLower(SettingProfiles[i].SettingProfileID) < strings.ToLower(SettingProfiles[j].SettingProfileID)
 	})
 	return SettingProfiles
 }
 
-func GetOne(id string) (*xwlogupload.SettingProfiles, error) {
-	settingProfile := xlogupload.GetOneSettingProfile(id)
+func GetOne(tenantId, id string) (*xwlogupload.SettingProfiles, error) {
+	settingProfile := xlogupload.GetOneSettingProfile(tenantId, id)
 	if settingProfile == nil {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
 	return settingProfile, nil
 }
 
-func Delete(id string, writeApplication string) (*xwlogupload.SettingProfiles, error) {
-	entity, err := GetOne(id)
+func Delete(tenantId string, id string, writeApplication string) (*xwlogupload.SettingProfiles, error) {
+	entity, err := GetOne(tenantId, id)
 	if err != nil {
 		return nil, err
 	}
-	err = validateUsage(id)
+	err = validateUsage(tenantId, id)
 	if err != nil {
 		return nil, err
 	}
 	if entity.ApplicationType != writeApplication {
 		return nil, fmt.Errorf("Entity with id %s ApplicationType doesn't match", id)
 	}
-	DeleteSettingProfile(id)
+	DeleteSettingProfile(tenantId, id)
 	return entity, nil
 }
 
-func GetSettingProfileList() []*xwlogupload.SettingProfiles {
+func GetSettingProfileList(tenantId string) []*xwlogupload.SettingProfiles {
 	all := []*xwlogupload.SettingProfiles{}
-	settingProfileList, err := ds.GetCachedSimpleDao().GetAllAsList(ds.TABLE_SETTING_PROFILES, 0)
+	settingProfileList, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_SETTING_PROFILES, 0)
 	if err != nil {
 		log.Warn("no SettingProfiles found")
 		return nil
@@ -83,15 +82,15 @@ func GetSettingProfileList() []*xwlogupload.SettingProfiles {
 	return all
 }
 
-func DeleteSettingProfile(id string) {
-	err := ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_SETTING_PROFILES, id)
+func DeleteSettingProfile(tenantId string, id string) {
+	err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_SETTING_PROFILES, id)
 	if err != nil {
 		log.Warn("delete settingProfile failed")
 	}
 }
 
-func SetSettingProfile(id string, settingProfile *xwlogupload.SettingProfiles) error {
-	if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_SETTING_PROFILES, id, settingProfile); err != nil {
+func SetSettingProfile(tenantId string, id string, settingProfile *xwlogupload.SettingProfiles) error {
+	if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_SETTING_PROFILES, id, settingProfile); err != nil {
 		log.Error("cannot save settingProfile to DB")
 		return err
 	}
@@ -99,7 +98,8 @@ func SetSettingProfile(id string, settingProfile *xwlogupload.SettingProfiles) e
 }
 
 func FindByContext(searchContext map[string]string) []*xwlogupload.SettingProfiles {
-	profiles := GetSettingProfileList()
+	tenantId := searchContext[xwcommon.TENANT_ID]
+	profiles := GetSettingProfileList(tenantId)
 	profilesFound := []*xwlogupload.SettingProfiles{}
 	for _, profile := range profiles {
 		if applicationType, ok := util.FindEntryInContext(searchContext, xwcommon.APPLICATION_TYPE, false); ok {
@@ -116,7 +116,7 @@ func FindByContext(searchContext map[string]string) []*xwlogupload.SettingProfil
 				}
 			}
 		}
-		if typeName, ok := util.FindEntryInContext(searchContext, xcommon.TYPE, false); ok {
+		if typeName, ok := util.FindEntryInContext(searchContext, common.TYPE, false); ok {
 			if typeName != "" {
 				baseName := strings.ToLower(profile.SettingType)
 				givenName := strings.ToLower(typeName)
@@ -168,8 +168,8 @@ func validateAll(entity *xwlogupload.SettingProfiles, existingEntities []*xwlogu
 	return nil
 }
 
-func validateUsage(id string) error {
-	all := GetSettingRulesList()
+func validateUsage(tenantId string, id string) error {
+	all := GetSettingRulesList(tenantId)
 	for _, rule := range all {
 		if rule.BoundSettingID == id {
 			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Can't delete profile as it's used in setting rule: "+rule.Name)
@@ -191,12 +191,12 @@ func SettingProfilesGeneratePage(list []*xwlogupload.SettingProfiles, page int, 
 	return list[startIndex:lastIndex]
 }
 
-func beforeCreating(entity *xwlogupload.SettingProfiles, writeApplication string) error {
+func beforeCreating(tenantId string, entity *xwlogupload.SettingProfiles, writeApplication string) error {
 	id := entity.ID
 	if id == "" {
 		entity.ID = uuid.New().String()
 	} else {
-		existingEntity := xlogupload.GetOneSettingProfile(id)
+		existingEntity := xlogupload.GetOneSettingProfile(tenantId, id)
 		if existingEntity != nil && !shared.ApplicationTypeEquals(existingEntity.ApplicationType, entity.ApplicationType) {
 			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Entity with id: "+id+" already exists in "+existingEntity.ApplicationType+" application")
 		} else if existingEntity != nil && shared.ApplicationTypeEquals(existingEntity.ApplicationType, writeApplication) {
@@ -206,12 +206,12 @@ func beforeCreating(entity *xwlogupload.SettingProfiles, writeApplication string
 	return nil
 }
 
-func beforeUpdating(entity *xwlogupload.SettingProfiles, writeApplication string) error {
+func beforeUpdating(tenantId string, entity *xwlogupload.SettingProfiles, writeApplication string) error {
 	id := entity.ID
 	if id == "" {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Entity id is empty")
 	}
-	existingEntity := xlogupload.GetOneSettingProfile(id)
+	existingEntity := xlogupload.GetOneSettingProfile(tenantId, id)
 	if !shared.ApplicationTypeEquals(existingEntity.ApplicationType, writeApplication) {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
@@ -221,7 +221,7 @@ func beforeUpdating(entity *xwlogupload.SettingProfiles, writeApplication string
 	return nil
 }
 
-func beforeSaving(entity *xwlogupload.SettingProfiles, writeApplication string) error {
+func beforeSaving(tenantId string, entity *xwlogupload.SettingProfiles, writeApplication string) error {
 	if entity != nil && entity.ApplicationType == "" {
 		entity.ApplicationType = writeApplication
 	}
@@ -229,7 +229,7 @@ func beforeSaving(entity *xwlogupload.SettingProfiles, writeApplication string) 
 	if err != nil {
 		return err
 	}
-	all := GetSettingProfileList()
+	all := GetSettingProfileList(tenantId)
 	err = validateAll(entity, all)
 	if err != nil {
 		return err
@@ -237,26 +237,26 @@ func beforeSaving(entity *xwlogupload.SettingProfiles, writeApplication string) 
 	return nil
 }
 
-func Create(entity *xwlogupload.SettingProfiles, applicationType string) error {
-	err := beforeCreating(entity, applicationType)
+func Create(tenantId string, entity *xwlogupload.SettingProfiles, applicationType string) error {
+	err := beforeCreating(tenantId, entity, applicationType)
 	if err != nil {
 		return err
 	}
-	err = beforeSaving(entity, applicationType)
+	err = beforeSaving(tenantId, entity, applicationType)
 	if err != nil {
 		return err
 	}
-	return SetSettingProfile(entity.ID, entity)
+	return SetSettingProfile(tenantId, entity.ID, entity)
 }
 
-func Update(entity *xwlogupload.SettingProfiles, applicationType string) error {
-	err := beforeUpdating(entity, applicationType)
+func Update(tenantId string, entity *xwlogupload.SettingProfiles, applicationType string) error {
+	err := beforeUpdating(tenantId, entity, applicationType)
 	if err != nil {
 		return err
 	}
-	err = beforeSaving(entity, applicationType)
+	err = beforeSaving(tenantId, entity, applicationType)
 	if err != nil {
 		return err
 	}
-	return SetSettingProfile(entity.ID, entity)
+	return SetSettingProfile(tenantId, entity.ID, entity)
 }

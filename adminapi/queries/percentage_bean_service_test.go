@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
@@ -39,7 +40,7 @@ func TestGetPercentageBeanFilterFieldValues_Success(t *testing.T) {
 	_, _ = PreCreatePercentageBean()
 
 	// Test with a valid field name
-	result, err := GetPercentageBeanFilterFieldValues("name", "stb")
+	result, err := GetPercentageBeanFilterFieldValues(db.GetDefaultTenantId(), "name", "stb")
 
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
@@ -51,7 +52,7 @@ func TestGetPercentageBeanFilterFieldValues_Error(t *testing.T) {
 	DeleteAllEntities()
 
 	// Test with empty database - should still work but return empty result
-	result, err := GetPercentageBeanFilterFieldValues("name", "stb")
+	result, err := GetPercentageBeanFilterFieldValues(db.GetDefaultTenantId(), "name", "stb")
 
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
@@ -63,7 +64,7 @@ func TestGetGlobalPercentageFields(t *testing.T) {
 	DeleteAllEntities()
 
 	// Test with a valid field name
-	result := getGlobalPercentageFields("percentage", "stb")
+	result := getGlobalPercentageFields(db.GetDefaultTenantId(), "percentage", "stb")
 
 	assert.NotNil(t, result)
 	// Should have at least the default 100 value
@@ -79,7 +80,7 @@ func TestGetPercentageBeanFieldValues(t *testing.T) {
 	_, _ = PreCreatePercentageBean()
 
 	// Test with a valid field name
-	result, err := getPercentageBeanFieldValues("name", "stb")
+	result, err := getPercentageBeanFieldValues(db.GetDefaultTenantId(), "name", "stb")
 
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
@@ -90,7 +91,7 @@ func TestGetPercentageBeanFieldValues_Error(t *testing.T) {
 	DeleteAllEntities()
 
 	// Test with empty database
-	result, err := getPercentageBeanFieldValues("name", "stb")
+	result, err := getPercentageBeanFieldValues(db.GetDefaultTenantId(), "name", "stb")
 
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
@@ -141,7 +142,7 @@ func TestCreateCanaries(t *testing.T) {
 	}
 
 	// Call createCanaries - it shouldn't panic
-	createCanaries(pb, nil, fields)
+	createCanaries(db.GetDefaultTenantId(), pb, nil, fields)
 
 	// If we get here without panic, the test passes
 	assert.True(t, true)
@@ -156,7 +157,7 @@ func TestCreateWakeupPoolList_Success(t *testing.T) {
 	}
 
 	// Test with empty database
-	err := CreateWakeupPoolList("stb", false, fields)
+	err := CreateWakeupPoolList(db.GetDefaultTenantId(), "stb", false, fields)
 
 	// Should complete without error
 	assert.Nil(t, err)
@@ -171,7 +172,7 @@ func TestCreateWakeupPoolList_Error(t *testing.T) {
 	}
 
 	// Test with invalid application type
-	err := CreateWakeupPoolList("", false, fields)
+	err := CreateWakeupPoolList(db.GetDefaultTenantId(), "", false, fields)
 
 	// May return error or nil depending on implementation
 	// The function should handle this gracefully
@@ -186,17 +187,17 @@ func TestGetGlobalPercentageFields_DifferentFields(t *testing.T) {
 	DeleteAllEntities()
 
 	// Test with percentage field (should have default 100)
-	result := getGlobalPercentageFields(PERCENTAGE_FIELD_NAME, "stb")
+	result := getGlobalPercentageFields(db.GetDefaultTenantId(), PERCENTAGE_FIELD_NAME, "stb")
 	assert.NotNil(t, result)
 	_, exists := result[100]
 	assert.True(t, exists, "Should have default 100 value for percentage field")
 
 	// Test with whitelist field
-	result2 := getGlobalPercentageFields(WHITELIST_FIELD_NAME, "stb")
+	result2 := getGlobalPercentageFields(db.GetDefaultTenantId(), WHITELIST_FIELD_NAME, "stb")
 	assert.NotNil(t, result2)
 
 	// Test with non-existent application type (should handle gracefully)
-	result3 := getGlobalPercentageFields(PERCENTAGE_FIELD_NAME, "nonexistent")
+	result3 := getGlobalPercentageFields(db.GetDefaultTenantId(), PERCENTAGE_FIELD_NAME, "nonexistent")
 	assert.NotNil(t, result3)
 }
 
@@ -209,7 +210,7 @@ func TestGetPercentageBeanFieldValues_Distributions(t *testing.T) {
 	assert.NotNil(t, pb)
 
 	// Test with distributions field
-	result, err := getPercentageBeanFieldValues("distributions", "stb")
+	result, err := getPercentageBeanFieldValues(db.GetDefaultTenantId(), "distributions", "stb")
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
 }
@@ -223,17 +224,17 @@ func TestGetPercentageBeanFieldValues_VariousFields(t *testing.T) {
 	assert.NotNil(t, pb)
 
 	// Test with model field (string)
-	result, err := getPercentageBeanFieldValues("model", "stb")
+	result, err := getPercentageBeanFieldValues(db.GetDefaultTenantId(), "model", "stb")
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
 
 	// Test with environment field (string)
-	result2, err2 := getPercentageBeanFieldValues("environment", "stb")
+	result2, err2 := getPercentageBeanFieldValues(db.GetDefaultTenantId(), "environment", "stb")
 	assert.Nil(t, err2)
 	assert.NotNil(t, result2)
 
 	// Test with active field (bool)
-	result3, err3 := getPercentageBeanFieldValues("active", "stb")
+	result3, err3 := getPercentageBeanFieldValues(db.GetDefaultTenantId(), "active", "stb")
 	assert.Nil(t, err3)
 	assert.NotNil(t, result3)
 }
@@ -400,7 +401,7 @@ func TestCreateCanaries_WithOldRule(t *testing.T) {
 	// Get the firmware rule for the old rule scenario
 	// Since createCanaries is called internally and requires *firmware.FirmwareRule,
 	// we'll test it with nil old rule which is the common case
-	createCanaries(pb, nil, fields)
+	createCanaries(db.GetDefaultTenantId(), pb, nil, fields)
 
 	// Should complete without panic
 	assert.True(t, true)
@@ -416,7 +417,7 @@ func TestCreateCanaries_CanaryCreationDisabled(t *testing.T) {
 	}
 
 	// createCanaries will check the flag and skip creation
-	createCanaries(pb, nil, fields)
+	createCanaries(db.GetDefaultTenantId(), pb, nil, fields)
 
 	assert.True(t, true, "Should handle disabled canary creation gracefully")
 }
@@ -433,7 +434,7 @@ func TestCreatePercentageBean_ResponseEntity_Conflict(t *testing.T) {
 	fields := log.Fields{"test": "conflict"}
 
 	// Try to create again with same ID
-	response := CreatePercentageBean(pb, "stb", fields)
+	response := CreatePercentageBean(db.GetDefaultTenantId(), pb, "stb", fields)
 	assert.NotNil(t, response)
 	assert.Equal(t, http.StatusConflict, response.Status)
 	assert.NotNil(t, response.Error)
@@ -455,7 +456,7 @@ func TestCreatePercentageBean_ResponseEntity_AppTypeMismatch(t *testing.T) {
 	fields := log.Fields{"test": "appTypeMismatch"}
 
 	// Try to create with mismatched application type
-	response := CreatePercentageBean(pb, "xhome", fields)
+	response := CreatePercentageBean(db.GetDefaultTenantId(), pb, "xhome", fields)
 	assert.NotNil(t, response)
 	assert.Equal(t, http.StatusConflict, response.Status)
 	assert.NotNil(t, response.Error)
@@ -476,7 +477,7 @@ func TestCreatePercentageBean_ResponseEntity_ValidationError(t *testing.T) {
 
 	fields := log.Fields{"test": "validation"}
 
-	response := CreatePercentageBean(pb, "stb", fields)
+	response := CreatePercentageBean(db.GetDefaultTenantId(), pb, "stb", fields)
 	assert.NotNil(t, response)
 	assert.True(t, response.Status == http.StatusBadRequest || response.Status == http.StatusConflict)
 	assert.NotNil(t, response.Error)
@@ -494,7 +495,7 @@ func TestUpdatePercentageBean_ResponseEntity_EmptyID(t *testing.T) {
 
 	fields := log.Fields{"test": "emptyID"}
 
-	response := UpdatePercentageBean(pb, "stb", fields)
+	response := UpdatePercentageBean(db.GetDefaultTenantId(), pb, "stb", fields)
 	assert.NotNil(t, response)
 	assert.Equal(t, http.StatusBadRequest, response.Status)
 	assert.NotNil(t, response.Error)
@@ -513,7 +514,7 @@ func TestUpdatePercentageBean_ResponseEntity_NotFound(t *testing.T) {
 
 	fields := log.Fields{"test": "notFound"}
 
-	response := UpdatePercentageBean(pb, "stb", fields)
+	response := UpdatePercentageBean(db.GetDefaultTenantId(), pb, "stb", fields)
 	assert.NotNil(t, response)
 	assert.Equal(t, http.StatusBadRequest, response.Status)
 	assert.NotNil(t, response.Error)
@@ -524,7 +525,7 @@ func TestUpdatePercentageBean_ResponseEntity_NotFound(t *testing.T) {
 func TestDeletePercentageBean_ResponseEntity_NotFound(t *testing.T) {
 	DeleteAllEntities()
 
-	response := DeletePercentageBean("non-existent-id", "stb")
+	response := DeletePercentageBean(db.GetDefaultTenantId(), "non-existent-id", "stb")
 	assert.NotNil(t, response)
 	assert.Equal(t, http.StatusNotFound, response.Status)
 	assert.NotNil(t, response.Error)
@@ -538,7 +539,7 @@ func TestDeletePercentageBean_ResponseEntity_AppTypeMismatch(t *testing.T) {
 	assert.NotNil(t, pb)
 
 	// Try to delete with wrong application type
-	response := DeletePercentageBean(pb.ID, "xhome")
+	response := DeletePercentageBean(db.GetDefaultTenantId(), pb.ID, "xhome")
 	assert.NotNil(t, response)
 	assert.Equal(t, http.StatusNotFound, response.Status)
 	assert.NotNil(t, response.Error)
@@ -556,7 +557,7 @@ func TestValidatePercentageBeanReferences_InvalidModel(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	err := validatePercentageBeanReferences(bean)
+	err := validatePercentageBeanReferences(db.GetDefaultTenantId(), bean)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Model")
 	assert.Contains(t, err.Error(), "does not exist")
@@ -571,7 +572,7 @@ func TestValidatePercentageBeanReferences_ValidModel(t *testing.T) {
 		ID:          "TEST_MODEL",
 		Description: "Test Model",
 	}
-	CreateModel(model)
+	CreateModel(db.GetDefaultTenantId(), model)
 
 	bean := &coreef.PercentageBean{
 		ID:              "test-bean-id",
@@ -580,7 +581,7 @@ func TestValidatePercentageBeanReferences_ValidModel(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	err := validatePercentageBeanReferences(bean)
+	err := validatePercentageBeanReferences(db.GetDefaultTenantId(), bean)
 	assert.NoError(t, err)
 
 	DeleteAllEntities()
@@ -595,7 +596,7 @@ func TestValidatePercentageBeanReferences_InvalidIPList(t *testing.T) {
 		ID:          "TEST_MODEL",
 		Description: "Test Model",
 	}
-	CreateModel(model)
+	CreateModel(db.GetDefaultTenantId(), model)
 
 	bean := &coreef.PercentageBean{
 		ID:              "test-bean-id",
@@ -605,7 +606,7 @@ func TestValidatePercentageBeanReferences_InvalidIPList(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	err := validatePercentageBeanReferences(bean)
+	err := validatePercentageBeanReferences(db.GetDefaultTenantId(), bean)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "IP address list")
 	assert.Contains(t, err.Error(), "does not exist")
@@ -622,11 +623,11 @@ func TestValidatePercentageBeanReferences_ValidIPList(t *testing.T) {
 		ID:          "TEST_MODEL",
 		Description: "Test Model",
 	}
-	CreateModel(model)
+	CreateModel(db.GetDefaultTenantId(), model)
 
 	// Create a valid IP list
 	ipList := makeGenericList("TEST_IP_LIST", shared.IP_LIST, []string{"192.168.1.0/24"})
-	CreateNamespacedList(ipList, false)
+	CreateNamespacedList(db.GetDefaultTenantId(), ipList, false)
 
 	bean := &coreef.PercentageBean{
 		ID:              "test-bean-id",
@@ -636,7 +637,7 @@ func TestValidatePercentageBeanReferences_ValidIPList(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	err := validatePercentageBeanReferences(bean)
+	err := validatePercentageBeanReferences(db.GetDefaultTenantId(), bean)
 	assert.NoError(t, err)
 
 	DeleteAllEntities()
@@ -651,7 +652,7 @@ func TestValidatePercentageBeanReferences_BlankWhitelist(t *testing.T) {
 		ID:          "TEST_MODEL",
 		Description: "Test Model",
 	}
-	CreateModel(model)
+	CreateModel(db.GetDefaultTenantId(), model)
 
 	bean := &coreef.PercentageBean{
 		ID:              "test-bean-id",
@@ -661,7 +662,7 @@ func TestValidatePercentageBeanReferences_BlankWhitelist(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	err := validatePercentageBeanReferences(bean)
+	err := validatePercentageBeanReferences(db.GetDefaultTenantId(), bean)
 	assert.NoError(t, err)
 
 	DeleteAllEntities()
@@ -676,7 +677,7 @@ func TestValidatePercentageBeanReferences_InvalidOptionalConditions(t *testing.T
 		ID:          "TEST_MODEL",
 		Description: "Test Model",
 	}
-	CreateModel(model)
+	CreateModel(db.GetDefaultTenantId(), model)
 
 	// Create optional condition referencing a model that doesn't exist
 	optionalConditions := &re.Rule{
@@ -695,7 +696,7 @@ func TestValidatePercentageBeanReferences_InvalidOptionalConditions(t *testing.T
 		OptionalConditions: optionalConditions,
 	}
 
-	err := validatePercentageBeanReferences(bean)
+	err := validatePercentageBeanReferences(db.GetDefaultTenantId(), bean)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Model does not exist")
 

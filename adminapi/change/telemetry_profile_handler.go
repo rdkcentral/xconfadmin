@@ -58,7 +58,8 @@ func GetTelemetryProfileByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profile := xwlogupload.GetOnePermanentTelemetryProfile(id)
+	tenantId := xwhttp.GetTenantId(r, "")
+	profile := xwlogupload.GetOnePermanentTelemetryProfile(tenantId, id)
 	if profile == nil {
 		errorStr := fmt.Sprintf("Entity with id %s does not exist", id)
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, errorStr)
@@ -90,7 +91,9 @@ func GetTelemetryProfilesHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	profiles := xlogupload.GetPermanentTelemetryProfileListByApplicationType(application)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	profiles := xlogupload.GetPermanentTelemetryProfileListByApplicationType(tenantId, application)
 
 	res, err := xhttp.ReturnJsonResponse(profiles, r)
 	if err != nil {
@@ -200,7 +203,8 @@ func UpdateTelemetryProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedProfile, err := UpdatePermanentTelemetryProfile(permTelemetryProfile)
+	tenantId := xwhttp.GetTenantId(r, "")
+	updatedProfile, err := UpdatePermanentTelemetryProfile(tenantId, permTelemetryProfile)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -281,7 +285,8 @@ func CreateTelemetryIdsHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	respEntity := CreateTelemetryIds()
+	tenantId := xwhttp.GetTenantId(r, "")
+	respEntity := CreateTelemetryIds(tenantId)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -385,12 +390,6 @@ func PutTelemetryProfileEntitiesHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 func PostTelemetryProfileFilteredHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := auth.CanRead(r, auth.TELEMETRY_ENTITY)
-	if err != nil {
-		xhttp.AdminError(w, err)
-		return
-	}
-
 	applicationType, err := auth.CanRead(r, auth.TELEMETRY_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -427,6 +426,7 @@ func PostTelemetryProfileFilteredHandler(w http.ResponseWriter, r *http.Request)
 	}
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
+	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	profiles := GetTelemetryProfilesByContext(contextMap)
 	profilesPerPage := GeneratePageTelemetryProfiles(profiles, pageNumber, pageSize)
@@ -476,7 +476,9 @@ func AddTelemetryProfileEntryHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	profile := xwlogupload.GetOnePermanentTelemetryProfile(id)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	profile := xwlogupload.GetOnePermanentTelemetryProfile(tenantId, id)
 	if profile == nil {
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
 		return
@@ -490,7 +492,7 @@ func AddTelemetryProfileEntryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	profile.TelemetryProfile = updatedTelemetryEntries
-	updatedProfile, err := UpdatePermanentTelemetryProfile(profile)
+	updatedProfile, err := UpdatePermanentTelemetryProfile(tenantId, profile)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -537,7 +539,9 @@ func AddTelemetryProfileEntryChangeHandler(w http.ResponseWriter, r *http.Reques
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	profile := xwlogupload.GetOnePermanentTelemetryProfile(id)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	profile := xwlogupload.GetOnePermanentTelemetryProfile(tenantId, id)
 	if profile == nil {
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
 		return
@@ -599,7 +603,8 @@ func RemoveTelemetryProfileEntryHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	profile := xwlogupload.GetOnePermanentTelemetryProfile(id)
+	tenantId := xwhttp.GetTenantId(r, "")
+	profile := xwlogupload.GetOnePermanentTelemetryProfile(tenantId, id)
 	if profile == nil {
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
 		return
@@ -615,7 +620,7 @@ func RemoveTelemetryProfileEntryHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	profile.TelemetryProfile = updatedTelemetryEntries
 
-	change, err := UpdatePermanentTelemetryProfile(profile)
+	change, err := UpdatePermanentTelemetryProfile(tenantId, profile)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -662,7 +667,8 @@ func RemoveTelemetryProfileEntryChangeHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	profile := xwlogupload.GetOnePermanentTelemetryProfile(id)
+	tenantId := xwhttp.GetTenantId(r, "")
+	profile := xwlogupload.GetOnePermanentTelemetryProfile(tenantId, id)
 	if profile == nil {
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id)))
 		return

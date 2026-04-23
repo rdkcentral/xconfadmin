@@ -38,7 +38,7 @@ import (
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
-func UpdateLocationFilter(applicationType string, locationFilter *coreef.DownloadLocationFilter) *xwhttp.ResponseEntity {
+func UpdateLocationFilter(tenantId string, applicationType string, locationFilter *coreef.DownloadLocationFilter) *xwhttp.ResponseEntity {
 	if util.IsBlank(locationFilter.Name) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("Name is blank"), nil)
 	}
@@ -47,7 +47,7 @@ func UpdateLocationFilter(applicationType string, locationFilter *coreef.Downloa
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	if err := firmware.ValidateRuleName(locationFilter.Id, locationFilter.Name, applicationType); err != nil {
+	if err := firmware.ValidateRuleName(tenantId, locationFilter.Id, locationFilter.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
@@ -66,7 +66,7 @@ func UpdateLocationFilter(applicationType string, locationFilter *coreef.Downloa
 	modelIds := util.Set{}
 	for _, model := range locationFilter.Models {
 		id := strings.ToUpper(model)
-		if !IsExistModel(id) {
+		if !IsExistModel(tenantId, id) {
 			return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("Model %s is not exist", id), nil)
 		}
 		modelIds.Add(id)
@@ -76,14 +76,14 @@ func UpdateLocationFilter(applicationType string, locationFilter *coreef.Downloa
 	envIds := util.Set{}
 	for _, env := range locationFilter.Environments {
 		id := strings.ToUpper(env)
-		if !IsExistEnvironment(id) {
+		if !IsExistEnvironment(tenantId, id) {
 			return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("Environment %s is not exist", id), nil)
 		}
 		envIds.Add(id)
 	}
 	locationFilter.Environments = envIds.ToSlice()
 
-	if locationFilter.IpAddressGroup != nil && IsChangedIpAddressGroup(locationFilter.IpAddressGroup) {
+	if locationFilter.IpAddressGroup != nil && IsChangedIpAddressGroup(tenantId, locationFilter.IpAddressGroup) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest,
 			fmt.Errorf("IP address group denoted by '%s' does not match any existing ipAddressGroup", locationFilter.IpAddressGroup.Name), nil)
 	}
@@ -117,7 +117,7 @@ func UpdateLocationFilter(applicationType string, locationFilter *coreef.Downloa
 		}
 	}
 
-	firmwareRule, err := SaveDownloadLocationFilter(locationFilter, applicationType)
+	firmwareRule, err := SaveDownloadLocationFilter(tenantId, locationFilter, applicationType)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -129,18 +129,18 @@ func UpdateLocationFilter(applicationType string, locationFilter *coreef.Downloa
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, locationFilter)
 }
 
-func DeleteLocationFilter(name string, applicationType string) *xwhttp.ResponseEntity {
+func DeleteLocationFilter(tenantId string, name string, applicationType string) *xwhttp.ResponseEntity {
 	if err := xshared.ValidateApplicationType(applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	locationFilter, err := coreef.DownloadLocationFiltersByName(applicationType, name)
+	locationFilter, err := coreef.DownloadLocationFiltersByName(tenantId, applicationType, name)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
 	if locationFilter != nil {
-		err = corefw.DeleteOneFirmwareRule(locationFilter.Id)
+		err = corefw.DeleteOneFirmwareRule(tenantId, locationFilter.Id)
 		if err != nil {
 			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 		}
@@ -149,7 +149,7 @@ func DeleteLocationFilter(name string, applicationType string) *xwhttp.ResponseE
 	return xwhttp.NewResponseEntity(http.StatusNoContent, nil, nil)
 }
 
-func SaveDownloadLocationFilter(filter *coreef.DownloadLocationFilter, applicationType string) (*corefw.FirmwareRule, error) {
+func SaveDownloadLocationFilter(tenantId string, filter *coreef.DownloadLocationFilter, applicationType string) (*corefw.FirmwareRule, error) {
 	firmwareRule, err := xcoreef.ConvertDownloadLocationFilterToFirmwareRule(filter)
 	if err != nil {
 		return nil, err
@@ -159,7 +159,7 @@ func SaveDownloadLocationFilter(filter *coreef.DownloadLocationFilter, applicati
 		firmwareRule.ApplicationType = applicationType
 	}
 
-	err = corefw.CreateFirmwareRuleOneDB(firmwareRule)
+	err = corefw.CreateFirmwareRuleOneDB(tenantId, firmwareRule)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func SaveDownloadLocationFilter(filter *coreef.DownloadLocationFilter, applicati
 	return firmwareRule, nil
 }
 
-func UpdateDownloadLocationRoundRobinFilter(applicationType string, filter *coreef.DownloadLocationRoundRobinFilterValue) *xwhttp.ResponseEntity {
+func UpdateDownloadLocationRoundRobinFilter(tenantId string, applicationType string, filter *coreef.DownloadLocationRoundRobinFilterValue) *xwhttp.ResponseEntity {
 	if err := xshared.ValidateApplicationType(applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
@@ -179,7 +179,7 @@ func UpdateDownloadLocationRoundRobinFilter(applicationType string, filter *core
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	err := estbfirmware.CreateDownloadLocationRoundRobinFilterValOneDB(filter)
+	err := estbfirmware.CreateDownloadLocationRoundRobinFilterValOneDB(tenantId, filter)
 	if err != nil {
 		errorStr := fmt.Sprintf("Unable to save DownloadLocationRoundRobin: %s", err.Error())
 		log.Error(errorStr)

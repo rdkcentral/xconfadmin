@@ -25,9 +25,9 @@ const (
 	Delete xwchange.ChangeOperation = "DELETE"
 )
 
-func GetChangeList() []*xwchange.Change {
+func GetChangeList(tenantId string) []*xwchange.Change {
 	all := []*xwchange.Change{}
-	changeList, err := db.GetSimpleDao().GetAllAsList(db.TABLE_XCONF_CHANGE, 0)
+	changeList, err := db.GetSimpleDao().GetAllAsList(tenantId, db.TABLE_TELEMETRY_CHANGES, 0)
 	if err != nil {
 		log.Warn("no Change found")
 		return nil
@@ -39,7 +39,7 @@ func GetChangeList() []*xwchange.Change {
 	return all
 }
 
-func SetOneApprovedChange(approvedChange *xwchange.ApprovedChange) error {
+func SetOneApprovedChange(tenantId string, approvedChange *xwchange.ApprovedChange) error {
 	approvedChange.Updated = xwutil.GetTimestamp(time.Now().UTC())
 
 	approvedChangeBytes, err := json.Marshal(approvedChange)
@@ -47,12 +47,12 @@ func SetOneApprovedChange(approvedChange *xwchange.ApprovedChange) error {
 		return err
 	}
 
-	return db.GetSimpleDao().SetOne(db.TABLE_XCONF_APPROVED_CHANGE, approvedChange.ID, approvedChangeBytes)
+	return db.GetSimpleDao().SetOne(tenantId, db.TABLE_TELEMETRY_APPROVED_CHANGES, approvedChange.ID, approvedChangeBytes)
 }
 
-func GetOneApprovedChange(id string) *xwchange.ApprovedChange {
+func GetOneApprovedChange(tenantId string, id string) *xwchange.ApprovedChange {
 	var change *xwchange.ApprovedChange
-	changeInst, err := db.GetSimpleDao().GetOne(db.TABLE_XCONF_APPROVED_CHANGE, id)
+	changeInst, err := db.GetSimpleDao().GetOne(tenantId, db.TABLE_TELEMETRY_APPROVED_CHANGES, id)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no Approved found for Id: %s", id))
 		return nil
@@ -61,9 +61,9 @@ func GetOneApprovedChange(id string) *xwchange.ApprovedChange {
 	return change
 }
 
-func GetApprovedChangeList() []*xwchange.ApprovedChange {
+func GetApprovedChangeList(tenantId string) []*xwchange.ApprovedChange {
 	all := []*xwchange.ApprovedChange{}
-	approvedList, err := db.GetSimpleDao().GetAllAsList(db.TABLE_XCONF_APPROVED_CHANGE, 0)
+	approvedList, err := db.GetSimpleDao().GetAllAsList(tenantId, db.TABLE_TELEMETRY_APPROVED_CHANGES, 0)
 	if err != nil {
 		log.Warn("no Change found")
 		return nil
@@ -75,9 +75,9 @@ func GetApprovedChangeList() []*xwchange.ApprovedChange {
 	return all
 }
 
-func GetChangesByEntityId(entityId string) []*xwchange.Change {
+func GetChangesByEntityId(tenantId string, entityId string) []*xwchange.Change {
 	result := []*xwchange.Change{}
-	all := GetChangeList()
+	all := GetChangeList(tenantId)
 	for _, change := range all {
 		if change.EntityID == entityId {
 			result = append(result, change)
@@ -86,9 +86,9 @@ func GetChangesByEntityId(entityId string) []*xwchange.Change {
 	return result
 }
 
-func GetOneChange(id string) *xwchange.Change {
+func GetOneChange(tenantId string, id string) *xwchange.Change {
 	var change *xwchange.Change
-	changeInst, err := db.GetSimpleDao().GetOne(db.TABLE_XCONF_CHANGE, id)
+	changeInst, err := db.GetSimpleDao().GetOne(tenantId, db.TABLE_TELEMETRY_CHANGES, id)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no Change found for Id: %s", id))
 		return nil
@@ -97,12 +97,12 @@ func GetOneChange(id string) *xwchange.Change {
 	return change
 }
 
-func DeleteOneChange(id string) error {
-	return db.GetSimpleDao().DeleteOne(db.TABLE_XCONF_CHANGE, id)
+func DeleteOneChange(tenantId string, id string) error {
+	return db.GetSimpleDao().DeleteOne(tenantId, db.TABLE_TELEMETRY_CHANGES, id)
 }
 
-func DeleteOneApprovedChange(id string) error {
-	return db.GetSimpleDao().DeleteOne(db.TABLE_XCONF_APPROVED_CHANGE, id)
+func DeleteOneApprovedChange(tenantId string, id string) error {
+	return db.GetSimpleDao().DeleteOne(tenantId, db.TABLE_TELEMETRY_APPROVED_CHANGES, id)
 }
 
 func NewEmptyChange() *xwchange.Change {
@@ -117,7 +117,7 @@ func NewEmptyTelemetryTwoChange() *xwchange.TelemetryTwoChange {
 	}
 }
 
-func CreateOneChange(change *xwchange.Change) error {
+func CreateOneChange(tenantId string, change *xwchange.Change) error {
 	change.Updated = util.GetTimestamp()
 
 	changeBytes, err := json.Marshal(change)
@@ -125,12 +125,12 @@ func CreateOneChange(change *xwchange.Change) error {
 		return err
 	}
 
-	return db.GetSimpleDao().SetOne(db.TABLE_XCONF_CHANGE, change.ID, changeBytes)
+	return db.GetSimpleDao().SetOne(tenantId, db.TABLE_TELEMETRY_CHANGES, change.ID, changeBytes)
 }
 
-func GetApprovedTelemetryTwoChangesByApplicationType(applicationType string) []*xwchange.ApprovedTelemetryTwoChange {
+func GetApprovedTelemetryTwoChangesByApplicationType(tenantId string, applicationType string) []*xwchange.ApprovedTelemetryTwoChange {
 	all := []*xwchange.ApprovedTelemetryTwoChange{}
-	list, err := db.GetSimpleDao().GetAllAsList(db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE, 0)
+	list, err := db.GetSimpleDao().GetAllAsList(tenantId, db.TABLE_TELEMETRY_APPROVED_TWO_CHANGES, 0)
 	if err != nil {
 		log.Warn("no xwchange.ApprovedTelemetryTwoChange found")
 		return nil
@@ -145,9 +145,9 @@ func GetApprovedTelemetryTwoChangesByApplicationType(applicationType string) []*
 	return all
 }
 
-func GetAllTelemetryTwoChangeList() []*xwchange.TelemetryTwoChange {
+func GetAllTelemetryTwoChangeList(tenantId string) []*xwchange.TelemetryTwoChange {
 	all := []*xwchange.TelemetryTwoChange{}
-	list, err := db.GetSimpleDao().GetAllAsList(db.TABLE_XCONF_TELEMETRY_TWO_CHANGE, 0)
+	list, err := db.GetSimpleDao().GetAllAsList(tenantId, db.TABLE_TELEMETRY_TWO_CHANGES, 0)
 	if err != nil {
 		log.Warn("no TelemetryTwoChange found")
 		return nil
@@ -159,7 +159,7 @@ func GetAllTelemetryTwoChangeList() []*xwchange.TelemetryTwoChange {
 	return all
 }
 
-func CreateOneTelemetryTwoChange(change *xwchange.TelemetryTwoChange) error {
+func CreateOneTelemetryTwoChange(tenantId string, change *xwchange.TelemetryTwoChange) error {
 	// create record in DB
 	if util.IsBlank(change.ID) {
 		change.ID = uuid.New().String()
@@ -171,12 +171,12 @@ func CreateOneTelemetryTwoChange(change *xwchange.TelemetryTwoChange) error {
 		return err
 	}
 
-	return db.GetSimpleDao().SetOne(db.TABLE_XCONF_TELEMETRY_TWO_CHANGE, change.ID, changeBytes)
+	return db.GetSimpleDao().SetOne(tenantId, db.TABLE_TELEMETRY_TWO_CHANGES, change.ID, changeBytes)
 }
 
-func GetAllApprovedTelemetryTwoChangeList() []*xwchange.ApprovedTelemetryTwoChange {
+func GetAllApprovedTelemetryTwoChangeList(tenantId string) []*xwchange.ApprovedTelemetryTwoChange {
 	all := []*xwchange.ApprovedTelemetryTwoChange{}
-	list, err := db.GetSimpleDao().GetAllAsList(db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE, 0)
+	list, err := db.GetSimpleDao().GetAllAsList(tenantId, db.TABLE_TELEMETRY_APPROVED_TWO_CHANGES, 0)
 	if err != nil {
 		log.Warn("no xwchange.ApprovedTelemetryTwoChange found")
 		return nil
@@ -188,9 +188,9 @@ func GetAllApprovedTelemetryTwoChangeList() []*xwchange.ApprovedTelemetryTwoChan
 	return all
 }
 
-func GetOneTelemetryTwoChange(id string) *xwchange.TelemetryTwoChange {
+func GetOneTelemetryTwoChange(tenantId string, id string) *xwchange.TelemetryTwoChange {
 	var change *xwchange.TelemetryTwoChange
-	changeInst, err := db.GetSimpleDao().GetOne(db.TABLE_XCONF_TELEMETRY_TWO_CHANGE, id)
+	changeInst, err := db.GetSimpleDao().GetOne(tenantId, db.TABLE_TELEMETRY_TWO_CHANGES, id)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no TelemetryTwoChange found for Id: %s", id))
 		return nil
@@ -213,7 +213,7 @@ func NewApprovedTelemetryTwoChange(change *xwchange.TelemetryTwoChange) *xwchang
 	}
 }
 
-func SetOneApprovedTelemetryTwoChange(approvedChange *xwchange.ApprovedTelemetryTwoChange) error {
+func SetOneApprovedTelemetryTwoChange(tenantId string, approvedChange *xwchange.ApprovedTelemetryTwoChange) error {
 	// create record in DB
 	if util.IsBlank(approvedChange.ID) {
 		approvedChange.ID = uuid.New().String()
@@ -225,16 +225,16 @@ func SetOneApprovedTelemetryTwoChange(approvedChange *xwchange.ApprovedTelemetry
 		return err
 	}
 
-	return db.GetSimpleDao().SetOne(db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE, approvedChange.ID, approvedChangeBytes)
+	return db.GetSimpleDao().SetOne(tenantId, db.TABLE_TELEMETRY_APPROVED_TWO_CHANGES, approvedChange.ID, approvedChangeBytes)
 }
 
-func DeleteOneTelemetryTwoChange(id string) error {
-	return db.GetSimpleDao().DeleteOne(db.TABLE_XCONF_TELEMETRY_TWO_CHANGE, id)
+func DeleteOneTelemetryTwoChange(tenantId string, id string) error {
+	return db.GetSimpleDao().DeleteOne(tenantId, db.TABLE_TELEMETRY_TWO_CHANGES, id)
 }
 
-func GetOneApprovedTelemetryTwoChange(id string) *xwchange.ApprovedTelemetryTwoChange {
+func GetOneApprovedTelemetryTwoChange(tenantId string, id string) *xwchange.ApprovedTelemetryTwoChange {
 	var change *xwchange.ApprovedTelemetryTwoChange
-	changeInst, err := db.GetSimpleDao().GetOne(db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE, id)
+	changeInst, err := db.GetSimpleDao().GetOne(tenantId, db.TABLE_TELEMETRY_APPROVED_TWO_CHANGES, id)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no xwchange.ApprovedTelemetryTwoChange found for Id: %s", id))
 		return nil
@@ -243,6 +243,6 @@ func GetOneApprovedTelemetryTwoChange(id string) *xwchange.ApprovedTelemetryTwoC
 	return change
 }
 
-func DeleteOneApprovedTelemetryTwoChange(id string) error {
-	return db.GetSimpleDao().DeleteOne(db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE, id)
+func DeleteOneApprovedTelemetryTwoChange(tenantId string, id string) error {
+	return db.GetSimpleDao().DeleteOne(tenantId, db.TABLE_TELEMETRY_APPROVED_TWO_CHANGES, id)
 }

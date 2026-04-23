@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"testing"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"gotest.tools/assert"
@@ -34,7 +34,7 @@ func ImportLogUploadTableData(data []string, tabletype logupload.LogUploadSettin
 	var err error
 	for _, row := range data {
 		err = json.Unmarshal([]byte(row), &tabletype)
-		err = setOneInDao(ds.TABLE_LOG_UPLOAD_SETTINGS, tabletype.ID, &tabletype)
+		err = setOneInDao(db.TABLE_LOG_UPLOAD_SETTINGS, tabletype.ID, &tabletype)
 	}
 	return err
 }

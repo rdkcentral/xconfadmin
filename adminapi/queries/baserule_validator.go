@@ -76,7 +76,7 @@ func isNotBlank(str string) bool {
 	return !util.IsBlank(str)
 }
 
-func RunGlobalValidation(rule re.Rule, fp func() []string) error {
+func RunGlobalValidation(tenantId string, rule re.Rule, fp func() []string) error {
 	conditions := re.ToConditions(&rule)
 	if len(conditions) == 0 {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Rule is empty")
@@ -110,18 +110,18 @@ func RunGlobalValidation(rule re.Rule, fp func() []string) error {
 		if equalFreeArgNames(xcommon.STB_ESTB_MAC, freeArg.GetName()) ||
 			equalFreeArgNames(logupload.EstbMacAddress, freeArg.Name) ||
 			equalFreeArgNames(logupload.EcmMac, freeArg.Name) {
-			err = checkFixedArgValue(*condition, util.IsValidMacAddress)
+			err = checkFixedArgValue(tenantId, *condition, util.IsValidMacAddress)
 			if err != nil {
 				return err
 			}
 		} else if equalFreeArgNames(xwcommon.IP_ADDRESS, freeArg.GetName()) ||
 			equalFreeArgNames(logupload.EstbIp, freeArg.Name) {
-			err = checkFixedArgValue(*condition, shared.IsValidIpAddress)
+			err = checkFixedArgValue(tenantId, *condition, shared.IsValidIpAddress)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = checkFixedArgValue(*condition, isNotBlank)
+			err = checkFixedArgValue(tenantId, *condition, isNotBlank)
 			if err != nil {
 				return err
 			}
@@ -174,7 +174,7 @@ func checkDuplicateFixedArgListItems(condition re.Condition) error {
 	return nil
 }
 
-func checkFixedArgValue(condition re.Condition, fp func(string) bool) error {
+func checkFixedArgValue(tenantId string, condition re.Condition, fp func(string) bool) error {
 	operation := condition.GetOperation()
 	if re.StandardOperationIn == operation {
 		fixedArgValues := condition.GetFixedArg().Collection.Value
@@ -187,7 +187,7 @@ func checkFixedArgValue(condition re.Condition, fp func(string) bool) error {
 		fixedArgValue := condition.GetFixedArg().GetValue().(string)
 		freeArgName := condition.GetFreeArg().GetName()
 		if freeArgName == xwcommon.IP_ADDRESS || freeArgName == logupload.EstbIp {
-			if GetNamespacedListByIdAndType(fixedArgValue, shared.IP_LIST) == nil {
+			if GetNamespacedListByIdAndType(tenantId, fixedArgValue, shared.IP_LIST) == nil {
 				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "IP list does not exist: "+fixedArgValue)
 			}
 		}
@@ -200,7 +200,7 @@ func checkFixedArgValue(condition re.Condition, fp func(string) bool) error {
 		freeArgName := condition.GetFreeArg().GetName()
 		if freeArgName == xwcommon.MODEL || freeArgName == logupload.Model {
 			normalizedModel := strings.ToUpper(strings.TrimSpace(fixedArgValue))
-			if !xcommon.IsExistModel(normalizedModel) {
+			if !xcommon.IsExistModel(tenantId, normalizedModel) {
 				return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Model does not exist: "+normalizedModel)
 			}
 		}

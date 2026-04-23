@@ -94,8 +94,9 @@ func CreateTelemetryEntryFor(w http.ResponseWriter, r *http.Request) {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("Invalid Expires Timestamp"))
 		return
 	}
-	//timestampedRule := CreateRuleForAttribute(contextAttributeName, expectedValue)
-	timestampedRule := CreateTelemetryProfile(contextAttributeName, expectedValue, &telemetryProfile)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	timestampedRule := CreateTelemetryProfile(tenantId, contextAttributeName, expectedValue, &telemetryProfile)
 	response, err := util.JSONMarshal(timestampedRule)
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal timestampedRule error: %v", err))
@@ -119,7 +120,9 @@ func DropTelemetryEntryFor(w http.ResponseWriter, r *http.Request) {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("missing expectedValue"))
 		return
 	}
-	telemetryProfileList := DropTelemetryFor(contextAttributeName, expectedValue)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	telemetryProfileList := DropTelemetryFor(tenantId, contextAttributeName, expectedValue)
 	response, err := util.JSONMarshal(telemetryProfileList)
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal telemetryProfileList error: %v", err))
@@ -140,8 +143,10 @@ func GetDescriptors(w http.ResponseWriter, r *http.Request) {
 			contextMap[k] = v[0]
 		}
 	}
+
 	applicationType, _ := contextMap[xwcommon.APPLICATION_TYPE]
-	descriptors := GetAvailableDescriptors(applicationType)
+	tenantId := xwhttp.GetTenantId(r, "")
+	descriptors := GetAvailableDescriptors(tenantId, applicationType)
 	response, err := util.JSONMarshal(descriptors)
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal Descriptors error: %v", err))
@@ -162,8 +167,10 @@ func GetTelemetryDescriptors(w http.ResponseWriter, r *http.Request) {
 			contextMap[k] = v[0]
 		}
 	}
+
 	applicationType, _ := contextMap[xwcommon.APPLICATION_TYPE]
-	descriptors := GetAvailableProfileDescriptors(applicationType)
+	tenantId := xwhttp.GetTenantId(r, "")
+	descriptors := GetAvailableProfileDescriptors(tenantId, applicationType)
 	response, err := util.JSONMarshal(descriptors)
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal ProfileDescriptors error: %v", err))
@@ -206,16 +213,18 @@ func TempAddToPermanentRule(w http.ResponseWriter, r *http.Request) {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("expires must be a number"))
 		return
 	}
-	telemetryRule := xlogupload.GetOneTelemetryRule(ruleId) //*TelemetryRule
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	telemetryRule := xlogupload.GetOneTelemetryRule(tenantId, ruleId) //*TelemetryRule
 	if telemetryRule == nil {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("no rule found for ruleId"))
 		return
 	}
-	profile := xlogupload.GetOnePermanentTelemetryProfile(telemetryRule.BoundTelemetryID) //*PermanentTelemetryProfile
+	profile := xlogupload.GetOnePermanentTelemetryProfile(tenantId, telemetryRule.BoundTelemetryID) //*PermanentTelemetryProfile
 	timedRule := CreateRuleForAttribute(contextAttributeName, expectedValue)
 	profile.Expires = expiresInt64
 	telemetryRuleBytes, _ := json.Marshal(timedRule)
-	xlogupload.SetOneTelemetryProfile(string(telemetryRuleBytes), ConvertPermanentTelemetryProfiletoTelemetryProfile(*profile))
+	xlogupload.SetOneTelemetryProfile(tenantId, string(telemetryRuleBytes), ConvertPermanentTelemetryProfiletoTelemetryProfile(*profile))
 
 	response, err := util.JSONMarshal(telemetryRule)
 	if err != nil {
@@ -272,7 +281,9 @@ func BindToTelemetry(w http.ResponseWriter, r *http.Request) {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("expires must be a number"))
 		return
 	}
-	profile := xlogupload.GetOnePermanentTelemetryProfile(telemetryId) //*PermanentTelemetryProfile
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	profile := xlogupload.GetOnePermanentTelemetryProfile(tenantId, telemetryId) //*PermanentTelemetryProfile
 	if profile == nil {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("no rule found for ID "+telemetryId+" provided"))
 		return
@@ -280,7 +291,7 @@ func BindToTelemetry(w http.ResponseWriter, r *http.Request) {
 	timedRule := CreateRuleForAttribute(contextAttributeName, expectedValue)
 	profile.Expires = expiresInt64
 	telemetryRuleBytes, _ := json.Marshal(timedRule)
-	xlogupload.SetOneTelemetryProfile(string(telemetryRuleBytes), ConvertPermanentTelemetryProfiletoTelemetryProfile(*profile))
+	xlogupload.SetOneTelemetryProfile(tenantId, string(telemetryRuleBytes), ConvertPermanentTelemetryProfiletoTelemetryProfile(*profile))
 
 	response, err := util.JSONMarshal(timedRule)
 	if err != nil {
@@ -321,12 +332,15 @@ func TelemetryTestPageHandler(w http.ResponseWriter, r *http.Request) {
 
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
 
+	tenantId := xwhttp.GetTenantId(r, "")
+	contextMap[xwcommon.TENANT_ID] = tenantId
+
 	result := make(map[string]interface{})
 	result["context"] = contextMap
 
 	telemetryProfileService := telemetry.NewTelemetryProfileService()
 	matchedrule := telemetryProfileService.GetTelemetryRuleForContext(contextMap)
-	permanentTelemetryProfile := telemetryProfileService.GetPermanentProfileByTelemetryRule(matchedrule)
+	permanentTelemetryProfile := telemetryProfileService.GetPermanentProfileByTelemetryRule(tenantId, matchedrule)
 	if permanentTelemetryProfile != nil {
 		result["result"] = map[string]interface{}{permanentTelemetryProfile.Name: []*xwlogupload.TelemetryRule{matchedrule}}
 	} else {

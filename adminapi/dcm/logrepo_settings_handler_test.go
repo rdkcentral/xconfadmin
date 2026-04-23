@@ -26,6 +26,7 @@ import (
 
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"gotest.tools/assert"
@@ -709,7 +710,7 @@ func TestDeleteLogRepoSettingsByIdHandler_Success(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 
 	// Verify it's actually deleted
-	deleted := GetLogRepoSettings("delete-me")
+	deleted := GetLogRepoSettings(db.GetDefaultTenantId(), "delete-me")
 	assert.Assert(t, deleted == nil)
 }
 
@@ -846,7 +847,7 @@ func TestUpdateLogRepoSettingsHandler_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
 	// Verify the update
-	updated := GetLogRepoSettings("update-me")
+	updated := GetLogRepoSettings(db.GetDefaultTenantId(), "update-me")
 	assert.Equal(t, "Updated Name", updated.Name)
 	assert.Equal(t, "Updated", updated.Description)
 }

@@ -49,7 +49,8 @@ func GetFirmwareRuleTemplateFilteredHandler(w http.ResponseWriter, r *http.Reque
 	util.AddQueryParamsToContextMap(r, filterContext)
 
 	var err error
-	allTemplates, err := corefw.GetFirmwareRuleTemplateAllAsListDBForAS("")
+	tenantId := xwhttp.GetTenantId(r, "")
+	allTemplates, err := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -87,6 +88,7 @@ func PostFirmwareRuleTemplateFilteredHandler(w http.ResponseWriter, r *http.Requ
 		xhttp.AdminError(w, err)
 		return
 	}
+
 	// Build the pageContext from query params
 	pageContext := make(map[string]string)
 	util.AddQueryParamsToContextMap(r, pageContext)
@@ -108,7 +110,8 @@ func PostFirmwareRuleTemplateFilteredHandler(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	allTemplates, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS("")
+	tenantId := xwhttp.GetTenantId(r, "")
+	allTemplates, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 	sort.Slice(allTemplates, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(allTemplates[i].ID), strings.ToLower(allTemplates[j].ID)) < 0
 	})
@@ -193,14 +196,15 @@ func PostFirmwareRuleTemplateImportAllHandler(w http.ResponseWriter, r *http.Req
 
 	db.GetCacheManager().ForceSyncChanges()
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		if err := fwRuleTemplateTableLock.Lock(tenantId, owner); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			if err := fwRuleTemplateTableLock.Unlock(tenantId, owner); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -209,7 +213,7 @@ func PostFirmwareRuleTemplateImportAllHandler(w http.ResponseWriter, r *http.Req
 		defer fwRuleTemplateTableMutex.Unlock()
 	}
 
-	result := importOrUpdateAllFirmwareRTs(firmwareRTs, successTag, failedTag)
+	result := importOrUpdateAllFirmwareRTs(tenantId, firmwareRTs, successTag, failedTag)
 	response, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -256,14 +260,15 @@ func PostFirmwareRuleTemplateImportHandler(w http.ResponseWriter, r *http.Reques
 
 	db.GetCacheManager().ForceSyncChanges()
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		if err := fwRuleTemplateTableLock.Lock(tenantId, owner); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			if err := fwRuleTemplateTableLock.Unlock(tenantId, owner); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -277,13 +282,13 @@ func PostFirmwareRuleTemplateImportHandler(w http.ResponseWriter, r *http.Reques
 		if entity.ID == "" {
 			entity.ID = uuid.New().String()
 		}
-		entityOnDb, err := corefw.GetFirmwareRuleTemplateOneDB(entity.ID)
+		entityOnDb, err := corefw.GetFirmwareRuleTemplateOneDB(tenantId, entity.ID)
 		if wrapped.Overwrite {
 			if err != nil {
 				result[failedTag] = append(result[failedTag], "FirmwareRuleTemplate with id '"+entity.ID+"' does not exist")
 				continue
 			}
-			if err := updateFirmwareRT(entity, entityOnDb); err != nil {
+			if err := updateFirmwareRT(tenantId, entity, entityOnDb); err != nil {
 				result[failedTag] = append(result[failedTag], "failed to import FirmwareRuleTemplate with id ="+entity.ID+", Error = "+err.Error())
 			} else {
 				result[successTag] = append(result[successTag], entity.ID)
@@ -293,7 +298,7 @@ func PostFirmwareRuleTemplateImportHandler(w http.ResponseWriter, r *http.Reques
 				result[failedTag] = append(result[failedTag], "FirmwareRuleTemplate with id '"+entity.ID+"' already exists")
 				continue
 			}
-			if _, err := createFirmwareRT(entity); err != nil {
+			if _, err := createFirmwareRT(tenantId, entity); err != nil {
 				result[failedTag] = append(result[failedTag], "failed to import FirmwareRuleTemplate with id ="+entity.ID+", Error = "+err.Error())
 			} else {
 				result[successTag] = append(result[successTag], entity.ID)
@@ -325,7 +330,8 @@ func PostChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	frt, err := corefw.GetFirmwareRuleTemplateOneDB(templateId)
+	tenantId := xwhttp.GetTenantId(r, "")
+	frt, err := corefw.GetFirmwareRuleTemplateOneDB(tenantId, templateId)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("unable to find template with id  %s", templateId))
 		return
@@ -341,12 +347,12 @@ func PostChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		if err := fwRuleTemplateTableLock.Lock(tenantId, owner); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			if err := fwRuleTemplateTableLock.Unlock(tenantId, owner); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -356,7 +362,7 @@ func PostChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//TODO: basically this is the same action get all and filtered by action type
-	allTemplates, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS("")
+	allTemplates, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 	templatesOfCurrentType := firmwareRTFilterByActionType(allTemplates, string(frt.ApplicableAction.ActionType))
 	if len(templatesOfCurrentType) == 0 {
 		xhttp.WriteXconfResponse(w, http.StatusOK, nil)
@@ -365,7 +371,7 @@ func PostChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 	templatesOfCurrentTypeCopy := firmwareRuleTemplatesToPrioritizables(templatesOfCurrentType)
 	reorganizedTemplates := UpdatePrioritizablesPriorities(templatesOfCurrentTypeCopy, int(frt.Priority), newPriority)
 
-	if err = saveAllTemplates(reorganizedTemplates); err != nil {
+	if err = saveAllTemplates(tenantId, reorganizedTemplates); err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("unable to re-organize priorities: %s", err))
 		return
 	}
@@ -404,14 +410,15 @@ func PostFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		if err := fwRuleTemplateTableLock.Lock(tenantId, owner); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			if err := fwRuleTemplateTableLock.Unlock(tenantId, owner); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -420,17 +427,17 @@ func PostFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		defer fwRuleTemplateTableMutex.Unlock()
 	}
 
-	_, err := corefw.GetFirmwareRuleTemplateOneDB(firmwareRT.ID)
+	_, err := corefw.GetFirmwareRuleTemplateOneDB(tenantId, firmwareRT.ID)
 	if err == nil {
 		response := "firmwareRuleTemplate already exists for " + firmwareRT.ID
 		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, response)
 		return
 	}
-	if _, err = createFirmwareRT(firmwareRT); err != nil {
+	if _, err = createFirmwareRT(tenantId, firmwareRT); err != nil {
 		xhttp.AdminError(w, err)
 		return
 	}
-	result, _ := corefw.GetFirmwareRuleTemplateOneDB(firmwareRT.ID)
+	result, _ := corefw.GetFirmwareRuleTemplateOneDB(tenantId, firmwareRT.ID)
 	response, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -460,14 +467,15 @@ func PutFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		if err := fwRuleTemplateTableLock.Lock(tenantId, owner); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			if err := fwRuleTemplateTableLock.Unlock(tenantId, owner); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -476,9 +484,9 @@ func PutFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		defer fwRuleTemplateTableMutex.Unlock()
 	}
 
-	entityOnDb, err := corefw.GetFirmwareRuleTemplateOneDB(firmwareRT.ID)
+	entityOnDb, err := corefw.GetFirmwareRuleTemplateOneDB(tenantId, firmwareRT.ID)
 	if err == nil {
-		err = updateFirmwareRT(firmwareRT, entityOnDb)
+		err = updateFirmwareRT(tenantId, firmwareRT, entityOnDb)
 	} else {
 		response := "firmwareRuleTemplate does not exist for " + firmwareRT.ID
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, response)
@@ -504,8 +512,10 @@ func DeleteFirmwareRuleTemplateByIdHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
+
 	// Check for usage in FirmwareRule
-	rules, err := corefw.GetFirmwareRuleAllAsListDBForAdmin()
+	rules, err := corefw.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
 	if err != nil && err != common.NotFound {
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, "Unable to get Rules that use Config with id "+id)
 		return
@@ -526,12 +536,12 @@ func DeleteFirmwareRuleTemplateByIdHandler(w http.ResponseWriter, r *http.Reques
 
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		if err := fwRuleTemplateTableLock.Lock(tenantId, owner); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			if err := fwRuleTemplateTableLock.Unlock(tenantId, owner); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -540,9 +550,9 @@ func DeleteFirmwareRuleTemplateByIdHandler(w http.ResponseWriter, r *http.Reques
 		defer fwRuleTemplateTableMutex.Unlock()
 	}
 
-	templateToDelete, err := corefw.GetFirmwareRuleTemplateOneDBWithId(id)
+	templateToDelete, err := corefw.GetFirmwareRuleTemplateOneDBWithId(tenantId, id)
 	if err == nil {
-		err = db.GetCachedSimpleDao().DeleteOne(db.TABLE_FIRMWARE_RULE_TEMPLATE, id)
+		err = db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_FIRMWARE_RULE_TEMPLATES, id)
 	}
 	if err != nil {
 		response := "firmwareRuletemplate does not exist for " + id
@@ -550,14 +560,14 @@ func DeleteFirmwareRuleTemplateByIdHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	allFrts, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS("")
+	allFrts, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 	actionContext := make(map[string]string)
 	actionType := string(templateToDelete.ApplicableAction.ActionType)
 	actionContext[cFirmwareRTApplicableActionType] = actionType
 	templatesByAction := filterFirmwareRTsByContext(allFrts, actionContext)[actionType]
 
 	templatesByActionCopy := firmwareRuleTemplatesToPrioritizables(templatesByAction)
-	err = saveAllTemplates(PackPriorities(templatesByActionCopy, templateToDelete))
+	err = saveAllTemplates(tenantId, PackPriorities(templatesByActionCopy, templateToDelete))
 	if err != nil {
 		response := "Failed to save firmwarerule templates after priority reorganization"
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, response)
@@ -601,7 +611,8 @@ func GetFirmwareRuleTemplateByIdHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	frt := GetFirmwareRuleTemplateById(id)
+	tenantId := xwhttp.GetTenantId(r, "")
+	frt := GetFirmwareRuleTemplateById(tenantId, id)
 	if frt == nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, fmt.Sprintf("unable to find FirmwareRuleTemplate with id : %v", id))
 		return
@@ -657,14 +668,15 @@ func PostFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Requ
 
 	db.GetCacheManager().ForceSyncChanges()
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		if err := fwRuleTemplateTableLock.Lock(tenantId, owner); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			if err := fwRuleTemplateTableLock.Unlock(tenantId, owner); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -675,7 +687,7 @@ func PostFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Requ
 
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
-		_, err := corefw.GetFirmwareRuleTemplateOneDB(entity.ID)
+		_, err := corefw.GetFirmwareRuleTemplateOneDB(tenantId, entity.ID)
 		if err == nil {
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_FAILURE,
@@ -683,7 +695,7 @@ func PostFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Requ
 			}
 			continue
 		}
-		if _, err = createFirmwareRT(entity); err != nil {
+		if _, err = createFirmwareRT(tenantId, entity); err != nil {
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_FAILURE,
 				Message: err.Error(),
@@ -732,14 +744,15 @@ func PutFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Reque
 
 	db.GetCacheManager().ForceSyncChanges()
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := fwRuleTemplateTableLock.Lock(owner); err != nil {
+		if err := fwRuleTemplateTableLock.Lock(tenantId, owner); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := fwRuleTemplateTableLock.Unlock(owner); err != nil {
+			if err := fwRuleTemplateTableLock.Unlock(tenantId, owner); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -750,7 +763,7 @@ func PutFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Reque
 
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
-		entityOnDb, err := corefw.GetFirmwareRuleTemplateOneDB(entity.ID)
+		entityOnDb, err := corefw.GetFirmwareRuleTemplateOneDB(tenantId, entity.ID)
 		if err != nil || entityOnDb == nil {
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_FAILURE,
@@ -758,7 +771,7 @@ func PutFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Reque
 			}
 			continue
 		}
-		if err := updateFirmwareRT(entity, entityOnDb); err != nil {
+		if err := updateFirmwareRT(tenantId, entity, entityOnDb); err != nil {
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_FAILURE,
 				Message: err.Error(),
@@ -782,7 +795,8 @@ func ObsoleteGetFirmwareRuleTemplatePageHandler(w http.ResponseWriter, r *http.R
 	pageContext := map[string]string{}
 	util.AddQueryParamsToContextMap(r, pageContext)
 
-	dbrules, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS("")
+	tenantId := xwhttp.GetTenantId(r, "")
+	dbrules, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 	sort.Slice(dbrules, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(dbrules[i].ID), strings.ToLower(dbrules[j].ID)) < 0
 	})
@@ -807,7 +821,8 @@ func GetFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	dbrules, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS("")
+	tenantId := xwhttp.GetTenantId(r, "")
+	dbrules, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 	sort.Slice(dbrules, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(dbrules[i].ID), strings.ToLower(dbrules[j].ID)) < 0
 	})
@@ -839,7 +854,9 @@ func GetFirmwareRuleTemplateAllByTypeHandler(w http.ResponseWriter, r *http.Requ
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("Unable to decipher %s", xcommon.TYPE))
 		return
 	}
-	dbrules, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS("")
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	dbrules, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 	tempIds := []corefw.FirmwareRuleTemplate{}
 	for _, v := range dbrules {
 		if string(v.ApplicableAction.ActionType) == applicableActionType {
@@ -866,7 +883,8 @@ func GetFirmwareRuleTemplateIdsHandler(w http.ResponseWriter, r *http.Request) {
 	applicableActionTypes, ok := queryParams[xcommon.TYPE]
 	if ok {
 		applicableActionType := applicableActionTypes[0]
-		dbrules, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS("")
+		tenantId := xwhttp.GetTenantId(r, "")
+		dbrules, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 		tempIds := []string{}
 		for _, v := range dbrules {
 			if string(v.ApplicableAction.ActionType) == applicableActionType && v.Editable {
@@ -882,6 +900,7 @@ func GetFirmwareRuleTemplateIdsHandler(w http.ResponseWriter, r *http.Request) {
 		xwhttp.WriteXconfResponse(w, http.StatusOK, res)
 		return
 	}
+
 	// xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "type query param not found")
 	// Java returns NotFound and so are we, though BadRequest would have been better
 	xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, "type query param not found")
@@ -906,7 +925,8 @@ func GetFirmwareRuleTemplateWithVarWithVarHandler(w http.ResponseWriter, r *http
 	if editVar == "true" {
 		editable = true
 	}
-	dbrules, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS("")
+	tenantId := xwhttp.GetTenantId(r, "")
+	dbrules, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 	tempIds := []corefw.FirmwareRuleTemplate{}
 	for _, v := range dbrules {
 		if string(v.ApplicableAction.ActionType) == applicableActionType && editable == v.Editable {
@@ -931,9 +951,10 @@ func GetFirmwareRuleTemplateExportHandler(w http.ResponseWriter, r *http.Request
 	}
 	queryParams := r.URL.Query()
 	actionTypes, ok := queryParams[xcommon.TYPE]
+	tenantId := xwhttp.GetTenantId(r, "")
 	if ok {
 		actionType := actionTypes[0]
-		entities, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS("")
+		entities, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 		dbrules := []corefw.FirmwareRuleTemplate{}
 		for _, v := range entities {
 			if string(v.ApplicableAction.ActionType) == actionType {

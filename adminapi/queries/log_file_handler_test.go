@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/rdkcentral/xconfadmin/shared/logupload"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/stretchr/testify/assert"
 )
@@ -98,15 +98,15 @@ func TestCreateLogFile_UpdatePath(t *testing.T) {
 
 	// Seed a LogUploadSettings referencing this log file (LogFiles mode)
 	lus := &logupload.LogUploadSettings{ID: "LUS1", Name: "LUS1", ApplicationType: "stb", NumberOfDays: 1, AreSettingsActive: true, ModeToGetLogFiles: logupload.MODE_TO_GET_LOG_FILES_0}
-	_ = logupload.SetOneLogUploadSettings(lus.ID, lus)
+	_ = logupload.SetOneLogUploadSettings(db.GetDefaultTenantId(), lus.ID, lus)
 	// Ensure original file exists in log file list keyed by settings id
-	_ = logupload.SetLogFile(created.ID, &created)
-	_ = logupload.SetOneLogFile(lus.ID, &created)
+	_ = logupload.SetLogFile(db.GetDefaultTenantId(), created.ID, &created)
+	_ = logupload.SetOneLogFile(db.GetDefaultTenantId(), lus.ID, &created)
 
 	// Seed a LogFilesGroups entry and its list so second loop executes
 	grp := &logupload.LogFilesGroups{ID: "GROUP1", GroupName: "GROUP1"}
-	_ = SetOneInDao(ds.TABLE_LOG_FILES_GROUPS, grp.ID, grp)
-	_ = logupload.SetOneLogFile(grp.ID, &created)
+	_ = SetOneInDao(db.TABLE_LOG_FILE_GROUPS, grp.ID, grp)
+	_ = logupload.SetOneLogFile(db.GetDefaultTenantId(), grp.ID, &created)
 
 	// now update same ID (should enter update branch and iterate both lists)
 	created.DeleteOnUpload = true

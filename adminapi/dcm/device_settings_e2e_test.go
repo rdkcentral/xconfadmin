@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"testing"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"github.com/gorilla/mux"
@@ -35,7 +35,7 @@ func ImportDeviceSettingsTableData(data []string, tabletype logupload.DeviceSett
 	var err error
 	for _, row := range data {
 		err = json.Unmarshal([]byte(row), &tabletype)
-		err = setOneInDao(ds.TABLE_DEVICE_SETTINGS, tabletype.ID, &tabletype)
+		err = setOneInDao(db.TABLE_DEVICE_SETTINGS, tabletype.ID, &tabletype)
 
 	}
 	return err
@@ -286,12 +286,12 @@ func TestGetDeviceSettingsExportHandler_Success(t *testing.T) {
 	}
 
 	// Save test data directly to DB
-	err := setOneInDao(ds.TABLE_DCM_RULE, formula1.ID, formula1)
+	err := setOneInDao(db.TABLE_DCM_RULES, formula1.ID, formula1)
 	assert.NilError(t, err)
-	err = setOneInDao(ds.TABLE_DCM_RULE, formula2.ID, formula2)
+	err = setOneInDao(db.TABLE_DCM_RULES, formula2.ID, formula2)
 	assert.NilError(t, err)
-	CreateDeviceSettings(deviceSettings1, "stb")
-	CreateDeviceSettings(deviceSettings2, "stb")
+	CreateDeviceSettings(db.GetDefaultTenantId(), deviceSettings1, "stb")
+	CreateDeviceSettings(db.GetDefaultTenantId(), deviceSettings2, "stb")
 
 	// Make request
 	url := "/xconfAdminService/dcm/deviceSettings/export"
@@ -390,12 +390,12 @@ func TestGetDeviceSettingsExportHandler_FilterByApplicationType(t *testing.T) {
 	}
 
 	// Save test data
-	err := setOneInDao(ds.TABLE_DCM_RULE, formulaSTB.ID, formulaSTB)
+	err := setOneInDao(db.TABLE_DCM_RULES, formulaSTB.ID, formulaSTB)
 	assert.NilError(t, err)
-	err = setOneInDao(ds.TABLE_DCM_RULE, formulaXHome.ID, formulaXHome)
+	err = setOneInDao(db.TABLE_DCM_RULES, formulaXHome.ID, formulaXHome)
 	assert.NilError(t, err)
-	CreateDeviceSettings(deviceSettingsSTB, "stb")
-	CreateDeviceSettings(deviceSettingsXHome, "xhome")
+	CreateDeviceSettings(db.GetDefaultTenantId(), deviceSettingsSTB, "stb")
+	CreateDeviceSettings(db.GetDefaultTenantId(), deviceSettingsXHome, "xhome")
 
 	// Request with stb application type
 	url := "/xconfAdminService/dcm/deviceSettings/export"
@@ -435,7 +435,7 @@ func TestGetDeviceSettingsExportHandler_MissingDeviceSettings(t *testing.T) {
 		Name:            "Orphan Formula Export",
 		ApplicationType: "stb",
 	}
-	err := setOneInDao(ds.TABLE_DCM_RULE, formula.ID, formula)
+	err := setOneInDao(db.TABLE_DCM_RULES, formula.ID, formula)
 	assert.NilError(t, err)
 
 	// Make request
@@ -542,11 +542,11 @@ func TestGetDeviceSettingsExportHandler_MultipleFormulasWithSomeMatching(t *test
 		},
 	}
 
-	err := setOneInDao(ds.TABLE_DCM_RULE, formula1.ID, formula1)
+	err := setOneInDao(db.TABLE_DCM_RULES, formula1.ID, formula1)
 	assert.NilError(t, err)
-	err = setOneInDao(ds.TABLE_DCM_RULE, formula2.ID, formula2)
+	err = setOneInDao(db.TABLE_DCM_RULES, formula2.ID, formula2)
 	assert.NilError(t, err)
-	respEntity := CreateDeviceSettings(deviceSettings1, "stb")
+	respEntity := CreateDeviceSettings(db.GetDefaultTenantId(), deviceSettings1, "stb")
 	assert.Check(t, respEntity.Error == nil, "Failed to create device settings: %v", respEntity.Error)
 
 	// Make request
@@ -609,9 +609,9 @@ func TestGetDeviceSettingsExportHandler_JSONResponseFormat(t *testing.T) {
 		},
 	}
 
-	err := setOneInDao(ds.TABLE_DCM_RULE, formula.ID, formula)
+	err := setOneInDao(db.TABLE_DCM_RULES, formula.ID, formula)
 	assert.NilError(t, err)
-	CreateDeviceSettings(deviceSettings, "stb")
+	CreateDeviceSettings(db.GetDefaultTenantId(), deviceSettings, "stb")
 
 	// Make request
 	url := "/xconfAdminService/dcm/deviceSettings/export"
@@ -662,7 +662,7 @@ func TestGetDeviceSettingsByIdHandler_Success(t *testing.T) {
 			TimeWindowMinutes: json.Number("0"),
 		},
 	}
-	CreateDeviceSettings(deviceSettings, "stb")
+	CreateDeviceSettings(db.GetDefaultTenantId(), deviceSettings, "stb")
 
 	url := "/xconfAdminService/dcm/deviceSettings/test-get-by-id"
 	req, err := http.NewRequest("GET", url, nil)
@@ -736,7 +736,7 @@ func TestDeleteDeviceSettingsByIdHandler_Success(t *testing.T) {
 			TimeWindowMinutes: json.Number("0"),
 		},
 	}
-	CreateDeviceSettings(deviceSettings, "stb")
+	CreateDeviceSettings(db.GetDefaultTenantId(), deviceSettings, "stb")
 
 	url := "/xconfAdminService/dcm/deviceSettings/test-delete-success"
 	req, err := http.NewRequest("DELETE", url, nil)
@@ -808,7 +808,7 @@ func TestUpdateDeviceSettingsHandler_Success(t *testing.T) {
 			TimeWindowMinutes: json.Number("0"),
 		},
 	}
-	CreateDeviceSettings(deviceSettings, "stb")
+	CreateDeviceSettings(db.GetDefaultTenantId(), deviceSettings, "stb")
 
 	// Update it
 	updatedSettings := &logupload.DeviceSettings{
@@ -906,8 +906,8 @@ func TestPostDeviceSettingsFilteredWithParamsHandler_WithFilters(t *testing.T) {
 			TimeWindowMinutes: json.Number("0"),
 		},
 	}
-	CreateDeviceSettings(ds1, "stb")
-	CreateDeviceSettings(ds2, "stb")
+	CreateDeviceSettings(db.GetDefaultTenantId(), ds1, "stb")
+	CreateDeviceSettings(db.GetDefaultTenantId(), ds2, "stb")
 
 	url := "/xconfAdminService/dcm/deviceSettings/filtered?pageNumber=1&pageSize=10"
 	filterContext := map[string]interface{}{}
@@ -990,10 +990,10 @@ func TestGetDeviceSettingsExportHandler_MultipleApplicationTypes(t *testing.T) {
 		},
 	}
 
-	setOneInDao(ds.TABLE_DCM_RULE, formula1.ID, formula1)
-	setOneInDao(ds.TABLE_DCM_RULE, formula2.ID, formula2)
-	CreateDeviceSettings(ds1, "stb")
-	CreateDeviceSettings(ds2, "xhome")
+	setOneInDao(db.TABLE_DCM_RULES, formula1.ID, formula1)
+	setOneInDao(db.TABLE_DCM_RULES, formula2.ID, formula2)
+	CreateDeviceSettings(db.GetDefaultTenantId(), ds1, "stb")
+	CreateDeviceSettings(db.GetDefaultTenantId(), ds2, "xhome")
 
 	// Test STB export
 	url := "/xconfAdminService/dcm/deviceSettings/export"

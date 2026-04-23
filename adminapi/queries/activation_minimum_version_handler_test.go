@@ -25,7 +25,7 @@ import (
 	"strings"
 	"testing"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	"github.com/rdkcentral/xconfwebconfig/util"
@@ -126,7 +126,7 @@ func perCreateActivationVersion(modelId string, firmwareVersion string, regex st
 	// Instead of calling service (which uses ds.GetCachedSimpleDao),
 	// directly save to mock/DB using helper
 	fwRule := coreef.ConvertIntoRule(amv)
-	SetOneInDao(ds.TABLE_FIRMWARE_RULE, fwRule.ID, fwRule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, fwRule.ID, fwRule)
 
 	return amv
 }

@@ -87,49 +87,49 @@ func IsMockDatabaseEnabled() bool {
 // GetOneFromDao retrieves a single entity - works with both mock and real DAO
 func GetOneFromDao(tableName string, rowKey string) (interface{}, error) {
 	if useMockDatabase && mockDaoInstance != nil {
-		return mockDaoInstance.GetOne(tableName, rowKey)
+		return mockDaoInstance.GetOne(db.GetDefaultTenantId(), tableName, rowKey)
 	}
-	return db.GetCachedSimpleDao().GetOne(tableName, rowKey)
+	return db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), tableName, rowKey)
 }
 
 // SetOneInDao stores a single entity - works with both mock and real DAO
 func SetOneInDao(tableName string, rowKey string, entity interface{}) error {
 	if useMockDatabase && mockDaoInstance != nil {
-		return mockDaoInstance.SetOne(tableName, rowKey, entity)
+		return mockDaoInstance.SetOne(db.GetDefaultTenantId(), tableName, rowKey, entity)
 	}
-	return db.GetCachedSimpleDao().SetOne(tableName, rowKey, entity)
+	return db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), tableName, rowKey, entity)
 }
 
 // DeleteOneFromDao removes a single entity - works with both mock and real DAO
 func DeleteOneFromDao(tableName string, rowKey string) error {
 	if useMockDatabase && mockDaoInstance != nil {
-		return mockDaoInstance.DeleteOne(tableName, rowKey)
+		return mockDaoInstance.DeleteOne(db.GetDefaultTenantId(), tableName, rowKey)
 	}
-	return db.GetCachedSimpleDao().DeleteOne(tableName, rowKey)
+	return db.GetCachedSimpleDao().DeleteOne(db.GetDefaultTenantId(), tableName, rowKey)
 }
 
 // GetAllAsListFromDao retrieves all entities as a list - works with both mock and real DAO
 func GetAllAsListFromDao(tableName string, maxResults int) ([]interface{}, error) {
 	if useMockDatabase && mockDaoInstance != nil {
-		return mockDaoInstance.GetAllAsList(tableName, maxResults)
+		return mockDaoInstance.GetAllAsList(db.GetDefaultTenantId(), tableName, maxResults)
 	}
-	return db.GetCachedSimpleDao().GetAllAsList(tableName, maxResults)
+	return db.GetCachedSimpleDao().GetAllAsList(db.GetDefaultTenantId(), tableName, maxResults)
 }
 
 // GetAllAsMapFromDao retrieves all entities as a map - works with both mock and real DAO
 func GetAllAsMapFromDao(tableName string) (map[interface{}]interface{}, error) {
 	if useMockDatabase && mockDaoInstance != nil {
-		return mockDaoInstance.GetAllAsMap(tableName)
+		return mockDaoInstance.GetAllAsMap(db.GetDefaultTenantId(), tableName)
 	}
-	return db.GetCachedSimpleDao().GetAllAsMap(tableName)
+	return db.GetCachedSimpleDao().GetAllAsMap(db.GetDefaultTenantId(), tableName)
 }
 
 // RefreshAllInDao refreshes cache for a table - no-op for mock
 func RefreshAllInDao(tableName string) error {
 	if useMockDatabase && mockDaoInstance != nil {
-		return mockDaoInstance.RefreshAll(tableName)
+		return mockDaoInstance.RefreshAll(db.GetDefaultTenantId(), tableName)
 	}
-	return db.GetCachedSimpleDao().RefreshAll(tableName)
+	return db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), tableName)
 }
 
 // SkipIfMockDatabase marks integration tests to skip in mock mode

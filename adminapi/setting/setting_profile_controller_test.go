@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/stretchr/testify/assert"
@@ -653,7 +654,7 @@ func TestGetSettingProfileOneExport_Success(t *testing.T) {
 		ApplicationType:  "STB",
 		SettingType:      "EPON",
 	}
-	SetSettingProfile(profile.ID, profile)
+	SetSettingProfile(db.GetDefaultTenantId(), profile.ID, profile)
 
 	req := httptest.NewRequest(http.MethodGet, "/setting-profiles/export-test-profile-1", nil)
 	recorder := httptest.NewRecorder()
@@ -675,7 +676,7 @@ func TestGetSettingProfileOneExport_WithExportParam(t *testing.T) {
 		ApplicationType:  "STB",
 		SettingType:      "EPON",
 	}
-	SetSettingProfile(profile.ID, profile)
+	SetSettingProfile(db.GetDefaultTenantId(), profile.ID, profile)
 
 	req := httptest.NewRequest(http.MethodGet, "/setting-profiles/export-test-profile-2?export=true", nil)
 	recorder := httptest.NewRecorder()

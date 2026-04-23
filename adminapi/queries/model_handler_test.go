@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"gotest.tools/assert"
 )
@@ -75,11 +76,11 @@ func TestPostModelEntitiesHandler_Success(t *testing.T) {
 	assert.Equal(t, model2Result["status"], "SUCCESS")
 
 	// Verify models were created in DB
-	savedModel1 := shared.GetOneModel("MODEL1")
+	savedModel1 := shared.GetOneModel(db.GetDefaultTenantId(), "MODEL1")
 	assert.Check(t, savedModel1 != nil, "MODEL1 should be saved")
 	assert.Equal(t, savedModel1.Description, "Test Model 1")
 
-	savedModel2 := shared.GetOneModel("MODEL2")
+	savedModel2 := shared.GetOneModel(db.GetDefaultTenantId(), "MODEL2")
 	assert.Check(t, savedModel2 != nil, "MODEL2 should be saved")
 	assert.Equal(t, savedModel2.Description, "Test Model 2")
 }
@@ -112,7 +113,7 @@ func TestPostModelEntitiesHandler_DuplicateModel(t *testing.T) {
 		ID:          "DUPLICATE_MODEL",
 		Description: "First Model",
 	}
-	CreateModel(model1)
+	CreateModel(db.GetDefaultTenantId(), model1)
 
 	// Try to create same model again in batch
 	models := []shared.Model{
@@ -155,7 +156,7 @@ func TestPostModelEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 		ID:          "EXISTING_MODEL",
 		Description: "Existing",
 	}
-	CreateModel(existingModel)
+	CreateModel(db.GetDefaultTenantId(), existingModel)
 
 	// Try to create batch with one duplicate and one new
 	models := []shared.Model{
@@ -315,7 +316,7 @@ func TestObsoleteGetModelPageHandler_Success(t *testing.T) {
 			ID:          fmt.Sprintf("PAGE_MODEL_%d", i),
 			Description: fmt.Sprintf("Model %d", i),
 		}
-		CreateModel(model)
+		CreateModel(db.GetDefaultTenantId(), model)
 	}
 
 	url := "/xconfAdminService/model/page?pageNumber=1&pageSize=3"
@@ -388,7 +389,7 @@ func TestObsoleteGetModelPageHandler_Pagination(t *testing.T) {
 			ID:          fmt.Sprintf("PAGINATE_%02d", i),
 			Description: fmt.Sprintf("Model %d", i),
 		}
-		CreateModel(model)
+		CreateModel(db.GetDefaultTenantId(), model)
 	}
 
 	// Request page 2 with 3 items per page
@@ -444,8 +445,8 @@ func TestPostModelFilteredHandler_Success(t *testing.T) {
 		ID:          "FILTER_MODEL2",
 		Description: "Test Model 2",
 	}
-	CreateModel(model1)
-	CreateModel(model2)
+	CreateModel(db.GetDefaultTenantId(), model1)
+	CreateModel(db.GetDefaultTenantId(), model2)
 
 	filterContext := map[string]string{}
 	body, err := json.Marshal(filterContext)
@@ -478,7 +479,7 @@ func TestPostModelFilteredHandler_WithEmptyBody(t *testing.T) {
 		ID:          "EMPTY_FILTER_MODEL",
 		Description: "Test",
 	}
-	CreateModel(model)
+	CreateModel(db.GetDefaultTenantId(), model)
 
 	url := "/xconfAdminService/model/filtered?pageNumber=1&pageSize=10"
 	req, err := http.NewRequest("POST", url, nil)
@@ -540,7 +541,7 @@ func TestPostModelFilteredHandler_Pagination(t *testing.T) {
 			ID:          fmt.Sprintf("PAGINATED_MODEL_%d", i),
 			Description: fmt.Sprintf("Model %d", i),
 		}
-		CreateModel(model)
+		CreateModel(db.GetDefaultTenantId(), model)
 	}
 
 	filterContext := map[string]string{}
@@ -576,7 +577,7 @@ func TestGetModelByIdHandler_Success(t *testing.T) {
 		ID:          "GET_BY_ID_MODEL",
 		Description: "Test Model",
 	}
-	CreateModel(model)
+	CreateModel(db.GetDefaultTenantId(), model)
 
 	url := "/xconfAdminService/model/GET_BY_ID_MODEL"
 	req, err := http.NewRequest("GET", url, nil)
@@ -620,7 +621,7 @@ func TestGetModelByIdHandler_WithExport(t *testing.T) {
 		ID:          "EXPORT_MODEL",
 		Description: "Export Test",
 	}
-	CreateModel(model)
+	CreateModel(db.GetDefaultTenantId(), model)
 
 	url := "/xconfAdminService/model/EXPORT_MODEL?export"
 	req, err := http.NewRequest("GET", url, nil)
@@ -654,7 +655,7 @@ func TestGetModelByIdHandler_CaseInsensitive(t *testing.T) {
 		ID:          "lowercase_model",
 		Description: "Test",
 	}
-	CreateModel(model)
+	CreateModel(db.GetDefaultTenantId(), model)
 
 	// Request with uppercase
 	url := "/xconfAdminService/model/LOWERCASE_MODEL"
@@ -683,8 +684,8 @@ func TestGetModelHandler_Success(t *testing.T) {
 		ID:          "ALL_MODEL2",
 		Description: "Model 2",
 	}
-	CreateModel(model1)
-	CreateModel(model2)
+	CreateModel(db.GetDefaultTenantId(), model1)
+	CreateModel(db.GetDefaultTenantId(), model2)
 
 	url := "/xconfAdminService/model"
 	req, err := http.NewRequest("GET", url, nil)
@@ -734,7 +735,7 @@ func TestGetModelHandler_WithExport(t *testing.T) {
 		ID:          "EXPORT_ALL_MODEL",
 		Description: "Export Test",
 	}
-	CreateModel(model)
+	CreateModel(db.GetDefaultTenantId(), model)
 
 	url := "/xconfAdminService/model?export"
 	req, err := http.NewRequest("GET", url, nil)
@@ -768,9 +769,9 @@ func TestGetModelHandler_SortedAlphabetically(t *testing.T) {
 		ID:          "M_MODEL",
 		Description: "M",
 	}
-	CreateModel(modelZ)
-	CreateModel(modelA)
-	CreateModel(modelM)
+	CreateModel(db.GetDefaultTenantId(), modelZ)
+	CreateModel(db.GetDefaultTenantId(), modelA)
+	CreateModel(db.GetDefaultTenantId(), modelM)
 
 	url := "/xconfAdminService/model"
 	req, err := http.NewRequest("GET", url, nil)
@@ -874,7 +875,7 @@ func TestPostModelFilteredHandler_FilterContextError(t *testing.T) {
 		ID:          "FILTER_ERROR_MODEL",
 		Description: "Test",
 	}
-	CreateModel(model)
+	CreateModel(db.GetDefaultTenantId(), model)
 
 	// Use invalid filter context (malformed JSON)
 	invalidBody := []byte(`{"key": "value"`)
@@ -1001,7 +1002,7 @@ func TestObsoleteGetModelPageHandler_PageOutOfBounds(t *testing.T) {
 			ID:          fmt.Sprintf("OOB_MODEL_%d", i),
 			Description: fmt.Sprintf("Model %d", i),
 		}
-		CreateModel(model)
+		CreateModel(db.GetDefaultTenantId(), model)
 	}
 
 	// Request page 10 which doesn't exist
@@ -1032,7 +1033,7 @@ func TestPostModelFilteredHandler_LargePageSize(t *testing.T) {
 			ID:          fmt.Sprintf("LARGE_PAGE_%d", i),
 			Description: fmt.Sprintf("Model %d", i),
 		}
-		CreateModel(model)
+		CreateModel(db.GetDefaultTenantId(), model)
 	}
 
 	filterContext := map[string]string{}

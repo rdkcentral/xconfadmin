@@ -33,7 +33,7 @@ import (
 
 	"github.com/google/uuid"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
@@ -78,7 +78,7 @@ func newFirmwareConfigApiUnitTest(t *testing.T) *apiUnitTest {
 }
 func SavePercentageBeanPB(percentageBean *coreef.PercentageBean) error {
 	firmwareRule := coreef.ConvertPercentageBeanToFirmwareRule(*percentageBean)
-	return SetOneInDao(ds.TABLE_FIRMWARE_RULE, firmwareRule.ID, firmwareRule)
+	return SetOneInDao(db.TABLE_FIRMWARE_RULES, firmwareRule.ID, firmwareRule)
 }
 func PreCreatePercentageBean() (*coreef.PercentageBean, error) {
 
@@ -103,7 +103,7 @@ func TestValidateUsageBeforeRemoving(t *testing.T) {
 	//DeleteAllEntities()
 	percentageBean, err := PreCreatePercentageBean()
 	assert.NilError(t, err)
-	firmwareConfig, _ := coreef.GetFirmwareConfigOneDB(percentageBean.LastKnownGood)
+	firmwareConfig, _ := coreef.GetFirmwareConfigOneDB(db.GetDefaultTenantId(), percentageBean.LastKnownGood)
 
 	url := fmt.Sprintf("/xconfAdminService/delete/firmwares/%v?&applicationType=stb", percentageBean.LastKnownGood)
 

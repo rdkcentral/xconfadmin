@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
@@ -152,7 +153,7 @@ func TestAmvAllApi(t *testing.T) {
 	// with Model good case
 	newModel := shared.Model{}
 	newModel.ID = "00"
-	_, err1 := shared.SetOneModel(&newModel)
+	_, err1 := shared.SetOneModel(db.GetDefaultTenantId(), &newModel)
 	assert.NilError(t, err1)
 
 	req, err = http.NewRequest("POST", AMV_URL, bytes.NewBuffer(jsonAmvCreateData))
@@ -216,7 +217,7 @@ func TestAmvAllApi(t *testing.T) {
 	//importAll good case
 	impnewModel := shared.Model{}
 	impnewModel.ID = "12"
-	_, err2 := shared.SetOneModel(&impnewModel)
+	_, err2 := shared.SetOneModel(db.GetDefaultTenantId(), &impnewModel)
 	assert.NilError(t, err2)
 
 	urlimport := fmt.Sprintf("%s/%s", AMV_URL, "importAll")
@@ -329,7 +330,7 @@ func TestAmv_GetById_NotFound(t *testing.T) {
 func TestAmv_GetById_Export(t *testing.T) {
 	// prepare model and create an amv
 	newModel := shared.Model{ID: "EXPORT00"}
-	_, err1 := shared.SetOneModel(&newModel)
+	_, err1 := shared.SetOneModel(db.GetDefaultTenantId(), &newModel)
 	assert.NilError(t, err1)
 	amvID := uuid.New().String()
 	body := fmt.Sprintf(`{"id":"%s","applicationType":"stb","description":"descExp","regularExpressions":["re"],"model":"EXPORT00","firmwareVersions":[],"partnerId":"p"}`, amvID)
@@ -357,7 +358,7 @@ func TestAmv_GetById_Export(t *testing.T) {
 func TestAmv_GetAll_ExportAll(t *testing.T) {
 	// ensure at least one amv present per applicationType
 	newModel := shared.Model{ID: "EXPALL00"}
-	_, err1 := shared.SetOneModel(&newModel)
+	_, err1 := shared.SetOneModel(db.GetDefaultTenantId(), &newModel)
 	assert.NilError(t, err1)
 	amvID := uuid.New().String()
 	body := fmt.Sprintf(`{"id":"%s","applicationType":"stb","description":"descAll","regularExpressions":["re"],"model":"EXPALL00","firmwareVersions":[],"partnerId":"p"}`, amvID)
@@ -383,7 +384,7 @@ func TestAmv_GetAll_ExportAll(t *testing.T) {
 func TestAmv_Create_ApplicationTypeMismatch(t *testing.T) {
 	// model exists
 	newModel := shared.Model{ID: "MIS00"}
-	_, err1 := shared.SetOneModel(&newModel)
+	_, err1 := shared.SetOneModel(db.GetDefaultTenantId(), &newModel)
 	assert.NilError(t, err1)
 	// send different applicationType cookie than body to force conflict in CreateAmv
 	amvID := uuid.New().String()
@@ -447,7 +448,7 @@ func TestAmv_Filtered_Post_PaginationErrors(t *testing.T) {
 func TestAmv_BatchCreateAndUpdate(t *testing.T) {
 	// create model
 	newModel := shared.Model{ID: "BATCH00"}
-	_, err := shared.SetOneModel(&newModel)
+	_, err := shared.SetOneModel(db.GetDefaultTenantId(), &newModel)
 	assert.NilError(t, err)
 	id1 := uuid.New().String()
 	id2 := uuid.New().String()
@@ -475,7 +476,7 @@ func TestAmv_BatchCreateAndUpdate(t *testing.T) {
 
 func TestAmv_ImportAll_MixingApplicationTypes(t *testing.T) {
 	newModel := shared.Model{ID: "MIX00"}
-	_, err := shared.SetOneModel(&newModel)
+	_, err := shared.SetOneModel(db.GetDefaultTenantId(), &newModel)
 	assert.NilError(t, err)
 	amvID1 := uuid.New().String()
 	amvID2 := uuid.New().String()

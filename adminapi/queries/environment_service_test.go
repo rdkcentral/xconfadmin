@@ -20,6 +20,8 @@ package queries
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,7 +30,7 @@ import (
 func TestGetEnvironment_Found(t *testing.T) {
 	// Test basic function - actual DB call would require setup
 	// Testing that function returns properly typed result
-	result := GetEnvironment("test-id")
+	result := GetEnvironment(db.GetDefaultTenantId(), "test-id")
 	// Result can be nil if DB not configured
 	if result != nil {
 		assert.IsType(t, &shared.Environment{}, result)
@@ -36,19 +38,19 @@ func TestGetEnvironment_Found(t *testing.T) {
 }
 
 func TestGetEnvironment_EmptyID(t *testing.T) {
-	result := GetEnvironment("")
+	result := GetEnvironment(db.GetDefaultTenantId(), "")
 	// Should handle empty ID gracefully
 	assert.True(t, result == nil || result != nil)
 }
 
 // Test IsExistEnvironment
 func TestIsExistEnvironment_EmptyID(t *testing.T) {
-	result := IsExistEnvironment("")
+	result := IsExistEnvironment(db.GetDefaultTenantId(), "")
 	assert.False(t, result)
 }
 
 func TestIsExistEnvironment_NonEmptyID(t *testing.T) {
-	result := IsExistEnvironment("TEST_ENV")
+	result := IsExistEnvironment(db.GetDefaultTenantId(), "TEST_ENV")
 	// Result depends on DB state
 	assert.True(t, result == true || result == false)
 }
@@ -296,6 +298,7 @@ func TestEnvironmentRuleGeneratePageWithContext_CaseInsensitiveSorting(t *testin
 // Test EnvironmentFilterByContext
 func TestEnvironmentFilterByContext_EmptyContext(t *testing.T) {
 	searchContext := make(map[string]string)
+	searchContext[common.TENANT_ID] = db.GetDefaultTenantId()
 	result := EnvironmentFilterByContext(searchContext)
 	assert.NotNil(t, result)
 }
@@ -303,6 +306,7 @@ func TestEnvironmentFilterByContext_EmptyContext(t *testing.T) {
 func TestEnvironmentFilterByContext_EmptyContextReturnsEmptyList(t *testing.T) {
 	// When no environments exist
 	searchContext := make(map[string]string)
+	searchContext[common.TENANT_ID] = db.GetDefaultTenantId()
 	result := EnvironmentFilterByContext(searchContext)
 	assert.NotNil(t, result)
 	assert.IsType(t, []*shared.Environment{}, result)
@@ -313,6 +317,7 @@ func TestEnvironmentFilterByContext_WithIDFilter(t *testing.T) {
 	searchContext := map[string]string{
 		cEnvironmentID: "TEST",
 	}
+	searchContext[common.TENANT_ID] = db.GetDefaultTenantId()
 	result := EnvironmentFilterByContext(searchContext)
 	assert.NotNil(t, result)
 }
@@ -322,6 +327,7 @@ func TestEnvironmentFilterByContext_WithDescriptionFilter(t *testing.T) {
 	searchContext := map[string]string{
 		cEnvironmentDescription: "production",
 	}
+	searchContext[common.TENANT_ID] = db.GetDefaultTenantId()
 	result := EnvironmentFilterByContext(searchContext)
 	assert.NotNil(t, result)
 }
@@ -332,6 +338,7 @@ func TestEnvironmentFilterByContext_WithBothFilters(t *testing.T) {
 		cEnvironmentID:          "PROD",
 		cEnvironmentDescription: "production",
 	}
+	searchContext[common.TENANT_ID] = db.GetDefaultTenantId()
 	result := EnvironmentFilterByContext(searchContext)
 	assert.NotNil(t, result)
 }
@@ -341,6 +348,7 @@ func TestEnvironmentFilterByContext_CaseInsensitive(t *testing.T) {
 	searchContext := map[string]string{
 		cEnvironmentID: "prod",
 	}
+	searchContext[common.TENANT_ID] = db.GetDefaultTenantId()
 	result := EnvironmentFilterByContext(searchContext)
 	assert.NotNil(t, result)
 }

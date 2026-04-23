@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"gotest.tools/assert"
 )
@@ -111,96 +112,96 @@ func TestToStringOnlyBaseProperties(t *testing.T) {
 }
 
 func TestGetDCMGenericRuleList(t *testing.T) {
-	rules := GetDCMGenericRuleList()
+	rules := GetDCMGenericRuleList(db.GetDefaultTenantId())
 	assert.Assert(t, rules != nil)
 }
 
 func TestGetOneDCMGenericRule(t *testing.T) {
-	rule := GetOneDCMGenericRule("test-id")
+	rule := GetOneDCMGenericRule(db.GetDefaultTenantId(), "test-id")
 	// Without DB, this will return nil
 	assert.Assert(t, rule == nil)
 }
 
 func TestEnvironmentAndModelFunctions(t *testing.T) {
 	// Test GetAllEnvironmentList
-	envs := GetAllEnvironmentList()
+	envs := GetAllEnvironmentList(db.GetDefaultTenantId())
 	assert.Assert(t, envs != nil)
 
 	// Test GetOneEnvironment
-	env := GetOneEnvironment("test-env")
+	env := GetOneEnvironment(db.GetDefaultTenantId(), "test-env")
 	assert.Assert(t, env == nil) // Without DB
 
 	// Test GetAllModelList
-	models := GetAllModelList()
+	models := GetAllModelList(db.GetDefaultTenantId())
 	assert.Assert(t, models != nil)
 
 	// Test GetOneModel
-	model := GetOneModel("test-model")
+	model := GetOneModel(db.GetDefaultTenantId(), "test-model")
 	assert.Assert(t, model == nil) // Without DB
 
 	// Test IsExistModel
-	exists := IsExistModel("test-model")
+	exists := IsExistModel(db.GetDefaultTenantId(), "test-model")
 	assert.Assert(t, !exists)
 
 	// Test with blank id
-	exists = IsExistModel("")
+	exists = IsExistModel(db.GetDefaultTenantId(), "")
 	assert.Assert(t, !exists)
 }
 
 func TestGetIntAppSetting(t *testing.T) {
 	// Test with default value
-	val := GetIntAppSetting("nonexistent")
+	val := GetIntAppSetting(db.GetDefaultTenantId(), "nonexistent")
 	assert.Equal(t, -1, val)
 
 	// Test with custom default
-	val = GetIntAppSetting("nonexistent", 42)
+	val = GetIntAppSetting(db.GetDefaultTenantId(), "nonexistent", 42)
 	assert.Equal(t, 42, val)
 }
 
 func TestGetFloat64AppSetting(t *testing.T) {
 	// Test with default value
-	val := GetFloat64AppSetting("nonexistent")
+	val := GetFloat64AppSetting(db.GetDefaultTenantId(), "nonexistent")
 	assert.Equal(t, -1.0, val)
 
 	// Test with custom default
-	val = GetFloat64AppSetting("nonexistent", 3.14)
+	val = GetFloat64AppSetting(db.GetDefaultTenantId(), "nonexistent", 3.14)
 	assert.Equal(t, 3.14, val)
 }
 
 func TestGetTimeAppSetting(t *testing.T) {
 	// Test with default value (will fail to find key)
-	val := GetTimeAppSetting("nonexistent")
+	val := GetTimeAppSetting(db.GetDefaultTenantId(), "nonexistent")
 	assert.Assert(t, val.IsZero())
 
 	// Test with custom default time
 	now := time.Now()
-	val = GetTimeAppSetting("nonexistent", now)
+	val = GetTimeAppSetting(db.GetDefaultTenantId(), "nonexistent", now)
 	assert.Equal(t, now, val)
 }
 
 func TestGetStringAppSetting(t *testing.T) {
 	// Test with default value
-	val := GetStringAppSetting("nonexistent")
+	val := GetStringAppSetting(db.GetDefaultTenantId(), "nonexistent")
 	assert.Equal(t, "", val)
 
 	// Test with custom default
-	val = GetStringAppSetting("nonexistent", "default")
+	val = GetStringAppSetting(db.GetDefaultTenantId(), "nonexistent", "default")
 	assert.Equal(t, "default", val)
 }
 
 func TestGetBooleanAppSetting(t *testing.T) {
 	// Test with default value
-	val := GetBooleanAppSetting("nonexistent")
+	val := GetBooleanAppSetting(db.GetDefaultTenantId(), "nonexistent")
 	assert.Equal(t, false, val)
 
 	// Test with custom default
-	val = GetBooleanAppSetting("nonexistent", true)
+	val = GetBooleanAppSetting(db.GetDefaultTenantId(), "nonexistent", true)
 	assert.Equal(t, true, val)
 }
 
 func TestGetAppSettings(t *testing.T) {
 	// This function calls DB, so without DB it will return an error
-	settings, _ := GetAppSettings()
+	settings, _ := GetAppSettings(db.GetDefaultTenantId())
 	// Without DB, we expect error but should still return empty map
 	assert.Assert(t, settings != nil)
 }

@@ -30,8 +30,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func GetAllFeatureEntity() []*xwrfc.FeatureEntity {
-	featureEntityList := xrfc.GetFeatureEntityList()
+func GetAllFeatureEntity(tenantId string) []*xwrfc.FeatureEntity {
+	featureEntityList := xrfc.GetFeatureEntityList(tenantId)
 	if featureEntityList == nil {
 		featureEntityList = make([]*xwrfc.FeatureEntity, 0)
 	}
@@ -46,16 +46,12 @@ func GetFeatureEntityFiltered(searchContext map[string]string) []*xwrfc.FeatureE
 	return featureEntityList
 }
 
-func GetFeatureEntityById(id string) *xwrfc.FeatureEntity {
-	feature := xwrfc.GetOneFeature(id)
+func GetFeatureEntityById(tenantId string, id string) *xwrfc.FeatureEntity {
+	feature := xwrfc.GetOneFeature(tenantId, id)
 	return feature.CreateFeatureEntity()
 }
 
-func DeleteFeatureById(id string) {
-	xrfc.DeleteOneFeature(id)
-}
-
-func ImportOrUpdateAllFeatureEntity(featureEntityList []*xwrfc.FeatureEntity, applicationType string) map[string][]string {
+func ImportOrUpdateAllFeatureEntity(tenantId string, featureEntityList []*xwrfc.FeatureEntity, applicationType string) map[string][]string {
 	importedList := []string{}
 	notImportedList := []string{}
 	for _, featureEntity := range featureEntityList {
@@ -64,18 +60,18 @@ func ImportOrUpdateAllFeatureEntity(featureEntityList []*xwrfc.FeatureEntity, ap
 		var isValid bool
 		var doesExist bool
 		var errMsg string
-		isValid, errMsg = xrfc.IsValidFeatureEntity(featureEntity)
+		isValid, errMsg = xrfc.IsValidFeatureEntity(tenantId, featureEntity)
 		if isValid {
-			doesExist = xrfc.DoesFeatureNameExistForAnotherEntityId(featureEntity)
+			doesExist = xrfc.DoesFeatureNameExistForAnotherEntityId(tenantId, featureEntity)
 			if doesExist {
 				errMsg = fmt.Sprintf("Feature with such featureInstance already exists: %s", featureEntity.FeatureName)
 			} else {
-				if xrfc.DoesFeatureExist(featureEntity.ID) {
+				if xrfc.DoesFeatureExist(tenantId, featureEntity.ID) {
 					// update feature
-					_, err = PutFeatureEntity(featureEntity, applicationType)
+					_, err = PutFeatureEntity(tenantId, featureEntity, applicationType)
 				} else {
 					// create feature
-					featureEntity, err = PostFeatureEntity(featureEntity, applicationType)
+					featureEntity, err = PostFeatureEntity(tenantId, featureEntity, applicationType)
 				}
 			}
 			if err != nil {
@@ -96,7 +92,7 @@ func ImportOrUpdateAllFeatureEntity(featureEntityList []*xwrfc.FeatureEntity, ap
 	}
 }
 
-func PostFeatureEntity(featureEntity *xwrfc.FeatureEntity, applicationType string) (*xwrfc.FeatureEntity, error) {
+func PostFeatureEntity(tenantId string, featureEntity *xwrfc.FeatureEntity, applicationType string) (*xwrfc.FeatureEntity, error) {
 	feature := featureEntity.CreateFeature()
 	if feature.ID == "" {
 		feature.ID = uuid.New().String()
@@ -104,12 +100,12 @@ func PostFeatureEntity(featureEntity *xwrfc.FeatureEntity, applicationType strin
 	if applicationType != featureEntity.ApplicationType {
 		return nil, errors.New("AplicationType cannot be different: : " + applicationType + " New: " + featureEntity.ApplicationType)
 	}
-	feature, err := xrfc.SetOneFeature(feature)
+	feature, err := xrfc.SetOneFeature(tenantId, feature)
 	return feature.CreateFeatureEntity(), err
 }
 
-func PutFeatureEntity(featureEntity *xwrfc.FeatureEntity, applicationType string) (*xwrfc.FeatureEntity, error) {
-	featureOnDb := xwrfc.GetOneFeature(featureEntity.ID)
+func PutFeatureEntity(tenantId string, featureEntity *xwrfc.FeatureEntity, applicationType string) (*xwrfc.FeatureEntity, error) {
+	featureOnDb := xwrfc.GetOneFeature(tenantId, featureEntity.ID)
 	if featureOnDb.ApplicationType != featureEntity.ApplicationType {
 		return nil, errors.New("AplicationType cannot be different: Old: " + featureOnDb.ApplicationType + " New: " + featureEntity.ApplicationType)
 	}
@@ -117,6 +113,6 @@ func PutFeatureEntity(featureEntity *xwrfc.FeatureEntity, applicationType string
 		return nil, errors.New("AplicationType cannot be different: : " + applicationType + " New: " + featureEntity.ApplicationType)
 	}
 	feature := featureEntity.CreateFeature()
-	feature, err := xrfc.SetOneFeature(feature)
+	feature, err := xrfc.SetOneFeature(tenantId, feature)
 	return feature.CreateFeatureEntity(), err
 }

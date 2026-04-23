@@ -27,7 +27,7 @@ import (
 
 	admin_corefw "github.com/rdkcentral/xconfadmin/shared/firmware"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
@@ -113,14 +113,14 @@ func createAndSaveMacList() *shared.GenericNamespacedList {
 	macList := shared.NewMacList()
 	macList.ID = "TEST_MAC_LIST"
 	macList.Data = []string{"AA:AA:AA:AA:AA:AA", "BB:BB:BB:BB:BB:BB"}
-	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, macList.ID, macList)
+	SetOneInDao(db.TABLE_GENERIC_NS_LIST, macList.ID, macList)
 	return macList
 }
 
 func createAndSaveMacRuleTemplate(macListId string) *corefw.FirmwareRuleTemplate {
 	macRule := estbfirmware.NewMacRule(macListId)
 	mrt := admin_corefw.NewFirmwareRuleTemplate(corefw.MAC_RULE, macRule, []string{}, 1)
-	SetOneInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE, mrt.ID, mrt)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, mrt.ID, mrt)
 	return mrt
 }
 

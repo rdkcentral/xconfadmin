@@ -230,8 +230,10 @@ func HasWritePermissionForTool(r *http.Request) bool {
 // CanWrite returns the applicationType the user has write permission for non-common entityType,
 // otherwise returns error if applicationType is not specified in query parameter or cookie
 func CanWrite(r *http.Request, entityType string, vargs ...string) (applicationType string, err error) {
-	if isLockdownMode() {
-		lockdownModules := strings.Split(common.GetStringAppSetting(common.PROP_LOCKDOWN_MODULES), ",")
+	tenantId := xwhttp.GetTenantId(r, "")
+
+	if isLockdownMode(tenantId) {
+		lockdownModules := strings.Split(common.GetStringAppSetting(tenantId, common.PROP_LOCKDOWN_MODULES), ",")
 		if len(lockdownModules) != 0 {
 			if util.CaseInsensitiveContains(lockdownModules, getCurrentModule(r, entityType)) || strings.ToUpper(lockdownModules[0]) == common.DefaultLockdownModules {
 				return "", xwcommon.NewRemoteErrorAS(http.StatusLocked, "Modification not allowed in Lockdown mode")
@@ -403,10 +405,10 @@ func ValidateWrite(r *http.Request, entityApplicationType string, entityType str
 	return nil
 }
 
-func isLockdownMode() bool {
-	if owcommon.GetBooleanAppSetting(owcommon.PROP_LOCKDOWN_ENABLED, false) {
-		startTime := owcommon.GetStringAppSetting(owcommon.PROP_LOCKDOWN_STARTTIME)
-		endTime := owcommon.GetStringAppSetting(owcommon.PROP_LOCKDOWN_ENDTIME)
+func isLockdownMode(tenantId string) bool {
+	if owcommon.GetBooleanAppSetting(tenantId, owcommon.PROP_LOCKDOWN_ENABLED, false) {
+		startTime := owcommon.GetStringAppSetting(tenantId, owcommon.PROP_LOCKDOWN_STARTTIME)
+		endTime := owcommon.GetStringAppSetting(tenantId, owcommon.PROP_LOCKDOWN_ENDTIME)
 
 		timezone, err := time.LoadLocation(owcommon.DefaultLockdownTimezone)
 		if err != nil {
@@ -488,6 +490,6 @@ func ExtractBodyAndCheckPermissions(obj owcommon.ApplicationTypeAware, w http.Re
 	return applicationType, nil
 }
 
-func isReadonlyMode() bool {
-	return owcommon.GetBooleanAppSetting(owcommon.READONLY_MODE, false)
+func isReadonlyMode(tenantId string) bool {
+	return owcommon.GetBooleanAppSetting(tenantId, owcommon.READONLY_MODE, false)
 }

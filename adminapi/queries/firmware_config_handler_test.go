@@ -40,7 +40,7 @@ func setupTestModels() {
 		{ID: "TEST-MODEL-3", Description: "Test Model 3"},
 	}
 	for _, model := range models {
-		SetOneInDao(db.TABLE_MODEL, model.ID, &model)
+		SetOneInDao(db.TABLE_MODELS, model.ID, &model)
 	}
 }
 
@@ -102,7 +102,7 @@ func TestPostFirmwareConfigEntitiesHandler_DuplicateEntity(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 
 	// Try to create duplicate
 	entities := []estbfirmware.FirmwareConfig{*fc}
@@ -138,7 +138,7 @@ func TestPostFirmwareConfigEntitiesHandler_DuplicateDescription(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc1.ID, fc1)
 
 	// Try to create entity with same description
 	entities := []estbfirmware.FirmwareConfig{
@@ -246,8 +246,8 @@ func TestPutFirmwareConfigEntitiesHandler_Success(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-2"}, FirmwareFilename: "test2.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc2.ID, fc2)
 
 	// Update entities
 	updatedEntities := []estbfirmware.FirmwareConfig{
@@ -333,7 +333,7 @@ func TestPutFirmwareConfigEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc1.ID, fc1)
 
 	// Update one existing and one non-existent
 	entities := []estbfirmware.FirmwareConfig{
@@ -387,7 +387,7 @@ func TestObsoleteGetFirmwareConfigPageHandler(t *testing.T) {
 			ApplicationType:   "stb",
 			SupportedModelIds: []string{"MODEL" + string(rune('0'+i))},
 		}
-		SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+		SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 	}
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig/page?pageNumber=1&pageSize=3", nil)
@@ -443,8 +443,8 @@ func TestPostFirmwareConfigBySupportedModelsHandler_Success(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"MODELC"},
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc2.ID, fc2)
 
 	modelIds := []string{"MODELA", "MODELC"}
 	body, _ := json.Marshal(modelIds)
@@ -499,7 +499,7 @@ func TestGetFirmwareConfigFirmwareConfigMapHandler_Success(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig/firmwareConfigMap", nil)
 	assert.NilError(t, err)
@@ -538,8 +538,8 @@ func TestPostFirmwareConfigGetSortedFirmwareVersionsIfExistOrNotHandler_Success(
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc2.ID, fc2)
 
 	fcData := FirmwareConfigData{
 		Versions: []string{"1.0.0", "2.0.0", "3.0.0"},
@@ -580,8 +580,8 @@ func TestPostFirmwareConfigFilteredHandler_Success(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-2"}, FirmwareFilename: "test2.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc2.ID, fc2)
 
 	filterContext := map[string]string{}
 	body, _ := json.Marshal(filterContext)
@@ -636,7 +636,7 @@ func TestGetFirmwareConfigByIdHandler_Success(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig/fc-byid-test", nil)
 	assert.NilError(t, err)
@@ -681,7 +681,7 @@ func TestGetFirmwareConfigByIdHandler_WithExport(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig/fc-export-test?export", nil)
 	assert.NilError(t, err)
@@ -712,7 +712,7 @@ func TestGetFirmwareConfigByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 		ApplicationType:   "xhome",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig/fc-app-conflict", nil)
 	assert.NilError(t, err)
@@ -746,8 +746,8 @@ func TestGetFirmwareConfigHandler_Success(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-2"}, FirmwareFilename: "test2.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc2.ID, fc2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig", nil)
 	assert.NilError(t, err)
@@ -774,7 +774,7 @@ func TestGetFirmwareConfigHandler_WithExport(t *testing.T) {
 		ApplicationType:   "stb",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig?export", nil)
 	assert.NilError(t, err)
@@ -869,7 +869,7 @@ func TestPutFirmwareConfigHandler_Success(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 
 	// Update config
 	fc.Description = "Updated Description"
@@ -937,7 +937,7 @@ func TestGetSupportedConfigsByEnvModelRuleName_Success(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig/bySupportedModels/TEST_RULE", nil)
 	assert.NilError(t, err)
@@ -984,7 +984,7 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_Success(t *testing
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/byEnvModelRuleName/TEST_RULE", nil)
 	assert.NilError(t, err)
@@ -1070,7 +1070,7 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ApplicationTypeMis
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/byEnvModelRuleName/fc-rule-mismatch", nil)
 	assert.NilError(t, err)
@@ -1142,8 +1142,8 @@ func TestGetSupportedConfigsByEnvModelRuleName_MultipleConfigs(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-2"},
 		FirmwareFilename:  "test2.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc2.ID, fc2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/supportedConfigsByEnvModelRuleName/TEST_RULE", nil)
 	assert.NilError(t, err)
@@ -1180,8 +1180,8 @@ func TestObsoleteGetFirmwareConfigPageHandler_WithFilters(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-2"},
 		FirmwareFilename:  "test2.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc2.ID, fc2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/page?pageNumber=1&pageSize=10&description=Filter", nil)
 	assert.NilError(t, err)
@@ -1228,7 +1228,7 @@ func TestObsoleteGetFirmwareConfigPageHandler_LargePage(t *testing.T) {
 			SupportedModelIds: []string{"MODEL" + string(rune('0'+i))},
 			FirmwareFilename:  "test.bin",
 		}
-		SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+		SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 	}
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/page?pageNumber=1&pageSize=100", nil)
@@ -1285,7 +1285,7 @@ func TestPutFirmwareConfigHandler_ApplicationTypeMismatch(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 
 	// Try to update with different app type in cookie
 	body, _ := json.Marshal(fc)
@@ -1367,7 +1367,7 @@ func TestPostFirmwareConfigHandler_DuplicateDescription(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc1.ID, fc1)
 
 	// Try to create another with same description
 	fc2 := &estbfirmware.FirmwareConfig{
@@ -1421,9 +1421,9 @@ func TestObsoleteGetFirmwareConfigPageHandler_SortingOrder(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-3"},
 		FirmwareFilename:  "test3.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc3.ID, fc3)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc3.ID, fc3)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/page?pageNumber=1&pageSize=10", nil)
 	assert.NilError(t, err)
@@ -1469,7 +1469,7 @@ func TestPutFirmwareConfigHandler_InvalidFirmwareVersion(t *testing.T) {
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 
 	// Try to update with empty version
 	fc.FirmwareVersion = ""
@@ -1553,7 +1553,7 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ValidRuleWithMatch
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/byEnvModelRuleName/fc-valid-rule-match", nil)
 	assert.NilError(t, err)
@@ -1606,8 +1606,8 @@ func TestObsoleteGetFirmwareConfigPageHandler_WithContextFiltering(t *testing.T)
 		SupportedModelIds: []string{"TEST-MODEL-2"},
 		FirmwareFilename:  "test2.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc1.ID, fc1)
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc2.ID, fc2)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc1.ID, fc1)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc2.ID, fc2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/page?pageNumber=1&pageSize=10&firmwareVersion=1.0.0", nil)
 	assert.NilError(t, err)

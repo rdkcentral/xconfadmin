@@ -25,6 +25,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"gotest.tools/assert"
@@ -80,7 +81,7 @@ func TestGetLogUploadSettingsByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 			TimeZone:   "UTC",
 		},
 	}
-	CreateLogUploadSettings(settings, "xhome")
+	CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "xhome")
 
 	// Try to access with "stb" application type
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/"+formula.ID, nil)
@@ -113,7 +114,7 @@ func TestGetLogUploadSettingsByIdHandler_Success(t *testing.T) {
 			TimeZone:   "UTC",
 		},
 	}
-	CreateLogUploadSettings(settings, "stb")
+	CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "stb")
 
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/"+formula.ID, nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
@@ -169,7 +170,7 @@ func TestGetLogUploadSettingsHandler_FilterByApplicationType(t *testing.T) {
 			TimeZone:   "UTC",
 		},
 	}
-	CreateLogUploadSettings(settingsStb, "stb")
+	CreateLogUploadSettings(db.GetDefaultTenantId(), settingsStb, "stb")
 
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
@@ -229,7 +230,7 @@ func TestGetLogUploadSettingsSizeHandler_NonZeroCount(t *testing.T) {
 				TimeZone:   "UTC",
 			},
 		}
-		CreateLogUploadSettings(settings, "stb")
+		CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "stb")
 	}
 
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/size", nil)
@@ -287,7 +288,7 @@ func TestGetLogUploadSettingsNamesHandler_WithNames(t *testing.T) {
 				TimeZone:   "UTC",
 			},
 		}
-		CreateLogUploadSettings(settings, "stb")
+		CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "stb")
 	}
 
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/names", nil)
@@ -352,7 +353,7 @@ func TestDeleteLogUploadSettingsByIdHandler_Success(t *testing.T) {
 			TimeZone:   "UTC",
 		},
 	}
-	CreateLogUploadSettings(settings, "stb")
+	CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "stb")
 
 	req := httptest.NewRequest("DELETE", "/xconfAdminService/dcm/logUploadSettings/"+formula.ID, nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
@@ -362,7 +363,7 @@ func TestDeleteLogUploadSettingsByIdHandler_Success(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 
 	// Verify it's actually deleted
-	deleted := logupload.GetOneLogUploadSettings(formula.ID)
+	deleted := logupload.GetOneLogUploadSettings(db.GetDefaultTenantId(), formula.ID)
 	assert.Assert(t, deleted == nil)
 }
 
@@ -420,7 +421,7 @@ func TestCreateLogUploadSettingsHandler_DuplicateID(t *testing.T) {
 			TimeZone:   "UTC",
 		},
 	}
-	CreateLogUploadSettings(settings, "stb")
+	CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "stb")
 
 	// Try to create another with same ID
 	body, _ := json.Marshal(settings)
@@ -530,7 +531,7 @@ func TestUpdateLogUploadSettingsHandler_Success(t *testing.T) {
 			TimeZone:   "UTC",
 		},
 	}
-	CreateLogUploadSettings(settings, "stb")
+	CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "stb")
 
 	// Update it
 	settings.Name = "Updated Name"
@@ -545,7 +546,7 @@ func TestUpdateLogUploadSettingsHandler_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
 	// Verify the update
-	updated := logupload.GetOneLogUploadSettings(formula.ID)
+	updated := logupload.GetOneLogUploadSettings(db.GetDefaultTenantId(), formula.ID)
 	assert.Equal(t, "Updated Name", updated.Name)
 }
 
@@ -606,7 +607,7 @@ func TestPostLogUploadSettingsFilteredWithParamsHandler_WithContext(t *testing.T
 			TimeZone:   "UTC",
 		},
 	}
-	CreateLogUploadSettings(settings, "stb")
+	CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "stb")
 
 	contextMap := map[string]string{}
 	body, _ := json.Marshal(contextMap)

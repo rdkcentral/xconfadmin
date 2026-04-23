@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
@@ -106,7 +107,7 @@ func TestGetSupportedVersionforModel_NoMatch(t *testing.T) {
 	app := "stb"
 
 	// This would require database mocking
-	result := GetSupportedVersionforModel(modelIds, firmwareVersions, app)
+	result := GetSupportedVersionforModel(db.GetDefaultTenantId(), modelIds, firmwareVersions, app)
 	assert.NotNil(t, result)
 }
 
@@ -115,13 +116,13 @@ func TestGetSupportedVersionforModel_EmptyInput(t *testing.T) {
 	firmwareVersions := []string{}
 	app := "stb"
 
-	result := GetSupportedVersionforModel(modelIds, firmwareVersions, app)
+	result := GetSupportedVersionforModel(db.GetDefaultTenantId(), modelIds, firmwareVersions, app)
 	assert.NotNil(t, result)
 	assert.Equal(t, 0, len(result))
 }
 
 func TestAmvValidate_NilAmv(t *testing.T) {
-	respEntity := amvValidate(nil)
+	respEntity := amvValidate(db.GetDefaultTenantId(), nil)
 
 	assert.NotNil(t, respEntity)
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
@@ -135,7 +136,7 @@ func TestAmvValidate_EmptyApplicationType(t *testing.T) {
 		Model:           "MODEL",
 	}
 
-	respEntity := amvValidate(amv)
+	respEntity := amvValidate(db.GetDefaultTenantId(), amv)
 
 	assert.NotNil(t, respEntity)
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
@@ -149,7 +150,7 @@ func TestAmvValidate_EmptyDescription(t *testing.T) {
 		Model:           "MODEL",
 	}
 
-	respEntity := amvValidate(amv)
+	respEntity := amvValidate(db.GetDefaultTenantId(), amv)
 
 	assert.NotNil(t, respEntity)
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
@@ -163,7 +164,7 @@ func TestAmvValidate_EmptyModel(t *testing.T) {
 		Model:           "",
 	}
 
-	respEntity := amvValidate(amv)
+	respEntity := amvValidate(db.GetDefaultTenantId(), amv)
 
 	assert.NotNil(t, respEntity)
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
@@ -177,7 +178,7 @@ func TestAmvValidate_InvalidModel(t *testing.T) {
 		Model:           "INVALID@MODEL",
 	}
 
-	respEntity := amvValidate(amv)
+	respEntity := amvValidate(db.GetDefaultTenantId(), amv)
 
 	assert.NotNil(t, respEntity)
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
@@ -643,7 +644,7 @@ func TestGetSupportedVersionforModel_MultipleModels(t *testing.T) {
 	firmwareVersions := []string{"1.0", "2.0", "3.0"}
 	app := "stb"
 
-	result := GetSupportedVersionforModel(modelIds, firmwareVersions, app)
+	result := GetSupportedVersionforModel(db.GetDefaultTenantId(), modelIds, firmwareVersions, app)
 	assert.NotNil(t, result)
 }
 
@@ -652,14 +653,14 @@ func TestGetSupportedVersionforModel_SingleModel(t *testing.T) {
 	firmwareVersions := []string{"1.0"}
 	app := "rdkcloud"
 
-	result := GetSupportedVersionforModel(modelIds, firmwareVersions, app)
+	result := GetSupportedVersionforModel(db.GetDefaultTenantId(), modelIds, firmwareVersions, app)
 	assert.NotNil(t, result)
 }
 
 func TestAmvValidate_AllFieldsEmpty(t *testing.T) {
 	amv := &firmware.ActivationVersion{}
 
-	respEntity := amvValidate(amv)
+	respEntity := amvValidate(db.GetDefaultTenantId(), amv)
 
 	assert.NotNil(t, respEntity)
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
@@ -671,7 +672,7 @@ func TestAmvValidate_OnlyApplicationType(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := amvValidate(amv)
+	respEntity := amvValidate(db.GetDefaultTenantId(), amv)
 
 	assert.NotNil(t, respEntity)
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
@@ -683,7 +684,7 @@ func TestAmvValidate_OnlyDescription(t *testing.T) {
 		Description:     "Test",
 	}
 
-	respEntity := amvValidate(amv)
+	respEntity := amvValidate(db.GetDefaultTenantId(), amv)
 
 	assert.NotNil(t, respEntity)
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
@@ -698,7 +699,7 @@ func TestAmvValidate_EmptyVersionsAndRegex(t *testing.T) {
 		FirmwareVersions:   []string{},
 	}
 
-	respEntity := amvValidate(amv)
+	respEntity := amvValidate(db.GetDefaultTenantId(), amv)
 
 	assert.NotNil(t, respEntity)
 	// Should fail because both regex and firmware versions are empty
@@ -960,25 +961,25 @@ func TestAmvFilterByContext_EmptyStrings(t *testing.T) {
 func TestGetAllAmvList_CallsDatabase(t *testing.T) {
 	// This test verifies the function can be called
 	// In a real scenario, we would mock the database
-	result := GetAllAmvList()
+	result := GetAllAmvList(db.GetDefaultTenantId())
 	assert.NotNil(t, result)
 }
 
 func TestGetAmvALL_CallsDatabase(t *testing.T) {
 	// This test verifies the function can be called
-	result := GetAmvALL()
+	result := GetAmvALL(db.GetDefaultTenantId())
 	assert.NotNil(t, result)
 }
 
 func TestGetAmv_ValidId(t *testing.T) {
 	// This test verifies the function can be called with an ID
-	result := GetAmv("test-id")
+	result := GetAmv(db.GetDefaultTenantId(), "test-id")
 	// May be nil if not found in database
 	_ = result
 }
 
 func TestGetAmv_EmptyId(t *testing.T) {
-	result := GetAmv("")
+	result := GetAmv(db.GetDefaultTenantId(), "")
 	// Should handle empty ID gracefully
 	_ = result
 }
@@ -988,7 +989,7 @@ func TestGetSupportedVersionforModel_DuplicateVersions(t *testing.T) {
 	firmwareVersions := []string{"1.0", "1.0", "2.0"}
 	app := "stb"
 
-	result := GetSupportedVersionforModel(modelIds, firmwareVersions, app)
+	result := GetSupportedVersionforModel(db.GetDefaultTenantId(), modelIds, firmwareVersions, app)
 	assert.NotNil(t, result)
 }
 
@@ -1065,7 +1066,7 @@ func TestGetSupportedVersionforModel_MatchingVersions(t *testing.T) {
 	firmwareVersions := []string{"1.0", "2.0"}
 	app := "stb"
 
-	result := GetSupportedVersionforModel(modelIds, firmwareVersions, app)
+	result := GetSupportedVersionforModel(db.GetDefaultTenantId(), modelIds, firmwareVersions, app)
 	// Result depends on what's in the database
 	assert.NotNil(t, result)
 }
@@ -1165,25 +1166,25 @@ func TestAmvFilterByContext_RegexAliasDifferentCase(t *testing.T) {
 
 func TestGetAllAmvList_EmptyResult(t *testing.T) {
 	// Test when no AMV rules exist
-	result := GetAllAmvList()
+	result := GetAllAmvList(db.GetDefaultTenantId())
 	assert.NotNil(t, result)
 	// Result will be empty array if no AMVs in DB
 }
 
 func TestGetAmvALL_EmptyResult(t *testing.T) {
 	// Test when no AMV rules exist
-	result := GetAmvALL()
+	result := GetAmvALL(db.GetDefaultTenantId())
 	assert.NotNil(t, result)
 }
 
 func TestGetAmv_NonExistent(t *testing.T) {
-	result := GetAmv("nonexistent-id-xyz-123")
+	result := GetAmv(db.GetDefaultTenantId(), "nonexistent-id-xyz-123")
 	// Should return nil for non-existent ID
 	_ = result
 }
 
 func TestGetOneAmv_NonExistent(t *testing.T) {
-	result := GetOneAmv("nonexistent-id-xyz-123")
+	result := GetOneAmv(db.GetDefaultTenantId(), "nonexistent-id-xyz-123")
 	// Should return nil for non-existent ID
 	_ = result
 }
@@ -1198,7 +1199,7 @@ func TestAmvValidate_WithPartnerId(t *testing.T) {
 		FirmwareVersions:   []string{},
 	}
 
-	respEntity := amvValidate(amv)
+	respEntity := amvValidate(db.GetDefaultTenantId(), amv)
 	// Should trim and uppercase partner ID
 	assert.NotNil(t, respEntity)
 }
@@ -1213,7 +1214,7 @@ func TestAmvValidate_WithLowercasePartnerId(t *testing.T) {
 		FirmwareVersions:   []string{},
 	}
 
-	respEntity := amvValidate(amv)
+	respEntity := amvValidate(db.GetDefaultTenantId(), amv)
 	assert.NotNil(t, respEntity)
 }
 
@@ -1226,7 +1227,7 @@ func TestAmvValidate_OnlyRegex(t *testing.T) {
 		FirmwareVersions:   []string{},
 	}
 
-	respEntity := amvValidate(amv)
+	respEntity := amvValidate(db.GetDefaultTenantId(), amv)
 	assert.NotNil(t, respEntity)
 	// Should be valid with only regex
 }
@@ -1240,7 +1241,7 @@ func TestAmvValidate_OnlyFirmwareVersions(t *testing.T) {
 		FirmwareVersions:   []string{"1.0"},
 	}
 
-	respEntity := amvValidate(amv)
+	respEntity := amvValidate(db.GetDefaultTenantId(), amv)
 	assert.NotNil(t, respEntity)
 }
 
@@ -1250,7 +1251,7 @@ func TestGetSupportedVersionforModel_DuplicateKeys(t *testing.T) {
 	firmwareVersions := []string{"1.0"}
 	app := "stb"
 
-	result := GetSupportedVersionforModel(modelIds, firmwareVersions, app)
+	result := GetSupportedVersionforModel(db.GetDefaultTenantId(), modelIds, firmwareVersions, app)
 	assert.NotNil(t, result)
 }
 

@@ -27,14 +27,15 @@ import (
 	"github.com/rdkcentral/xconfadmin/shared"
 	xlogupload "github.com/rdkcentral/xconfadmin/shared/logupload"
 
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
-func CreateTelemetryProfile(contextAttribute string, expectedValue string, telemetry *xwlogupload.TelemetryProfile) *xwlogupload.TimestampedRule {
+func CreateTelemetryProfile(tenantId string, contextAttribute string, expectedValue string, telemetry *xwlogupload.TelemetryProfile) *xwlogupload.TimestampedRule {
 	telemetryRule := CreateRuleForAttribute(contextAttribute, expectedValue)
 	telemetryRuleBytes, _ := json.Marshal(telemetryRule)
-	xlogupload.SetOneTelemetryProfile(string(telemetryRuleBytes), telemetry)
+	xlogupload.SetOneTelemetryProfile(tenantId, string(telemetryRuleBytes), telemetry)
 	return telemetryRule
 }
 
@@ -56,26 +57,28 @@ func CreateRuleForAttribute(contextAttribute string, expectedValue string) *xwlo
 	return timestampedRule
 }
 
-func DropTelemetryFor(contextAttribute string, expectedValue string) []*xwlogupload.TelemetryProfile {
+func DropTelemetryFor(tenantId string, contextAttribute string, expectedValue string) []*xwlogupload.TelemetryProfile {
 	context := map[string]string{
-		contextAttribute: expectedValue,
+		contextAttribute:   expectedValue,
+		xwcommon.TENANT_ID: tenantId,
 	}
 	matchedRules := getMatchedRules(context)
 	telemetryProfileList := []*xwlogupload.TelemetryProfile{}
 	for _, timestampedRule := range matchedRules {
 		timestampedRuleBytes, _ := json.Marshal(timestampedRule)
-		telemetryProfile := xwlogupload.GetOneTelemetryProfile(string(timestampedRuleBytes))
+		telemetryProfile := xwlogupload.GetOneTelemetryProfile(tenantId, string(timestampedRuleBytes))
 		if telemetryProfile != nil {
 			telemetryProfileList = append(telemetryProfileList, telemetryProfile)
 			log.Debug(fmt.Sprintf("removing temporary rule: : %v", telemetryProfile))
-			xwlogupload.DeleteTelemetryProfile(string(timestampedRuleBytes))
+			xwlogupload.DeleteTelemetryProfile(tenantId, string(timestampedRuleBytes))
 		}
 	}
 	return telemetryProfileList
 }
 
 func getMatchedRules(context map[string]string) []*xwlogupload.TimestampedRule {
-	timestampedRuleList := xlogupload.GetTimestampedRulesPointer()
+	tenantId := context[xwcommon.TENANT_ID]
+	timestampedRuleList := xlogupload.GetTimestampedRulesPointer(tenantId)
 	matched := []*xwlogupload.TimestampedRule{}
 	ruleProcessor := rulesengine.NewRuleProcessor()
 	for _, timestampedRule := range timestampedRuleList {
@@ -86,9 +89,9 @@ func getMatchedRules(context map[string]string) []*xwlogupload.TimestampedRule {
 	return matched
 }
 
-func GetAvailableDescriptors(applicationType string) []*xwlogupload.PermanentTelemetryRuleDescriptor {
+func GetAvailableDescriptors(tenantId string, applicationType string) []*xwlogupload.PermanentTelemetryRuleDescriptor {
 	descriptors := []*xwlogupload.PermanentTelemetryRuleDescriptor{}
-	telemetryRuleList := xwlogupload.GetTelemetryRuleListForAs() //[]*TelemetryRule
+	telemetryRuleList := xwlogupload.GetTelemetryRuleListForAs(tenantId) //[]*TelemetryRule
 	for _, telemetryRule := range telemetryRuleList {
 		if telemetryRule != nil && shared.ApplicationTypeEquals(telemetryRule.ApplicationType, applicationType) {
 			ruleDescriptor := xwlogupload.NewPermanentTelemetryRuleDescriptor()
@@ -100,9 +103,9 @@ func GetAvailableDescriptors(applicationType string) []*xwlogupload.PermanentTel
 	return descriptors
 }
 
-func GetAvailableProfileDescriptors(applicationType string) []*xwlogupload.TelemetryProfileDescriptor {
+func GetAvailableProfileDescriptors(tenantId string, applicationType string) []*xwlogupload.TelemetryProfileDescriptor {
 	descriptors := []*xwlogupload.TelemetryProfileDescriptor{}
-	permanentTelemetryProfileList := xwlogupload.GetPermanentTelemetryProfileList() //[]*PermanentTelemetryProfile
+	permanentTelemetryProfileList := xwlogupload.GetPermanentTelemetryProfileList(tenantId) //[]*PermanentTelemetryProfile
 	for _, telemetry := range permanentTelemetryProfileList {
 		if telemetry != nil && shared.ApplicationTypeEquals(telemetry.ApplicationType, applicationType) {
 			profileDescriptor := xwlogupload.NewTelemetryProfileDescriptor()

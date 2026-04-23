@@ -26,6 +26,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/stretchr/testify/assert"
@@ -50,7 +51,7 @@ func TestDeleteIpAddressGroupHandler_Success(t *testing.T) {
 	id := uuid.NewString()
 	// Create an IP address group first
 	ipList := makeGenericList(id, shared.IP_LIST, []string{"192.168.1.1"})
-	CreateNamespacedList(ipList, false)
+	CreateNamespacedList(db.GetDefaultTenantId(), ipList, false)
 
 	url := fmt.Sprintf("/xconfAdminService/queries/ipAddressGroups/%s?applicationType=stb", id)
 	req := httptest.NewRequest("DELETE", url, nil)
@@ -111,7 +112,7 @@ func TestGetQueriesMacListsById_Success(t *testing.T) {
 	// Test successful retrieval
 	id := uuid.NewString()
 	macList := makeGenericList(id, shared.MAC_LIST, []string{"AA:BB:CC:DD:EE:FF"})
-	CreateNamespacedList(macList, false)
+	CreateNamespacedList(db.GetDefaultTenantId(), macList, false)
 
 	url := fmt.Sprintf("/xconfAdminService/queries/macs/%s?applicationType=stb", id)
 	req := httptest.NewRequest("GET", url, nil)
@@ -155,7 +156,7 @@ func TestAddDataMacListHandler_Success(t *testing.T) {
 
 	// First create via handler
 	createList := makeGenericList(listId, shared.MAC_LIST, []string{"AA:BB:CC:DD:EE:00"})
-	createResp := CreateNamespacedList(createList, false)
+	createResp := CreateNamespacedList(db.GetDefaultTenantId(), createList, false)
 	assert.Equal(t, http.StatusCreated, createResp.Status)
 
 	wrapper := shared.StringListWrapper{
@@ -205,7 +206,7 @@ func TestRemoveDataMacListHandler_Success(t *testing.T) {
 
 	// First create via handler with 2 MACs
 	createList := makeGenericList(listId, shared.MAC_LIST, []string{"AA:BB:CC:DD:EE:FF", "11:22:33:44:55:66"})
-	createResp := CreateNamespacedList(createList, false)
+	createResp := CreateNamespacedList(db.GetDefaultTenantId(), createList, false)
 	if createResp.Status != http.StatusCreated {
 		t.Logf("Create failed: %d - %v", createResp.Status, createResp.Error)
 		t.Skip("Cannot test remove when create fails")
@@ -255,7 +256,7 @@ func TestGetNamespacedListHandler_Success(t *testing.T) {
 	// Test successful retrieval
 	id := uuid.NewString()
 	nsList := makeGenericList(id, shared.IP_LIST, []string{"192.168.1.1"})
-	CreateNamespacedList(nsList, false)
+	CreateNamespacedList(db.GetDefaultTenantId(), nsList, false)
 
 	url := fmt.Sprintf("/xconfAdminService/queries/namespacedLists/%s?applicationType=stb", id)
 	req := httptest.NewRequest("GET", url, nil)
@@ -296,7 +297,7 @@ func TestGetNamespacedListHandler_ExportWithHeaders(t *testing.T) {
 	// Test WriteXconfResponseWithHeaders for export
 	id := uuid.NewString()
 	nsList := makeGenericList(id, shared.IP_LIST, []string{"192.168.1.1"})
-	CreateNamespacedList(nsList, false)
+	CreateNamespacedList(db.GetDefaultTenantId(), nsList, false)
 
 	url := fmt.Sprintf("/xconfAdminService/queries/namespacedLists/%s?applicationType=stb&export=true", id)
 	req := httptest.NewRequest("GET", url, nil)
@@ -386,7 +387,7 @@ func TestAddDataMacListHandler_ValidationError(t *testing.T) {
 
 	// Create a valid list first
 	createList := makeGenericList(listId, shared.MAC_LIST, []string{"AA:BB:CC:DD:EE:00"})
-	createResp := CreateNamespacedList(createList, false)
+	createResp := CreateNamespacedList(db.GetDefaultTenantId(), createList, false)
 	if createResp.Status != http.StatusCreated {
 		t.Skip("Cannot test validation when create fails")
 	}
@@ -412,7 +413,7 @@ func TestRemoveDataMacListHandler_NotInList(t *testing.T) {
 
 	// Create a list with one MAC
 	createList := makeGenericList(listId, shared.MAC_LIST, []string{"AA:BB:CC:DD:EE:00"})
-	createResp := CreateNamespacedList(createList, false)
+	createResp := CreateNamespacedList(db.GetDefaultTenantId(), createList, false)
 	if createResp.Status != http.StatusCreated {
 		t.Skip("Cannot test remove when create fails")
 	}

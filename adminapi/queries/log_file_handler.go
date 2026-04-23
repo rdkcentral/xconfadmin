@@ -58,24 +58,27 @@ func CreateLogFile(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Log file is empty")
 		return
 	}
-	if !isValidName(logFile) {
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	if !isValidName(tenantId, logFile) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Name is already used")
 		return
 	}
+
 	if logFile.ID == "" {
 		logFile.ID = uuid.New().String()
-		err := logupload.SetLogFile(logFile.ID, &logFile)
+		err := logupload.SetLogFile(tenantId, logFile.ID, &logFile)
 		if err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 	} else {
-		err := logupload.SetLogFile(logFile.ID, &logFile)
+		err := logupload.SetLogFile(tenantId, logFile.ID, &logFile)
 		if err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		err = updateLogUploadSettingsAndLogFileGroups(&logFile)
+		err = updateLogUploadSettingsAndLogFileGroups(tenantId, &logFile)
 		if err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
@@ -88,19 +91,19 @@ func CreateLogFile(w http.ResponseWriter, r *http.Request) {
 	xhttp.WriteXconfResponse(w, http.StatusCreated, response)
 }
 
-func isValidName(logFile logupload.LogFile) bool {
+func isValidName(tenantId string, logFile logupload.LogFile) bool {
 	if logFile.Name == "" {
 		return false
 	}
-	lf := getLogFileByName(strings.Trim(logFile.Name, " "))
+	lf := getLogFileByName(tenantId, strings.Trim(logFile.Name, " "))
 	if lf != nil && lf.ID != logFile.ID {
 		return false
 	}
 	return true
 }
 
-func getLogFileByName(name string) *logupload.LogFile {
-	logFileList := logupload.GetLogFileList(0) //logFileList is a list of LogFiles
+func getLogFileByName(tenantId string, name string) *logupload.LogFile {
+	logFileList := logupload.GetLogFileList(tenantId, 0) //logFileList is a list of LogFiles
 	for _, logFile := range logFileList {
 		if logFile.Name == name {
 			return logFile
@@ -109,35 +112,35 @@ func getLogFileByName(name string) *logupload.LogFile {
 	return nil
 }
 
-func updateLogUploadSettingsAndLogFileGroups(logFile *logupload.LogFile) error {
-	listLogUploadSettings, err := logupload.GetAllLogUploadSettings(math.MaxInt32 / 100)
+func updateLogUploadSettingsAndLogFileGroups(tenantId string, logFile *logupload.LogFile) error {
+	listLogUploadSettings, err := logupload.GetAllLogUploadSettings(tenantId, math.MaxInt32/100)
 	if err != nil {
 		return err
 	}
 	for _, logUploadSettings := range listLogUploadSettings {
-		LogFileList, err := logupload.GetOneLogFileList(logUploadSettings.ID)
+		LogFileList, err := logupload.GetOneLogFileList(tenantId, logUploadSettings.ID)
 		if err != nil {
 			log.Warn(fmt.Sprintf("error getting LogFileList for logUploadSettings.Id: %s", logUploadSettings.ID))
 			continue
 		}
 		for _, logFileDB := range LogFileList.Data {
 			if logFileDB.ID == logFile.ID {
-				logupload.SetOneLogFile(logUploadSettings.ID, logFile)
+				logupload.SetOneLogFile(tenantId, logUploadSettings.ID, logFile)
 			}
 		}
 	}
-	listLogFilesGroups, err := logupload.GetLogFileGroupsList(math.MaxInt32 / 100)
+	listLogFilesGroups, err := logupload.GetLogFileGroupsList(tenantId, math.MaxInt32/100)
 	if err != nil {
 		return err
 	}
 	for _, logFilesGroup := range listLogFilesGroups {
-		LogFileList, err := logupload.GetOneLogFileList(logFilesGroup.ID)
+		LogFileList, err := logupload.GetOneLogFileList(tenantId, logFilesGroup.ID)
 		if err != nil {
 			log.Warn(fmt.Sprintf("error getting LogFileList for logUploadSettings.Id: %s", logFilesGroup.ID))
 		}
 		for _, logFileDB := range LogFileList.Data {
 			if logFileDB.ID == logFile.ID {
-				logupload.SetOneLogFile(logFilesGroup.ID, logFile)
+				logupload.SetOneLogFile(tenantId, logFilesGroup.ID, logFile)
 			}
 		}
 	}

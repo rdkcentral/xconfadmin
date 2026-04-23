@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
@@ -49,7 +50,7 @@ func TestGetMacAddresses(t *testing.T) {
 	macSingle := "AA:BB:CC:DD:EE:FF"
 	// Persist list
 	namedList := shared.NewGenericNamespacedList(listId, shared.MacList, []string{macA, macB})
-	_ = SetOneInDao(shared.TableGenericNSList, namedList.ID, namedList)
+	_ = SetOneInDao(db.TABLE_GENERIC_NS_LIST, namedList.ID, namedList)
 
 	// Build firmware rule JSON with two compound parts: one IN_LIST (listId) and one IS (macSingle)
 	ruleJSON := `{
@@ -77,7 +78,7 @@ func TestGetMacAddresses(t *testing.T) {
 	fr := &corefw.FirmwareRule{}
 	_ = json.Unmarshal([]byte(ruleJSON), fr)
 
-	macs := getMacAddresses([]interface{}{fr})
+	macs := getMacAddresses(db.GetDefaultTenantId(), []interface{}{fr})
 	assert.Len(t, macs, 3)
 }
 

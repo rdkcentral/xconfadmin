@@ -48,7 +48,8 @@ func PutCanarySettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respEntity := SetCanarySetting(&canarySettings)
+	tenantId := xwhttp.GetTenantId(r, "")
+	respEntity := SetCanarySetting(tenantId, &canarySettings)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -62,7 +63,8 @@ func GetCanarySettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	canarySetting, err := GetCanarySettings()
+	tenantId := xwhttp.GetTenantId(r, "")
+	canarySetting, err := GetCanarySettings(tenantId)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

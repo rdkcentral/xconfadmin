@@ -21,12 +21,9 @@ import (
 	admin_change "github.com/rdkcentral/xconfadmin/shared/change"
 	admin_logupload "github.com/rdkcentral/xconfadmin/shared/logupload"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
-
-	// "github.com/rdkcentral/xconfadmin/taggingapi/tag" // No longer needed - tag refactored
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	"github.com/rdkcentral/xconfwebconfig/db"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	core_change "github.com/rdkcentral/xconfwebconfig/shared/change"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
@@ -399,20 +396,20 @@ func DeleteTelemetryEntities() {
 
 	// SLOW PATH: Only used for real database integration tests
 	telemetryTables := []string{
-		ds.TABLE_TELEMETRY,
-		ds.TABLE_TELEMETRY_RULES,
-		ds.TABLE_TELEMETRY_TWO_PROFILES,
-		ds.TABLE_TELEMETRY_TWO_RULES,
-		ds.TABLE_PERMANENT_TELEMETRY,
-		db.TABLE_XCONF_CHANGE,
-		db.TABLE_XCONF_APPROVED_CHANGE,
-		db.TABLE_XCONF_TELEMETRY_TWO_CHANGE,
-		db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE,
+		db.TABLE_TELEMETRY_PROFILES,
+		db.TABLE_TELEMETRY_RULES,
+		db.TABLE_TELEMETRY_TWO_PROFILES,
+		db.TABLE_TELEMETRY_TWO_RULES,
+		db.TABLE_PERMANENT_TELEMETRY_PROFILES,
+		db.TABLE_TELEMETRY_CHANGES,
+		db.TABLE_TELEMETRY_APPROVED_CHANGES,
+		db.TABLE_TELEMETRY_TWO_CHANGES,
+		db.TABLE_TELEMETRY_APPROVED_TWO_CHANGES,
 	}
 
 	for _, tableName := range telemetryTables {
 		truncateTable(tableName)
-		db.GetCachedSimpleDao().RefreshAll(tableName)
+		db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), tableName)
 	}
 }
 
@@ -420,7 +417,7 @@ func truncateTable(tableName string) error {
 	dbClient := db.GetDatabaseClient()
 	cassandraClient, ok := dbClient.(*db.CassandraClient)
 	if ok {
-		return cassandraClient.DeleteAllXconfData(tableName)
+		return cassandraClient.DeleteAllXconfData(db.GetDefaultTenantId(), tableName)
 	}
 	return nil
 }
@@ -429,7 +426,7 @@ func TestAddTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
-	SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
+	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	entry := &logupload.TelemetryElement{
 		ID:               uuid.New().String(),
@@ -456,7 +453,7 @@ func TestAddTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 	assert.Contains(t, change.NewEntity.TelemetryProfile, *entry, "updated profile should contain new telemetry entry")
 	assert.NotContains(t, change.OldEntity.TelemetryProfile, *entry, "old profile should not contain new telemetry entry")
 
-	p = logupload.GetOnePermanentTelemetryProfile(p.ID)
+	p = logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
 	assert.NotContains(t, p.TelemetryProfile, *entry, "profile in database should not contain new telemetry entry before approval")
 
 	url = fmt.Sprintf("/xconfAdminService/change/approve/%v?%v", change.ID, queryParams)
@@ -466,7 +463,7 @@ func TestAddTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
-	p = logupload.GetOnePermanentTelemetryProfile(p.ID)
+	p = logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Contains(t, p.TelemetryProfile, *entry, "profile in database should contain new telemetry entry after approval")
 }
 
@@ -483,7 +480,7 @@ func TestRemoveTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 		Component:        "",
 	}
 	p.TelemetryProfile = append(p.TelemetryProfile, *entry)
-	SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
+	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	entriesToRemove := []*logupload.TelemetryElement{entry}
 	entryByte, _ := json.Marshal(entriesToRemove)
@@ -502,7 +499,7 @@ func TestRemoveTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 	assert.NotContains(t, change.NewEntity.TelemetryProfile, *entry, "updated profile should not contain removed telemetry entry")
 	assert.Contains(t, change.OldEntity.TelemetryProfile, *entry, "old profile should contain telemetry entry to remove")
 
-	p = logupload.GetOnePermanentTelemetryProfile(p.ID)
+	p = logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Contains(t, p.TelemetryProfile, *entry, "profile in database should contain telemetry entry to remove before approval")
 
 	url = fmt.Sprintf("/xconfAdminService/change/approve/%v?%v", change.ID, queryParams)
@@ -512,7 +509,7 @@ func TestRemoveTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
-	p = logupload.GetOnePermanentTelemetryProfile(p.ID)
+	p = logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
 	assert.NotContains(t, p.TelemetryProfile, *entry, "profile in database should not contain removed telemetry entry after approval")
 }
 
@@ -535,7 +532,7 @@ func TestTelemetryProfileCreate(t *testing.T) {
 
 	assert.Equal(t, p, createdProfile)
 
-	dbProfile := logupload.GetOnePermanentTelemetryProfile(p.ID)
+	dbProfile := logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Equal(t, p, dbProfile, "profile to create should match created profile in database")
 }
 
@@ -559,7 +556,7 @@ func TestTelemetryProfileCreateChangeAndApproveIt(t *testing.T) {
 	assert.Empty(t, change.OldEntity, "old entity in create change should be nil")
 	assert.Equal(t, p, change.NewEntity, "new entity should match profile to create")
 
-	dbProfile := logupload.GetOnePermanentTelemetryProfile(p.ID)
+	dbProfile := logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Empty(t, dbProfile, "profile before approval should not be present in database")
 
 	url = fmt.Sprintf("/xconfAdminService/change/approve/%v?%v", change.ID, queryParams)
@@ -569,10 +566,10 @@ func TestTelemetryProfileCreateChangeAndApproveIt(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
-	dbProfile = logupload.GetOnePermanentTelemetryProfile(p.ID)
+	dbProfile = logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Equal(t, p, dbProfile, "profile to create should match created profile in database")
 
-	approvedChange := admin_change.GetOneApprovedChange(change.ID)
+	approvedChange := admin_change.GetOneApprovedChange(db.GetDefaultTenantId(), change.ID)
 	assert.NotEmpty(t, approvedChange, "approved telemetry profile change should be created")
 	assert.Empty(t, approvedChange.OldEntity, "old entity should not present")
 	assert.Equal(t, p, approvedChange.NewEntity, "old entity should not present")
@@ -582,7 +579,7 @@ func TestTelemetryProfileUpdate(t *testing.T) {
 	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
-	SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
+	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	entry := logupload.TelemetryElement{
 		ID:               uuid.New().String(),
@@ -608,12 +605,12 @@ func TestTelemetryProfileUpdate(t *testing.T) {
 
 	assert.Equal(t, profileToUpdate, updatedProfile)
 
-	dbProfile := logupload.GetOnePermanentTelemetryProfile(p.ID)
+	dbProfile := logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
 	assert.NotEqual(t, p, dbProfile, "profiles should not match")
 	assert.Equal(t, 2, len(dbProfile.TelemetryProfile), "profiles before and after update should not match")
 	assert.Contains(t, dbProfile.TelemetryProfile, entry, "profile should contain newly added telemetry entry")
 
-	assert.Equal(t, 0, len(admin_change.GetChangesByEntityId(p.ID)), "no changes should be created")
+	assert.Equal(t, 0, len(admin_change.GetChangesByEntityId(db.GetDefaultTenantId(), p.ID)), "no changes should be created")
 	// NOTE: Skipping approved changes check in mock mode - it uses a different DAO we can't mock
 	// assert.Equal(t, 0, len(admin_change.GetApprovedChangeList()), "no approved change should not be created")
 }
@@ -622,7 +619,7 @@ func TestTelemetryProfileUpdateChangeAndApproveIt(t *testing.T) {
 	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
-	SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
+	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	entry := logupload.TelemetryElement{
 		ID:               uuid.New().String(),
@@ -649,7 +646,7 @@ func TestTelemetryProfileUpdateChangeAndApproveIt(t *testing.T) {
 	assert.Equal(t, p, change.OldEntity, "old entity should be equal profile before update")
 	assert.Equal(t, profileToUpdate, change.NewEntity, "new entity should match profile to update")
 
-	dbProfile := logupload.GetOnePermanentTelemetryProfile(p.ID)
+	dbProfile := logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Equal(t, p, dbProfile, "profile before approval should be equal profile in database")
 
 	url = fmt.Sprintf("/xconfAdminService/change/approve/%v?%v", change.ID, queryParams)
@@ -659,10 +656,10 @@ func TestTelemetryProfileUpdateChangeAndApproveIt(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
-	dbProfile = logupload.GetOnePermanentTelemetryProfile(p.ID)
+	dbProfile = logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Equal(t, profileToUpdate, dbProfile, "profile to update should be equal updated profile in database")
 
-	approvedChange := admin_change.GetOneApprovedChange(change.ID)
+	approvedChange := admin_change.GetOneApprovedChange(db.GetDefaultTenantId(), change.ID)
 	assert.NotEmpty(t, approvedChange, "approved telemetry profile change should be created")
 	assert.Equal(t, change.ID, approvedChange.ID, "approved change id should be correct")
 	assert.Equal(t, p, approvedChange.OldEntity, "old entity should not be present")
@@ -673,7 +670,7 @@ func TestTelemetryProfileDelete(t *testing.T) {
 	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
-	SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
+	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
 		{"applicationType", "stb"},
@@ -684,11 +681,11 @@ func TestTelemetryProfileDelete(t *testing.T) {
 	rr := ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 
-	ds.GetCachedSimpleDao().RefreshAll(ds.TABLE_PERMANENT_TELEMETRY)
-	dbProfile := logupload.GetOnePermanentTelemetryProfile(p.ID)
+	db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), db.TABLE_PERMANENT_TELEMETRY_PROFILES)
+	dbProfile := logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Empty(t, dbProfile, "telemetry profile should be removed")
 
-	assert.Equal(t, 0, len(admin_change.GetChangesByEntityId(p.ID)), "no changes should be created")
+	assert.Equal(t, 0, len(admin_change.GetChangesByEntityId(db.GetDefaultTenantId(), p.ID)), "no changes should be created")
 	// NOTE: Skipping approved changes check in mock mode - it uses a different DAO we can't mock
 	// assert.Equal(t, 0, len(admin_change.GetApprovedChangeList()), "no approved change should not be created")
 }
@@ -697,7 +694,7 @@ func TestTelemetryProfileDeleteChangeAndApproveIt(t *testing.T) {
 	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
-	SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
+	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
 		{"applicationType", "stb"},
@@ -713,7 +710,7 @@ func TestTelemetryProfileDeleteChangeAndApproveIt(t *testing.T) {
 	assert.Equal(t, p, change.OldEntity, "old entity should be equal profile to delete")
 	assert.Empty(t, change.NewEntity, "new entity in create change should not exist")
 
-	dbProfile := logupload.GetOnePermanentTelemetryProfile(p.ID)
+	dbProfile := logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Equal(t, p, dbProfile, "profile before approval (removing) should be present in database")
 
 	url = fmt.Sprintf("/xconfAdminService/change/approve/%v?%v", change.ID, queryParams)
@@ -723,12 +720,12 @@ func TestTelemetryProfileDeleteChangeAndApproveIt(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
-	ds.GetCachedSimpleDao().RefreshAll(ds.TABLE_PERMANENT_TELEMETRY)
+	db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), db.TABLE_PERMANENT_TELEMETRY_PROFILES)
 
-	dbProfile = logupload.GetOnePermanentTelemetryProfile(p.ID)
+	dbProfile = logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Empty(t, dbProfile, "profile should be removed")
 
-	approvedChange := admin_change.GetOneApprovedChange(change.ID)
+	approvedChange := admin_change.GetOneApprovedChange(db.GetDefaultTenantId(), change.ID)
 	assert.NotEmpty(t, approvedChange, "approved telemetry profile change should be created")
 	assert.Empty(t, approvedChange.NewEntity, "old entity should not present")
 	assert.Equal(t, p, approvedChange.OldEntity, "old entity should be present")
@@ -761,7 +758,7 @@ func TestTelemetryProfileUpdateChangeThrowsExceptionInCaseIfDuplicatedChange(t *
 	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
-	SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
+	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	entry := logupload.TelemetryElement{
 		ID:               uuid.New().String(),
@@ -795,7 +792,7 @@ func TestTelemetryProfileDeleteChangeThrowsExceptionInCaseIfDuplicatedChange(t *
 	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
-	SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
+	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
 		{"applicationType", "stb"},
@@ -818,7 +815,7 @@ func TestUpdateTelemetyProfileThrowsAnExceptionInCaseOfDuplicatedTelemetryEntrie
 	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
-	SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
+	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	duplicatedEntry := logupload.TelemetryElement{
 		ID:               p.TelemetryProfile[0].ID,
@@ -857,7 +854,7 @@ func TestAddTelemetryThrowsAnExceptionInCaseOfDuplicate(t *testing.T) {
 	DeleteTelemetryEntities()
 
 	p := createTelemetryProfile()
-	SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, p.ID, p)
+	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	duplicatedEntry := logupload.TelemetryElement{
 		ID:               p.TelemetryProfile[0].ID,

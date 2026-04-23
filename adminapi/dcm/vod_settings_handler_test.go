@@ -92,7 +92,7 @@ func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
 		Description:     "Test Formula 1",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formula1.ID, formula1)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formula1.ID, formula1)
 
 	formula2 := &logupload.DCMGenericRule{
 		ID:              "formula-2",
@@ -100,7 +100,7 @@ func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
 		Description:     "Test Formula 2",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formula2.ID, formula2)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formula2.ID, formula2)
 
 	// Create corresponding VOD settings
 	vod1 := &logupload.VodSettings{
@@ -109,7 +109,7 @@ func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
 		LocationsURL:    "http://vod1.com",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vod1.ID, vod1)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_VOD_SETTINGS, vod1.ID, vod1)
 
 	vod2 := &logupload.VodSettings{
 		ID:              formula2.ID,
@@ -117,7 +117,7 @@ func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
 		LocationsURL:    "http://vod2.com",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vod2.ID, vod2)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_VOD_SETTINGS, vod2.ID, vod2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
@@ -146,14 +146,14 @@ func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 		Name:            "Formula STB",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formulaSTB.ID, formulaSTB)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formulaSTB.ID, formulaSTB)
 
 	formulaXHome := &logupload.DCMGenericRule{
 		ID:              "formula-xhome",
 		Name:            "Formula XHome",
 		ApplicationType: "xhome",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formulaXHome.ID, formulaXHome)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formulaXHome.ID, formulaXHome)
 
 	// Create corresponding VOD settings
 	vodSTB := &logupload.VodSettings{
@@ -162,7 +162,7 @@ func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 		LocationsURL:    "http://vodstb.com",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vodSTB.ID, vodSTB)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_VOD_SETTINGS, vodSTB.ID, vodSTB)
 
 	vodXHome := &logupload.VodSettings{
 		ID:              formulaXHome.ID,
@@ -170,7 +170,7 @@ func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 		LocationsURL:    "http://vodxhome.com",
 		ApplicationType: "xhome",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vodXHome.ID, vodXHome)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_VOD_SETTINGS, vodXHome.ID, vodXHome)
 
 	// Request export for stb only
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
@@ -201,7 +201,7 @@ func TestGetVodSettingExportHandler_MissingVodSettings(t *testing.T) {
 		Name:            "Formula Without VOD",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formula.ID, formula)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formula.ID, formula)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
@@ -279,7 +279,7 @@ func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
 			Name:            "Formula " + app,
 			ApplicationType: app,
 		}
-		db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formula.ID, formula)
+		db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formula.ID, formula)
 
 		if i < 2 { // Create VOD settings for first 2 only
 			vod := &logupload.VodSettings{
@@ -288,7 +288,7 @@ func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
 				LocationsURL:    "http://vod" + app + ".com",
 				ApplicationType: app,
 			}
-			db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vod.ID, vod)
+			db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_VOD_SETTINGS, vod.ID, vod)
 		}
 	}
 
@@ -336,7 +336,7 @@ func TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings(t *testin
 			Name:            "Formula " + string(rune('0'+i)),
 			ApplicationType: "stb",
 		}
-		db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formula.ID, formula)
+		db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formula.ID, formula)
 
 		// Only create VOD settings for formulas 1 and 2
 		if i <= 2 {
@@ -346,7 +346,7 @@ func TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings(t *testin
 				LocationsURL:    "http://vod" + string(rune('0'+i)) + ".com",
 				ApplicationType: "stb",
 			}
-			db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vod.ID, vod)
+			db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_VOD_SETTINGS, vod.ID, vod)
 		}
 	}
 
@@ -386,7 +386,7 @@ func TestGetVodSettingExportHandler_ValidateResponseStructure(t *testing.T) {
 		Name:            "Complete Formula",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formula.ID, formula)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formula.ID, formula)
 
 	vod := &logupload.VodSettings{
 		ID:              formula.ID,
@@ -396,7 +396,7 @@ func TestGetVodSettingExportHandler_ValidateResponseStructure(t *testing.T) {
 		IPNames:         []string{"ip1", "ip2"},
 		IPList:          []string{"192.168.1.1", "192.168.1.2"},
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vod.ID, vod)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_VOD_SETTINGS, vod.ID, vod)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
