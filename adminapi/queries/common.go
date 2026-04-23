@@ -76,8 +76,8 @@ func GetInfoTableNames(w http.ResponseWriter, r *http.Request) {
 	for _, tableInfo := range db.GetAllTableInfo() {
 		entry := make(map[string]bool)
 		entry["Split"] = tableInfo.Split
-		entry["Compress"] = tableInfo.Compress
-		entry["CacheData"] = tableInfo.CacheData
+		entry["Compressed"] = tableInfo.Compressed
+		entry["Cached"] = tableInfo.Cached
 		tables[tableInfo.TableName] = entry
 	}
 	response, _ := util.JSONMarshal(tables)
@@ -90,6 +90,8 @@ func GetInfoTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
+
 	tableName := mux.Vars(r)[xcommon.TABLE_NAME]
 	tableInfo, _ := db.GetTableInfo(tableName)
 	if tableInfo == nil {
@@ -97,7 +99,7 @@ func GetInfoTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if tableInfo.IsCompressOnly() {
+	if tableInfo.IsCompressedOnly() {
 		xwhttp.WriteXconfResponse(w, http.StatusNotImplemented, []byte("Listing table not supported"))
 		return
 	}
@@ -108,16 +110,16 @@ func GetInfoTable(w http.ResponseWriter, r *http.Request) {
 	var data map[string]interface{}
 	var err error
 
-	if tableName == db.TABLE_XCONF_CHANGED_KEYS {
+	if tableName == db.TABLE_CHANGE_EVENTS {
 		if cacheData {
 			xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("Data is not cached for this table"))
 			return
 		}
 
-		data, err = GetChangedKeysMapRaw()
+		data, err = GetChangedKeysMapRaw(tenantId)
 	} else {
 		if cacheData {
-			res, err := db.GetCachedSimpleDao().GetAllAsMap(tableInfo.TableName)
+			res, err := db.GetCachedSimpleDao().GetAllAsMap(tenantId, tableInfo.TableName)
 			if err == nil {
 				cacheData := make(map[string]interface{})
 				for k, v := range res {
@@ -130,10 +132,10 @@ func GetInfoTable(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			// Use the appropriate db based on compression policy
-			if tableInfo.IsCompressAndSplit() {
-				data, err = db.GetCompressingDataDao().GetAllAsMap(tableInfo.TableName, false)
+			if tableInfo.IsCompressedAndSplit() {
+				data, err = db.GetCompressingDataDao().GetAllAsMap(tenantId, tableInfo.TableName, false)
 			} else {
-				data, err = db.GetSimpleDao().GetAllAsMap(tableInfo.TableName, 0)
+				data, err = db.GetSimpleDao().GetAllAsMap(tenantId, tableInfo.TableName, 0)
 			}
 		}
 	}
@@ -153,6 +155,8 @@ func GetInfoTableRowKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
+
 	tableName := mux.Vars(r)[xcommon.TABLE_NAME]
 	tableInfo, _ := db.GetTableInfo(tableName)
 	if tableInfo == nil {
@@ -160,7 +164,7 @@ func GetInfoTableRowKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if tableInfo.IsCompressOnly() {
+	if tableInfo.IsCompressedOnly() {
 		xwhttp.WriteXconfResponse(w, http.StatusNotImplemented, []byte("Listing table not supported"))
 		return
 	}
@@ -172,18 +176,18 @@ func GetInfoTableRowKey(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	if _, found := r.URL.Query()["cache"]; found {
-		if !tableInfo.CacheData {
+		if !tableInfo.Cached {
 			xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("Data is not cached for this table"))
 			return
 		}
 
-		data, err = db.GetCachedSimpleDao().GetOne(tableInfo.TableName, rowKey)
+		data, err = db.GetCachedSimpleDao().GetOne(tenantId, tableInfo.TableName, rowKey)
 	} else {
 		// Use the appropriate db based on compression policy
-		if tableInfo.IsCompressAndSplit() {
-			data, err = db.GetCompressingDataDao().GetOne(tableInfo.TableName, rowKey)
+		if tableInfo.IsCompressedAndSplit() {
+			data, err = db.GetCompressingDataDao().GetOne(tenantId, tableInfo.TableName, rowKey)
 		} else {
-			data, err = db.GetSimpleDao().GetOne(tableInfo.TableName, rowKey)
+			data, err = db.GetSimpleDao().GetOne(tenantId, tableInfo.TableName, rowKey)
 		}
 	}
 
@@ -197,7 +201,7 @@ func GetInfoTableRowKey(w http.ResponseWriter, r *http.Request) {
 }
 
 // Get all ChangedKeys records in the last 15 minutes as raw JSON data
-func GetChangedKeysMapRaw() (map[string]interface{}, error) {
+func GetChangedKeysMapRaw(tenantId string) (map[string]interface{}, error) {
 	changedKeysTimeWindowSize := db.GetCacheManager().GetChangedKeysTimeWindowSize()
 
 	endTS := util.GetTimestamp(time.Now().UTC())
@@ -222,7 +226,7 @@ func GetChangedKeysMapRaw() (map[string]interface{}, error) {
 	data := make(map[string]interface{})
 
 	for rowKey, rangeInfo := range ranges {
-		list, err := db.GetListingDao().GetRange(db.TABLE_XCONF_CHANGED_KEYS, rowKey, rangeInfo)
+		list, err := db.GetListingDao().GetRange(tenantId, db.TABLE_CHANGE_EVENTS, rowKey, rangeInfo)
 		if err != nil {
 			return nil, err
 		}
@@ -243,6 +247,8 @@ func UpdateInfoTableRowKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
+
 	tableName := mux.Vars(r)[xcommon.TABLE_NAME]
 	tableInfo, _ := db.GetTableInfo(tableName)
 	if tableInfo == nil {
@@ -250,7 +256,7 @@ func UpdateInfoTableRowKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if tableInfo.IsCompressOnly() {
+	if tableInfo.IsCompressedOnly() {
 		xwhttp.WriteXconfResponse(w, http.StatusNotImplemented, []byte("Listing table not supported"))
 		return
 	}
@@ -275,15 +281,15 @@ func UpdateInfoTableRowKey(w http.ResponseWriter, r *http.Request) {
 	// Update data the DB as Json Data; first ensure the record exists
 	// by using the GetOneRaw function and avoid unmarshalling the object
 	var err error
-	if tableInfo.IsCompressAndSplit() {
-		_, err = db.GetCompressingDataDao().GetOne(tableName, rowKey)
+	if tableInfo.IsCompressedAndSplit() {
+		_, err = db.GetCompressingDataDao().GetOne(tenantId, tableName, rowKey)
 		if err == nil {
-			err = db.GetCompressingDataDao().SetOne(tableName, rowKey, jsonData)
+			err = db.GetCompressingDataDao().SetOne(tenantId, tableName, rowKey, jsonData)
 		}
 	} else {
-		_, err = db.GetSimpleDao().GetOne(tableName, rowKey)
+		_, err = db.GetSimpleDao().GetOne(tenantId, tableName, rowKey)
 		if err == nil {
-			err = db.GetSimpleDao().SetOne(tableName, rowKey, jsonData)
+			err = db.GetSimpleDao().SetOne(tenantId, tableName, rowKey, jsonData)
 		}
 	}
 	if err != nil {
@@ -291,13 +297,13 @@ func UpdateInfoTableRowKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if tableInfo.CacheData {
+	if tableInfo.Cached {
 		// Write cache changed log
 		cm := db.GetCacheManager()
-		cm.WriteCacheLog(tableName, rowKey, db.UPDATE_OPERATION)
+		cm.WriteCacheLog(tenantId, tableName, rowKey, db.UPDATE_OPERATION)
 
 		// Refresh the cache entry
-		if err = db.GetCachedSimpleDao().RefreshOne(tableInfo.TableName, rowKey); err != nil {
+		if err = db.GetCachedSimpleDao().RefreshOne(tenantId, tableInfo.TableName, rowKey); err != nil {
 			xwhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(fmt.Sprintf("Unable to refresh cache entry: %s", err.Error())))
 		}
 	}
@@ -358,8 +364,10 @@ func GetStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stats := db.GetCacheManager().GetStatistics()
-	response, _ := util.JSONMarshal(stats.CacheMap)
+	tenantId := xwhttp.GetTenantId(r, "")
+
+	stats := db.GetCacheManager().GetStatistics(tenantId)
+	response, _ := util.JSONMarshal(stats.TableStats)
 	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
@@ -369,7 +377,9 @@ func GetInfoStatistics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stats := *db.GetCacheManager().GetStatistics()
+	tenantId := xwhttp.GetTenantId(r, "")
+
+	stats := *db.GetCacheManager().GetStatistics(tenantId)
 	response, _ := util.JSONMarshal(stats)
 	xhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
@@ -381,7 +391,9 @@ func GetAppSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	settings, err := xcommon.GetAppSettings()
+	tenantId := xwhttp.GetTenantId(r, "")
+
+	settings, err := xcommon.GetAppSettings(tenantId)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -410,12 +422,14 @@ func UpdateAppSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
+
 	for k, v := range settings {
 		if !xcommon.IsValidAppSetting(k) {
 			xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("Invalid AppSetting: %s", k))
 			return
 		}
-		if _, err := xcommon.SetAppSetting(k, v); err != nil {
+		if _, err := xcommon.SetAppSetting(tenantId, k, v); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Unable to save AppSetting for %s: %s", k, err.Error()))
 			return
 		}
@@ -430,10 +444,12 @@ func GetInfoRefreshAllHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	failedToRefreshTables := db.GetCacheManager().RefreshAll()
+	tenantId := xwhttp.GetTenantId(r, "")
+
+	failedToRefreshTables := db.GetCacheManager().RefreshAll(tenantId)
 	if len(failedToRefreshTables) == 0 {
-		stats := db.GetCacheManager().GetStatistics()
-		response, _ := util.JSONMarshal(stats.CacheMap)
+		stats := db.GetCacheManager().GetStatistics(tenantId)
+		response, _ := util.JSONMarshal(stats.TableStats)
 		xhttp.WriteXconfResponse(w, http.StatusOK, response)
 	} else {
 		xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(fmt.Sprintf("\"Couldn't refresh caches for tables: %s\"", strings.Join(failedToRefreshTables, ", "))))
@@ -446,10 +462,12 @@ func GetInfoRefreshHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
+
 	tableName := mux.Vars(r)[xcommon.TABLE_NAME]
-	err := db.GetCacheManager().Refresh(tableName)
+	err := db.GetCacheManager().Refresh(tenantId, tableName)
 	if err == nil {
-		if stats, err := db.GetCacheManager().GetCacheStats(tableName); err == nil {
+		if stats, err := db.GetCacheManager().GetCacheStats(tenantId, tableName); err == nil {
 			response, _ := util.JSONMarshal(stats)
 			xhttp.WriteXconfResponse(w, http.StatusOK, response)
 		} else {

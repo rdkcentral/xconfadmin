@@ -10,11 +10,9 @@ import (
 	"github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/rdkcentral/xconfwebconfig/db"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	core "github.com/rdkcentral/xconfwebconfig/shared"
 	shared "github.com/rdkcentral/xconfwebconfig/shared"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -65,27 +63,27 @@ type MacIpRuleConfig struct {
 	IpMacIsConditionLimit int `json:"ipMacIsConditionLimit"`
 }
 
-func SetAppSetting(key string, value interface{}) (*shared.AppSetting, error) {
+func SetAppSetting(tenantId string, key string, value interface{}) (*shared.AppSetting, error) {
 	setting := shared.AppSetting{
 		ID:      key,
 		Updated: util.GetTimestamp(time.Now().UTC()),
 		Value:   value,
 	}
 
-	err := db.GetCachedSimpleDao().SetOne(db.TABLE_APP_SETTINGS, setting.ID, &setting)
+	err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_APP_SETTINGS, setting.ID, &setting)
 	if err != nil {
 		return nil, err
 	}
 	return &setting, nil
 }
 
-func GetBooleanAppSetting(key string, vargs ...bool) bool {
+func GetBooleanAppSetting(tenantId string, key string, vargs ...bool) bool {
 	defaultVal := false
 	if len(vargs) > 0 {
 		defaultVal = vargs[0]
 	}
 
-	inst, err := ds.GetCachedSimpleDao().GetOne(TABLE_APP_SETTINGS, key)
+	inst, err := db.GetCachedSimpleDao().GetOne(tenantId, TABLE_APP_SETTINGS, key)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no AppSetting found for %s", key))
 		return defaultVal
@@ -218,9 +216,9 @@ func (dcm *DCMGenericRule) ToStringOnlyBaseProperties() string {
 	return dcm.Rule.Condition.String()
 }
 
-func GetDCMGenericRuleList() []*DCMGenericRule {
+func GetDCMGenericRuleList(tenantId string) []*DCMGenericRule {
 	all := []*DCMGenericRule{}
-	dmcRuleList, err := ds.GetCachedSimpleDao().GetAllAsList(ds.TABLE_DCM_RULE, 0)
+	dmcRuleList, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_DCM_RULES, 0)
 	if err != nil {
 		log.Warn("no dmcRule found")
 		return all
@@ -234,8 +232,8 @@ func GetDCMGenericRuleList() []*DCMGenericRule {
 	return all
 }
 
-func GetOneDCMGenericRule(id string) *DCMGenericRule {
-	dmcRuleInst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_DCM_RULE, id)
+func GetOneDCMGenericRule(tenantId string, id string) *DCMGenericRule {
+	dmcRuleInst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_DCM_RULES, id)
 	if err != nil {
 		log.Warn("no dmcRule found for " + id)
 		return nil
@@ -244,9 +242,9 @@ func GetOneDCMGenericRule(id string) *DCMGenericRule {
 	return dmcRule
 }
 
-func GetAllEnvironmentList() []*shared.Environment {
+func GetAllEnvironmentList(tenantId string) []*shared.Environment {
 	result := []*shared.Environment{}
-	list, err := ds.GetCachedSimpleDao().GetAllAsList(ds.TABLE_ENVIRONMENT, 0)
+	list, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_ENVIRONMENTS, 0)
 	if err != nil {
 		log.Warn("no environment found")
 		return result
@@ -258,8 +256,8 @@ func GetAllEnvironmentList() []*shared.Environment {
 	return result
 }
 
-func GetOneEnvironment(id string) *shared.Environment {
-	inst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_ENVIRONMENT, id)
+func GetOneEnvironment(tenantId string, id string) *shared.Environment {
+	inst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_ENVIRONMENTS, id)
 	if err != nil {
 		log.Warn("no environment found for " + id)
 		return nil
@@ -267,9 +265,9 @@ func GetOneEnvironment(id string) *shared.Environment {
 	return inst.(*shared.Environment)
 }
 
-func GetAllModelList() []*shared.Model {
+func GetAllModelList(tenantId string) []*shared.Model {
 	result := []*shared.Model{}
-	list, err := ds.GetCachedSimpleDao().GetAllAsList(ds.TABLE_MODEL, 0)
+	list, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_MODELS, 0)
 	if err != nil {
 		log.Warn("no model found")
 		return result
@@ -281,8 +279,8 @@ func GetAllModelList() []*shared.Model {
 	return result
 }
 
-func GetOneModel(id string) *shared.Model {
-	inst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_MODEL, id)
+func GetOneModel(tenantId string, id string) *shared.Model {
+	inst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_MODELS, id)
 	if err != nil {
 		log.Warn("no model found for " + id)
 		return nil
@@ -290,43 +288,43 @@ func GetOneModel(id string) *shared.Model {
 	return inst.(*shared.Model)
 }
 
-func SetOneEnvironment(env *shared.Environment) (*shared.Environment, error) {
+func SetOneEnvironment(tenantId string, env *shared.Environment) (*shared.Environment, error) {
 	env.Updated = util.GetTimestamp()
-	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_ENVIRONMENT, env.ID, env)
+	err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_ENVIRONMENTS, env.ID, env)
 	if err != nil {
 		return nil, err
 	}
 	return env, nil
 }
 
-func DeleteOneEnvironment(id string) error {
-	err := ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_ENVIRONMENT, id)
+func DeleteOneEnvironment(tenantId string, id string) error {
+	err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_ENVIRONMENTS, id)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func SetOneModel(model *core.Model) (*core.Model, error) {
+func SetOneModel(tenantId string, model *core.Model) (*core.Model, error) {
 	model.Updated = util.GetTimestamp()
-	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_MODEL, model.ID, model)
+	err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_MODELS, model.ID, model)
 	if err != nil {
 		return nil, err
 	}
 	return model, nil
 }
 
-func DeleteOneModel(id string) error {
-	err := ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_MODEL, id)
+func DeleteOneModel(tenantId string, id string) error {
+	err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_MODELS, id)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func IsExistModel(id string) bool {
+func IsExistModel(tenantId string, id string) bool {
 	if !util.IsBlank(id) {
-		inst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_MODEL, id)
+		inst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_MODELS, id)
 		if inst != nil && err == nil {
 			return true
 		}
@@ -334,13 +332,13 @@ func IsExistModel(id string) bool {
 	return false
 }
 
-func GetIntAppSetting(key string, vargs ...int) int {
+func GetIntAppSetting(tenantId string, key string, vargs ...int) int {
 	defaultVal := -1
 	if len(vargs) > 0 {
 		defaultVal = vargs[0]
 	}
 
-	inst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_APP_SETTINGS, key)
+	inst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_APP_SETTINGS, key)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no AppSetting found for %s", key))
 		return defaultVal
@@ -356,13 +354,13 @@ func GetIntAppSetting(key string, vargs ...int) int {
 	}
 }
 
-func GetFloat64AppSetting(key string, vargs ...float64) float64 {
+func GetFloat64AppSetting(tenantId string, key string, vargs ...float64) float64 {
 	defaultVal := -1.0
 	if len(vargs) > 0 {
 		defaultVal = vargs[0]
 	}
 
-	inst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_APP_SETTINGS, key)
+	inst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_APP_SETTINGS, key)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no AppSetting found for %s", key))
 		return defaultVal
@@ -372,13 +370,13 @@ func GetFloat64AppSetting(key string, vargs ...float64) float64 {
 	return setting.Value.(float64)
 }
 
-func GetTimeAppSetting(key string, vargs ...time.Time) time.Time {
+func GetTimeAppSetting(tenantId string, key string, vargs ...time.Time) time.Time {
 	var defaultVal time.Time
 	if len(vargs) > 0 {
 		defaultVal = vargs[0]
 	}
 
-	inst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_APP_SETTINGS, key)
+	inst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_APP_SETTINGS, key)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no AppSetting found for %s", key))
 		return defaultVal
@@ -394,13 +392,13 @@ func GetTimeAppSetting(key string, vargs ...time.Time) time.Time {
 	return time
 }
 
-func GetStringAppSetting(key string, vargs ...string) string {
+func GetStringAppSetting(tenantId string, key string, vargs ...string) string {
 	defaultVal := ""
 	if len(vargs) > 0 {
 		defaultVal = vargs[0]
 	}
 
-	inst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_APP_SETTINGS, key)
+	inst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_APP_SETTINGS, key)
 	if err != nil {
 		log.Warn("no AppSetting found for " + key)
 		return defaultVal
@@ -410,10 +408,10 @@ func GetStringAppSetting(key string, vargs ...string) string {
 	return setting.Value.(string)
 }
 
-func GetAppSettings() (map[string]interface{}, error) {
+func GetAppSettings(tenantId string) (map[string]interface{}, error) {
 	settings := make(map[string]interface{})
 
-	list, err := ds.GetCachedSimpleDao().GetAllAsList(ds.TABLE_APP_SETTINGS, 0)
+	list, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_APP_SETTINGS, 0)
 	if err != nil {
 		return settings, err
 	}

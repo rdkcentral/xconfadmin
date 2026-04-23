@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/rdkcentral/xconfadmin/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -222,9 +223,9 @@ func TestPostRecookingLockdownSettingsHandler_Success(t *testing.T) {
 // Test lockdown mode branch where rfc lockdown enabled triggers 400
 func TestPostRecookingLockdownSettingsHandler_LockdownModeRFC(t *testing.T) {
 	// Enable lockdown settings via app settings
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, "00:00:00")
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, "23:59:59")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENABLED, true)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_STARTTIME, "00:00:00")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENDTIME, "23:59:59")
 	// construct request with valid JSON but expect 400 due to rfc lockdown
 	recorder := httptest.NewRecorder()
 	w := xwhttp.NewXResponseWriter(recorder)
@@ -260,121 +261,121 @@ func TestPostRecookingLockdownSettingsHandler_TimezoneError(t *testing.T) {
 }
 
 func TestIsLockdownMode(t *testing.T) {
-	res := isLockdownMode()
+	res := isLockdownMode(db.GetDefaultTenantId())
 	assert.False(t, res)
 }
 
 // Test isLockdownMode with lockdown disabled (covers line 160)
 func TestIsLockdownMode_Disabled(t *testing.T) {
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, false)
-	result := isLockdownMode()
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENABLED, false)
+	result := isLockdownMode(db.GetDefaultTenantId())
 	assert.False(t, result, "Should return false when lockdown is disabled")
 }
 
 // Test isLockdownMode with timezone load error (covers lines 121-124)
 func TestIsLockdownMode_TimezoneError(t *testing.T) {
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, "12:00:00")
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, "13:00:00")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENABLED, true)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_STARTTIME, "12:00:00")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENDTIME, "13:00:00")
 
 	// Timezone error is hard to trigger as DefaultLockdownTimezone is valid
 	// This test ensures the function completes successfully with valid timezone
-	result := isLockdownMode()
+	result := isLockdownMode(db.GetDefaultTenantId())
 	assert.True(t, result || !result, "Function should complete")
 }
 
 // Test isLockdownMode with current time parse error (covers lines 130-133)
 func TestIsLockdownMode_CurrentTimeParseError(t *testing.T) {
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, "12:00:00")
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, "13:00:00")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENABLED, true)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_STARTTIME, "12:00:00")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENDTIME, "13:00:00")
 
 	// This branch is difficult to trigger as time.Now() always produces parseable time
 	// But we test that the function executes without error
-	result := isLockdownMode()
+	result := isLockdownMode(db.GetDefaultTenantId())
 	assert.True(t, result || !result, "Function should complete")
 }
 
 // Test isLockdownMode with start time parse error (covers lines 134-137)
 func TestIsLockdownMode_StartTimeParseError(t *testing.T) {
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, "invalid-time")
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, "13:00:00")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENABLED, true)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_STARTTIME, "invalid-time")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENDTIME, "13:00:00")
 
-	result := isLockdownMode()
+	result := isLockdownMode(db.GetDefaultTenantId())
 	// Should return false due to parse error
 	assert.False(t, result, "Should return false on start time parse error")
 }
 
 // Test isLockdownMode with end time parse error (covers lines 138-141)
 func TestIsLockdownMode_EndTimeParseError(t *testing.T) {
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, "12:00:00")
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, "invalid-time")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENABLED, true)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_STARTTIME, "12:00:00")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENDTIME, "invalid-time")
 
-	result := isLockdownMode()
+	result := isLockdownMode(db.GetDefaultTenantId())
 	// Should return false due to parse error
 	assert.False(t, result, "Should return false on end time parse error")
 }
 
 // Test isLockdownMode with start time after end time (covers lines 143-145)
 func TestIsLockdownMode_StartAfterEnd(t *testing.T) {
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, "23:00:00")
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, "01:00:00")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENABLED, true)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_STARTTIME, "23:00:00")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENDTIME, "01:00:00")
 
-	result := isLockdownMode()
+	result := isLockdownMode(db.GetDefaultTenantId())
 	// The function adjusts start time by subtracting a day
 	assert.True(t, result || !result, "Function should handle start > end")
 }
 
 // Test isLockdownMode when current time is in lockdown window (covers lines 147-150)
 func TestIsLockdownMode_InWindow(t *testing.T) {
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENABLED, true)
 
 	// Set times so current time is definitely in window
 	now := time.Now()
 	start := now.Add(-1 * time.Hour).Format("15:04:05")
 	end := now.Add(1 * time.Hour).Format("15:04:05")
 
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, start)
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, end)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_STARTTIME, start)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENDTIME, end)
 
-	result := isLockdownMode()
+	result := isLockdownMode(db.GetDefaultTenantId())
 	// Should return true when in window, but timing may vary
 	assert.True(t, result || !result, "Function should check window")
 }
 
 // Test isLockdownMode when current time equals start time (covers line 147)
 func TestIsLockdownMode_AtStartTime(t *testing.T) {
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENABLED, true)
 
 	// Try to set current time as start
 	now := time.Now()
 	nowStr := now.Format("15:04:05")
 	endStr := now.Add(1 * time.Hour).Format("15:04:05")
 
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, nowStr)
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, endStr)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_STARTTIME, nowStr)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENDTIME, endStr)
 
-	result := isLockdownMode()
+	result := isLockdownMode(db.GetDefaultTenantId())
 	// May or may not be true depending on exact timing
 	assert.True(t, result || !result, "Function should handle exact start time")
 }
 
 // Test isLockdownMode when current time is outside window (covers line 151)
 func TestIsLockdownMode_OutsideWindow(t *testing.T) {
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENABLED, true)
 
 	// Set times so current time is definitely outside
 	now := time.Now()
 	start := now.Add(-3 * time.Hour).Format("15:04:05")
 	end := now.Add(-2 * time.Hour).Format("15:04:05")
 
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, start)
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, end)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_STARTTIME, start)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENDTIME, end)
 
-	result := isLockdownMode()
+	result := isLockdownMode(db.GetDefaultTenantId())
 	// Should return false when outside window
 	assert.False(t, result, "Should return false when current time is outside lockdown window")
 }
@@ -382,18 +383,18 @@ func TestIsLockdownMode_OutsideWindow(t *testing.T) {
 // Exercise isLockdownMode with startTime > endTime (adjustment branch) and active window true
 func TestIsLockdownMode_AdjustmentAndActiveWindow(t *testing.T) {
 	// Set app settings for enabled lockdown with inverted times (start after end)
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, "23:59:59")
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, "00:00:01")
-	_ = isLockdownMode() // executes adjustment branch (we ignore result)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENABLED, true)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_STARTTIME, "23:59:59")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENDTIME, "00:00:01")
+	_ = isLockdownMode(db.GetDefaultTenantId()) // executes adjustment branch (we ignore result)
 	// Now set times so current time is inside window (start just before now, end just after)
 	now := time.Now()
 	start := now.Add(-30 * time.Second).Format("15:04:05")
 	end := now.Add(30 * time.Second).Format("15:04:05")
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, start)
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, end)
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, true)
-	active := isLockdownMode()
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_STARTTIME, start)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENDTIME, end)
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_ENABLED, true)
+	active := isLockdownMode(db.GetDefaultTenantId())
 	// Accept true (expected) or false if timing edge races; do not fail, just assert branch executed
 	assert.True(t, active || !active, "branch executed")
 }
@@ -428,7 +429,7 @@ func TestCheckRecookingStatus(t *testing.T) {
 			completed = true
 			done <- true
 		}()
-		CheckRecookingStatus(lockDuration, module, mockFields)
+		CheckRecookingStatus(db.GetDefaultTenantId(), lockDuration, module, mockFields)
 	}()
 
 	select {
@@ -461,7 +462,7 @@ func TestCheckRecookingStatus_ShortDuration(t *testing.T) {
 			}
 			done <- true
 		}()
-		CheckRecookingStatus(lockDuration, module, mockFields)
+		CheckRecookingStatus(db.GetDefaultTenantId(), lockDuration, module, mockFields)
 	}()
 
 	select {
@@ -493,7 +494,7 @@ func TestCheckRecookingStatus_ErrorPath(t *testing.T) {
 			}
 			done <- true
 		}()
-		CheckRecookingStatus(lockDuration, module, mockFields)
+		CheckRecookingStatus(db.GetDefaultTenantId(), lockDuration, module, mockFields)
 	}()
 
 	select {
@@ -526,7 +527,7 @@ func TestCheckRecookingStatus_StateFalse(t *testing.T) {
 			}
 			done <- true
 		}()
-		CheckRecookingStatus(lockDuration, module, mockFields)
+		CheckRecookingStatus(db.GetDefaultTenantId(), lockDuration, module, mockFields)
 	}()
 
 	select {
@@ -558,7 +559,7 @@ func TestCheckRecookingStatus_StateTrue(t *testing.T) {
 			}
 			done <- true
 		}()
-		CheckRecookingStatus(lockDuration, module, mockFields)
+		CheckRecookingStatus(db.GetDefaultTenantId(), lockDuration, module, mockFields)
 	}()
 
 	select {
@@ -578,7 +579,7 @@ func TestCheckRecookingStatus_LockdownModulesRFC(t *testing.T) {
 	}()
 
 	// Set lockdown module to rfc
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_MODULES, "rfc")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_MODULES, "rfc")
 
 	mockFields := log.Fields{"test": "rfcmodule"}
 	lockDuration := 10 * time.Millisecond
@@ -593,7 +594,7 @@ func TestCheckRecookingStatus_LockdownModulesRFC(t *testing.T) {
 			}
 			done <- true
 		}()
-		CheckRecookingStatus(lockDuration, module, mockFields)
+		CheckRecookingStatus(db.GetDefaultTenantId(), lockDuration, module, mockFields)
 	}()
 
 	select {
@@ -613,7 +614,7 @@ func TestCheckRecookingStatus_MultipleModules(t *testing.T) {
 	}()
 
 	// Set lockdown modules to include rfc and others
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_MODULES, "rfc,firmware,telemetry")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_MODULES, "rfc,firmware,telemetry")
 
 	mockFields := log.Fields{"test": "multimodule"}
 	lockDuration := 10 * time.Millisecond
@@ -628,7 +629,7 @@ func TestCheckRecookingStatus_MultipleModules(t *testing.T) {
 			}
 			done <- true
 		}()
-		CheckRecookingStatus(lockDuration, module, mockFields)
+		CheckRecookingStatus(db.GetDefaultTenantId(), lockDuration, module, mockFields)
 	}()
 
 	select {
@@ -648,7 +649,7 @@ func TestCheckRecookingStatus_NoRFCModule(t *testing.T) {
 	}()
 
 	// Set lockdown modules without rfc
-	_, _ = common.SetAppSetting(common.PROP_LOCKDOWN_MODULES, "firmware,telemetry")
+	_, _ = common.SetAppSetting(db.GetDefaultTenantId(), common.PROP_LOCKDOWN_MODULES, "firmware,telemetry")
 
 	mockFields := log.Fields{"test": "norfc"}
 	lockDuration := 10 * time.Millisecond
@@ -663,7 +664,7 @@ func TestCheckRecookingStatus_NoRFCModule(t *testing.T) {
 			}
 			done <- true
 		}()
-		CheckRecookingStatus(lockDuration, module, mockFields)
+		CheckRecookingStatus(db.GetDefaultTenantId(), lockDuration, module, mockFields)
 	}()
 
 	select {

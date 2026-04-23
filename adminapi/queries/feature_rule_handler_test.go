@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
@@ -20,7 +20,7 @@ import (
 // Helpers
 func frMakeFeature(name string, app string) *xwrfc.Feature {
 	f := &xwrfc.Feature{ID: uuid.New().String(), Name: name, FeatureName: name + "Fn", ApplicationType: app, Enable: true, EffectiveImmediate: true, ConfigData: map[string]string{"k": "v"}}
-	SetOneInDao(ds.TABLE_XCONF_FEATURE, f.ID, f)
+	SetOneInDao(db.TABLE_FEATURES, f.ID, f)
 	return f
 }
 func frMakeRule() *re.Rule {
@@ -29,12 +29,12 @@ func frMakeRule() *re.Rule {
 
 func frMakeFeatureRule(featureIds []string, app string, priority int) *xwrfc.FeatureRule {
 	fr := &xwrfc.FeatureRule{Id: uuid.New().String(), Name: "FR-" + uuid.New().String(), ApplicationType: app, FeatureIds: featureIds, Priority: priority, Rule: frMakeRule()}
-	SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr.Id, fr)
+	SetOneInDao(db.TABLE_FEATURE_CONTROL_RULES, fr.Id, fr)
 	return fr
 }
 
 func frCleanup() {
-	tables := []string{ds.TABLE_FEATURE_CONTROL_RULE, ds.TABLE_XCONF_FEATURE}
+	tables := []string{db.TABLE_FEATURE_CONTROL_RULES, db.TABLE_FEATURES}
 	for _, tbl := range tables {
 		list, _ := GetAllAsListFromDao(tbl, 0)
 		for _, inst := range list {
@@ -45,7 +45,7 @@ func frCleanup() {
 				DeleteOneFromDao(tbl, v.ID)
 			}
 		}
-		ds.GetCachedSimpleDao().RefreshAll(tbl)
+		db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), tbl)
 	}
 }
 
@@ -177,7 +177,7 @@ func TestBatchCreateAndUpdateHandlers(t *testing.T) {
 	// need existing rule id
 	created := &xwrfc.FeatureRule{}
 	json.Unmarshal(rrNative.Body.Bytes(), &created) // body is map, ignore parse error for brevity
-	existingList, _ := GetAllAsListFromDao(ds.TABLE_FEATURE_CONTROL_RULE, 0)
+	existingList, _ := GetAllAsListFromDao(db.TABLE_FEATURE_CONTROL_RULES, 0)
 	var existing *xwrfc.FeatureRule
 	for _, inst := range existingList {
 		if fr, ok := inst.(*xwrfc.FeatureRule); ok {

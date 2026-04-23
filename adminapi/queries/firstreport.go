@@ -36,7 +36,7 @@ func nextChar(ch rune) rune {
 	return ch
 }
 
-func doReport(macAddresses []string) ([]byte, error) {
+func doReport(tenantId string, macAddresses []string) ([]byte, error) {
 	sort.Slice(macAddresses, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(macAddresses[i]), strings.ToLower(macAddresses[j])) < 0
 	})
@@ -79,7 +79,7 @@ func doReport(macAddresses []string) ([]byte, error) {
 	data := map[string][]string{}
 
 	for _, ma := range macAddresses {
-		ll := estbfirmware.GetLastConfigLog(ma)
+		ll := estbfirmware.GetLastConfigLog(tenantId, ma)
 		if ll == nil {
 			continue
 		}
@@ -121,7 +121,7 @@ func doReport(macAddresses []string) ([]byte, error) {
 			data["firmwareDownloadProtocol"] = append(data["firmwareDownloadProtocol"], "")
 		}
 
-		chs := estbfirmware.GetConfigChangeLogsOnly(ma)
+		chs := estbfirmware.GetConfigChangeLogsOnly(tenantId, ma)
 
 		if len(chs) == 0 {
 			data["lst chg env"] = append(data["lst chg env"], "")

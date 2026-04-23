@@ -3,12 +3,14 @@ package setting
 import (
 	"testing"
 
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDeleteSettingProfile(t *testing.T) {
-	DeleteSettingProfile("test-profile-123")
+	DeleteSettingProfile(db.GetDefaultTenantId(), "test-profile-123")
 	assert.True(t, true)
 }
 
@@ -63,24 +65,25 @@ func TestValidateAll(t *testing.T) {
 }
 
 func TestValidateUsage(t *testing.T) {
-	validateUsage("non-existent-id")
+	validateUsage(db.GetDefaultTenantId(), "non-existent-id")
 	assert.NotPanics(t, func() {
 		defer func() {
 			recover() // Suppress any panics for this test
 		}()
-		validateUsage("test-id")
+		validateUsage(db.GetDefaultTenantId(), "test-id")
 	})
 }
 
 func TestSetSettingProfile(t *testing.T) {
-	err := SetSettingProfile("test-id", nil)
+	err := SetSettingProfile(db.GetDefaultTenantId(), "test-id", nil)
 	assert.NotNil(t, err)
 }
 
 // TestFindByContext_WithApplicationType tests searching with application type
 func TestFindByContext_WithApplicationType(t *testing.T) {
 	searchContext := map[string]string{
-		"applicationType": "STB",
+		"applicationType":  "STB",
+		xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 	}
 	results := FindByContext(searchContext)
 	assert.NotNil(t, results)
@@ -89,7 +92,8 @@ func TestFindByContext_WithApplicationType(t *testing.T) {
 // TestFindByContext_WithName tests searching with name
 func TestFindByContext_WithName(t *testing.T) {
 	searchContext := map[string]string{
-		"name": "test",
+		"name":             "test",
+		xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 	}
 	results := FindByContext(searchContext)
 	assert.NotNil(t, results)
@@ -98,7 +102,8 @@ func TestFindByContext_WithName(t *testing.T) {
 // TestFindByContext_WithType tests searching with type
 func TestFindByContext_WithType(t *testing.T) {
 	searchContext := map[string]string{
-		"type": "PARTNER_SETTINGS",
+		"type":             "PARTNER_SETTINGS",
+		xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 	}
 	results := FindByContext(searchContext)
 	assert.NotNil(t, results)
@@ -107,9 +112,10 @@ func TestFindByContext_WithType(t *testing.T) {
 // TestFindByContext_MultipleFilters tests with multiple search criteria
 func TestFindByContext_MultipleFilters(t *testing.T) {
 	searchContext := map[string]string{
-		"applicationType": "STB",
-		"name":            "profile",
-		"type":            "PARTNER",
+		"applicationType":  "STB",
+		"name":             "profile",
+		"type":             "PARTNER",
+		xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 	}
 	results := FindByContext(searchContext)
 	assert.NotNil(t, results)
@@ -122,7 +128,7 @@ func TestDelete_Success(t *testing.T) {
 
 // TestDelete_NonExistentID tests delete with non-existent ID
 func TestDelete_NonExistentID(t *testing.T) {
-	result, err := Delete("non-existent-delete-id", "STB")
+	result, err := Delete(db.GetDefaultTenantId(), "non-existent-delete-id", "STB")
 	assert.NotNil(t, err)
 	assert.Nil(t, result)
 }
@@ -167,7 +173,7 @@ func TestBeforeSaving_ValidEntity(t *testing.T) {
 		Properties:       map[string]string{"key1": "value1"},
 	}
 
-	err := beforeSaving(profile, "STB")
+	err := beforeSaving(db.GetDefaultTenantId(), profile, "STB")
 	if err != nil {
 		// Function validates against existing profiles, error is acceptable
 		assert.NotNil(t, err)
@@ -184,7 +190,7 @@ func TestBeforeSaving_EmptyProperties(t *testing.T) {
 		Properties:       nil,
 	}
 
-	err := beforeSaving(profile, "STB")
+	err := beforeSaving(db.GetDefaultTenantId(), profile, "STB")
 	assert.NotNil(t, err)
 }
 

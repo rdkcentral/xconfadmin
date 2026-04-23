@@ -46,7 +46,7 @@ func NewEmptyTimeFilter() *corefw.TimeFilter {
 }
 
 // func TimeFiltersByApplicationType(applicationType string) ([]*TimeFilter, error) {
-// 	rulelst, err := ds.GetCachedSimpleDao().GetAllAsList(ds.TABLE_FIRMWARE_RULE, 0)
+// 	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_RULES, 0)
 // 	if err != nil {
 // 		return nil, err
 // 	}

@@ -37,7 +37,7 @@ func NewMockCachedSimpleDao() *MockCachedSimpleDao {
 }
 
 // GetOne retrieves a single entity by table name and row key
-func (m *MockCachedSimpleDao) GetOne(tableName string, rowKey string) (interface{}, error) {
+func (m *MockCachedSimpleDao) GetOne(tenantId string, tableName string, rowKey string) (interface{}, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -54,12 +54,12 @@ func (m *MockCachedSimpleDao) GetOne(tableName string, rowKey string) (interface
 }
 
 // GetOneFromCacheOnly retrieves a single entity from cache (same as GetOne in mock)
-func (m *MockCachedSimpleDao) GetOneFromCacheOnly(tableName string, rowKey string) (interface{}, error) {
-	return m.GetOne(tableName, rowKey)
+func (m *MockCachedSimpleDao) GetOneFromCacheOnly(tenantId string, tableName string, rowKey string) (interface{}, error) {
+	return m.GetOne(tenantId, tableName, rowKey)
 }
 
 // SetOne stores a single entity in the specified table with the given row key
-func (m *MockCachedSimpleDao) SetOne(tableName string, rowKey string, entity interface{}) error {
+func (m *MockCachedSimpleDao) SetOne(tenantId string, tableName string, rowKey string, entity interface{}) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -72,7 +72,7 @@ func (m *MockCachedSimpleDao) SetOne(tableName string, rowKey string, entity int
 }
 
 // DeleteOne removes a single entity from the specified table
-func (m *MockCachedSimpleDao) DeleteOne(tableName string, rowKey string) error {
+func (m *MockCachedSimpleDao) DeleteOne(tenantId string, tableName string, rowKey string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -84,7 +84,7 @@ func (m *MockCachedSimpleDao) DeleteOne(tableName string, rowKey string) error {
 }
 
 // GetAllByKeys retrieves multiple entities by their keys from a table
-func (m *MockCachedSimpleDao) GetAllByKeys(tableName string, rowKeys []string) ([]interface{}, error) {
+func (m *MockCachedSimpleDao) GetAllByKeys(tenantId string, tableName string, rowKeys []string) ([]interface{}, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -104,7 +104,7 @@ func (m *MockCachedSimpleDao) GetAllByKeys(tableName string, rowKeys []string) (
 }
 
 // GetAllAsList retrieves all entities from a table as a list
-func (m *MockCachedSimpleDao) GetAllAsList(tableName string, maxResults int) ([]interface{}, error) {
+func (m *MockCachedSimpleDao) GetAllAsList(tenantId string, tableName string, maxResults int) ([]interface{}, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -127,7 +127,7 @@ func (m *MockCachedSimpleDao) GetAllAsList(tableName string, maxResults int) ([]
 }
 
 // GetAllAsMap retrieves all entities from a table as a map
-func (m *MockCachedSimpleDao) GetAllAsMap(tableName string) (map[interface{}]interface{}, error) {
+func (m *MockCachedSimpleDao) GetAllAsMap(tenantId string, tableName string) (map[interface{}]interface{}, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -145,12 +145,12 @@ func (m *MockCachedSimpleDao) GetAllAsMap(tableName string) (map[interface{}]int
 }
 
 // GetAllAsShallowMap retrieves all entities from a table as a shallow map (same as GetAllAsMap in mock)
-func (m *MockCachedSimpleDao) GetAllAsShallowMap(tableName string) (map[interface{}]interface{}, error) {
-	return m.GetAllAsMap(tableName)
+func (m *MockCachedSimpleDao) GetAllAsShallowMap(tenantId string, tableName string) (map[interface{}]interface{}, error) {
+	return m.GetAllAsMap(tenantId, tableName)
 }
 
 // GetKeys retrieves all keys from a table
-func (m *MockCachedSimpleDao) GetKeys(tableName string) ([]interface{}, error) {
+func (m *MockCachedSimpleDao) GetKeys(tenantId string, tableName string) ([]interface{}, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -168,13 +168,13 @@ func (m *MockCachedSimpleDao) GetKeys(tableName string) ([]interface{}, error) {
 }
 
 // RefreshAll refreshes all cached data for a table (no-op in mock)
-func (m *MockCachedSimpleDao) RefreshAll(tableName string) error {
+func (m *MockCachedSimpleDao) RefreshAll(tenantId string, tableName string) error {
 	// No-op for in-memory mock - data is always "fresh"
 	return nil
 }
 
 // RefreshOne refreshes cached data for a single entity (no-op in mock)
-func (m *MockCachedSimpleDao) RefreshOne(tableName string, rowKey string) error {
+func (m *MockCachedSimpleDao) RefreshOne(tenantId string, tableName string, rowKey string) error {
 	// No-op for in-memory mock - data is always "fresh"
 	return nil
 }
@@ -188,7 +188,7 @@ func (m *MockCachedSimpleDao) Clear() {
 }
 
 // ClearTable removes all data from a specific table
-func (m *MockCachedSimpleDao) ClearTable(tableName string) {
+func (m *MockCachedSimpleDao) ClearTable(tenantId string, tableName string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -196,7 +196,7 @@ func (m *MockCachedSimpleDao) ClearTable(tableName string) {
 }
 
 // GetTableData returns a copy of all data in a table (for testing/debugging)
-func (m *MockCachedSimpleDao) GetTableData(tableName string) map[string]interface{} {
+func (m *MockCachedSimpleDao) GetTableData(tenantId string, tableName string) map[string]interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -214,7 +214,7 @@ func (m *MockCachedSimpleDao) GetTableData(tableName string) map[string]interfac
 }
 
 // CountEntries returns the number of entries in a table
-func (m *MockCachedSimpleDao) CountEntries(tableName string) int {
+func (m *MockCachedSimpleDao) CountEntries(tenantId string, tableName string) int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 

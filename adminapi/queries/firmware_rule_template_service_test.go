@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	"gotest.tools/assert"
@@ -349,7 +349,7 @@ func TestCreateFirmwareRT_Success(t *testing.T) {
 
 	template := createTestFirmwareRuleTemplateService(uuid.New().String(), "TestCreate", 1, "RULE_TEMPLATE")
 
-	result, err := createFirmwareRT(*template)
+	result, err := createFirmwareRT(db.GetDefaultTenantId(), *template)
 	assert.NilError(t, err)
 	assert.Assert(t, result != nil)
 	assert.Equal(t, result.ID, template.ID)
@@ -366,7 +366,7 @@ func TestCreateFirmwareRT_ValidationError(t *testing.T) {
 		Priority: 1,
 	}
 
-	result, err := createFirmwareRT(template)
+	result, err := createFirmwareRT(db.GetDefaultTenantId(), template)
 	assert.Assert(t, err != nil)
 	assert.Assert(t, result == nil)
 	assert.ErrorContains(t, err, "Missing applicable action type")
@@ -379,7 +379,7 @@ func TestCreateFirmwareRT_DuplicateName(t *testing.T) {
 
 	// Create first template
 	template1 := createTestFirmwareRuleTemplateService(uuid.New().String(), "DuplicateTest", 1, "RULE_TEMPLATE")
-	SetOneInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template1.ID, template1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, template1.ID, template1)
 
 	// Try to create second template with same name but different rule
 	// The function checks for duplicate names, so this should fail
@@ -408,7 +408,7 @@ func TestCreateFirmwareRT_DuplicateName(t *testing.T) {
 	var template2 firmware.FirmwareRuleTemplate
 	json.Unmarshal([]byte(templateJSON), &template2)
 
-	result, err := createFirmwareRT(template2)
+	result, err := createFirmwareRT(db.GetDefaultTenantId(), template2)
 
 	// The function may or may not check for duplicate names depending on implementation
 	// If it succeeds, that's also valid behavior
@@ -432,7 +432,7 @@ func TestGetFirmwareRuleTemplateExportName(t *testing.T) {
 
 // Test importOrUpdateAllFirmwareRTs
 func TestImportOrUpdateAllFirmwareRTs_CreateNew(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 	setupTestModels()
 	defer DeleteAllEntities()
@@ -440,7 +440,7 @@ func TestImportOrUpdateAllFirmwareRTs_CreateNew(t *testing.T) {
 	template := createTestFirmwareRuleTemplateService(uuid.New().String(), "ImportTest1", 1, "RULE_TEMPLATE")
 	entities := []firmware.FirmwareRuleTemplate{*template}
 
-	result := importOrUpdateAllFirmwareRTs(entities, "success", "failure")
+	result := importOrUpdateAllFirmwareRTs(db.GetDefaultTenantId(), entities, "success", "failure")
 
 	assert.Assert(t, len(result["success"]) >= 1)
 	assert.Assert(t, len(result["failure"]) == 0)
@@ -462,7 +462,7 @@ func TestImportOrUpdateAllFirmwareRTs_EmptyName(t *testing.T) {
 	}
 	// Don't set name
 
-	result := importOrUpdateAllFirmwareRTs(entities, "success", "failure")
+	result := importOrUpdateAllFirmwareRTs(db.GetDefaultTenantId(), entities, "success", "failure")
 
 	assert.Assert(t, len(result["failure"]) == 1)
 }
@@ -476,7 +476,7 @@ func TestImportOrUpdateAllFirmwareRTs_GenerateID(t *testing.T) {
 	template.ID = "" // Clear the ID
 	entities := []firmware.FirmwareRuleTemplate{*template}
 
-	result := importOrUpdateAllFirmwareRTs(entities, "success", "failure")
+	result := importOrUpdateAllFirmwareRTs(db.GetDefaultTenantId(), entities, "success", "failure")
 
 	// The function might not auto-generate IDs if they're empty
 	// Let's check both success and failure to see actual behavior

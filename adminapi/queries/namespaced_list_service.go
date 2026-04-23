@@ -28,6 +28,7 @@ import (
 	"github.com/rdkcentral/xconfadmin/common"
 	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
 	"github.com/rdkcentral/xconfadmin/util"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
@@ -39,12 +40,12 @@ import (
 )
 
 var ruleTables = []string{
-	db.TABLE_DCM_RULE,
-	db.TABLE_FIRMWARE_RULE,
-	db.TABLE_FIRMWARE_RULE_TEMPLATE,
+	db.TABLE_DCM_RULES,
+	db.TABLE_FIRMWARE_RULES,
+	db.TABLE_FIRMWARE_RULE_TEMPLATES,
 	db.TABLE_TELEMETRY_RULES,
 	db.TABLE_TELEMETRY_TWO_RULES,
-	db.TABLE_FEATURE_CONTROL_RULE,
+	db.TABLE_FEATURE_CONTROL_RULES,
 	db.TABLE_SETTING_RULES,
 }
 
@@ -58,13 +59,13 @@ const (
 var namedListTableMutex sync.Mutex
 var namedListTableLock = db.NewDistributedLock(db.TABLE_GENERIC_NS_LIST, 5)
 
-func GetNamespacedListIdsByType(typeName string) []string {
+func GetNamespacedListIdsByType(tenantId, typeName string) []string {
 	var list []*shared.GenericNamespacedList
 	var err error
 	if typeName == "" {
-		list, err = shared.GetGenericNamedListListsDB()
+		list, err = shared.GetGenericNamedListListsDB(tenantId)
 	} else {
-		list, err = shared.GetGenericNamedListListsByTypeDB(typeName)
+		list, err = shared.GetGenericNamedListListsByTypeDB(tenantId, typeName)
 	}
 	if err != nil {
 		log.Error(fmt.Sprintf("GetNamespacedLists: %v", err))
@@ -78,13 +79,13 @@ func GetNamespacedListIdsByType(typeName string) []string {
 	return result
 }
 
-func GetNamespacedListsByType(typeName string) []*shared.GenericNamespacedList {
+func GetNamespacedListsByType(tenantId, typeName string) []*shared.GenericNamespacedList {
 	var list []*shared.GenericNamespacedList
 	var err error
 	if typeName == "" {
-		list, err = shared.GetGenericNamedListListsDB()
+		list, err = shared.GetGenericNamedListListsDB(tenantId)
 	} else {
-		list, err = shared.GetGenericNamedListListsByTypeDB(typeName)
+		list, err = shared.GetGenericNamedListListsByTypeDB(tenantId, typeName)
 	}
 	if err != nil {
 		log.Error(fmt.Sprintf("GetNamespacedLists: %v", err))
@@ -94,8 +95,8 @@ func GetNamespacedListsByType(typeName string) []*shared.GenericNamespacedList {
 	return list
 }
 
-func GetNamespacedListById(id string) *shared.GenericNamespacedList {
-	nl, err := shared.GetGenericNamedListOneDB(id)
+func GetNamespacedListById(tenantId, id string) *shared.GenericNamespacedList {
+	nl, err := shared.GetGenericNamedListOneDB(tenantId, id)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetNamespacedListById: %v", err))
 		return nil
@@ -104,8 +105,8 @@ func GetNamespacedListById(id string) *shared.GenericNamespacedList {
 	return nl
 }
 
-func GetNamespacedListByIdAndType(id string, typeName string) *shared.GenericNamespacedList {
-	nl := GetNamespacedListById(id)
+func GetNamespacedListByIdAndType(tenantId, id string, typeName string) *shared.GenericNamespacedList {
+	nl := GetNamespacedListById(tenantId, id)
 	if nl == nil || nl.TypeName != typeName {
 		return nil
 	}
@@ -113,9 +114,9 @@ func GetNamespacedListByIdAndType(id string, typeName string) *shared.GenericNam
 	return nl
 }
 
-func GetNamespacedListsByIp(ip string) []*shared.GenericNamespacedList {
+func GetNamespacedListsByIp(tenantId, ip string) []*shared.GenericNamespacedList {
 	result := []*shared.GenericNamespacedList{}
-	list, err := shared.GetGenericNamedListListsByTypeDB(shared.IP_LIST)
+	list, err := shared.GetGenericNamedListListsByTypeDB(tenantId, shared.IP_LIST)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetNamespacedListsByIp: %v", err))
 		return result
@@ -130,9 +131,9 @@ func GetNamespacedListsByIp(ip string) []*shared.GenericNamespacedList {
 	return result
 }
 
-func GetMacListsByMacPart(macAddress string) []*shared.GenericNamespacedList {
+func GetMacListsByMacPart(tenantId, macAddress string) []*shared.GenericNamespacedList {
 	result := []*shared.GenericNamespacedList{}
-	list, err := shared.GetGenericNamedListListsByTypeDB(shared.MAC_LIST)
+	list, err := shared.GetGenericNamedListListsByTypeDB(tenantId, shared.MAC_LIST)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetMacListsByMac: %v", err))
 		return result
@@ -146,7 +147,8 @@ func GetMacListsByMacPart(macAddress string) []*shared.GenericNamespacedList {
 }
 
 func GetNamespacedListsByContext(searchContext map[string]string) []*shared.GenericNamespacedList {
-	lists, err := shared.GetGenericNamedListListsDB()
+	tenantId := searchContext[xwcommon.TENANT_ID]
+	lists, err := shared.GetGenericNamedListListsDB(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetMacListsByMac: %v", err))
 		return []*shared.GenericNamespacedList{}
@@ -232,7 +234,7 @@ func ValidateListDataForAdmin(typeName string, listData []string) error {
 	return nil
 }
 
-func AddNamespacedListData(listType string, listId string, stringListWrapper *shared.StringListWrapper) *xwhttp.ResponseEntity {
+func AddNamespacedListData(tenantId string, listType string, listId string, stringListWrapper *shared.StringListWrapper) *xwhttp.ResponseEntity {
 	if listId == "" {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("Id is empty"), nil)
 	}
@@ -242,7 +244,7 @@ func AddNamespacedListData(listType string, listId string, stringListWrapper *sh
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	listToUpdate, err := shared.GetGenericNamedListOneByTypeNonCached(listId, listType)
+	listToUpdate, err := shared.GetGenericNamedListOneByTypeNonCached(tenantId, listId, listType)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("List with current ID doesn't exist"), nil)
 	}
@@ -264,12 +266,12 @@ func AddNamespacedListData(listType string, listId string, stringListWrapper *sh
 
 	listToUpdate.Data = itemsSet.ToSlice()
 
-	err = listToUpdate.ValidateDataIntersection()
+	err = listToUpdate.ValidateDataIntersection(tenantId)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	err = shared.CreateGenericNamedListOneDB(listToUpdate)
+	err = shared.CreateGenericNamedListOneDB(tenantId, listToUpdate)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -281,7 +283,7 @@ func AddNamespacedListData(listType string, listId string, stringListWrapper *sh
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, listToUpdate)
 }
 
-func RemoveNamespacedListData(listType string, listId string, stringListWrapper *shared.StringListWrapper) *xwhttp.ResponseEntity {
+func RemoveNamespacedListData(tenantId string, listType string, listId string, stringListWrapper *shared.StringListWrapper) *xwhttp.ResponseEntity {
 	if listId == "" {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("Id is empty"), nil)
 	}
@@ -291,7 +293,7 @@ func RemoveNamespacedListData(listType string, listId string, stringListWrapper 
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	listToUpdate, err := shared.GetGenericNamedListOneByTypeNonCached(listId, listType)
+	listToUpdate, err := shared.GetGenericNamedListOneByTypeNonCached(tenantId, listId, listType)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("List with current ID doesn't exist"), nil)
 	}
@@ -331,7 +333,7 @@ func RemoveNamespacedListData(listType string, listId string, stringListWrapper 
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("Namespaced list should contain at least one %s address", getItemName(listType)), nil)
 	}
 
-	err = shared.CreateGenericNamedListOneDB(listToUpdate)
+	err = shared.CreateGenericNamedListOneDB(tenantId, listToUpdate)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -339,8 +341,8 @@ func RemoveNamespacedListData(listType string, listId string, stringListWrapper 
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, listToUpdate)
 }
 
-func CreateNamespacedList(namespacedList *shared.GenericNamespacedList, updateIfExists bool) *xwhttp.ResponseEntity {
-	err := namespacedList.ValidateForAdminService()
+func CreateNamespacedList(tenantId string, namespacedList *shared.GenericNamespacedList, updateIfExists bool) *xwhttp.ResponseEntity {
+	err := namespacedList.ValidateForAdminService(tenantId)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
@@ -357,13 +359,13 @@ func CreateNamespacedList(namespacedList *shared.GenericNamespacedList, updateIf
 
 	// No need to check for existing record if update is allowed
 	if !updateIfExists {
-		existingList, _ := shared.GetGenericNamedListOneByTypeNonCached(namespacedList.ID, namespacedList.TypeName)
+		existingList, _ := shared.GetGenericNamedListOneByTypeNonCached(tenantId, namespacedList.ID, namespacedList.TypeName)
 		if existingList != nil {
 			return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("List with name %s already exists", namespacedList.ID), nil)
 		}
 	}
 
-	err = shared.CreateGenericNamedListOneDB(namespacedList)
+	err = shared.CreateGenericNamedListOneDB(tenantId, namespacedList)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -371,8 +373,8 @@ func CreateNamespacedList(namespacedList *shared.GenericNamespacedList, updateIf
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, namespacedList)
 }
 
-func UpdateNamespacedList(namespacedList *shared.GenericNamespacedList, newId string) *xwhttp.ResponseEntity {
-	err := namespacedList.ValidateForAdminService()
+func UpdateNamespacedList(tenantId string, namespacedList *shared.GenericNamespacedList, newId string) *xwhttp.ResponseEntity {
+	err := namespacedList.ValidateForAdminService(tenantId)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
@@ -389,21 +391,21 @@ func UpdateNamespacedList(namespacedList *shared.GenericNamespacedList, newId st
 
 	// When new ID is provided, performs rename operation otherwise update
 	if !xutil.IsBlank(newId) && newId != namespacedList.ID {
-		existingList, _ := shared.GetGenericNamedListOneByTypeNonCached(newId, namespacedList.TypeName)
+		existingList, _ := shared.GetGenericNamedListOneByTypeNonCached(tenantId, newId, namespacedList.TypeName)
 		if existingList != nil {
 			return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("\"%s %s already exists\"", namespacedList.TypeName, newId), nil)
 		}
 
-		if err = renameNamespacedListInUsedEntities(namespacedList.ID, newId); err != nil {
+		if err = renameNamespacedListInUsedEntities(tenantId, namespacedList.ID, newId); err != nil {
 			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 		}
 
-		if err = shared.DeleteOneGenericNamedList(namespacedList.ID); err != nil {
+		if err = shared.DeleteOneGenericNamedList(tenantId, namespacedList.ID); err != nil {
 			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 		}
 		namespacedList.ID = newId
 	} else {
-		existingList, err := shared.GetGenericNamedListOneByTypeNonCached(namespacedList.ID, namespacedList.TypeName)
+		existingList, err := shared.GetGenericNamedListOneByTypeNonCached(tenantId, namespacedList.ID, namespacedList.TypeName)
 		if err != nil {
 			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 		}
@@ -412,7 +414,7 @@ func UpdateNamespacedList(namespacedList *shared.GenericNamespacedList, newId st
 		}
 	}
 
-	err = shared.CreateGenericNamedListOneDB(namespacedList)
+	err = shared.CreateGenericNamedListOneDB(tenantId, namespacedList)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -420,19 +422,19 @@ func UpdateNamespacedList(namespacedList *shared.GenericNamespacedList, newId st
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, namespacedList)
 }
 
-func DeleteNamespacedList(typeName string, id string) *xwhttp.ResponseEntity {
+func DeleteNamespacedList(tenantId string, typeName string, id string) *xwhttp.ResponseEntity {
 	var namespacedList *shared.GenericNamespacedList
 	if typeName == "" {
-		namespacedList = GetNamespacedListById(id)
+		namespacedList = GetNamespacedListById(tenantId, id)
 	} else {
-		namespacedList = GetNamespacedListByIdAndType(id, typeName)
+		namespacedList = GetNamespacedListByIdAndType(tenantId, id, typeName)
 	}
 	if namespacedList == nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, fmt.Errorf("List with id: %s does not exist", id), nil)
 	}
 	namespacedList.Updated = 0
 
-	usage, err := validateUsageForNamespacedList(id)
+	usage, err := validateUsageForNamespacedList(tenantId, id)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -441,16 +443,16 @@ func DeleteNamespacedList(typeName string, id string) *xwhttp.ResponseEntity {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(usage), nil)
 	}
 
-	if err := shared.DeleteOneGenericNamedList(id); err == nil {
+	if err := shared.DeleteOneGenericNamedList(tenantId, id); err == nil {
 		return xwhttp.NewResponseEntity(http.StatusNoContent, nil, nil)
 	}
 	return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 }
 
 // Return usage info if NamespacedList is used by a rule, empty string otherwise
-func validateUsageForNamespacedList(id string) (string, error) {
+func validateUsageForNamespacedList(tenantId string, id string) (string, error) {
 	for _, tableName := range ruleTables {
-		ruleList, err := db.GetCachedSimpleDao().GetAllAsList(tableName, 0)
+		ruleList, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, tableName, 0)
 		if err != nil {
 			return "", err
 		}
@@ -466,7 +468,7 @@ func validateUsageForNamespacedList(id string) (string, error) {
 				return fmt.Sprintf("List is used by %s %s", xrule.GetRuleType(), xrule.GetName()), nil
 			}
 
-			if tableName == db.TABLE_FIRMWARE_RULE {
+			if tableName == db.TABLE_FIRMWARE_RULES {
 				firmwareRule, ok := v.(*firmware.FirmwareRule)
 				if !ok {
 					return "", fmt.Errorf("Failed to parse Firmware Rule")
@@ -478,7 +480,7 @@ func validateUsageForNamespacedList(id string) (string, error) {
 		}
 	}
 
-	for _, feature := range rfc.GetFeatureList() {
+	for _, feature := range rfc.GetFeatureList(tenantId) {
 		if feature != nil && feature.Whitelisted && feature.WhitelistProperty != nil && feature.WhitelistProperty.Value == id {
 			return fmt.Sprintf("NamespacedList is used by %s feature", feature.FeatureName), nil
 		}
@@ -487,9 +489,9 @@ func validateUsageForNamespacedList(id string) (string, error) {
 	return "", nil
 }
 
-func renameNamespacedListInUsedEntities(oldNamespacedListId string, newNamespacedListId string) error {
+func renameNamespacedListInUsedEntities(tenantId string, oldNamespacedListId string, newNamespacedListId string) error {
 	for _, tableName := range ruleTables {
-		ruleList, err := db.GetCachedSimpleDao().GetAllAsList(tableName, 0)
+		ruleList, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, tableName, 0)
 		if err != nil {
 			return err
 		}
@@ -498,7 +500,7 @@ func renameNamespacedListInUsedEntities(oldNamespacedListId string, newNamespace
 			if xrule, ok := v.(re.XRule); ok {
 				rule := xrule.GetRule()
 				if re.ChangeFixedArgToNewValue(oldNamespacedListId, newNamespacedListId, *rule, re.StandardOperationInList) {
-					if err := db.GetCachedSimpleDao().SetOne(tableName, xrule.GetId(), v); err != nil {
+					if err := db.GetCachedSimpleDao().SetOne(tenantId, tableName, xrule.GetId(), v); err != nil {
 						return err
 					}
 				}
@@ -507,10 +509,10 @@ func renameNamespacedListInUsedEntities(oldNamespacedListId string, newNamespace
 			}
 		}
 
-		for _, feature := range rfc.GetFeatureListForAS() {
+		for _, feature := range rfc.GetFeatureListForAS(tenantId) {
 			if feature != nil && feature.Whitelisted && feature.WhitelistProperty != nil && feature.WhitelistProperty.Value == oldNamespacedListId {
 				feature.WhitelistProperty.Value = newNamespacedListId
-				if _, err := xrfc.SetOneFeature(feature); err != nil {
+				if _, err := xrfc.SetOneFeature(tenantId, feature); err != nil {
 					return err
 				}
 			}

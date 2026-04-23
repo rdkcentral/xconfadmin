@@ -3,6 +3,7 @@ package logupload
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
@@ -69,7 +70,7 @@ func TestSetOnePermanentTelemetryProfile(t *testing.T) {
 		ID:              "profile-123",
 		ApplicationType: shared.STB,
 	}
-	err := SetOnePermanentTelemetryProfile("profile-123", profile)
+	err := SetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), "profile-123", profile)
 	// May fail if dao not initialized; that's acceptable in unit test
 	_ = err
 	t.Log("SetOnePermanentTelemetryProfile executed")
@@ -77,7 +78,7 @@ func TestSetOnePermanentTelemetryProfile(t *testing.T) {
 
 // TestGetOnePermanentTelemetryProfile tests retrieving a permanent telemetry profile
 func TestGetOnePermanentTelemetryProfile(t *testing.T) {
-	result := GetOnePermanentTelemetryProfile("non-existent-id")
+	result := GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), "non-existent-id")
 	// Expected to return nil if not found
 	if result != nil {
 		t.Logf("GetOnePermanentTelemetryProfile returned: %+v", result)
@@ -88,13 +89,13 @@ func TestGetOnePermanentTelemetryProfile(t *testing.T) {
 
 // TestDeletePermanentTelemetryProfile tests deleting a permanent telemetry profile
 func TestDeletePermanentTelemetryProfile(t *testing.T) {
-	DeletePermanentTelemetryProfile("test-profile-id")
+	DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), "test-profile-id")
 	t.Log("DeletePermanentTelemetryProfile executed")
 }
 
 // TestGetPermanentTelemetryProfileList tests retrieving all permanent telemetry profiles
 func TestGetPermanentTelemetryProfileList(t *testing.T) {
-	profiles := GetPermanentTelemetryProfileList()
+	profiles := GetPermanentTelemetryProfileList(db.GetDefaultTenantId())
 	if profiles == nil {
 		t.Log("GetPermanentTelemetryProfileList returned nil (expected if no data)")
 	} else {
@@ -104,7 +105,7 @@ func TestGetPermanentTelemetryProfileList(t *testing.T) {
 
 // TestGetPermanentTelemetryProfileListByApplicationType tests filtering by application type
 func TestGetPermanentTelemetryProfileListByApplicationType(t *testing.T) {
-	profiles := GetPermanentTelemetryProfileListByApplicationType(shared.STB)
+	profiles := GetPermanentTelemetryProfileListByApplicationType(db.GetDefaultTenantId(), shared.STB)
 	if profiles == nil {
 		t.Log("GetPermanentTelemetryProfileListByApplicationType returned nil")
 	} else {
@@ -114,7 +115,7 @@ func TestGetPermanentTelemetryProfileListByApplicationType(t *testing.T) {
 
 // TestGetAllTelemetryTwoProfileList tests retrieving all telemetry two profiles
 func TestGetAllTelemetryTwoProfileList(t *testing.T) {
-	profiles := GetAllTelemetryTwoProfileList(shared.STB)
+	profiles := GetAllTelemetryTwoProfileList(db.GetDefaultTenantId(), shared.STB)
 	if profiles == nil {
 		t.Log("GetAllTelemetryTwoProfileList returned nil (expected if no data)")
 	} else {
@@ -139,7 +140,7 @@ func TestNewEmptyTelemetryTwoProfile(t *testing.T) {
 
 // TestGetOneTelemetryTwoProfile tests retrieving a single telemetry two profile
 func TestGetOneTelemetryTwoProfile(t *testing.T) {
-	result := GetOneTelemetryTwoProfile("non-existent-id")
+	result := GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), "non-existent-id")
 	if result != nil {
 		t.Logf("GetOneTelemetryTwoProfile returned: %+v", result)
 	} else {
@@ -153,7 +154,7 @@ func TestSetOneTelemetryTwoProfile(t *testing.T) {
 		ID:              "profile-two-123",
 		ApplicationType: shared.STB,
 	}
-	err := SetOneTelemetryTwoProfile(profile)
+	err := SetOneTelemetryTwoProfile(db.GetDefaultTenantId(), profile)
 	// May fail if dao not initialized; that's acceptable
 	_ = err
 	t.Log("SetOneTelemetryTwoProfile executed")
@@ -161,7 +162,7 @@ func TestSetOneTelemetryTwoProfile(t *testing.T) {
 
 // TestDeleteTelemetryTwoProfile tests deleting a telemetry two profile
 func TestDeleteTelemetryTwoProfile(t *testing.T) {
-	err := DeleteTelemetryTwoProfile("test-id")
+	err := DeleteTelemetryTwoProfile(db.GetDefaultTenantId(), "test-id")
 	// May fail if dao not initialized; that's acceptable
 	_ = err
 	t.Log("DeleteTelemetryTwoProfile executed")
@@ -173,13 +174,13 @@ func TestSetOneTelemetryProfile(t *testing.T) {
 		ID:              "telemetry-123",
 		ApplicationType: shared.STB,
 	}
-	SetOneTelemetryProfile("telemetry-123", profile)
+	SetOneTelemetryProfile(db.GetDefaultTenantId(), "telemetry-123", profile)
 	t.Log("SetOneTelemetryProfile executed")
 }
 
 // TestGetTimestampedRulesPointer tests retrieving timestamped rules
 func TestGetTimestampedRulesPointer(t *testing.T) {
-	rules := GetTimestampedRulesPointer()
+	rules := GetTimestampedRulesPointer(db.GetDefaultTenantId())
 	if rules == nil {
 		t.Log("GetTimestampedRulesPointer returned nil (expected if no data)")
 	} else {
@@ -189,7 +190,7 @@ func TestGetTimestampedRulesPointer(t *testing.T) {
 
 // TestGetOneTelemetryTwoRule tests retrieving a single telemetry two rule
 func TestGetOneTelemetryTwoRule(t *testing.T) {
-	result := GetOneTelemetryTwoRule("non-existent-rule-id")
+	result := GetOneTelemetryTwoRule(db.GetDefaultTenantId(), "non-existent-rule-id")
 	if result != nil {
 		t.Logf("GetOneTelemetryTwoRule returned: %+v", result)
 	} else {
@@ -199,7 +200,7 @@ func TestGetOneTelemetryTwoRule(t *testing.T) {
 
 // TestGetOneTelemetryRule tests retrieving a single telemetry rule
 func TestGetOneTelemetryRule(t *testing.T) {
-	result := GetOneTelemetryRule("non-existent-rule-id")
+	result := GetOneTelemetryRule(db.GetDefaultTenantId(), "non-existent-rule-id")
 	if result != nil {
 		t.Logf("GetOneTelemetryRule returned: %+v", result)
 	} else {
@@ -213,7 +214,7 @@ func TestSetOneTelemetryTwoRule(t *testing.T) {
 		ID:              "rule-two-123",
 		ApplicationType: shared.STB,
 	}
-	err := SetOneTelemetryTwoRule("rule-two-123", rule)
+	err := SetOneTelemetryTwoRule(db.GetDefaultTenantId(), "rule-two-123", rule)
 	// May fail if dao not initialized; that's acceptable
 	_ = err
 	t.Log("SetOneTelemetryTwoRule executed")
@@ -221,18 +222,18 @@ func TestSetOneTelemetryTwoRule(t *testing.T) {
 
 // TestDeleteTelemetryTwoRule tests deleting a telemetry two rule
 func TestDeleteTelemetryTwoRule(t *testing.T) {
-	err := DeleteTelemetryTwoRule("test-rule-id")
+	err := DeleteTelemetryTwoRule(db.GetDefaultTenantId(), "test-rule-id")
 	// May fail if dao not initialized; that's acceptable
 	_ = err
 	t.Log("DeleteTelemetryTwoRule executed")
 }
 
 // func TestGetOne(t *testing.T) {
-// 	// GetCachedSimpleDaoFunc = func() ds.CachedSimpleDao {
+// 	// GetCachedSimpleDaoFunc = func() db.CachedSimpleDao {
 // 	// 	return cachedSimpleDaoMock{}
 // 	// }
 // 	getOneMock = func(tableName string, rowKey string) (interface{}, error) {
-// 		if tableName == ds.TABLE_TELEMETRY {
+// 		if tableName == db.TABLE_TELEMETRY {
 // 			telemetryProfile := &logupload.TelemetryProfile{
 // 				ID:               "id",
 // 				Name:             "name",
@@ -255,11 +256,11 @@ func TestDeleteTelemetryTwoRule(t *testing.T) {
 // }
 
 // func TestGetTelemetryProfileList(t *testing.T) {
-// 	// GetCachedSimpleDaoFunc = func() ds.CachedSimpleDao {
+// 	// GetCachedSimpleDaoFunc = func() db.CachedSimpleDao {
 // 	// 	return cachedSimpleDaoMock{}
 // 	// }
 // 	getAllAsListMock = func(tableName string, maxResults int) ([]interface{}, error) {
-// 		if tableName == ds.TABLE_TELEMETRY {
+// 		if tableName == db.TABLE_TELEMETRY {
 // 			telemetryProfile1 := logupload.TelemetryProfile{
 // 				ID:               "id1",
 // 				Name:             "name1",
@@ -294,11 +295,11 @@ func TestDeleteTelemetryTwoRule(t *testing.T) {
 
 // func TestGetTelemetryProfileMap(t *testing.T) {
 
-// 	// GetCachedSimpleDaoFunc = func() ds.CachedSimpleDao {
+// 	// GetCachedSimpleDaoFunc = func() db.CachedSimpleDao {
 // 	// 	return cachedSimpleDaoMock{}
 // 	// }
 // 	getAllAsMapMock = func(tableName string) (map[interface{}]interface{}, error) {
-// 		if tableName == ds.TABLE_TELEMETRY {
+// 		if tableName == db.TABLE_TELEMETRY {
 // 			telemetryProfile1 := logupload.TelemetryProfile{
 // 				ID:               "id1",
 // 				Name:             "name1",

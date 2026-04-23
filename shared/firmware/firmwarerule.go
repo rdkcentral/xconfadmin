@@ -30,8 +30,8 @@ type ApplicableAction struct {
 	ActivationFirmwareVersions map[string][]string  `json:"activationFirmwareVersions,omitempty"`
 }
 
-func GetFirmwareRuleTemplateCount() (int, error) {
-	entries, err := db.GetSimpleDao().GetAllAsMapRaw(db.TABLE_FIRMWARE_RULE_TEMPLATE, 0)
+func GetFirmwareRuleTemplateCount(tenantId string) (int, error) {
+	entries, err := db.GetSimpleDao().GetAllAsMapRaw(tenantId, db.TABLE_FIRMWARE_RULE_TEMPLATES, 0)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareRuleTemplateCount: %v", err))
 		return 0, err
@@ -79,9 +79,9 @@ func NewDefinePropertiesTemplate(id string, rule ru.Rule, properties map[string]
 	}
 }
 
-func GetFirmwareSortedRuleAllAsListDB() ([]*corefw.FirmwareRule, error) {
+func GetFirmwareSortedRuleAllAsListDB(tenantId string) ([]*corefw.FirmwareRule, error) {
 	log.Debug("GetFirmwareSortedRuleAllAsListDB starts...")
-	rulemap, err := db.GetCachedSimpleDao().GetAllAsMap(db.TABLE_FIRMWARE_RULE)
+	rulemap, err := db.GetCachedSimpleDao().GetAllAsMap(tenantId, db.TABLE_FIRMWARE_RULES)
 	if err != nil {
 		return nil, err
 	}

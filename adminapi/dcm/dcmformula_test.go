@@ -48,7 +48,6 @@ import (
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	"github.com/rdkcentral/xconfwebconfig/db"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	core "github.com/rdkcentral/xconfwebconfig/shared"
@@ -472,7 +471,7 @@ func CreateFirmwareRuleTemplates() {
 		if jsonData, err := json.Marshal(template); err != nil {
 			panic(err)
 		} else {
-			if err := ds.GetSimpleDao().SetOne(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template.ID, jsonData); err != nil {
+			if err := db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULE_TEMPLATES, template.ID, jsonData); err != nil {
 				panic(err)
 			}
 		}
@@ -481,7 +480,7 @@ func CreateFirmwareRuleTemplates() {
 
 // GetFirmwareRuleTemplateCount - local implementation to avoid circular dependency
 func GetFirmwareRuleTemplateCount() (int, error) {
-	entries, err := db.GetSimpleDao().GetAllAsMapRaw(db.TABLE_FIRMWARE_RULE_TEMPLATE, 0)
+	entries, err := db.GetSimpleDao().GetAllAsMapRaw(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULE_TEMPLATES, 0)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareRuleTemplateCount: %v", err))
 		return 0, err
@@ -741,14 +740,14 @@ func TestMain(m *testing.M) {
 		db.SetDatabaseClient(mockDbClient)
 
 		// Register table configurations to avoid "Table configuration not found" errors
-		db.RegisterTableConfigSimple(db.TABLE_DCM_RULE, logupload.NewDCMGenericRuleInf)
-		db.RegisterTableConfigSimple(db.TABLE_LOG_FILE, logupload.NewLogFileInf)
-		db.RegisterTableConfigSimple(db.TABLE_LOG_FILE_LIST, logupload.NewLogFileListInf)
+		db.RegisterTableConfigSimple(db.TABLE_DCM_RULES, logupload.NewDCMGenericRuleInf)
+		db.RegisterTableConfigSimple(db.TABLE_LOG_FILES, logupload.NewLogFileInf)
+		db.RegisterTableConfigSimple(db.TABLE_LOG_FILE_LISTS, logupload.NewLogFileListInf)
 		db.RegisterTableConfigSimple(db.TABLE_LOG_UPLOAD_SETTINGS, logupload.NewLogUploadSettingsInf)
 		db.RegisterTableConfigSimple(db.TABLE_DEVICE_SETTINGS, logupload.NewDeviceSettingsInf)
 		db.RegisterTableConfigSimple(db.TABLE_VOD_SETTINGS, logupload.NewVodSettingsInf)
-		db.RegisterTableConfigSimple(db.TABLE_UPLOAD_REPOSITORY, logupload.NewUploadRepositoryInf)
-		db.RegisterTableConfigSimple(db.TABLE_XCONF_CHANGED_KEYS, db.NewChangedDataInf)
+		db.RegisterTableConfigSimple(db.TABLE_UPLOAD_REPOSITORIES, logupload.NewUploadRepositoryInf)
+		db.RegisterTableConfigSimple(db.TABLE_CHANGE_EVENTS, db.NewChangedDataInf)
 
 		// Initialize mock database
 		mockDaoInstance = InitMockDatabase()
@@ -961,8 +960,8 @@ func DeleteAllEntities() {
 		if err := truncateTable(tableInfo.TableName); err != nil {
 			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
 		}
-		if tableInfo.CacheData {
-			db.GetCachedSimpleDao().RefreshAll(tableInfo.TableName)
+		if tableInfo.Cached {
+			db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), tableInfo.TableName)
 		}
 	}
 }
@@ -971,7 +970,7 @@ func truncateTable(tableName string) error {
 	dbClient := db.GetDatabaseClient()
 	cassandraClient, ok := dbClient.(*db.CassandraClient)
 	if ok {
-		return cassandraClient.DeleteAllXconfData(tableName)
+		return cassandraClient.DeleteAllXconfData(db.GetDefaultTenantId(), tableName)
 	}
 	return nil
 }
@@ -981,9 +980,9 @@ func CreateAndSaveModel(id string) *core.Model {
 
 	var err error
 	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		err = mockDaoInstance.SetOne(db.TABLE_MODEL, model.ID, model)
+		err = mockDaoInstance.SetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID, model)
 	} else {
-		err = db.GetCachedSimpleDao().SetOne(db.TABLE_MODEL, model.ID, model)
+		err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID, model)
 	}
 
 	if err != nil {
@@ -1016,30 +1015,30 @@ func getDaoForTest() interface{} {
 
 func setOneInDao(tableName string, rowKey string, entity interface{}) error {
 	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		return mockDaoInstance.SetOne(tableName, rowKey, entity)
+		return mockDaoInstance.SetOne(db.GetDefaultTenantId(), tableName, rowKey, entity)
 	}
-	return db.GetCachedSimpleDao().SetOne(tableName, rowKey, entity)
+	return db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), tableName, rowKey, entity)
 }
 
 func getOneFromDao(tableName string, rowKey string) (interface{}, error) {
 	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		return mockDaoInstance.GetOne(tableName, rowKey)
+		return mockDaoInstance.GetOne(db.GetDefaultTenantId(), tableName, rowKey)
 	}
-	return db.GetCachedSimpleDao().GetOne(tableName, rowKey)
+	return db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), tableName, rowKey)
 }
 
 func getAllAsListFromDao(tableName string, maxResults int) ([]interface{}, error) {
 	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		return mockDaoInstance.GetAllAsList(tableName, maxResults)
+		return mockDaoInstance.GetAllAsList(db.GetDefaultTenantId(), tableName, maxResults)
 	}
-	return db.GetCachedSimpleDao().GetAllAsList(tableName, maxResults)
+	return db.GetCachedSimpleDao().GetAllAsList(db.GetDefaultTenantId(), tableName, maxResults)
 }
 
 func deleteOneFromDao(tableName string, rowKey string) error {
 	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		return mockDaoInstance.DeleteOne(tableName, rowKey)
+		return mockDaoInstance.DeleteOne(db.GetDefaultTenantId(), tableName, rowKey)
 	}
-	return db.GetCachedSimpleDao().DeleteOne(tableName, rowKey)
+	return db.GetCachedSimpleDao().DeleteOne(db.GetDefaultTenantId(), tableName, rowKey)
 }
 
 func TestDfAllApi(t *testing.T) {
@@ -1050,7 +1049,7 @@ func TestDfAllApi(t *testing.T) {
 	dfrule := logupload.DCMGenericRule{}
 	err := json.Unmarshal([]byte(jsondfCreateData), &dfrule)
 	assert.NilError(t, err)
-	setOneInDao(ds.TABLE_DCM_RULE, dfrule.ID, &dfrule)
+	setOneInDao(db.TABLE_DCM_RULES, dfrule.ID, &dfrule)
 
 	// create entry
 	url := fmt.Sprintf("%s", DF_URL)
@@ -1943,7 +1942,7 @@ func TestDcmFormulaChangePriorityHandler_AppTypeMismatch(t *testing.T) {
 	formula := createFormula("MODEL_PRIO_MISMATCH", 0)
 	formula.ApplicationType = "xhome"
 	formulaJson, _ := json.Marshal(formula)
-	setOneInDao(db.TABLE_DCM_RULE, formula.ID, formulaJson)
+	setOneInDao(db.TABLE_DCM_RULES, formula.ID, formulaJson)
 
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s/priority/2?applicationType=stb", formula.ID)
 	req := httptest.NewRequest("POST", url, nil)
@@ -2871,7 +2870,7 @@ func TestImportFormulas_SortByPriority(t *testing.T) {
 	assert.Equal(t, http.StatusOK, results["IMPORT_SORT_3"].Status)
 
 	// Verify they were imported in priority order by checking the saved formulas
-	allFormulas := GetDcmFormulaAll()
+	allFormulas := GetDcmFormulaAll(db.GetDefaultTenantId())
 	assert.Assert(t, len(allFormulas) >= 3)
 }
 
@@ -2923,7 +2922,7 @@ func TestImportFormulas_Overwrite(t *testing.T) {
 	assert.Equal(t, http.StatusOK, results1["IMPORT_OVER_1"].Status)
 
 	// Verify the entity was created
-	createdFormula := logupload.GetOneDCMGenericRule("IMPORT_OVER_1")
+	createdFormula := logupload.GetOneDCMGenericRule(db.GetDefaultTenantId(), "IMPORT_OVER_1")
 	if createdFormula == nil {
 		t.Fatal("Formula was not created by first import!")
 	}
@@ -2991,10 +2990,10 @@ func testImportFormula(fws *logupload.FormulaWithSettings, overwrite bool, appTy
 	// Only save the DCM rule if we're doing an update (overwrite=true) and it doesn't exist yet
 	if overwrite && fws.Formula != nil {
 		// Check if it already exists
-		_, err := getOneFromDao(db.TABLE_DCM_RULE, fws.Formula.ID)
+		_, err := getOneFromDao(db.TABLE_DCM_RULES, fws.Formula.ID)
 		if err != nil {
 			// Doesn't exist, so save it
-			err = setOneInDao(db.TABLE_DCM_RULE, fws.Formula.ID, fws.Formula)
+			err = setOneInDao(db.TABLE_DCM_RULES, fws.Formula.ID, fws.Formula)
 			if err != nil {
 				return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 			}
@@ -3003,7 +3002,7 @@ func testImportFormula(fws *logupload.FormulaWithSettings, overwrite bool, appTy
 
 	// Call the actual import functionality
 	db.GetCacheManager().ForceSyncChanges()
-	return importFormula(fws, overwrite, appType)
+	return importFormula(db.GetDefaultTenantId(), fws, overwrite, appType)
 }
 
 // testImportFormulas is a test helper that sets up DCM rules and tests bulk formula import
@@ -3013,7 +3012,7 @@ func testImportFormulas(fwsList []*logupload.FormulaWithSettings, appType string
 	// Process each formula individually for testing
 	for _, fws := range fwsList {
 		if fws.Formula != nil {
-			respEntity := importFormula(fws, overwrite, appType)
+			respEntity := importFormula(db.GetDefaultTenantId(), fws, overwrite, appType)
 			results[fws.Formula.ID] = &common.ResponseEntity{
 				Status: respEntity.Status,
 				Error:  respEntity.Error,

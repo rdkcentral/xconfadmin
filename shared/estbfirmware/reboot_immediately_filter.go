@@ -43,7 +43,7 @@ func NewEmptyRebootImmediatelyFilter() *coreef.RebootImmediatelyFilter {
 // }
 
 // func RebootImmediatelyFiltersByApplicationType(applicationType string) ([]*RebootImmediatelyFilter, error) {
-// 	rulelst, err := ds.GetCachedSimpleDao().GetAllAsList(ds.TABLE_FIRMWARE_RULE, 0)
+// 	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_RULES, 0)
 // 	if err != nil {
 // 		return nil, err
 // 	}
@@ -65,7 +65,7 @@ func NewEmptyRebootImmediatelyFilter() *coreef.RebootImmediatelyFilter {
 // }
 
 // func RebootImmediatelyFiltersByName(applicationType string, name string) (*RebootImmediatelyFilter, error) {
-// 	rulelst, err := ds.GetCachedSimpleDao().GetAllAsList(ds.TABLE_FIRMWARE_RULE, 0)
+// 	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_RULES, 0)
 // 	if err != nil {
 // 		return nil, err
 // 	}

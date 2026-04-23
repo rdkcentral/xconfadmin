@@ -23,22 +23,18 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xutil "github.com/rdkcentral/xconfadmin/util"
-
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
-
-	xcommon "github.com/rdkcentral/xconfadmin/common"
-
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	"github.com/rdkcentral/xconfwebconfig/util"
-
-	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -54,9 +50,9 @@ const (
 	cFirmwareConfigNumberOfItems        = "numberOfItems"
 )
 
-func GetFirmwareConfigs(applicationType string) []*coreef.FirmwareConfigResponse {
+func GetFirmwareConfigs(tenantId string, applicationType string) []*coreef.FirmwareConfigResponse {
 	result := []*coreef.FirmwareConfigResponse{}
-	list, err := coreef.GetFirmwareConfigAsListDB()
+	list, err := coreef.GetFirmwareConfigAsListDB(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareConfigs: %v", err))
 		return result
@@ -73,9 +69,9 @@ func GetFirmwareConfigs(applicationType string) []*coreef.FirmwareConfigResponse
 	return result
 }
 
-func GetFirmwareConfigsAS(applicationType string) []*coreef.FirmwareConfig {
+func GetFirmwareConfigsAS(tenantId string, applicationType string) []*coreef.FirmwareConfig {
 	result := []*coreef.FirmwareConfig{}
-	list, err := coreef.GetFirmwareConfigAsListDB()
+	list, err := coreef.GetFirmwareConfigAsListDB(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareConfigs: %v", err))
 		return result
@@ -94,8 +90,8 @@ func GetFirmwareConfigsAS(applicationType string) []*coreef.FirmwareConfig {
 	return result
 }
 
-func GetFirmwareConfigById(id string) *coreef.FirmwareConfigResponse {
-	fc, err := coreef.GetFirmwareConfigOneDB(id)
+func GetFirmwareConfigById(tenantId string, id string) *coreef.FirmwareConfigResponse {
+	fc, err := coreef.GetFirmwareConfigOneDB(tenantId, id)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareConfigById: %v", err))
 		return nil
@@ -103,8 +99,8 @@ func GetFirmwareConfigById(id string) *coreef.FirmwareConfigResponse {
 	return fc.CreateFirmwareConfigResponse()
 }
 
-func GetFirmwareConfigByIdAS(id string) *coreef.FirmwareConfig {
-	fc, err := coreef.GetFirmwareConfigOneDB(id)
+func GetFirmwareConfigByIdAS(tenantId string, id string) *coreef.FirmwareConfig {
+	fc, err := coreef.GetFirmwareConfigOneDB(tenantId, id)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareConfigById: %v", err))
 		return nil
@@ -112,9 +108,9 @@ func GetFirmwareConfigByIdAS(id string) *coreef.FirmwareConfig {
 	return fc
 }
 
-func GetFirmwareConfigsByModelIdAndApplicationType(modelId string, applicationType string) []*coreef.FirmwareConfigResponse {
+func GetFirmwareConfigsByModelIdAndApplicationType(tenantId string, modelId string, applicationType string) []*coreef.FirmwareConfigResponse {
 	result := []*coreef.FirmwareConfigResponse{}
-	list, err := coreef.GetFirmwareConfigAsListDB()
+	list, err := coreef.GetFirmwareConfigAsListDB(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareConfigsByModelIdAndApplicationType: %v", err))
 		return result
@@ -134,9 +130,9 @@ func GetFirmwareConfigsByModelIdAndApplicationType(modelId string, applicationTy
 	return result
 }
 
-func GetFirmwareConfigsByModelIdAndApplicationTypeAS(modelId string, applicationType string) []*coreef.FirmwareConfig {
+func GetFirmwareConfigsByModelIdAndApplicationTypeAS(tenantId string, modelId string, applicationType string) []*coreef.FirmwareConfig {
 	result := []*coreef.FirmwareConfig{}
-	list, err := coreef.GetFirmwareConfigAsListDB()
+	list, err := coreef.GetFirmwareConfigAsListDB(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareConfigsByModelIdAndApplicationType: %v", err))
 		return result
@@ -155,8 +151,8 @@ func GetFirmwareConfigsByModelIdAndApplicationTypeAS(modelId string, application
 	return result
 }
 
-func IsValidFirmwareConfigByModelIds(modelId string, applicationType string, firmwareConfig *coreef.FirmwareConfig) bool {
-	list, err := coreef.GetFirmwareConfigAsListDB()
+func IsValidFirmwareConfigByModelIds(tenantId string, modelId string, applicationType string, firmwareConfig *coreef.FirmwareConfig) bool {
+	list, err := coreef.GetFirmwareConfigAsListDB(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareConfigsByModelIdAndApplicationType: %v", err))
 		return false
@@ -176,8 +172,8 @@ func IsValidFirmwareConfigByModelIds(modelId string, applicationType string, fir
 	return false
 }
 
-func IsValidFirmwareConfigByModelIdList(modelIds *[]string, applicationType string, firmwareConfig *coreef.FirmwareConfig) bool {
-	list, err := coreef.GetFirmwareConfigAsListDB()
+func IsValidFirmwareConfigByModelIdList(tenantId string, modelIds *[]string, applicationType string, firmwareConfig *coreef.FirmwareConfig) bool {
+	list, err := coreef.GetFirmwareConfigAsListDB(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareConfigsByModelIdAndApplicationType: %v", err))
 		return false
@@ -273,7 +269,7 @@ func filterFirmwareConfigsByContext(entries []*coreef.FirmwareConfig, searchCont
 	return result, nil
 }
 
-func beforeCreatingFirmwareConfig(entity *coreef.FirmwareConfig, writeApplication string) error {
+func beforeCreatingFirmwareConfig(tenantId string, entity *coreef.FirmwareConfig, writeApplication string) error {
 	if util.IsBlank(entity.ID) {
 		entity.ID = uuid.New().String()
 	} else {
@@ -283,7 +279,7 @@ func beforeCreatingFirmwareConfig(entity *coreef.FirmwareConfig, writeApplicatio
 			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "ApplicationType conflict")
 		}
 		entity.Updated = util.GetTimestamp()
-		existingEntity, _ := coreef.GetFirmwareConfigOneDB(entity.ID)
+		existingEntity, _ := coreef.GetFirmwareConfigOneDB(tenantId, entity.ID)
 
 		if existingEntity != nil {
 			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Entity with id: "+entity.ID+" already exists in "+existingEntity.ApplicationType+" application")
@@ -292,41 +288,41 @@ func beforeCreatingFirmwareConfig(entity *coreef.FirmwareConfig, writeApplicatio
 	return nil
 }
 
-func CreateFirmwareConfigAS(config *coreef.FirmwareConfig, appType string, validateName bool) *xwhttp.ResponseEntity {
+func CreateFirmwareConfigAS(tenantId string, config *coreef.FirmwareConfig, appType string, validateName bool) *xwhttp.ResponseEntity {
 	for i, id := range config.SupportedModelIds {
 		config.SupportedModelIds[i] = strings.ToUpper(id)
 	}
 
-	err := config.Validate()
+	err := config.Validate(tenantId)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 	if validateName {
-		err = config.ValidateName()
+		err = config.ValidateName(tenantId)
 		if err != xwcommon.NotFound && err != nil {
 			return xwhttp.NewResponseEntity(http.StatusConflict, err, nil)
 		}
 	}
-	if err = beforeCreatingFirmwareConfig(config, appType); err != nil {
+	if err = beforeCreatingFirmwareConfig(tenantId, config, appType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, err, nil)
 	}
 
-	err = coreef.CreateFirmwareConfigOneDB(config)
+	err = coreef.CreateFirmwareConfigOneDB(tenantId, config)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, config)
 }
 
-func CreateFirmwareConfig(config *coreef.FirmwareConfig, appType string) *xwhttp.ResponseEntity {
-	if err := CreateFirmwareConfigAS(config, appType, true); err != nil {
+func CreateFirmwareConfig(tenantId string, config *coreef.FirmwareConfig, appType string) *xwhttp.ResponseEntity {
+	if err := CreateFirmwareConfigAS(tenantId, config, appType, true); err != nil {
 		return err
 	}
 	resp := config.CreateFirmwareConfigResponse()
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, resp)
 }
 
-func beforeUpdatingFirmwareConfig(entity *coreef.FirmwareConfig, writeApplication string) error {
+func beforeUpdatingFirmwareConfig(tenantId string, entity *coreef.FirmwareConfig, writeApplication string) error {
 	if util.IsBlank(entity.ID) {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Entity id is empty: ")
 
@@ -337,7 +333,7 @@ func beforeUpdatingFirmwareConfig(entity *coreef.FirmwareConfig, writeApplicatio
 			entity.ApplicationType = writeApplication
 		}
 	}
-	existingEntity, _ := coreef.GetFirmwareConfigOneDB(entity.ID)
+	existingEntity, _ := coreef.GetFirmwareConfigOneDB(tenantId, entity.ID)
 
 	if existingEntity == nil || existingEntity.ApplicationType != entity.ApplicationType {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+entity.ID+" does not exist in "+existingEntity.ApplicationType+" application")
@@ -345,59 +341,59 @@ func beforeUpdatingFirmwareConfig(entity *coreef.FirmwareConfig, writeApplicatio
 	return nil
 }
 
-func UpdateFirmwareConfigAS(config *coreef.FirmwareConfig, appType string, validateName bool) *xwhttp.ResponseEntity {
+func UpdateFirmwareConfigAS(tenantId string, config *coreef.FirmwareConfig, appType string, validateName bool) *xwhttp.ResponseEntity {
 	for i, id := range config.SupportedModelIds {
 		config.SupportedModelIds[i] = strings.ToUpper(id)
 	}
 
-	err := config.Validate()
+	err := config.Validate(tenantId)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	if GetFirmwareConfigById(config.ID) == nil {
+	if GetFirmwareConfigById(tenantId, config.ID) == nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, fmt.Errorf("\"FirmwareConfig with current id: %s does not exist\"", config.ID), nil)
 	}
 
 	if validateName {
-		err = config.ValidateName()
+		err = config.ValidateName(tenantId)
 		if err != nil {
 			return xwhttp.NewResponseEntity(http.StatusConflict, err, nil)
 		}
 	}
 
-	if err = beforeUpdatingFirmwareConfig(config, appType); err != nil {
+	if err = beforeUpdatingFirmwareConfig(tenantId, config, appType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, err, nil)
 	}
 
-	err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_FIRMWARE_CONFIG, config.ID, config)
+	err = db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_FIRMWARE_CONFIGS, config.ID, config)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, config)
 }
 
-func UpdateFirmwareConfig(config *coreef.FirmwareConfig, appType string) *xwhttp.ResponseEntity {
-	if err := UpdateFirmwareConfigAS(config, appType, true); err != nil {
+func UpdateFirmwareConfig(tenantId string, config *coreef.FirmwareConfig, appType string) *xwhttp.ResponseEntity {
+	if err := UpdateFirmwareConfigAS(tenantId, config, appType, true); err != nil {
 		return err
 	}
 	resp := config.CreateFirmwareConfigResponse()
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, resp)
 }
 
-func beforeDeletingFirmwareConfig(id string, appType string) *xwhttp.ResponseEntity {
-	entity, _ := coreef.GetFirmwareConfigOneDB(id)
+func beforeDeletingFirmwareConfig(tenantId string, id string, appType string) *xwhttp.ResponseEntity {
+	entity, _ := coreef.GetFirmwareConfigOneDB(tenantId, id)
 	if entity == nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, fmt.Errorf("Entity with id: %s does not exist", id), nil)
 	}
 
-	err := beforeUpdatingFirmwareConfig(entity, appType)
+	err := beforeUpdatingFirmwareConfig(tenantId, entity, appType)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, err, nil)
 	}
 
 	// Check for usage in FirmwareRule
-	amvs := GetAllAmvList()
+	amvs := GetAllAmvList(tenantId)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, fmt.Errorf("ActivationVersion check Referential Integrity while deleting %s failed", id), nil)
 	}
@@ -410,7 +406,7 @@ func beforeDeletingFirmwareConfig(id string, appType string) *xwhttp.ResponseEnt
 	}
 
 	// Check for usage in FirmwareRule
-	rules, err := corefw.GetFirmwareRuleAllAsListDBForAdmin()
+	rules, err := corefw.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
 	if err != nil && err.Error() != xcommon.NotFound.Error() {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, fmt.Errorf("Get FirmwareRules to check Referential Integrity while deleting %s failed", id), nil)
 	}
@@ -426,20 +422,20 @@ func beforeDeletingFirmwareConfig(id string, appType string) *xwhttp.ResponseEnt
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, entity)
 }
 
-func DeleteFirmwareConfig(id string, appType string) *xwhttp.ResponseEntity {
-	err := beforeDeletingFirmwareConfig(id, appType)
+func DeleteFirmwareConfig(tenantId string, id string, appType string) *xwhttp.ResponseEntity {
+	err := beforeDeletingFirmwareConfig(tenantId, id, appType)
 	if err.Error != nil {
 		return err
 	}
-	err2 := coreef.DeleteOneFirmwareConfig(id)
+	err2 := coreef.DeleteOneFirmwareConfig(tenantId, id)
 	if err2 != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err2, nil)
 	}
 	return xwhttp.NewResponseEntity(http.StatusNoContent, nil, nil)
 }
 
-func GetFirmwareConfigId(version string, applicationType string) string {
-	list, err := coreef.GetFirmwareConfigAsListDB()
+func GetFirmwareConfigId(tenantId string, version string, applicationType string) string {
+	list, err := coreef.GetFirmwareConfigAsListDB(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareConfigId: %v", err))
 		return ""
@@ -454,9 +450,9 @@ func GetFirmwareConfigId(version string, applicationType string) string {
 	return ""
 }
 
-func GetFirmwareConfigsByModelIdsAndApplication(modelIds []string, applicationType string) []coreef.FirmwareConfig {
+func GetFirmwareConfigsByModelIdsAndApplication(tenantId string, modelIds []string, applicationType string) []coreef.FirmwareConfig {
 	result := []coreef.FirmwareConfig{}
-	entries, _ := coreef.GetFirmwareConfigAsListDB()
+	entries, _ := coreef.GetFirmwareConfigAsListDB(tenantId)
 	for _, entry := range entries {
 		if applicationType == entry.ApplicationType && hasCommonEntries(modelIds, entry.SupportedModelIds) {
 			result = append(result, *entry)
@@ -474,13 +470,13 @@ func containsVersion(configs []coreef.FirmwareConfig, version string) bool {
 	return false
 }
 
-func GetSortedFirmwareVersionsIfDoesExistOrNot(firmwareConfigData FirmwareConfigData, applicationType string) map[string][]string {
+func GetSortedFirmwareVersionsIfDoesExistOrNot(tenantId string, firmwareConfigData FirmwareConfigData, applicationType string) map[string][]string {
 	firmwareVersionMap := make(map[string][]string)
 
 	if len(firmwareConfigData.Versions) == 0 || len(firmwareConfigData.ModelSet) == 0 {
 		return firmwareVersionMap
 	}
-	firmwareConfigsByModel := GetFirmwareConfigsByModelIdsAndApplication(firmwareConfigData.ModelSet, applicationType)
+	firmwareConfigsByModel := GetFirmwareConfigsByModelIdsAndApplication(tenantId, firmwareConfigData.ModelSet, applicationType)
 	existedVersions := []string{}
 	notExistedVersions := []string{}
 	for _, firmwareVersion := range firmwareConfigData.Versions {
@@ -498,10 +494,10 @@ func GetSortedFirmwareVersionsIfDoesExistOrNot(firmwareConfigData FirmwareConfig
 	return firmwareVersionMap
 }
 
-func getSupportedConfigsByEnvModelRuleName(envModelName string, appType string) []coreef.FirmwareConfig {
+func getSupportedConfigsByEnvModelRuleName(tenantId string, envModelName string, appType string) []coreef.FirmwareConfig {
 	versionSet := []coreef.FirmwareConfig{}
 	model := ""
-	firmwareRules, _ := corefw.GetFirmwareRuleAllAsListDBForAdmin()
+	firmwareRules, _ := corefw.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
 	for _, rule := range firmwareRules {
 		if rule.Type == corefw.ENV_MODEL_RULE && rule.Name == envModelName && rule.ApplicationType == appType {
 			model = extractModel(*rule)
@@ -512,7 +508,7 @@ func getSupportedConfigsByEnvModelRuleName(envModelName string, appType string) 
 		return versionSet
 	}
 
-	configs, _ := coreef.GetFirmwareConfigAsListDB()
+	configs, _ := coreef.GetFirmwareConfigAsListDB(tenantId)
 	for _, config := range configs {
 		if config.ApplicationType != appType {
 			continue
@@ -528,11 +524,11 @@ func getSupportedConfigsByEnvModelRuleName(envModelName string, appType string) 
 	return versionSet
 }
 
-func getFirmwareConfigByEnvModelRuleName(envModelRuleName string) *coreef.FirmwareConfig {
-	firmwareRules, _ := corefw.GetFirmwareRuleAllAsListDBForAdmin()
+func getFirmwareConfigByEnvModelRuleName(tenantId string, envModelRuleName string) *coreef.FirmwareConfig {
+	firmwareRules, _ := corefw.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
 	for _, rule := range firmwareRules {
 		if rule.Type == corefw.ENV_MODEL_RULE && rule.Name == envModelRuleName && rule.ApplicableAction.Type == ".RuleAction" { // TODO Not sure what instanceof means in GO
-			fc, err := coreef.GetFirmwareConfigOneDB(rule.ConfigId())
+			fc, err := coreef.GetFirmwareConfigOneDB(tenantId, rule.ConfigId())
 			if err == nil {
 				return fc
 			}

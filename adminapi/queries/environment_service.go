@@ -27,30 +27,31 @@ import (
 
 	"github.com/rdkcentral/xconfadmin/util"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 )
 
-func GetEnvironment(id string) *shared.Environment {
-	environment := shared.GetOneEnvironment(id)
+func GetEnvironment(tenantId string, id string) *shared.Environment {
+	environment := shared.GetOneEnvironment(tenantId, id)
 	if environment != nil {
 		return environment
 	}
 	return nil
 }
 
-func IsExistEnvironment(envId string) bool {
+func IsExistEnvironment(tenantId string, envId string) bool {
 	if envId != "" {
-		environment := shared.GetOneEnvironment(envId)
+		environment := shared.GetOneEnvironment(tenantId, envId)
 		return environment != nil
 	}
 	return false
 }
 
-func CreateEnvironment(environment *shared.Environment) *xwhttp.ResponseEntity {
+func CreateEnvironment(tenantId string, environment *shared.Environment) *xwhttp.ResponseEntity {
 	// Environment's ID (name) is stored in uppercase
 	environment.ID = strings.ToUpper(strings.TrimSpace(environment.ID))
 
@@ -59,12 +60,12 @@ func CreateEnvironment(environment *shared.Environment) *xwhttp.ResponseEntity {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	existedEnv := shared.GetOneEnvironment(environment.ID)
+	existedEnv := shared.GetOneEnvironment(tenantId, environment.ID)
 	if existedEnv != nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New("Environment with "+environment.ID+" already exists"), nil)
 	}
 
-	env, err := shared.SetOneEnvironment(environment)
+	env, err := shared.SetOneEnvironment(tenantId, environment)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -72,7 +73,7 @@ func CreateEnvironment(environment *shared.Environment) *xwhttp.ResponseEntity {
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, env)
 }
 
-func UpdateEnvironment(environment *shared.Environment) *xwhttp.ResponseEntity {
+func UpdateEnvironment(tenantId string, environment *shared.Environment) *xwhttp.ResponseEntity {
 	// Environment's ID (name) is stored in uppercase
 	environment.ID = strings.ToUpper(strings.TrimSpace(environment.ID))
 
@@ -81,12 +82,12 @@ func UpdateEnvironment(environment *shared.Environment) *xwhttp.ResponseEntity {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	existedEnv := shared.GetOneEnvironment(environment.ID)
+	existedEnv := shared.GetOneEnvironment(tenantId, environment.ID)
 	if existedEnv == nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New("Environment with "+environment.ID+" does not exist"), nil)
 	}
 
-	env, err := shared.SetOneEnvironment(environment)
+	env, err := shared.SetOneEnvironment(tenantId, environment)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -94,8 +95,8 @@ func UpdateEnvironment(environment *shared.Environment) *xwhttp.ResponseEntity {
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, env)
 }
 
-func DeleteEnvironment(id string) *xwhttp.ResponseEntity {
-	usage, err := validateUsageForEnvironment(id)
+func DeleteEnvironment(tenantId string, id string) *xwhttp.ResponseEntity {
+	usage, err := validateUsageForEnvironment(tenantId, id)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -104,7 +105,7 @@ func DeleteEnvironment(id string) *xwhttp.ResponseEntity {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(usage), nil)
 	}
 
-	err = shared.DeleteOneEnvironment(id)
+	err = shared.DeleteOneEnvironment(tenantId, id)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -113,19 +114,19 @@ func DeleteEnvironment(id string) *xwhttp.ResponseEntity {
 }
 
 // Return usage info if Environment is used by a rule, empty string otherwise
-func validateUsageForEnvironment(id string) (string, error) {
+func validateUsageForEnvironment(tenantId string, id string) (string, error) {
 	ruleTables := []string{
-		ds.TABLE_DCM_RULE,
-		ds.TABLE_FIRMWARE_RULE,
-		ds.TABLE_FIRMWARE_RULE_TEMPLATE,
-		ds.TABLE_TELEMETRY_RULES,
-		ds.TABLE_TELEMETRY_TWO_RULES,
-		ds.TABLE_FEATURE_CONTROL_RULE,
-		ds.TABLE_SETTING_RULES,
+		db.TABLE_DCM_RULES,
+		db.TABLE_FIRMWARE_RULES,
+		db.TABLE_FIRMWARE_RULE_TEMPLATES,
+		db.TABLE_TELEMETRY_RULES,
+		db.TABLE_TELEMETRY_TWO_RULES,
+		db.TABLE_FEATURE_CONTROL_RULES,
+		db.TABLE_SETTING_RULES,
 	}
 
 	for _, tableName := range ruleTables {
-		resultMap, err := ds.GetCachedSimpleDao().GetAllAsMap(tableName)
+		resultMap, err := db.GetCachedSimpleDao().GetAllAsMap(tenantId, tableName)
 		if err != nil {
 			return "", err
 		}
@@ -181,7 +182,8 @@ func EnvironmentRuleGeneratePageWithContext(evrules []*shared.Environment, conte
 
 func EnvironmentFilterByContext(searchContext map[string]string) []*shared.Environment {
 	EnvironmentRuleList := []*shared.Environment{}
-	environments := shared.GetAllEnvironmentList()
+	tenantId := searchContext[common.TENANT_ID]
+	environments := shared.GetAllEnvironmentList(tenantId)
 	if (len(environments)) == 0 {
 		return EnvironmentRuleList
 	}

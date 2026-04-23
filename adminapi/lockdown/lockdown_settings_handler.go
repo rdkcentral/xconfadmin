@@ -25,6 +25,7 @@ import (
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	ccommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 func PutLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +46,8 @@ func PutLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respEntity := SetLockdownSetting(&lockdownSettings)
+	tenantId := xwhttp.GetTenantId(r, "")
+	respEntity := SetLockdownSetting(tenantId, &lockdownSettings)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -55,7 +57,8 @@ func PutLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 func GetLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// No permission check needed
-	lockdownSetting, err := GetLockdownSettings()
+	tenantId := xwhttp.GetTenantId(r, "")
+	lockdownSetting, err := GetLockdownSettings(tenantId)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

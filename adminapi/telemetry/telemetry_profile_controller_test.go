@@ -29,7 +29,7 @@ import (
 	"github.com/google/uuid"
 	"gotest.tools/assert"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
@@ -65,7 +65,7 @@ func createPermanentTelemetryProfile(id string) *xwlogupload.PermanentTelemetryP
 		PollingFrequency: "120",
 		Component:        "comp_perm",
 	}}
-	_ = SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, perm.ID, perm)
+	_ = SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, perm.ID, perm)
 	return perm
 }
 
@@ -75,7 +75,7 @@ func createTelemetryRule(boundProfileId string) *xwlogupload.TelemetryRule {
 	r.Name = "telemetry_rule"
 	r.ApplicationType = "stb"
 	r.BoundTelemetryID = boundProfileId
-	_ = SetOneInDao(ds.TABLE_TELEMETRY_RULES, r.ID, r)
+	_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, r.ID, r)
 	return r
 }
 

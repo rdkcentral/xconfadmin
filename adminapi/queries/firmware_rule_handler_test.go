@@ -34,7 +34,7 @@ import (
 
 // Helper function to setup firmware rule templates
 func setupFirmwareRuleTemplates() {
-	CreateFirmwareRuleTemplates()
+	CreateFirmwareRuleTemplates(db.GetDefaultTenantId())
 
 	// Create the test firmware config that rules reference
 	testConfig := &estbfirmware.FirmwareConfig{
@@ -45,7 +45,7 @@ func setupFirmwareRuleTemplates() {
 		SupportedModelIds: []string{"TEST-MODEL"},
 		FirmwareFilename:  "test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, testConfig.ID, testConfig)
+	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, testConfig.ID, testConfig)
 	db.GetCacheManager().ForceSyncChanges()
 }
 
@@ -128,7 +128,7 @@ func TestPostFirmwareRuleHandler_DuplicateID(t *testing.T) {
 
 	// Create first rule
 	rule1 := createTestFirmwareRule("duplicate-id", "First Rule", "stb")
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule1.ID, rule1)
 
 	// Try to create second rule with same ID
 	rule2 := createTestFirmwareRule("duplicate-id", "Second Rule", "stb")
@@ -171,7 +171,7 @@ func TestPutFirmwareRuleHandler_Success(t *testing.T) {
 
 	// Create initial rule
 	rule := createTestFirmwareRule("rule-to-update", "Original Name", "stb")
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 	db.GetCacheManager().ForceSyncChanges() // Ensure cache is synchronized before update
 
 	// Update the rule
@@ -219,7 +219,7 @@ func TestDeleteFirmwareRuleByIdHandler_Success(t *testing.T) {
 
 	// Create rule to delete
 	rule := createTestFirmwareRule("rule-to-delete", "To Be Deleted", "stb")
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 	db.GetCacheManager().ForceSyncChanges() // Ensure rule is available before deletion
 
 	req, err := http.NewRequest("DELETE", "/xconfAdminService/firmwarerule/rule-to-delete", nil)
@@ -231,7 +231,7 @@ func TestDeleteFirmwareRuleByIdHandler_Success(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 
 	// Verify deletion
-	deleted, _ := firmware.GetFirmwareRuleOneDB("rule-to-delete")
+	deleted, _ := firmware.GetFirmwareRuleOneDB(db.GetDefaultTenantId(), "rule-to-delete")
 	assert.Assert(t, deleted == nil)
 }
 
@@ -258,7 +258,7 @@ func TestDeleteFirmwareRuleByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 
 	// Create rule with xhome app type
 	rule := createTestFirmwareRule("rule-app-mismatch", "App Mismatch Rule", "xhome")
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 	db.GetCacheManager().ForceSyncChanges() // Ensure rule is available before deletion attempt
 
 	// Try to delete with stb app type
@@ -278,7 +278,7 @@ func TestGetFirmwareRuleByIdHandler_Success(t *testing.T) {
 	defer DeleteAllEntities()
 
 	rule := createTestFirmwareRule("rule-get-by-id", "Get By ID Test", "stb")
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/rule-get-by-id", nil)
 	assert.NilError(t, err)
@@ -301,7 +301,7 @@ func TestGetFirmwareRuleByIdHandler_WithExport(t *testing.T) {
 	defer DeleteAllEntities()
 
 	rule := createTestFirmwareRule("rule-export-test", "Export Test", "stb")
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/rule-export-test?export", nil)
 	assert.NilError(t, err)
@@ -338,7 +338,7 @@ func TestGetFirmwareRuleByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 	defer DeleteAllEntities()
 
 	rule := createTestFirmwareRule("rule-get-mismatch", "Get Mismatch Test", "xhome")
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/rule-get-mismatch", nil)
 	assert.NilError(t, err)
@@ -358,8 +358,8 @@ func TestGetFirmwareRuleHandler_Success(t *testing.T) {
 	// Create test rules
 	rule1 := createTestFirmwareRule("rule-all-1", "All Rules Test 1", "stb")
 	rule2 := createTestFirmwareRule("rule-all-2", "All Rules Test 2", "stb")
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule2.ID, rule2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule", nil)
 	assert.NilError(t, err)
@@ -381,7 +381,7 @@ func TestGetFirmwareRuleHandler_WithExport(t *testing.T) {
 	defer DeleteAllEntities()
 
 	rule := createTestFirmwareRule("rule-export-all", "Export All Test", "stb")
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule?export", nil)
 	assert.NilError(t, err)
@@ -407,8 +407,8 @@ func TestGetFirmwareRuleFilteredHandler(t *testing.T) {
 	rule1.Type = firmware.MAC_RULE
 	rule2 := createTestFirmwareRule("rule-filter-2", "Filter Test 2", "stb")
 	rule2.Type = firmware.ENV_MODEL_RULE
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule2.ID, rule2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/filtered", nil)
 	assert.NilError(t, err)
@@ -432,8 +432,8 @@ func TestPostFirmwareRuleFilteredHandler_Success(t *testing.T) {
 	// Create test rules
 	rule1 := createTestFirmwareRule("rule-post-filter-1", "POST Filter 1", "stb")
 	rule2 := createTestFirmwareRule("rule-post-filter-2", "POST Filter 2", "stb")
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule2.ID, rule2)
 
 	filterContext := map[string]string{}
 	body, _ := json.Marshal(filterContext)
@@ -478,8 +478,8 @@ func TestGetFirmwareRuleByTypeNamesHandler_Success(t *testing.T) {
 	rule1.Type = firmware.MAC_RULE
 	rule2 := createTestFirmwareRule("rule-type-2", "Type Test 2", "stb")
 	rule2.Type = firmware.MAC_RULE
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule2.ID, rule2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/MAC_RULE/names", nil)
 	assert.NilError(t, err)
@@ -547,7 +547,7 @@ func TestPostFirmwareRuleEntitiesHandler_DuplicateEntity(t *testing.T) {
 
 	// Create existing rule
 	existing := createTestFirmwareRule("duplicate-batch", "Existing Rule", "stb")
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, existing.ID, existing)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, existing.ID, existing)
 
 	// Try to create batch with duplicate
 	entities := []*firmware.FirmwareRule{
@@ -580,8 +580,8 @@ func TestPutFirmwareRuleEntitiesHandler_Success(t *testing.T) {
 	rule1 := createTestFirmwareRuleWithMAC("batch-update-1", "Original 1", "stb", "AA:BB:CC:DD:EE:01")
 	rule2 := createTestFirmwareRuleWithMAC("batch-update-2", "Original 2", "stb", "AA:BB:CC:DD:EE:02")
 
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule2.ID, rule2)
 	db.GetCacheManager().ForceSyncChanges()
 
 	// Update the rules
@@ -641,7 +641,7 @@ func TestObsoleteGetFirmwareRulePageHandler(t *testing.T) {
 	// This test verifies that the endpoint returns NotImplemented status
 	for i := 1; i <= 5; i++ {
 		rule := createTestFirmwareRule("page-rule-"+string(rune('0'+i)), "Page Rule "+string(rune('0'+i)), "stb")
-		SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+		SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 	}
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/page?pageNumber=1&pageSize=3", nil)
@@ -660,7 +660,7 @@ func TestGetFirmwareRuleExportAllTypesHandler(t *testing.T) {
 	defer DeleteAllEntities()
 
 	rule := createTestFirmwareRule("export-all-types", "Export All Types Test", "stb")
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/export/allTypes?exportAll", nil)
 	assert.NilError(t, err)
@@ -683,7 +683,7 @@ func TestGetFirmwareRuleExportByTypeHandler_Success(t *testing.T) {
 
 	rule := createTestFirmwareRule("export-by-type", "Export By Type Test", "stb")
 	rule.ApplicableAction.ActionType = "RULE"
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/export/byType?exportAll&type=RULE", nil)
 	assert.NilError(t, err)
@@ -892,8 +892,8 @@ func TestGetFirmwareRuleExportAllTypesHandler_SuccessWithRules(t *testing.T) {
 	rule1.Type = firmware.MAC_RULE
 	rule2 := createTestFirmwareRule("export-all-2", "Export All 2", "stb")
 	rule2.Type = firmware.ENV_MODEL_RULE
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule2.ID, rule2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/export/allTypes?exportAll", nil)
 	assert.NilError(t, err)
@@ -953,8 +953,8 @@ func TestGetFirmwareRuleByTemplateByTemplateIdNamesHandler_Success(t *testing.T)
 	// Create rules with template IDs
 	rule1 := createTestFirmwareRule("template-rule-1", "Template Rule 1", "stb")
 	rule2 := createTestFirmwareRule("template-rule-2", "Template Rule 2", "stb")
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule1.ID, rule1)
+	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule2.ID, rule2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/byTemplate/some-template-id/names", nil)
 	assert.NilError(t, err)

@@ -24,6 +24,7 @@ import (
 
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	logupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
@@ -1133,7 +1134,7 @@ func TestCheckFixedArgValue_OtherOperation(t *testing.T) {
 		FixedArg:  &re.FixedArg{},
 	}
 
-	err := checkFixedArgValue(condition, validationFunc)
+	err := checkFixedArgValue(db.GetDefaultTenantId(), condition, validationFunc)
 	assert.NoError(t, err) // Should return nil for EXISTS operation
 }
 
@@ -1185,7 +1186,7 @@ func TestCheckDuplicateConditions_SingleCondition(t *testing.T) {
 func TestRunGlobalValidation_EmptyRule(t *testing.T) {
 	rule := re.Rule{}
 
-	err := RunGlobalValidation(rule, GetAllowedOperations)
+	err := RunGlobalValidation(db.GetDefaultTenantId(), rule, GetAllowedOperations)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Rule is empty")
 }
@@ -1199,7 +1200,7 @@ func TestRunGlobalValidation_ValidSimpleRule(t *testing.T) {
 		},
 	}
 
-	err := RunGlobalValidation(rule, GetAllowedOperations)
+	err := RunGlobalValidation(db.GetDefaultTenantId(), rule, GetAllowedOperations)
 	assert.NoError(t, err)
 }
 
@@ -1223,7 +1224,7 @@ func TestRunGlobalValidation_ValidCompoundRule(t *testing.T) {
 		},
 	}
 
-	err := RunGlobalValidation(rule, GetAllowedOperations)
+	err := RunGlobalValidation(db.GetDefaultTenantId(), rule, GetAllowedOperations)
 	assert.NoError(t, err)
 }
 
@@ -1247,7 +1248,7 @@ func TestRunGlobalValidation_InvalidRelation(t *testing.T) {
 		},
 	}
 
-	err := RunGlobalValidation(rule, GetAllowedOperations)
+	err := RunGlobalValidation(db.GetDefaultTenantId(), rule, GetAllowedOperations)
 	assert.Error(t, err)
 }
 
@@ -1260,7 +1261,7 @@ func TestRunGlobalValidation_BlankCondition(t *testing.T) {
 		},
 	}
 
-	err := RunGlobalValidation(rule, GetAllowedOperations)
+	err := RunGlobalValidation(db.GetDefaultTenantId(), rule, GetAllowedOperations)
 	assert.Error(t, err)
 }
 
@@ -1273,7 +1274,7 @@ func TestRunGlobalValidation_InvalidOperation(t *testing.T) {
 		},
 	}
 
-	err := RunGlobalValidation(rule, GetAllowedOperations)
+	err := RunGlobalValidation(db.GetDefaultTenantId(), rule, GetAllowedOperations)
 	assert.Error(t, err)
 }
 
@@ -1286,7 +1287,7 @@ func TestCheckFixedArgValue_InListOperationOnIPAddress_MissingIPList(t *testing.
 		FixedArg:  re.NewFixedArg("NONEXISTENT_IP_LIST"),
 	}
 
-	err := checkFixedArgValue(condition, isNotBlank)
+	err := checkFixedArgValue(db.GetDefaultTenantId(), condition, isNotBlank)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "IP list does not exist")
 }
@@ -1297,7 +1298,7 @@ func TestCheckFixedArgValue_InListOperationOnIPAddress_ValidIPList(t *testing.T)
 
 	// Create a valid IP list using the package-level helper and service function
 	ipList := makeGenericList("TEST_IP_LIST", shared.IP_LIST, []string{"192.168.1.0/24"})
-	CreateNamespacedList(ipList, false)
+	CreateNamespacedList(db.GetDefaultTenantId(), ipList, false)
 
 	condition := re.Condition{
 		FreeArg:   &re.FreeArg{Name: xwcommon.IP_ADDRESS},
@@ -1305,7 +1306,7 @@ func TestCheckFixedArgValue_InListOperationOnIPAddress_ValidIPList(t *testing.T)
 		FixedArg:  re.NewFixedArg("TEST_IP_LIST"),
 	}
 
-	err := checkFixedArgValue(condition, isNotBlank)
+	err := checkFixedArgValue(db.GetDefaultTenantId(), condition, isNotBlank)
 	assert.NoError(t, err)
 
 	DeleteAllEntities()
@@ -1318,7 +1319,7 @@ func TestCheckFixedArgValue_InListOperationOnEstbIp_MissingIPList(t *testing.T) 
 		FixedArg:  re.NewFixedArg("MISSING_LIST_ID"),
 	}
 
-	err := checkFixedArgValue(condition, isNotBlank)
+	err := checkFixedArgValue(db.GetDefaultTenantId(), condition, isNotBlank)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "IP list does not exist")
 }
@@ -1332,7 +1333,7 @@ func TestCheckFixedArgValue_InListOperationOnNonIPField_NoListValidation(t *test
 	}
 
 	// Non-IP field: no IP list validation should occur
-	err := checkFixedArgValue(condition, isNotBlank)
+	err := checkFixedArgValue(db.GetDefaultTenantId(), condition, isNotBlank)
 	assert.NoError(t, err)
 }
 
@@ -1345,7 +1346,7 @@ func TestCheckFixedArgValue_IsOperationOnModel_MissingModel(t *testing.T) {
 		FixedArg:  re.NewFixedArg("NONEXISTENT_MODEL_XYZ_123"),
 	}
 
-	err := checkFixedArgValue(condition, isNotBlank)
+	err := checkFixedArgValue(db.GetDefaultTenantId(), condition, isNotBlank)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Model does not exist")
 }
@@ -1359,7 +1360,7 @@ func TestCheckFixedArgValue_IsOperationOnModel_ValidModel(t *testing.T) {
 		ID:          "TEST_MODEL",
 		Description: "Test Model",
 	}
-	CreateModel(model)
+	CreateModel(db.GetDefaultTenantId(), model)
 
 	condition := re.Condition{
 		FreeArg:   &re.FreeArg{Name: xwcommon.MODEL},
@@ -1367,7 +1368,7 @@ func TestCheckFixedArgValue_IsOperationOnModel_ValidModel(t *testing.T) {
 		FixedArg:  re.NewFixedArg("TEST_MODEL"),
 	}
 
-	err := checkFixedArgValue(condition, isNotBlank)
+	err := checkFixedArgValue(db.GetDefaultTenantId(), condition, isNotBlank)
 	assert.NoError(t, err)
 
 	DeleteAllEntities()
@@ -1380,7 +1381,7 @@ func TestCheckFixedArgValue_IsOperationOnLoguploadModel_MissingModel(t *testing.
 		FixedArg:  re.NewFixedArg("MISSING_MODEL_ID"),
 	}
 
-	err := checkFixedArgValue(condition, isNotBlank)
+	err := checkFixedArgValue(db.GetDefaultTenantId(), condition, isNotBlank)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Model does not exist")
 }
@@ -1394,6 +1395,6 @@ func TestCheckFixedArgValue_IsOperationOnNonModelField_NoModelValidation(t *test
 	}
 
 	// Non-MODEL field: no model validation should occur
-	err := checkFixedArgValue(condition, isNotBlank)
+	err := checkFixedArgValue(db.GetDefaultTenantId(), condition, isNotBlank)
 	assert.NoError(t, err)
 }

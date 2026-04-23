@@ -246,7 +246,7 @@ func TestSetLogFile(t *testing.T) {
 		DeleteOnUpload: true,
 	}
 
-	err := SetLogFile(logFile.ID, logFile)
+	err := SetLogFile(db.GetDefaultTenantId(), logFile.ID, logFile)
 	// We expect either success or a database error
 	// The important thing is that the function doesn't panic
 	if err != nil {
@@ -262,7 +262,7 @@ func TestGetLogFileGroupsList(t *testing.T) {
 		t.Skip("Database not configured")
 	}
 
-	groups, err := GetLogFileGroupsList(10)
+	groups, err := GetLogFileGroupsList(db.GetDefaultTenantId(), 10)
 	// We expect either a list or an error
 	// The important thing is that the function doesn't panic
 	if err != nil {
@@ -465,13 +465,13 @@ func TestGetLogFileGroupsList_WithData(t *testing.T) {
 	}
 
 	// Try to save it (may fail if DB not configured)
-	err := db.GetCachedSimpleDao().SetOne(db.TABLE_LOG_FILES_GROUPS, testGroup.ID, testGroup)
+	err := db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_LOG_FILE_GROUPS, testGroup.ID, testGroup)
 	if err != nil {
 		t.Logf("Could not save test group: %v", err)
 	}
 
 	// Now try to get the list
-	groups, err := GetLogFileGroupsList(100)
+	groups, err := GetLogFileGroupsList(db.GetDefaultTenantId(), 100)
 	if err != nil {
 		t.Logf("GetLogFileGroupsList returned error: %v", err)
 	} else {
@@ -1102,56 +1102,56 @@ func TestNewLogUploadSettingsInf(t *testing.T) {
 // TestGetOneDeviceSettings tests GetOneDeviceSettings (requires DB setup)
 func TestGetOneDeviceSettings(t *testing.T) {
 	// Test with non-existent ID (should return nil)
-	result := GetOneDeviceSettings("non-existent-id")
+	result := GetOneDeviceSettings(db.GetDefaultTenantId(), "non-existent-id")
 	assert.Nil(t, result)
 }
 
 // TestGetOneLogUploadSettings tests GetOneLogUploadSettings (requires DB setup)
 func TestGetOneLogUploadSettings(t *testing.T) {
 	// Test with non-existent ID (should return nil)
-	result := GetOneLogUploadSettings("non-existent-id")
+	result := GetOneLogUploadSettings(db.GetDefaultTenantId(), "non-existent-id")
 	assert.Nil(t, result)
 }
 
 // TestGetOneUploadRepository tests GetOneUploadRepository (requires DB setup)
 func TestGetOneUploadRepository(t *testing.T) {
 	// Test with non-existent ID (should return nil)
-	result := GetOneUploadRepository("non-existent-id")
+	result := GetOneUploadRepository(db.GetDefaultTenantId(), "non-existent-id")
 	assert.Nil(t, result)
 }
 
 // TestGetOneVodSettings tests GetOneVodSettings (requires DB setup)
 func TestGetOneVodSettings(t *testing.T) {
 	// Test with non-existent ID (should return nil)
-	result := GetOneVodSettings("non-existent-id")
+	result := GetOneVodSettings(db.GetDefaultTenantId(), "non-existent-id")
 	assert.Nil(t, result)
 }
 
 // TestGetOneSettingProfile tests GetOneSettingProfile (requires DB setup)
 func TestGetOneSettingProfile(t *testing.T) {
 	// Test with non-existent ID (should return nil)
-	result := GetOneSettingProfile("non-existent-id")
+	result := GetOneSettingProfile(db.GetDefaultTenantId(), "non-existent-id")
 	assert.Nil(t, result)
 }
 
 // TestGetLogFileList tests GetLogFileList (requires DB setup)
 func TestGetLogFileList(t *testing.T) {
 	// Test with non-existent data (should return nil)
-	result := GetLogFileList(10)
+	result := GetLogFileList(db.GetDefaultTenantId(), 10)
 	assert.Nil(t, result)
 }
 
 // TestGetAllLogFileList tests GetAllLogFileList (requires DB setup)
 func TestGetAllLogFileList(t *testing.T) {
 	// Test with non-existent data (should return nil)
-	result := GetAllLogFileList(10)
+	result := GetAllLogFileList(db.GetDefaultTenantId(), 10)
 	assert.Nil(t, result)
 }
 
 // TestGetAllSettingRuleList tests GetAllSettingRuleList (requires DB setup)
 func TestGetAllSettingRuleList(t *testing.T) {
 	// Test with non-existent data (should return empty slice)
-	result := GetAllSettingRuleList()
+	result := GetAllSettingRuleList(db.GetDefaultTenantId())
 	assert.NotNil(t, result)
 	assert.Equal(t, 0, len(result))
 }
@@ -1159,7 +1159,7 @@ func TestGetAllSettingRuleList(t *testing.T) {
 // TestGetAllLogUploadSettings tests GetAllLogUploadSettings (requires DB setup)
 func TestGetAllLogUploadSettings(t *testing.T) {
 	// Test with non-existent data (should return error)
-	result, err := GetAllLogUploadSettings(10)
+	result, err := GetAllLogUploadSettings(db.GetDefaultTenantId(), 10)
 	assert.Error(t, err)
 	assert.Nil(t, result)
 }
@@ -1171,14 +1171,14 @@ func TestSetOneLogUploadSettings(t *testing.T) {
 		Name: "Test",
 	}
 	// This will fail without proper DB setup, but tests the function signature
-	err := SetOneLogUploadSettings("test-lus", lus)
+	err := SetOneLogUploadSettings(db.GetDefaultTenantId(), "test-lus", lus)
 	assert.Error(t, err)
 }
 
 // TestGetOneLogFileList tests GetOneLogFileList
 func TestGetOneLogFileList(t *testing.T) {
 	// Test with non-existent ID (should return empty LogFileList with empty Data)
-	result, err := GetOneLogFileList("non-existent-id")
+	result, err := GetOneLogFileList(db.GetDefaultTenantId(), "non-existent-id")
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.NotNil(t, result.Data)
@@ -1192,7 +1192,7 @@ func TestSetOneLogFile(t *testing.T) {
 		Name: "test.log",
 	}
 	// This will work with in-memory DB
-	err := SetOneLogFile("test-list", logFile)
+	err := SetOneLogFile(db.GetDefaultTenantId(), "test-list", logFile)
 	// May succeed or fail depending on DB state, just test it doesn't panic
 	_ = err
 }
@@ -1200,7 +1200,7 @@ func TestSetOneLogFile(t *testing.T) {
 // TestDeleteOneLogFileList tests DeleteOneLogFileList
 func TestDeleteOneLogFileList(t *testing.T) {
 	// This will work with in-memory DB
-	err := DeleteOneLogFileList("test-list")
+	err := DeleteOneLogFileList(db.GetDefaultTenantId(), "test-list")
 	// May succeed or fail depending on DB state, just test it doesn't panic
 	_ = err
 }

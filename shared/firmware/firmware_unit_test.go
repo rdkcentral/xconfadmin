@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
@@ -123,7 +124,7 @@ func TestGetFirmwareRuleTemplateCount(t *testing.T) {
 		}
 	}()
 
-	count, err := GetFirmwareRuleTemplateCount()
+	count, err := GetFirmwareRuleTemplateCount(db.GetDefaultTenantId())
 	if err != nil {
 		t.Logf("DB error expected in test environment: %v", err)
 		return
@@ -203,7 +204,7 @@ func TestGetFirmwareSortedRuleAllAsListDB(t *testing.T) {
 		}
 	}()
 
-	rules, err := GetFirmwareSortedRuleAllAsListDB()
+	rules, err := GetFirmwareSortedRuleAllAsListDB(db.GetDefaultTenantId())
 	if err != nil {
 		t.Logf("DB error expected in test environment: %v", err)
 		return

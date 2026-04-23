@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"gotest.tools/assert"
@@ -34,7 +35,7 @@ func TestGetLogRepoSettings_Nil(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
-	result := GetLogRepoSettings("nonexistent-id")
+	result := GetLogRepoSettings(db.GetDefaultTenantId(), "nonexistent-id")
 	assert.Assert(t, result == nil, "Expected nil for nonexistent repository")
 }
 
@@ -52,7 +53,7 @@ func TestGetLogRepoSettings_Success(t *testing.T) {
 	}
 	CreateLogRepoSettings(repo, "stb")
 
-	result := GetLogRepoSettings("test-repo-1")
+	result := GetLogRepoSettings(db.GetDefaultTenantId(), "test-repo-1")
 	assert.Assert(t, result != nil)
 	assert.Equal(t, "test-repo-1", result.ID)
 	assert.Equal(t, "Test Repo", result.Name)
@@ -64,7 +65,7 @@ func TestGetLogRepoSettingsAll_EmptyList(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
-	result := GetLogRepoSettingsAll()
+	result := GetLogRepoSettingsAll(db.GetDefaultTenantId())
 	assert.Equal(t, 0, len(result))
 }
 
@@ -94,7 +95,7 @@ func TestGetLogRepoSettingsAll_WithRepositories(t *testing.T) {
 		CreateLogRepoSettings(repo, "stb")
 	}
 
-	result := GetLogRepoSettingsAll()
+	result := GetLogRepoSettingsAll(db.GetDefaultTenantId())
 	assert.Assert(t, len(result) >= 2)
 }
 
@@ -529,7 +530,7 @@ func TestUpdateLogRepoSettings_Success(t *testing.T) {
 	assert.Assert(t, respEntity.Data != nil)
 
 	// Verify update
-	updated := GetLogRepoSettings("test-id")
+	updated := GetLogRepoSettings(db.GetDefaultTenantId(), "test-id")
 	assert.Equal(t, "Updated Name", updated.Name)
 }
 
@@ -540,7 +541,7 @@ func TestDeleteLogRepoSettingsbyId_NonExistent(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
-	respEntity := DeleteLogRepoSettingsbyId("nonexistent-id", "stb")
+	respEntity := DeleteLogRepoSettingsbyId(db.GetDefaultTenantId(), "nonexistent-id", "stb")
 
 	assert.Equal(t, http.StatusNotFound, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -562,7 +563,7 @@ func TestDeleteLogRepoSettingsbyId_ApplicationTypeMismatch(t *testing.T) {
 	CreateLogRepoSettings(repo, "stb")
 
 	// Try to delete with different app type
-	respEntity := DeleteLogRepoSettingsbyId("test-id", "xhome")
+	respEntity := DeleteLogRepoSettingsbyId(db.GetDefaultTenantId(), "test-id", "xhome")
 
 	assert.Equal(t, http.StatusNotFound, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -589,7 +590,7 @@ func TestDeleteLogRepoSettingsbyId_InUse(t *testing.T) {
 	// The actual implementation would need proper setup of related entities
 
 	// For now, test deletion without references
-	respEntity := DeleteLogRepoSettingsbyId("in-use-repo", "stb")
+	respEntity := DeleteLogRepoSettingsbyId(db.GetDefaultTenantId(), "in-use-repo", "stb")
 
 	// Should succeed if not referenced
 	assert.Equal(t, http.StatusNoContent, respEntity.Status)
@@ -612,13 +613,13 @@ func TestDeleteLogRepoSettingsbyId_Success(t *testing.T) {
 	CreateLogRepoSettings(repo, "stb")
 
 	// Delete it
-	respEntity := DeleteLogRepoSettingsbyId("delete-me", "stb")
+	respEntity := DeleteLogRepoSettingsbyId(db.GetDefaultTenantId(), "delete-me", "stb")
 
 	assert.Equal(t, http.StatusNoContent, respEntity.Status)
 	assert.Assert(t, respEntity.Error == nil)
 
 	// Verify deletion
-	deleted := GetLogRepoSettings("delete-me")
+	deleted := GetLogRepoSettings(db.GetDefaultTenantId(), "delete-me")
 	assert.Assert(t, deleted == nil)
 }
 

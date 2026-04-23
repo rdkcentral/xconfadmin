@@ -38,7 +38,7 @@ import (
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
-func UpdateTimeFilter(applicationType string, timeFilter *xcoreef.TimeFilter) *xwhttp.ResponseEntity {
+func UpdateTimeFilter(tenantId string, applicationType string, timeFilter *xcoreef.TimeFilter) *xwhttp.ResponseEntity {
 	if util.IsBlank(timeFilter.Name) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("Name is blank"), nil)
 	}
@@ -47,7 +47,7 @@ func UpdateTimeFilter(applicationType string, timeFilter *xcoreef.TimeFilter) *x
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	if err := firmware.ValidateRuleName(timeFilter.Id, timeFilter.Name, applicationType); err != nil {
+	if err := firmware.ValidateRuleName(tenantId, timeFilter.Id, timeFilter.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
@@ -59,12 +59,12 @@ func UpdateTimeFilter(applicationType string, timeFilter *xcoreef.TimeFilter) *x
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	if IsChangedIpAddressGroup(timeFilter.IpWhiteList) {
+	if IsChangedIpAddressGroup(tenantId, timeFilter.IpWhiteList) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest,
 			fmt.Errorf("IP address group denoted by '%s' does not match any existing ipAddressGroup", timeFilter.IpWhiteList.Name), nil)
 	}
 
-	if !IsExistEnvModelRule(timeFilter.EnvModelRuleBean, applicationType) {
+	if !IsExistEnvModelRule(tenantId, timeFilter.EnvModelRuleBean, applicationType) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest,
 			fmt.Errorf("Firmware Rule of type ENV_MODEL_RULE with model = '%s' and env = '%s' does not exist in %s application",
 				timeFilter.EnvModelRuleBean.ModelId, timeFilter.EnvModelRuleBean.EnvironmentId, applicationType), nil)
@@ -83,7 +83,7 @@ func UpdateTimeFilter(applicationType string, timeFilter *xcoreef.TimeFilter) *x
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	err := corefw.CreateFirmwareRuleOneDB(firmwareRule)
+	err := corefw.CreateFirmwareRuleOneDB(tenantId, firmwareRule)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -95,14 +95,14 @@ func UpdateTimeFilter(applicationType string, timeFilter *xcoreef.TimeFilter) *x
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, timeFilter)
 }
 
-func DeleteTimeFilter(name string, applicationType string) *xwhttp.ResponseEntity {
-	timeFilter, err := xcoreef.TimeFilterByName(name, applicationType)
+func DeleteTimeFilter(tenantId string, name string, applicationType string) *xwhttp.ResponseEntity {
+	timeFilter, err := xcoreef.TimeFilterByName(tenantId, name, applicationType)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
 	if timeFilter != nil {
-		err = corefw.DeleteOneFirmwareRule(timeFilter.Id)
+		err = corefw.DeleteOneFirmwareRule(tenantId, timeFilter.Id)
 		if err != nil {
 			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 		}
@@ -111,17 +111,17 @@ func DeleteTimeFilter(name string, applicationType string) *xwhttp.ResponseEntit
 	return xwhttp.NewResponseEntity(http.StatusNoContent, nil, nil)
 }
 
-func IsExistEnvModelRule(envModelRule xcoreef.EnvModelRuleBean, applicationType string) bool {
+func IsExistEnvModelRule(tenantId string, envModelRule xcoreef.EnvModelRuleBean, applicationType string) bool {
 	if envModelRule.Id != "" && envModelRule.ModelId != "" {
-		bean := GetOneByEnvModel(envModelRule.ModelId, envModelRule.EnvironmentId, applicationType)
+		bean := GetOneByEnvModel(tenantId, envModelRule.ModelId, envModelRule.EnvironmentId, applicationType)
 		return bean != nil
 	}
 	return false
 }
 
-func GetOneByEnvModel(model string, environment string, applicationType string) *xcoreef.EnvModelBean {
+func GetOneByEnvModel(tenantId string, model string, environment string, applicationType string) *xcoreef.EnvModelBean {
 	emRuleService := daef.EnvModelRuleService{}
-	emRuleBeans := emRuleService.GetByApplicationType(applicationType)
+	emRuleBeans := emRuleService.GetByApplicationType(tenantId, applicationType)
 	for _, emRuleBean := range emRuleBeans {
 		if strings.EqualFold(emRuleBean.ModelId, model) && strings.EqualFold(emRuleBean.EnvironmentId, environment) {
 			return emRuleBean

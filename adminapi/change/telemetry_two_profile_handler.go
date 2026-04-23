@@ -55,7 +55,9 @@ func GetTelemetryTwoProfilesHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	profiles := xlogupload.GetTelemetryTwoProfileListByApplicationType(applicationType)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	profiles := xlogupload.GetTelemetryTwoProfileListByApplicationType(tenantId, applicationType)
 
 	res, err := xhttp.ReturnJsonResponse(profiles, r)
 	if err != nil {
@@ -226,7 +228,8 @@ func GetTelemetryTwoProfileByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profile := xlogupload.GetOneTelemetryTwoProfile(id)
+	tenantId := xwhttp.GetTenantId(r, "")
+	profile := xlogupload.GetOneTelemetryTwoProfile(tenantId, id)
 	if profile == nil {
 		errorStr := fmt.Sprintf("Entity with id %s does not exist", id)
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, errorStr)
@@ -273,7 +276,8 @@ func GetTelemetryTwoProfilePageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profiles := xlogupload.GetAllTelemetryTwoProfileList(applicationType)
+	tenantId := xwhttp.GetTenantId(r, "")
+	profiles := xlogupload.GetAllTelemetryTwoProfileList(tenantId, applicationType)
 	profilesPerPage := GeneratePageTelemetryTwoProfiles(profiles, pageNumber, pageSize)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -309,7 +313,8 @@ func PostTelemetryTwoProfilesByIdListHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	profiles := GetTelemetryTwoProfilesByIdList(applicationType, idList)
+	tenantId := xwhttp.GetTenantId(r, "")
+	profiles := GetTelemetryTwoProfilesByIdList(tenantId, applicationType, idList)
 
 	res, err := xhttp.ReturnJsonResponse(profiles, r)
 	if err != nil {
@@ -357,6 +362,7 @@ func PostTelemetryTwoProfileFilteredHandler(w http.ResponseWriter, r *http.Reque
 	}
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
+	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	profiles := GetTelemetryTwoProfilesByContext(contextMap)
 	sort.SliceStable(profiles, func(i, j int) bool {

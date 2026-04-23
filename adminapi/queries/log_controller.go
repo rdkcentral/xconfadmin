@@ -25,6 +25,7 @@ import (
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfadmin/shared/estbfirmware"
 	"github.com/rdkcentral/xconfadmin/util"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -47,10 +48,12 @@ func GetLogs(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("invalid mac address: "+macStr))
 		return
 	}
+
 	result := make(map[string]interface{}, 2)
-	last := estbfirmware.GetLastConfigLog(macAddress) //*ConfigChangeLog
+	tenantId := xwhttp.GetTenantId(r, "")
+	last := estbfirmware.GetLastConfigLog(tenantId, macAddress) //*ConfigChangeLog
 	if last != nil {
-		configChangeLogList := estbfirmware.GetConfigChangeLogsOnly(macAddress) //[]*ConfigChangeLog
+		configChangeLogList := estbfirmware.GetConfigChangeLogsOnly(tenantId, macAddress) //[]*ConfigChangeLog
 		result["lastConfigLog"] = last
 		result["configChangeLog"] = configChangeLogList
 	}

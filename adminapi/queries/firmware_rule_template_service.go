@@ -43,7 +43,7 @@ import (
 )
 
 var fwRuleTemplateTableMutex sync.Mutex
-var fwRuleTemplateTableLock = db.NewDistributedLock(db.TABLE_FIRMWARE_RULE_TEMPLATE, 10)
+var fwRuleTemplateTableLock = db.NewDistributedLock(db.TABLE_FIRMWARE_RULE_TEMPLATES, 10)
 
 const (
 	cFirmwareRTName                 = xcommon.NAME
@@ -297,21 +297,21 @@ func addNewFirmwareRTAndReorganize(newItem corefw.FirmwareRuleTemplate, itemsLis
 // func saveAllFirmwareRTs(templateList []*corefw.FirmwareRuleTemplate) error {
 // 	for _, template := range templateList {
 // 		template.Updated = xutil.GetTimestamp(time.Now().UTC())
-// 		if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template.ID, template); err != nil {
+// 		if err := db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE_TEMPLATES, template.ID, template); err != nil {
 // 			return err
 // 		}
 // 	}
 // 	return nil
 // }
 
-func saveAllTemplates(templateList []xshared.Prioritizable) error {
+func saveAllTemplates(tenantId string, templateList []xshared.Prioritizable) error {
 	for _, template := range templateList {
 		frt := template.(*corefw.FirmwareRuleTemplate)
 		if err := frt.Validate(); err != nil {
 			return err
 		}
 		frt.Updated = util.GetTimestamp()
-		if err := db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE_TEMPLATE, template.GetID(), template); err != nil {
+		if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_FIRMWARE_RULE_TEMPLATES, template.GetID(), template); err != nil {
 			return err
 		}
 	}
@@ -327,16 +327,16 @@ func firmwareRuleTemplatesToPrioritizables(frts []*corefw.FirmwareRuleTemplate) 
 	return prioritizables
 }
 
-func updateFirmwareRT(templateToUpdate corefw.FirmwareRuleTemplate, frtOnDb *corefw.FirmwareRuleTemplate) error {
+func updateFirmwareRT(tenantId string, templateToUpdate corefw.FirmwareRuleTemplate, frtOnDb *corefw.FirmwareRuleTemplate) error {
 	err := validateOneFirmwareRT(templateToUpdate)
 	if err != nil {
 		return err
 	}
-	existingTemplate, err := corefw.GetFirmwareRuleTemplateOneDB(templateToUpdate.ID)
+	existingTemplate, err := corefw.GetFirmwareRuleTemplateOneDB(tenantId, templateToUpdate.ID)
 	if err != nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "FirmwareRuleTemplate does not exist for "+templateToUpdate.ID)
 	}
-	templatesByActionType, err := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(templateToUpdate.ApplicableAction.ActionType)
+	templatesByActionType, err := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, templateToUpdate.ApplicableAction.ActionType)
 	if err != nil {
 		return err
 	}
@@ -347,18 +347,18 @@ func updateFirmwareRT(templateToUpdate corefw.FirmwareRuleTemplate, frtOnDb *cor
 
 	templatesByActionTypeCopy := firmwareRuleTemplatesToPrioritizables(templatesByActionType) //TODO
 	list := UpdatePrioritizablePriorityAndReorganize(&templateToUpdate, templatesByActionTypeCopy, int(existingTemplate.Priority))
-	if err = saveAllTemplates(list); err != nil {
+	if err = saveAllTemplates(tenantId, list); err != nil {
 		return err
 	}
 	return nil
 }
 
-func createFirmwareRT(template corefw.FirmwareRuleTemplate) (templ *corefw.FirmwareRuleTemplate, err error) {
+func createFirmwareRT(tenantId string, template corefw.FirmwareRuleTemplate) (templ *corefw.FirmwareRuleTemplate, err error) {
 	err = validateOneFirmwareRT(template)
 	if err != nil {
 		return nil, err
 	}
-	templatesOfCurrentType, err := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(template.ApplicableAction.ActionType)
+	templatesOfCurrentType, err := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, template.ApplicableAction.ActionType)
 	if err != nil {
 		if err.Error() != xwcommon.NotFound.Error() {
 			return nil, err
@@ -370,7 +370,7 @@ func createFirmwareRT(template corefw.FirmwareRuleTemplate) (templ *corefw.Firmw
 	}
 	templatesOfCurrentTypeCopy := firmwareRuleTemplatesToPrioritizables(templatesOfCurrentType)
 	reorganizedTemplates := AddNewPrioritizableAndReorganizePriorities(&template, templatesOfCurrentTypeCopy)
-	if err = saveAllTemplates(reorganizedTemplates); err != nil {
+	if err = saveAllTemplates(tenantId, reorganizedTemplates); err != nil {
 		return nil, err
 	}
 	templ = &template
@@ -378,7 +378,7 @@ func createFirmwareRT(template corefw.FirmwareRuleTemplate) (templ *corefw.Firmw
 	return templ, nil
 }
 
-func importOrUpdateAllFirmwareRTs(entities []corefw.FirmwareRuleTemplate, successTag string, failedTag string) map[string][]string {
+func importOrUpdateAllFirmwareRTs(tenantId string, entities []corefw.FirmwareRuleTemplate, successTag string, failedTag string) map[string][]string {
 	result := make(map[string][]string)
 	result[successTag] = []string{}
 	result[failedTag] = []string{}
@@ -391,11 +391,11 @@ func importOrUpdateAllFirmwareRTs(entities []corefw.FirmwareRuleTemplate, succes
 		if entity.ID == "" {
 			entity.ID = uuid.New().String()
 		}
-		entityOnDb, err := corefw.GetFirmwareRuleTemplateOneDBWithId(entity.ID)
+		entityOnDb, err := corefw.GetFirmwareRuleTemplateOneDBWithId(tenantId, entity.ID)
 		if err != nil {
-			_, err = createFirmwareRT(entity)
+			_, err = createFirmwareRT(tenantId, entity)
 		} else {
-			err = updateFirmwareRT(entity, entityOnDb)
+			err = updateFirmwareRT(tenantId, entity, entityOnDb)
 		}
 		if err == nil {
 			result[successTag] = append(result[successTag], entity.ID)
@@ -406,8 +406,8 @@ func importOrUpdateAllFirmwareRTs(entities []corefw.FirmwareRuleTemplate, succes
 	return result
 }
 
-func GetFirmwareRuleTemplateById(id string) *corefw.FirmwareRuleTemplate {
-	frt, err := corefw.GetFirmwareRuleTemplateOneDB(id)
+func GetFirmwareRuleTemplateById(tenantId string, id string) *corefw.FirmwareRuleTemplate {
+	frt, err := corefw.GetFirmwareRuleTemplateOneDB(tenantId, id)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareRuleTemplateById: %v", err))
 		return nil
@@ -422,8 +422,8 @@ func getFirmwareRuleTemplateExportName(all bool) string {
 	return "firmwareRuleTemplate_"
 }
 
-func CreateFirmwareRuleTemplates() {
-	if count, _ := xcorefw.GetFirmwareRuleTemplateCount(); count > 0 {
+func CreateFirmwareRuleTemplates(tenantId string) {
+	if count, _ := xcorefw.GetFirmwareRuleTemplateCount(tenantId); count > 0 {
 		return
 	}
 
@@ -508,7 +508,7 @@ func CreateFirmwareRuleTemplates() {
 		if jsonData, err := json.Marshal(template); err != nil {
 			panic(err)
 		} else {
-			if err := db.GetSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE_TEMPLATE, template.ID, jsonData); err != nil {
+			if err := db.GetSimpleDao().SetOne(tenantId, db.TABLE_FIRMWARE_RULE_TEMPLATES, template.ID, jsonData); err != nil {
 				panic(err)
 			}
 		}

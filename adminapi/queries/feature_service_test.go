@@ -20,20 +20,22 @@ package queries
 import (
 	"testing"
 
+	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
 	"github.com/stretchr/testify/assert"
 )
 
 // Test GetAllFeatureEntity
 func TestGetAllFeatureEntity(t *testing.T) {
-	result := GetAllFeatureEntity()
+	result := GetAllFeatureEntity(db.GetDefaultTenantId())
 	assert.NotNil(t, result)
 	assert.IsType(t, []*xwrfc.FeatureEntity{}, result)
 }
 
 func TestGetAllFeatureEntity_ReturnsEmptyListNotNil(t *testing.T) {
 	// Should never return nil, always return empty list
-	result := GetAllFeatureEntity()
+	result := GetAllFeatureEntity(db.GetDefaultTenantId())
 	assert.NotNil(t, result)
 	assert.True(t, len(result) >= 0)
 }
@@ -72,13 +74,13 @@ func TestGetFeatureEntityFiltered_NilContext(t *testing.T) {
 // Test GetFeatureEntityById
 func TestGetFeatureEntityById_ValidId(t *testing.T) {
 	// Test with a valid-looking ID
-	result := GetFeatureEntityById("test-id-123")
+	result := GetFeatureEntityById(db.GetDefaultTenantId(), "test-id-123")
 	// Result depends on DB state, but function should not panic
 	assert.True(t, result != nil || result == nil)
 }
 
 func TestGetFeatureEntityById_EmptyId(t *testing.T) {
-	result := GetFeatureEntityById("")
+	result := GetFeatureEntityById(db.GetDefaultTenantId(), "")
 	// Should handle empty ID without panicking
 	assert.True(t, result != nil || result == nil)
 }
@@ -87,21 +89,21 @@ func TestGetFeatureEntityById_EmptyId(t *testing.T) {
 func TestDeleteFeatureById_ValidId(t *testing.T) {
 	// Should not panic
 	assert.NotPanics(t, func() {
-		DeleteFeatureById("test-id")
+		xrfc.DeleteOneFeature(db.GetDefaultTenantId(), "test-id")
 	})
 }
 
 func TestDeleteFeatureById_EmptyId(t *testing.T) {
 	// Should handle empty ID
 	assert.NotPanics(t, func() {
-		DeleteFeatureById("")
+		xrfc.DeleteOneFeature(db.GetDefaultTenantId(), "")
 	})
 }
 
 // Test ImportOrUpdateAllFeatureEntity
 func TestImportOrUpdateAllFeatureEntity_EmptyList(t *testing.T) {
 	featureEntityList := []*xwrfc.FeatureEntity{}
-	result := ImportOrUpdateAllFeatureEntity(featureEntityList, "stb")
+	result := ImportOrUpdateAllFeatureEntity(db.GetDefaultTenantId(), featureEntityList, "stb")
 
 	assert.NotNil(t, result)
 	assert.Contains(t, result, IMPORTED)
@@ -111,7 +113,7 @@ func TestImportOrUpdateAllFeatureEntity_EmptyList(t *testing.T) {
 }
 
 func TestImportOrUpdateAllFeatureEntity_NilList(t *testing.T) {
-	result := ImportOrUpdateAllFeatureEntity(nil, "stb")
+	result := ImportOrUpdateAllFeatureEntity(db.GetDefaultTenantId(), nil, "stb")
 
 	assert.NotNil(t, result)
 	assert.Contains(t, result, IMPORTED)
@@ -127,7 +129,7 @@ func TestImportOrUpdateAllFeatureEntity_SingleValidFeature(t *testing.T) {
 	}
 	featureEntityList := []*xwrfc.FeatureEntity{featureEntity}
 
-	result := ImportOrUpdateAllFeatureEntity(featureEntityList, "stb")
+	result := ImportOrUpdateAllFeatureEntity(db.GetDefaultTenantId(), featureEntityList, "stb")
 
 	assert.NotNil(t, result)
 	assert.Contains(t, result, IMPORTED)
@@ -159,7 +161,7 @@ func TestImportOrUpdateAllFeatureEntity_MultipleFeatures(t *testing.T) {
 		},
 	}
 
-	result := ImportOrUpdateAllFeatureEntity(featureEntityList, "stb")
+	result := ImportOrUpdateAllFeatureEntity(db.GetDefaultTenantId(), featureEntityList, "stb")
 
 	assert.NotNil(t, result)
 	totalProcessed := len(result[IMPORTED]) + len(result[NOT_IMPORTED])
@@ -182,7 +184,7 @@ func TestImportOrUpdateAllFeatureEntity_DifferentApplicationTypes(t *testing.T) 
 		},
 	}
 
-	result := ImportOrUpdateAllFeatureEntity(featureEntityList, "stb")
+	result := ImportOrUpdateAllFeatureEntity(db.GetDefaultTenantId(), featureEntityList, "stb")
 
 	assert.NotNil(t, result)
 	// Features with different application types should be in NOT_IMPORTED
@@ -198,7 +200,7 @@ func TestPostFeatureEntity_ValidFeature(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	result, err := PostFeatureEntity(featureEntity, "stb")
+	result, err := PostFeatureEntity(db.GetDefaultTenantId(), featureEntity, "stb")
 	// Result depends on DB state and validation
 	if err != nil {
 		assert.Error(t, err)
@@ -215,7 +217,7 @@ func TestPostFeatureEntity_EmptyId(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	result, err := PostFeatureEntity(featureEntity, "stb")
+	result, err := PostFeatureEntity(db.GetDefaultTenantId(), featureEntity, "stb")
 	// Should generate UUID for empty ID
 	if err == nil && result != nil {
 		assert.NotEmpty(t, result.ID)
@@ -230,7 +232,7 @@ func TestPostFeatureEntity_ApplicationTypeMismatch(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	result, err := PostFeatureEntity(featureEntity, "xhome")
+	result, err := PostFeatureEntity(db.GetDefaultTenantId(), featureEntity, "xhome")
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "AplicationType cannot be different")
@@ -258,7 +260,7 @@ func TestPostFeatureEntity_DifferentAppTypes(t *testing.T) {
 				ApplicationType: tc.entityType,
 			}
 
-			result, err := PostFeatureEntity(featureEntity, tc.requestType)
+			result, err := PostFeatureEntity(db.GetDefaultTenantId(), featureEntity, tc.requestType)
 			if tc.expectError {
 				assert.Error(t, err)
 				assert.Nil(t, result)
@@ -286,7 +288,7 @@ func TestPostFeatureEntity_EmptyFeatureName(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	result, err := PostFeatureEntity(featureEntity, "stb")
+	result, err := PostFeatureEntity(db.GetDefaultTenantId(), featureEntity, "stb")
 	// Should handle empty feature name
 	assert.True(t, result != nil || err != nil)
 }
@@ -294,7 +296,7 @@ func TestPostFeatureEntity_EmptyFeatureName(t *testing.T) {
 func TestGetAllFeatureEntity_ConsistentReturn(t *testing.T) {
 	// Call multiple times, should always return non-nil
 	for i := 0; i < 5; i++ {
-		result := GetAllFeatureEntity()
+		result := GetAllFeatureEntity(db.GetDefaultTenantId())
 		assert.NotNil(t, result)
 	}
 }
@@ -310,7 +312,7 @@ func TestGetFeatureEntityFiltered_EmptyStringFilters(t *testing.T) {
 
 func TestImportOrUpdateAllFeatureEntity_ResultStructure(t *testing.T) {
 	featureEntityList := []*xwrfc.FeatureEntity{}
-	result := ImportOrUpdateAllFeatureEntity(featureEntityList, "stb")
+	result := ImportOrUpdateAllFeatureEntity(db.GetDefaultTenantId(), featureEntityList, "stb")
 
 	// Verify result has expected keys
 	assert.Contains(t, result, IMPORTED)
@@ -345,7 +347,7 @@ func TestImportOrUpdateAllFeatureEntity_MixedValidInvalid(t *testing.T) {
 		},
 	}
 
-	result := ImportOrUpdateAllFeatureEntity(featureEntityList, "stb")
+	result := ImportOrUpdateAllFeatureEntity(db.GetDefaultTenantId(), featureEntityList, "stb")
 
 	assert.NotNil(t, result)
 	totalProcessed := len(result[IMPORTED]) + len(result[NOT_IMPORTED])
@@ -363,7 +365,7 @@ func TestGetFeatureEntityById_SpecialCharacters(t *testing.T) {
 
 	for _, id := range testIDs {
 		assert.NotPanics(t, func() {
-			GetFeatureEntityById(id)
+			GetFeatureEntityById(db.GetDefaultTenantId(), id)
 		})
 	}
 }
@@ -371,8 +373,8 @@ func TestGetFeatureEntityById_SpecialCharacters(t *testing.T) {
 func TestDeleteFeatureById_MultipleDeletes(t *testing.T) {
 	// Test deleting same ID multiple times doesn't panic
 	assert.NotPanics(t, func() {
-		DeleteFeatureById("test-id")
-		DeleteFeatureById("test-id")
-		DeleteFeatureById("test-id")
+		xrfc.DeleteOneFeature(db.GetDefaultTenantId(), "test-id")
+		xrfc.DeleteOneFeature(db.GetDefaultTenantId(), "test-id")
+		xrfc.DeleteOneFeature(db.GetDefaultTenantId(), "test-id")
 	})
 }

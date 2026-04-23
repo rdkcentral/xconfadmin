@@ -44,7 +44,7 @@ func TestGetChangeLog(t *testing.T) {
 
 func TestGetChangedKeysMapRaw(t *testing.T) {
 	// Test basic functionality
-	result, err := GetChangedKeysMapRaw()
+	result, err := GetChangedKeysMapRaw(db.GetDefaultTenantId())
 
 	// May return error if DB not set up
 	if err != nil {

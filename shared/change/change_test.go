@@ -3,6 +3,7 @@ package change
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwshared "github.com/rdkcentral/xconfwebconfig/shared"
 	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
 )
@@ -54,7 +55,7 @@ func TestCreateOneTelemetryTwoChangeSetsIDAndUpdated(t *testing.T) {
 	if src.ID != "" {
 		t.Fatalf("precondition: expected blank ID")
 	}
-	err := CreateOneTelemetryTwoChange(src)
+	err := CreateOneTelemetryTwoChange(db.GetDefaultTenantId(), src)
 	if src.ID == "" {
 		t.Fatalf("expected ID to be generated")
 	}
@@ -75,7 +76,7 @@ func TestCreateOneChange(t *testing.T) {
 	if change.Updated != 0 {
 		t.Fatalf("precondition: expected Updated to be 0")
 	}
-	err := CreateOneChange(change)
+	err := CreateOneChange(db.GetDefaultTenantId(), change)
 	if change.Updated == 0 {
 		t.Fatalf("expected Updated timestamp to be set")
 	}
@@ -85,7 +86,7 @@ func TestCreateOneChange(t *testing.T) {
 
 // TestGetChangeList retrieves all changes; may return nil if dao not initialized.
 func TestGetChangeList(t *testing.T) {
-	changes := GetChangeList()
+	changes := GetChangeList(db.GetDefaultTenantId())
 	// May be nil or empty depending on test environment
 	if changes == nil {
 		t.Log("GetChangeList returned nil (expected if no data)")
@@ -104,7 +105,7 @@ func TestSetOneApprovedChange(t *testing.T) {
 	if approvedChange.Updated != 0 {
 		t.Fatalf("precondition: expected Updated to be 0")
 	}
-	err := SetOneApprovedChange(approvedChange)
+	err := SetOneApprovedChange(db.GetDefaultTenantId(), approvedChange)
 	if approvedChange.Updated == 0 {
 		t.Fatalf("expected Updated timestamp to be set")
 	}
@@ -113,7 +114,7 @@ func TestSetOneApprovedChange(t *testing.T) {
 
 // TestGetOneApprovedChange retrieves a single approved change by ID.
 func TestGetOneApprovedChange(t *testing.T) {
-	result := GetOneApprovedChange("non-existent-id")
+	result := GetOneApprovedChange(db.GetDefaultTenantId(), "non-existent-id")
 	// Expected to return nil if not found
 	if result != nil {
 		t.Logf("GetOneApprovedChange returned: %+v", result)
@@ -124,7 +125,7 @@ func TestGetOneApprovedChange(t *testing.T) {
 
 // TestGetApprovedChangeList retrieves all approved changes.
 func TestGetApprovedChangeList(t *testing.T) {
-	changes := GetApprovedChangeList()
+	changes := GetApprovedChangeList(db.GetDefaultTenantId())
 	// May be nil or empty depending on test environment
 	if changes == nil {
 		t.Log("GetApprovedChangeList returned nil (expected if no data)")
@@ -135,7 +136,7 @@ func TestGetApprovedChangeList(t *testing.T) {
 
 // TestGetChangesByEntityId filters changes by entity ID.
 func TestGetChangesByEntityId(t *testing.T) {
-	changes := GetChangesByEntityId("entity-123")
+	changes := GetChangesByEntityId(db.GetDefaultTenantId(), "entity-123")
 	// May be empty or nil depending on test environment
 	if changes == nil {
 		t.Log("GetChangesByEntityId returned nil")
@@ -146,7 +147,7 @@ func TestGetChangesByEntityId(t *testing.T) {
 
 // TestGetOneChange retrieves a single change by ID.
 func TestGetOneChange(t *testing.T) {
-	result := GetOneChange("non-existent-change-id")
+	result := GetOneChange(db.GetDefaultTenantId(), "non-existent-change-id")
 	// Expected to return nil if not found
 	if result != nil {
 		t.Logf("GetOneChange returned: %+v", result)
@@ -157,7 +158,7 @@ func TestGetOneChange(t *testing.T) {
 
 // TestGetApprovedTelemetryTwoChangesByApplicationType retrieves approved telemetry two changes by app type.
 func TestGetApprovedTelemetryTwoChangesByApplicationType(t *testing.T) {
-	changes := GetApprovedTelemetryTwoChangesByApplicationType(xwshared.STB)
+	changes := GetApprovedTelemetryTwoChangesByApplicationType(db.GetDefaultTenantId(), xwshared.STB)
 	// May be nil or empty depending on test environment
 	if changes == nil {
 		t.Log("GetApprovedTelemetryTwoChangesByApplicationType returned nil (expected if no data)")
@@ -168,7 +169,7 @@ func TestGetApprovedTelemetryTwoChangesByApplicationType(t *testing.T) {
 
 // TestGetAllTelemetryTwoChangeList retrieves all telemetry two changes.
 func TestGetAllTelemetryTwoChangeList(t *testing.T) {
-	changes := GetAllTelemetryTwoChangeList()
+	changes := GetAllTelemetryTwoChangeList(db.GetDefaultTenantId())
 	// May be nil or empty depending on test environment
 	if changes == nil {
 		t.Log("GetAllTelemetryTwoChangeList returned nil (expected if no data)")
@@ -179,7 +180,7 @@ func TestGetAllTelemetryTwoChangeList(t *testing.T) {
 
 // TestGetAllApprovedTelemetryTwoChangeList retrieves all approved telemetry two changes.
 func TestGetAllApprovedTelemetryTwoChangeList(t *testing.T) {
-	changes := GetAllApprovedTelemetryTwoChangeList()
+	changes := GetAllApprovedTelemetryTwoChangeList(db.GetDefaultTenantId())
 	// May be nil or empty depending on test environment
 	if changes == nil {
 		t.Log("GetAllApprovedTelemetryTwoChangeList returned nil (expected if no data)")
@@ -190,7 +191,7 @@ func TestGetAllApprovedTelemetryTwoChangeList(t *testing.T) {
 
 // TestGetOneTelemetryTwoChange retrieves a single telemetry two change by ID.
 func TestGetOneTelemetryTwoChange(t *testing.T) {
-	result := GetOneTelemetryTwoChange("non-existent-telemetry-id")
+	result := GetOneTelemetryTwoChange(db.GetDefaultTenantId(), "non-existent-telemetry-id")
 	// Expected to return nil if not found
 	if result != nil {
 		t.Logf("GetOneTelemetryTwoChange returned: %+v", result)
@@ -201,7 +202,7 @@ func TestGetOneTelemetryTwoChange(t *testing.T) {
 
 // TestGetOneApprovedTelemetryTwoChange retrieves a single approved telemetry two change by ID.
 func TestGetOneApprovedTelemetryTwoChange(t *testing.T) {
-	result := GetOneApprovedTelemetryTwoChange("non-existent-approved-telemetry-id")
+	result := GetOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), "non-existent-approved-telemetry-id")
 	// Expected to return nil if not found
 	if result != nil {
 		t.Logf("GetOneApprovedTelemetryTwoChange returned: %+v", result)
@@ -216,7 +217,7 @@ func TestSetOneApprovedTelemetryTwoChangeSetsIDAndUpdated(t *testing.T) {
 	if approved.ID != "" {
 		t.Fatalf("precondition: expected blank ID")
 	}
-	err := SetOneApprovedTelemetryTwoChange(approved)
+	err := SetOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), approved)
 	if approved.ID == "" {
 		t.Fatalf("expected ID to be generated for approved change")
 	}

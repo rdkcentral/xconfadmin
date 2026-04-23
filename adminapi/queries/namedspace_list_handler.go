@@ -45,7 +45,8 @@ func GetQueriesIpAddressGroups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := GetIpAddressGroups()
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetIpAddressGroups(tenantId)
 	res, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -72,7 +73,8 @@ func GetQueriesIpAddressGroupsByIp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := GetIpAddressGroupsByIp(ipAddress)
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetIpAddressGroupsByIp(tenantId, ipAddress)
 	res, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -95,8 +97,8 @@ func GetQueriesIpAddressGroupsByName(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := []*shared.IpAddressGroup{}
-
-	ipAddrGrp := GetIpAddressGroupByName(name)
+	tenantId := xwhttp.GetTenantId(r, "")
+	ipAddrGrp := GetIpAddressGroupByName(tenantId, name)
 	if ipAddrGrp == nil {
 		values, ok := r.URL.Query()[xwcommon.VERSION]
 		if ok {
@@ -139,7 +141,8 @@ func CreateIpAddressGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respEntity := CreateIpAddressGroup(&newIpAddressGroup)
+	tenantId := xwhttp.GetTenantId(r, "")
+	respEntity := CreateIpAddressGroup(tenantId, &newIpAddressGroup)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -180,14 +183,15 @@ func AddDataIpAddressGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, listId); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, listId); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, listId); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, listId); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -196,7 +200,7 @@ func AddDataIpAddressGroupHandler(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := AddNamespacedListData(shared.IP_LIST, listId, &stringListWrapper)
+	respEntity := AddNamespacedListData(tenantId, shared.IP_LIST, listId, &stringListWrapper)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -237,14 +241,15 @@ func RemoveDataIpAddressGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, listId); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, listId); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, listId); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, listId); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -253,7 +258,7 @@ func RemoveDataIpAddressGroupHandler(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := RemoveNamespacedListData(shared.IP_LIST, listId, &stringListWrapper)
+	respEntity := RemoveNamespacedListData(tenantId, shared.IP_LIST, listId, &stringListWrapper)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -274,14 +279,15 @@ func DeleteIpAddressGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, id); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, id); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, id); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, id); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -290,7 +296,7 @@ func DeleteIpAddressGroupHandler(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := DeleteNamespacedList(shared.IP_LIST, id)
+	respEntity := DeleteNamespacedList(tenantId, shared.IP_LIST, id)
 	if respEntity.Error != nil {
 		if respEntity.Status == http.StatusNotFound {
 			respEntity.Status = http.StatusNoContent // Ignored not found
@@ -308,7 +314,8 @@ func GetQueriesIpAddressGroupsV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := GetNamespacedListsByType(shared.IP_LIST)
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetNamespacedListsByType(tenantId, shared.IP_LIST)
 	res, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -335,7 +342,8 @@ func GetQueriesIpAddressGroupsByIpV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := GetNamespacedListsByIp(ipAddress)
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetNamespacedListsByIp(tenantId, ipAddress)
 	res, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -357,7 +365,8 @@ func GetQueriesIpAddressGroupsByNameV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ipAddrGrp := GetNamespacedListByIdAndType(id, shared.IP_LIST)
+	tenantId := xwhttp.GetTenantId(r, "")
+	ipAddrGrp := GetNamespacedListByIdAndType(tenantId, id, shared.IP_LIST)
 	if ipAddrGrp == nil {
 		errorStr := fmt.Sprintf("IpAddressGroup with name %s does not exist", id)
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, errorStr)
@@ -393,14 +402,15 @@ func CreateIpAddressGroupHandlerV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, newIpList.ID); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, newIpList.ID); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, newIpList.ID); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, newIpList.ID); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -409,7 +419,7 @@ func CreateIpAddressGroupHandlerV2(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := CreateNamespacedList(newIpList, false)
+	respEntity := CreateNamespacedList(tenantId, newIpList, false)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -444,14 +454,15 @@ func UpdateIpAddressGroupHandlerV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, newIpList.ID); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, newIpList.ID); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, newIpList.ID); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, newIpList.ID); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -460,7 +471,7 @@ func UpdateIpAddressGroupHandlerV2(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := UpdateNamespacedList(newIpList, "")
+	respEntity := UpdateNamespacedList(tenantId, newIpList, "")
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -487,14 +498,15 @@ func DeleteIpAddressGroupHandlerV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, id); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, id); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, id); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, id); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -503,7 +515,7 @@ func DeleteIpAddressGroupHandlerV2(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := DeleteNamespacedList(shared.IP_LIST, id)
+	respEntity := DeleteNamespacedList(tenantId, shared.IP_LIST, id)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -517,7 +529,8 @@ func GetQueriesMacLists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := GetNamespacedListsByType(shared.MAC_LIST)
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetNamespacedListsByType(tenantId, shared.MAC_LIST)
 	res, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -539,7 +552,8 @@ func GetQueriesMacListsById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	macList := GetNamespacedListByIdAndType(id, shared.MAC_LIST)
+	tenantId := xwhttp.GetTenantId(r, "")
+	macList := GetNamespacedListByIdAndType(tenantId, id, shared.MAC_LIST)
 	if macList == nil {
 		values, ok := r.URL.Query()[xwcommon.VERSION]
 		if ok {
@@ -568,8 +582,9 @@ func GetQueriesMacListsByMacPart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	mac := mux.Vars(r)[xwcommon.MAC]
-	result := GetMacListsByMacPart(mac)
+	result := GetMacListsByMacPart(tenantId, mac)
 	res, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -598,14 +613,15 @@ func SaveMacListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, newMacList.ID); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, newMacList.ID); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, newMacList.ID); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, newMacList.ID); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -615,7 +631,7 @@ func SaveMacListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create the new MacList or update an existing one
-	respEntity := CreateNamespacedList(newMacList, true)
+	respEntity := CreateNamespacedList(tenantId, newMacList, true)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -649,14 +665,15 @@ func CreateMacListHandlerV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, newMacList.ID); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, newMacList.ID); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, newMacList.ID); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, newMacList.ID); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -665,7 +682,7 @@ func CreateMacListHandlerV2(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := CreateNamespacedList(newMacList, false)
+	respEntity := CreateNamespacedList(tenantId, newMacList, false)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -699,14 +716,15 @@ func UpdateMacListHandlerV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, newMacList.ID); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, newMacList.ID); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, newMacList.ID); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, newMacList.ID); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -715,7 +733,7 @@ func UpdateMacListHandlerV2(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := UpdateNamespacedList(newMacList, "")
+	respEntity := UpdateNamespacedList(tenantId, newMacList, "")
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -756,14 +774,15 @@ func AddDataMacListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, listId); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, listId); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, listId); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, listId); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -772,7 +791,7 @@ func AddDataMacListHandler(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := AddNamespacedListData(shared.MAC_LIST, listId, &stringListWrapper)
+	respEntity := AddNamespacedListData(tenantId, shared.MAC_LIST, listId, &stringListWrapper)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -813,14 +832,15 @@ func RemoveDataMacListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, listId); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, listId); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, listId); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, listId); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -829,7 +849,7 @@ func RemoveDataMacListHandler(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := RemoveNamespacedListData(shared.MAC_LIST, listId, &stringListWrapper)
+	respEntity := RemoveNamespacedListData(tenantId, shared.MAC_LIST, listId, &stringListWrapper)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -855,14 +875,15 @@ func DeleteMacListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, id); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, id); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, id); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, id); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -871,7 +892,7 @@ func DeleteMacListHandler(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := DeleteNamespacedList(shared.MAC_LIST, id)
+	respEntity := DeleteNamespacedList(tenantId, shared.MAC_LIST, id)
 	if respEntity.Error != nil {
 		if respEntity.Status == http.StatusNotFound {
 			respEntity.Status = http.StatusNoContent // Ignored not found
@@ -896,7 +917,8 @@ func GetQueriesMacListsByIdV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	macList := GetNamespacedListByIdAndType(id, shared.MAC_LIST)
+	tenantId := xwhttp.GetTenantId(r, "")
+	macList := GetNamespacedListByIdAndType(tenantId, id, shared.MAC_LIST)
 	if macList == nil {
 		errorStr := fmt.Sprintf("MacList with id %s does not exist", id)
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, errorStr)
@@ -924,14 +946,15 @@ func DeleteMacListHandlerV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, id); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, id); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, id); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, id); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -940,7 +963,7 @@ func DeleteMacListHandlerV2(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := DeleteNamespacedList(shared.MAC_LIST, id)
+	respEntity := DeleteNamespacedList(tenantId, shared.MAC_LIST, id)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -961,7 +984,8 @@ func GetNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	nsList, err := shared.GetGenericNamedListOneByTypeNonCached(id, "")
+	tenantId := xwhttp.GetTenantId(r, "")
+	nsList, err := shared.GetGenericNamedListOneByTypeNonCached(tenantId, id, "")
 	if err != nil {
 		errorStr := fmt.Sprintf("List with id %s does not exist", id)
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, errorStr)
@@ -993,7 +1017,8 @@ func GetNamespacedListIdsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ids := GetNamespacedListIdsByType("")
+	tenantId := xwhttp.GetTenantId(r, "")
+	ids := GetNamespacedListIdsByType(tenantId, "")
 
 	res, err := xhttp.ReturnJsonResponse(ids, r)
 	if err != nil {
@@ -1016,7 +1041,8 @@ func GetNamespacedListIdsByTypeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ids := GetNamespacedListIdsByType(typeName)
+	tenantId := xwhttp.GetTenantId(r, "")
+	ids := GetNamespacedListIdsByType(tenantId, typeName)
 	sortedById := func(i, j int) bool {
 		return strings.ToLower(ids[i]) < strings.ToLower(ids[j])
 	}
@@ -1036,7 +1062,8 @@ func GetNamespacedListsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := GetNamespacedListsByType("")
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetNamespacedListsByType(tenantId, "")
 	sort.Slice(result, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(result[i].ID), strings.ToLower(result[j].ID)) < 0
 	})
@@ -1068,7 +1095,8 @@ func GetNamespacedListsByTypeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := GetNamespacedListsByType(typeName)
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetNamespacedListsByType(tenantId, typeName)
 	sort.Slice(result, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(result[i].ID), strings.ToLower(result[j].ID)) < 0
 	})
@@ -1093,7 +1121,8 @@ func GetIpAddressGroupsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	nsLists := GetNamespacedListsByType(shared.IP_LIST)
+	tenantId := xwhttp.GetTenantId(r, "")
+	nsLists := GetNamespacedListsByType(tenantId, shared.IP_LIST)
 	result := covt.ConvertToListOfIpAddressGroups(nsLists)
 	res, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
@@ -1124,14 +1153,15 @@ func CreateNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, newNamespacedListList.ID); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, newNamespacedListList.ID); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, newNamespacedListList.ID); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, newNamespacedListList.ID); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -1140,7 +1170,7 @@ func CreateNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := CreateNamespacedList(newNamespacedListList, false)
+	respEntity := CreateNamespacedList(tenantId, newNamespacedListList, false)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -1175,14 +1205,15 @@ func UpdateNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, namespacedListList.ID); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, namespacedListList.ID); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, namespacedListList.ID); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, namespacedListList.ID); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -1191,7 +1222,7 @@ func UpdateNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := UpdateNamespacedList(namespacedListList, "")
+	respEntity := UpdateNamespacedList(tenantId, namespacedListList, "")
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -1233,14 +1264,15 @@ func RenameNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, id); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, id); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, id); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, id); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -1249,7 +1281,7 @@ func RenameNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := UpdateNamespacedList(namespacedListList, id)
+	respEntity := UpdateNamespacedList(tenantId, namespacedListList, id)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -1276,14 +1308,15 @@ func DeleteNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
-		if err := namedListTableLock.LockRow(owner, id); err != nil {
+		if err := namedListTableLock.LockRow(tenantId, owner, id); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 		defer func() {
-			if err := namedListTableLock.UnlockRow(owner, id); err != nil {
+			if err := namedListTableLock.UnlockRow(tenantId, owner, id); err != nil {
 				log.Error(err)
 			}
 		}()
@@ -1292,7 +1325,7 @@ func DeleteNamespacedListHandler(w http.ResponseWriter, r *http.Request) {
 		defer namedListTableMutex.Unlock()
 	}
 
-	respEntity := DeleteNamespacedList("", id)
+	respEntity := DeleteNamespacedList(tenantId, "", id)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -1335,6 +1368,7 @@ func PostNamespacedListFilteredHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	util.AddQueryParamsToContextMap(r, contextMap)
+	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	nsLists := GetNamespacedListsByContext(contextMap)
 	sort.Slice(nsLists, func(i, j int) bool {
@@ -1373,13 +1407,14 @@ func PostNamespacedListEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	owner := auth.GetDistributedLockOwner(r)
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, e := range entities {
 		// Using a closure to correctly scope the defer for the lock
 		func(entity shared.GenericNamespacedList) {
 			if xhttp.WebConfServer.DistributedLockConfig.Enabled {
-				if err := namedListTableLock.LockRow(owner, entity.ID); err != nil {
+				if err := namedListTableLock.LockRow(tenantId, owner, entity.ID); err != nil {
 					entitiesMap[entity.ID] = xhttp.EntityMessage{
 						Status:  xcommon.ENTITY_STATUS_FAILURE,
 						Message: err.Error(),
@@ -1387,7 +1422,7 @@ func PostNamespacedListEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				defer func() {
-					if err := namedListTableLock.UnlockRow(owner, entity.ID); err != nil {
+					if err := namedListTableLock.UnlockRow(tenantId, owner, entity.ID); err != nil {
 						log.Error(err)
 					}
 				}()
@@ -1396,7 +1431,7 @@ func PostNamespacedListEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 				defer namedListTableMutex.Unlock()
 			}
 
-			respEntity := CreateNamespacedList(&entity, false)
+			respEntity := CreateNamespacedList(tenantId, &entity, false)
 			if respEntity.Error == nil {
 				entitiesMap[entity.ID] = xhttp.EntityMessage{
 					Status:  xcommon.ENTITY_STATUS_SUCCESS,
@@ -1437,13 +1472,14 @@ func PutNamespacedListEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	owner := auth.GetDistributedLockOwner(r)
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, e := range entities {
 		// Using a closure to correctly scope the defer for the lock
 		func(entity shared.GenericNamespacedList) {
 			if xhttp.WebConfServer.DistributedLockConfig.Enabled {
-				if err := namedListTableLock.LockRow(owner, entity.ID); err != nil {
+				if err := namedListTableLock.LockRow(tenantId, owner, entity.ID); err != nil {
 					entitiesMap[entity.ID] = xhttp.EntityMessage{
 						Status:  xcommon.ENTITY_STATUS_FAILURE,
 						Message: err.Error(),
@@ -1451,7 +1487,7 @@ func PutNamespacedListEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				defer func() {
-					if err := namedListTableLock.UnlockRow(owner, entity.ID); err != nil {
+					if err := namedListTableLock.UnlockRow(tenantId, owner, entity.ID); err != nil {
 						log.Error(err)
 					}
 				}()
@@ -1460,7 +1496,7 @@ func PutNamespacedListEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 				defer namedListTableMutex.Unlock()
 			}
 
-			respEntity := UpdateNamespacedList(&entity, "")
+			respEntity := UpdateNamespacedList(tenantId, &entity, "")
 			if respEntity.Error == nil {
 				entitiesMap[entity.ID] = xhttp.EntityMessage{
 					Status:  xcommon.ENTITY_STATUS_SUCCESS,

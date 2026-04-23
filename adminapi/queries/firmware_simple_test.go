@@ -20,6 +20,7 @@ package queries
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/stretchr/testify/assert"
@@ -27,23 +28,23 @@ import (
 
 func TestGetFirmwareConfigs_AllTypes(t *testing.T) {
 	// Test get all firmware configs with empty type
-	result := GetFirmwareConfigs("")
+	result := GetFirmwareConfigs(db.GetDefaultTenantId(), "")
 	assert.NotNil(t, result)
 	assert.IsType(t, []*coreef.FirmwareConfigResponse{}, result)
 
 	// Test with specific type
-	result = GetFirmwareConfigs("stb")
+	result = GetFirmwareConfigs(db.GetDefaultTenantId(), "stb")
 	assert.NotNil(t, result)
 }
 
 func TestGetFirmwareConfigById_NonExistent(t *testing.T) {
-	result := GetFirmwareConfigById("NON_EXISTENT_ID")
+	result := GetFirmwareConfigById(db.GetDefaultTenantId(), "NON_EXISTENT_ID")
 	// May return nil if not found
 	_ = result
 }
 
 func TestGetFirmwareConfigsAS_Empty(t *testing.T) {
-	result := GetFirmwareConfigsAS("")
+	result := GetFirmwareConfigsAS(db.GetDefaultTenantId(), "")
 	// Accept nil or empty slice when database has no data
 	if result != nil {
 		assert.IsType(t, []*coreef.FirmwareConfig{}, result)
@@ -51,22 +52,22 @@ func TestGetFirmwareConfigsAS_Empty(t *testing.T) {
 }
 
 func TestGetFirmwareConfigsAS_WithType(t *testing.T) {
-	result := GetFirmwareConfigsAS("stb")
+	result := GetFirmwareConfigsAS(db.GetDefaultTenantId(), "stb")
 	assert.NotNil(t, result)
 }
 
 func TestGetFirmwareConfigByIdAS_NonExistent(t *testing.T) {
-	result := GetFirmwareConfigByIdAS("NON_EXISTENT")
+	result := GetFirmwareConfigByIdAS(db.GetDefaultTenantId(), "NON_EXISTENT")
 	_ = result
 }
 
 func TestGetFirmwareConfigsByModelIdAndApplicationType_NonExistent(t *testing.T) {
-	result := GetFirmwareConfigsByModelIdAndApplicationType("NON_EXISTENT_MODEL", "stb")
+	result := GetFirmwareConfigsByModelIdAndApplicationType(db.GetDefaultTenantId(), "NON_EXISTENT_MODEL", "stb")
 	assert.NotNil(t, result)
 }
 
 func TestGetFirmwareConfigsByModelIdAndApplicationTypeAS_NonExistent(t *testing.T) {
-	result := GetFirmwareConfigsByModelIdAndApplicationTypeAS("NON_EXISTENT_MODEL", "stb")
+	result := GetFirmwareConfigsByModelIdAndApplicationTypeAS(db.GetDefaultTenantId(), "NON_EXISTENT_MODEL", "stb")
 	assert.NotNil(t, result)
 }
 

@@ -20,6 +20,7 @@ package mocks
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,11 +37,11 @@ func TestNewMockCachedSimpleDao(t *testing.T) {
 func TestMockCachedSimpleDao_SetOne(t *testing.T) {
 	dao := NewMockCachedSimpleDao()
 
-	err := dao.SetOne(testTable, "test-id", "test-value")
+	err := dao.SetOne(db.GetDefaultTenantId(), testTable, "test-id", "test-value")
 	assert.Nil(t, err)
 
 	// Verify it was stored
-	result, err := dao.GetOne(testTable, "test-id")
+	result, err := dao.GetOne(db.GetDefaultTenantId(), testTable, "test-id")
 	assert.Nil(t, err)
 	assert.Equal(t, "test-value", result)
 }
@@ -50,12 +51,12 @@ func TestMockCachedSimpleDao_GetOne(t *testing.T) {
 	dao := NewMockCachedSimpleDao()
 
 	// Test non-existent key
-	_, err := dao.GetOne(testTable, "non-existent")
+	_, err := dao.GetOne(db.GetDefaultTenantId(), testTable, "non-existent")
 	assert.NotNil(t, err)
 
 	// Test existing key
-	dao.SetOne(testTable, "key1", "value1")
-	result, err := dao.GetOne(testTable, "key1")
+	dao.SetOne(db.GetDefaultTenantId(), testTable, "key1", "value1")
+	result, err := dao.GetOne(db.GetDefaultTenantId(), testTable, "key1")
 	assert.Nil(t, err)
 	assert.Equal(t, "value1", result)
 }
@@ -65,19 +66,19 @@ func TestMockCachedSimpleDao_DeleteOne(t *testing.T) {
 	dao := NewMockCachedSimpleDao()
 
 	// Add data
-	dao.SetOne(testTable, "key1", "value1")
-	dao.SetOne(testTable, "key2", "value2")
+	dao.SetOne(db.GetDefaultTenantId(), testTable, "key1", "value1")
+	dao.SetOne(db.GetDefaultTenantId(), testTable, "key2", "value2")
 
 	// Delete one
-	err := dao.DeleteOne(testTable, "key1")
+	err := dao.DeleteOne(db.GetDefaultTenantId(), testTable, "key1")
 	assert.Nil(t, err)
 
 	// Verify it was deleted
-	_, err = dao.GetOne(testTable, "key1")
+	_, err = dao.GetOne(db.GetDefaultTenantId(), testTable, "key1")
 	assert.NotNil(t, err)
 
 	// Verify other key still exists
-	result, err := dao.GetOne(testTable, "key2")
+	result, err := dao.GetOne(db.GetDefaultTenantId(), testTable, "key2")
 	assert.Nil(t, err)
 	assert.Equal(t, "value2", result)
 }
@@ -87,15 +88,15 @@ func TestMockCachedSimpleDao_GetKeys(t *testing.T) {
 	dao := NewMockCachedSimpleDao()
 
 	// Test empty dao - should return empty slice, not nil
-	keys, err := dao.GetKeys(testTable)
+	keys, err := dao.GetKeys(db.GetDefaultTenantId(), testTable)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(keys))
 
 	// Add some data
-	dao.SetOne(testTable, "key1", "value1")
-	dao.SetOne(testTable, "key2", "value2")
+	dao.SetOne(db.GetDefaultTenantId(), testTable, "key1", "value1")
+	dao.SetOne(db.GetDefaultTenantId(), testTable, "key2", "value2")
 
-	keys, err = dao.GetKeys(testTable)
+	keys, err = dao.GetKeys(db.GetDefaultTenantId(), testTable)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(keys))
 }
@@ -105,16 +106,16 @@ func TestMockCachedSimpleDao_GetAllAsMap(t *testing.T) {
 	dao := NewMockCachedSimpleDao()
 
 	// Test empty dao
-	resultMap, err := dao.GetAllAsMap(testTable)
+	resultMap, err := dao.GetAllAsMap(db.GetDefaultTenantId(), testTable)
 	assert.Nil(t, err)
 	assert.NotNil(t, resultMap)
 	assert.Equal(t, 0, len(resultMap))
 
 	// Add some data
-	dao.SetOne(testTable, "key1", "value1")
-	dao.SetOne(testTable, "key2", "value2")
+	dao.SetOne(db.GetDefaultTenantId(), testTable, "key1", "value1")
+	dao.SetOne(db.GetDefaultTenantId(), testTable, "key2", "value2")
 
-	resultMap, err = dao.GetAllAsMap(testTable)
+	resultMap, err = dao.GetAllAsMap(db.GetDefaultTenantId(), testTable)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(resultMap))
 	assert.Equal(t, "value1", resultMap["key1"])
@@ -126,17 +127,17 @@ func TestMockCachedSimpleDao_Clear(t *testing.T) {
 	dao := NewMockCachedSimpleDao()
 
 	// Add data to multiple tables
-	dao.SetOne(testTable, "key1", "value1")
-	dao.SetOne(testTable, "key2", "value2")
-	dao.SetOne("OTHER_TABLE", "key3", "value3")
+	dao.SetOne(db.GetDefaultTenantId(), testTable, "key1", "value1")
+	dao.SetOne(db.GetDefaultTenantId(), testTable, "key2", "value2")
+	dao.SetOne(db.GetDefaultTenantId(), "OTHER_TABLE", "key3", "value3")
 
 	// Clear
 	dao.Clear()
 
 	// Verify all data is gone
-	_, err := dao.GetOne(testTable, "key1")
+	_, err := dao.GetOne(db.GetDefaultTenantId(), testTable, "key1")
 	assert.NotNil(t, err)
-	_, err = dao.GetOne("OTHER_TABLE", "key3")
+	_, err = dao.GetOne(db.GetDefaultTenantId(), "OTHER_TABLE", "key3")
 	assert.NotNil(t, err)
 }
 
@@ -145,10 +146,10 @@ func TestMockCachedSimpleDao_GetOneFromCacheOnly(t *testing.T) {
 	dao := NewMockCachedSimpleDao()
 
 	// Add data
-	dao.SetOne(testTable, "key1", "value1")
+	dao.SetOne(db.GetDefaultTenantId(), testTable, "key1", "value1")
 
 	// Get from cache only (same as GetOne in mock)
-	result, err := dao.GetOneFromCacheOnly(testTable, "key1")
+	result, err := dao.GetOneFromCacheOnly(db.GetDefaultTenantId(), testTable, "key1")
 	assert.Nil(t, err)
 	assert.Equal(t, "value1", result)
 }

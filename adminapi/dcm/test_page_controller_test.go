@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
@@ -122,8 +122,8 @@ func TestDcmTestPageHandler_SuccessWithMatchingRules(t *testing.T) {
 	}
 
 	// Store in database - DeviceSettings uses same ID as formula for association
-	_ = setOneInDao(ds.TABLE_DCM_RULE, formula.ID, formula)
-	_ = setOneInDao(ds.TABLE_DEVICE_SETTINGS, deviceSettings.ID, deviceSettings)
+	_ = setOneInDao(db.TABLE_DCM_RULES, formula.ID, formula)
+	_ = setOneInDao(db.TABLE_DEVICE_SETTINGS, deviceSettings.ID, deviceSettings)
 
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/dcm/testpage?applicationType=stb", nil)
 	// Provide context that will match our rule
@@ -178,8 +178,8 @@ func TestDcmTestPageHandler_SuccessWithMatchingRules(t *testing.T) {
 	}
 
 	// Clean up
-	_ = ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_DCM_RULE, formula.ID)
-	_ = ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_DEVICE_SETTINGS, deviceSettings.ID)
+	_ = db.GetCachedSimpleDao().DeleteOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formula.ID)
+	_ = db.GetCachedSimpleDao().DeleteOne(db.GetDefaultTenantId(), db.TABLE_DEVICE_SETTINGS, deviceSettings.ID)
 } // 6. Test with various MAC address formats to ensure normalization works
 func TestDcmTestPageHandler_MacAddressNormalization(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/dcm/testpage?applicationType=stb", nil)

@@ -26,21 +26,16 @@ import (
 	"strconv"
 	"strings"
 
-	xutil "github.com/rdkcentral/xconfadmin/util"
-
-	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
-	"github.com/rdkcentral/xconfwebconfig/util"
-
 	"github.com/google/uuid"
 
-	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
-
 	"github.com/rdkcentral/xconfadmin/common"
-
+	xutil "github.com/rdkcentral/xconfadmin/util"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared"
-
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -49,9 +44,9 @@ const (
 	cLogRepoSettingsPageSize   = "pageSize"
 )
 
-func GetLogRepoSettingsList() []*logupload.UploadRepository {
+func GetLogRepoSettingsList(tenantId string) []*logupload.UploadRepository {
 	all := []*logupload.UploadRepository{}
-	logRepoSettingsList, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_UPLOAD_REPOSITORY, 0)
+	logRepoSettingsList, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_UPLOAD_REPOSITORIES, 0)
 	if err != nil {
 		log.Warn("no LogRepSettings found")
 		return all
@@ -65,15 +60,15 @@ func GetLogRepoSettingsList() []*logupload.UploadRepository {
 	return all
 }
 
-func GetLogRepoSettingsAll() []*logupload.UploadRepository {
+func GetLogRepoSettingsAll(tenantId string) []*logupload.UploadRepository {
 	result := []*logupload.UploadRepository{}
-	result = GetLogRepoSettingsList()
+	result = GetLogRepoSettingsList(tenantId)
 	return result
 }
 
-func GetOneLogRepoSettings(id string) *logupload.UploadRepository {
+func GetOneLogRepoSettings(tenantId string, id string) *logupload.UploadRepository {
 	var logRepoSettings *logupload.UploadRepository
-	logRepoSettingsInst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_UPLOAD_REPOSITORY, id)
+	logRepoSettingsInst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_UPLOAD_REPOSITORIES, id)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no LogRepoSettings found for Id: %s", id))
 		return nil
@@ -82,8 +77,8 @@ func GetOneLogRepoSettings(id string) *logupload.UploadRepository {
 	return logRepoSettings
 }
 
-func GetLogRepoSettings(id string) *logupload.UploadRepository {
-	logRepoSettings := GetOneLogRepoSettings(id)
+func GetLogRepoSettings(tenantId string, id string) *logupload.UploadRepository {
+	logRepoSettings := GetOneLogRepoSettings(tenantId, id)
 	if logRepoSettings != nil {
 		return logRepoSettings
 	}
@@ -91,8 +86,8 @@ func GetLogRepoSettings(id string) *logupload.UploadRepository {
 
 }
 
-func validateUsageForLogRepoSettings(Id string, app string) error {
-	lr := GetLogRepoSettings(Id)
+func validateUsageForLogRepoSettings(tenantId string, Id string, app string) error {
+	lr := GetLogRepoSettings(tenantId, Id)
 	if lr == nil {
 		return fmt.Errorf("Entity with id  %s does not exist ", Id)
 	}
@@ -102,14 +97,14 @@ func validateUsageForLogRepoSettings(Id string, app string) error {
 	return nil
 }
 
-func DeleteLogRepoSettingsbyId(id string, app string) *xwhttp.ResponseEntity {
-	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_UPLOAD_REPOSITORY, id)
+func DeleteLogRepoSettingsbyId(tenantId string, id string, app string) *xwhttp.ResponseEntity {
+	inst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_UPLOAD_REPOSITORIES, id)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, fmt.Errorf(" %s is not found", id), nil)
 	}
 	lu := inst.(*logupload.UploadRepository)
 
-	lurules := GetLogUploadSettingsList()
+	lurules := GetLogUploadSettingsList(tenantId)
 	referred := []string{}
 	for _, item := range lurules {
 		if item.ApplicationType != lu.ApplicationType {
@@ -123,20 +118,21 @@ func DeleteLogRepoSettingsbyId(id string, app string) *xwhttp.ResponseEntity {
 		referredLUs := strings.Join(referred, ", ")
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("%s is used by %d LogUploadSettings (%s)", lu.Name, len(referred), referredLUs), nil)
 	}
-	err = validateUsageForLogRepoSettings(id, app)
+	err = validateUsageForLogRepoSettings(tenantId, id, app)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, err, nil)
 	}
 
-	err = DeleteOneLogRepoSettings(id)
+	err = DeleteOneLogRepoSettings(tenantId, id)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
 	return xwhttp.NewResponseEntity(http.StatusNoContent, nil, nil)
 }
-func DeleteOneLogRepoSettings(id string) error {
-	err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_UPLOAD_REPOSITORY, id)
+
+func DeleteOneLogRepoSettings(tenantId string, id string) error {
+	err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_UPLOAD_REPOSITORIES, id)
 	if err != nil {
 		return err
 	}
@@ -171,7 +167,7 @@ func LogRepoSettingsValidate(lr *logupload.UploadRepository) *xwhttp.ResponseEnt
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("URL is InValid"), nil)
 	}
 
-	lrrules := GetLogRepoSettingsAll()
+	lrrules := GetLogRepoSettingsAll(db.GetDefaultTenantId())
 	for _, exlrrule := range lrrules {
 		if exlrrule.ApplicationType != lr.ApplicationType {
 			continue
@@ -186,7 +182,7 @@ func LogRepoSettingsValidate(lr *logupload.UploadRepository) *xwhttp.ResponseEnt
 }
 
 func CreateLogRepoSettings(lr *logupload.UploadRepository, app string) *xwhttp.ResponseEntity {
-	_, err := db.GetCachedSimpleDao().GetOne(db.TABLE_UPLOAD_REPOSITORY, lr.ID)
+	_, err := db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_UPLOAD_REPOSITORIES, lr.ID)
 	if err == nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(fmt.Sprintf("Entity with id %s already exists", lr.ID)), nil)
 	}
@@ -199,7 +195,7 @@ func CreateLogRepoSettings(lr *logupload.UploadRepository, app string) *xwhttp.R
 		return respEntity
 	}
 	lr.Updated = util.GetTimestamp()
-	if err = db.GetCachedSimpleDao().SetOne(db.TABLE_UPLOAD_REPOSITORY, lr.ID, lr); err != nil {
+	if err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_UPLOAD_REPOSITORIES, lr.ID, lr); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, lr)
@@ -209,7 +205,7 @@ func UpdateLogRepoSettings(lr *logupload.UploadRepository, app string) *xwhttp.R
 	if util.IsBlank(lr.ID) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New(" ID  is empty"), nil)
 	}
-	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_UPLOAD_REPOSITORY, lr.ID)
+	inst, err := db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_UPLOAD_REPOSITORIES, lr.ID)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(fmt.Sprintf("Entity with id %s does not exists", lr.ID)), nil)
 	}
@@ -226,7 +222,7 @@ func UpdateLogRepoSettings(lr *logupload.UploadRepository, app string) *xwhttp.R
 	}
 
 	lr.Updated = util.GetTimestamp()
-	if err = db.GetCachedSimpleDao().SetOne(db.TABLE_UPLOAD_REPOSITORY, lr.ID, lr); err != nil {
+	if err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_UPLOAD_REPOSITORIES, lr.ID, lr); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
@@ -268,7 +264,7 @@ func LogRepoSettingsGeneratePageWithContext(lrrules []*logupload.UploadRepositor
 }
 
 func LogRepoSettingsFilterByContext(searchContext map[string]string) []*logupload.UploadRepository {
-	logRepoSettingsRules := GetLogRepoSettingsList()
+	logRepoSettingsRules := GetLogRepoSettingsList(db.GetDefaultTenantId())
 	logRepoSettingsRuleList := []*logupload.UploadRepository{}
 	for _, lrRule := range logRepoSettingsRules {
 		if lrRule == nil {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	rfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
 
 	"gotest.tools/assert"
@@ -101,31 +102,31 @@ func TestFeatureEntityAndUnmarshall(t *testing.T) {
 func TestIsValidFeatureEntity(t *testing.T) {
 	// nil feature
 	var featureEntity *rfc.FeatureEntity
-	isValid, errMsg := IsValidFeatureEntity(featureEntity)
+	isValid, errMsg := IsValidFeatureEntity(db.GetDefaultTenantId(), featureEntity)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Application type is empty")
 
 	// empty feature
 	featureEntity = &rfc.FeatureEntity{}
-	isValid, errMsg = IsValidFeatureEntity(featureEntity)
+	isValid, errMsg = IsValidFeatureEntity(db.GetDefaultTenantId(), featureEntity)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Application type is empty")
 
 	// not valid application type
 	featureEntity.ApplicationType = "fakeApplicationType"
-	isValid, errMsg = IsValidFeatureEntity(featureEntity)
+	isValid, errMsg = IsValidFeatureEntity(db.GetDefaultTenantId(), featureEntity)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "ApplicationType fakeApplicationType is not valid")
 
 	// no name
 	featureEntity.ApplicationType = "stb"
-	isValid, errMsg = IsValidFeatureEntity(featureEntity)
+	isValid, errMsg = IsValidFeatureEntity(db.GetDefaultTenantId(), featureEntity)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Name is blank")
 
 	// no feature name
 	featureEntity.Name = "name"
-	isValid, errMsg = IsValidFeatureEntity(featureEntity)
+	isValid, errMsg = IsValidFeatureEntity(db.GetDefaultTenantId(), featureEntity)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Feature Name is blank")
 
@@ -134,7 +135,7 @@ func TestIsValidFeatureEntity(t *testing.T) {
 	featureEntity.ConfigData = map[string]string{
 		"": "",
 	}
-	isValid, errMsg = IsValidFeatureEntity(featureEntity)
+	isValid, errMsg = IsValidFeatureEntity(db.GetDefaultTenantId(), featureEntity)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Key is blank")
 
@@ -142,14 +143,14 @@ func TestIsValidFeatureEntity(t *testing.T) {
 	featureEntity.ConfigData = map[string]string{
 		"key": "",
 	}
-	isValid, errMsg = IsValidFeatureEntity(featureEntity)
+	isValid, errMsg = IsValidFeatureEntity(db.GetDefaultTenantId(), featureEntity)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Value is blank for key: key")
 
 	// whitelisted with no whitelist data
 	featureEntity.ConfigData["key"] = "value"
 	featureEntity.Whitelisted = true
-	isValid, errMsg = IsValidFeatureEntity(featureEntity)
+	isValid, errMsg = IsValidFeatureEntity(db.GetDefaultTenantId(), featureEntity)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Key is required")
 
@@ -158,7 +159,7 @@ func TestIsValidFeatureEntity(t *testing.T) {
 		Key:   "key",
 		Value: "",
 	}
-	isValid, errMsg = IsValidFeatureEntity(featureEntity)
+	isValid, errMsg = IsValidFeatureEntity(db.GetDefaultTenantId(), featureEntity)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Value is required")
 
@@ -166,13 +167,13 @@ func TestIsValidFeatureEntity(t *testing.T) {
 	featureEntity.WhitelistProperty.Value = "value"
 	featureEntity.WhitelistProperty.NamespacedListType = "namespacedListType"
 	featureEntity.WhitelistProperty.TypeName = "typeName"
-	isValid, errMsg = IsValidFeatureEntity(featureEntity)
+	isValid, errMsg = IsValidFeatureEntity(db.GetDefaultTenantId(), featureEntity)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "namespacedListType with id value does not exist")
 
 	// valid feature
 	featureEntity.Whitelisted = false
-	isValid, errMsg = IsValidFeatureEntity(featureEntity)
+	isValid, errMsg = IsValidFeatureEntity(db.GetDefaultTenantId(), featureEntity)
 	assert.Equal(t, isValid, true)
 	assert.Equal(t, errMsg, "")
 }
@@ -180,31 +181,31 @@ func TestIsValidFeatureEntity(t *testing.T) {
 func TestIsValidFeature(t *testing.T) {
 	// nil feature
 	var feature *rfc.Feature
-	isValid, errMsg := IsValidFeature(feature)
+	isValid, errMsg := IsValidFeature(db.GetDefaultTenantId(), feature)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Application type is empty")
 
 	// empty feature
 	feature = &rfc.Feature{}
-	isValid, errMsg = IsValidFeature(feature)
+	isValid, errMsg = IsValidFeature(db.GetDefaultTenantId(), feature)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Application type is empty")
 
 	// not valid application type
 	feature.ApplicationType = "fakeApplicationType"
-	isValid, errMsg = IsValidFeature(feature)
+	isValid, errMsg = IsValidFeature(db.GetDefaultTenantId(), feature)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "ApplicationType fakeApplicationType is not valid")
 
 	// no name
 	feature.ApplicationType = "stb"
-	isValid, errMsg = IsValidFeature(feature)
+	isValid, errMsg = IsValidFeature(db.GetDefaultTenantId(), feature)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Name is blank")
 
 	// no feature name
 	feature.Name = "name"
-	isValid, errMsg = IsValidFeature(feature)
+	isValid, errMsg = IsValidFeature(db.GetDefaultTenantId(), feature)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Feature Name is blank")
 
@@ -213,7 +214,7 @@ func TestIsValidFeature(t *testing.T) {
 	feature.ConfigData = map[string]string{
 		"": "",
 	}
-	isValid, errMsg = IsValidFeature(feature)
+	isValid, errMsg = IsValidFeature(db.GetDefaultTenantId(), feature)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Key is blank")
 
@@ -221,14 +222,14 @@ func TestIsValidFeature(t *testing.T) {
 	feature.ConfigData = map[string]string{
 		"key": "",
 	}
-	isValid, errMsg = IsValidFeature(feature)
+	isValid, errMsg = IsValidFeature(db.GetDefaultTenantId(), feature)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Value is blank for key: key")
 
 	// whitelisted with no whitelist data
 	feature.ConfigData["key"] = "value"
 	feature.Whitelisted = true
-	isValid, errMsg = IsValidFeature(feature)
+	isValid, errMsg = IsValidFeature(db.GetDefaultTenantId(), feature)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Key is required")
 
@@ -237,7 +238,7 @@ func TestIsValidFeature(t *testing.T) {
 		Key:   "key",
 		Value: "",
 	}
-	isValid, errMsg = IsValidFeature(feature)
+	isValid, errMsg = IsValidFeature(db.GetDefaultTenantId(), feature)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "Value is required")
 
@@ -245,13 +246,13 @@ func TestIsValidFeature(t *testing.T) {
 	feature.WhitelistProperty.Value = "value"
 	feature.WhitelistProperty.NamespacedListType = "namespacedListType"
 	feature.WhitelistProperty.TypeName = "typeName"
-	isValid, errMsg = IsValidFeature(feature)
+	isValid, errMsg = IsValidFeature(db.GetDefaultTenantId(), feature)
 	assert.Equal(t, isValid, false)
 	assert.Equal(t, errMsg, "namespacedListType with id value does not exist")
 
 	// valid feature
 	feature.Whitelisted = false
-	isValid, errMsg = IsValidFeature(feature)
+	isValid, errMsg = IsValidFeature(db.GetDefaultTenantId(), feature)
 	assert.Equal(t, isValid, true)
 	assert.Equal(t, errMsg, "")
 }
@@ -259,7 +260,7 @@ func TestIsValidFeature(t *testing.T) {
 func TestDeleteFeatureRule(t *testing.T) {
 	// Test function executes without panic
 	assert.Assert(t, true, "DeleteFeatureRule should execute without panic")
-	DeleteFeatureRule("test-rule-id")
+	DeleteFeatureRule(db.GetDefaultTenantId(), "test-rule-id")
 }
 
 func TestDoesFeatureNameExistForAnotherId(t *testing.T) {
@@ -270,7 +271,7 @@ func TestDoesFeatureNameExistForAnotherId(t *testing.T) {
 	}
 
 	// Should return false for non-existent feature or when DB not initialized
-	result := DoesFeatureNameExistForAnotherId(feature)
+	result := DoesFeatureNameExistForAnotherId(db.GetDefaultTenantId(), feature)
 	assert.Equal(t, result, false)
 }
 
@@ -282,7 +283,7 @@ func TestDoesFeatureNameExistForAnotherEntityId(t *testing.T) {
 	}
 
 	// Should return false for non-existent feature entity
-	result := DoesFeatureNameExistForAnotherEntityId(featureEntity)
+	result := DoesFeatureNameExistForAnotherEntityId(db.GetDefaultTenantId(), featureEntity)
 	assert.Equal(t, result, false)
 }
 
@@ -294,14 +295,14 @@ func TestSetFeatureRule(t *testing.T) {
 	}
 
 	// Test function executes - may error if DB not initialized
-	err := SetFeatureRule("test-rule", featureRule)
+	err := SetFeatureRule(db.GetDefaultTenantId(), "test-rule", featureRule)
 	// Either succeeds or returns error, both are valid
 	_ = err
 }
 
 func TestGetFeatureRule(t *testing.T) {
 	// Test with non-existent ID
-	result := GetFeatureRule("non-existent-id")
+	result := GetFeatureRule(db.GetDefaultTenantId(), "non-existent-id")
 
 	// Should return nil when not found or DB not initialized
 	assert.Assert(t, result == nil)
@@ -309,7 +310,7 @@ func TestGetFeatureRule(t *testing.T) {
 
 func TestGetFeatureEntityList(t *testing.T) {
 	// Test function executes without panic
-	result := GetFeatureEntityList()
+	result := GetFeatureEntityList(db.GetDefaultTenantId())
 
 	// Should return nil or slice when executed
 	if result != nil {
@@ -319,12 +320,12 @@ func TestGetFeatureEntityList(t *testing.T) {
 
 func TestDoesFeatureExistInSomeApplicationType(t *testing.T) {
 	// Test with empty ID
-	exists, appType := DoesFeatureExistInSomeApplicationType("")
+	exists, appType := DoesFeatureExistInSomeApplicationType(db.GetDefaultTenantId(), "")
 	assert.Equal(t, exists, false)
 	assert.Equal(t, appType, "")
 
 	// Test with non-existent ID
-	exists, appType = DoesFeatureExistInSomeApplicationType("non-existent-id")
+	exists, appType = DoesFeatureExistInSomeApplicationType(db.GetDefaultTenantId(), "non-existent-id")
 	assert.Equal(t, exists, false)
 	assert.Equal(t, appType, "")
 }
@@ -332,6 +333,7 @@ func TestDoesFeatureExistInSomeApplicationType(t *testing.T) {
 func TestGetFilteredFeatureEntityList(t *testing.T) {
 	searchContext := map[string]string{
 		"APPLICATION_TYPE": "stb",
+		"TENANT_ID":        db.GetDefaultTenantId(),
 	}
 
 	// Test function executes without panic
@@ -352,7 +354,7 @@ func TestSetOneFeature(t *testing.T) {
 	}
 
 	// Test function executes - may error if DB not initialized
-	result, err := SetOneFeature(feature)
+	result, err := SetOneFeature(db.GetDefaultTenantId(), feature)
 
 	// Either succeeds or returns error
 	if err == nil {
@@ -363,7 +365,7 @@ func TestSetOneFeature(t *testing.T) {
 func TestDeleteOneFeature(t *testing.T) {
 	// Test function executes without panic
 	assert.Assert(t, true, "DeleteOneFeature should execute without panic")
-	DeleteOneFeature("test-feature-id")
+	DeleteOneFeature(db.GetDefaultTenantId(), "test-feature-id")
 }
 
 func TestGetFilteredFeatureList(t *testing.T) {
@@ -416,7 +418,7 @@ func TestDoesFeatureNameExistForAnotherIdForApplicationType(t *testing.T) {
 	}
 
 	// Test function executes without panic
-	result := DoesFeatureNameExistForAnotherIdForApplicationType(feature, "stb")
+	result := DoesFeatureNameExistForAnotherIdForApplicationType(db.GetDefaultTenantId(), feature, "stb")
 
 	// Should return false when no conflicts or DB not initialized
 	assert.Equal(t, result, false)
@@ -424,20 +426,20 @@ func TestDoesFeatureNameExistForAnotherIdForApplicationType(t *testing.T) {
 
 func TestDoesFeatureExist(t *testing.T) {
 	// Test with empty ID
-	result := DoesFeatureExist("")
+	result := DoesFeatureExist(db.GetDefaultTenantId(), "")
 	assert.Equal(t, result, false)
 
 	// Test with non-existent ID
-	result = DoesFeatureExist("non-existent-id")
+	result = DoesFeatureExist(db.GetDefaultTenantId(), "non-existent-id")
 	assert.Equal(t, result, false)
 }
 
 func TestDoesFeatureExistWithApplicationType(t *testing.T) {
 	// Test with empty ID
-	result := DoesFeatureExistWithApplicationType("", "stb")
+	result := DoesFeatureExistWithApplicationType(db.GetDefaultTenantId(), "", "stb")
 	assert.Equal(t, result, false)
 
 	// Test with non-existent ID
-	result = DoesFeatureExistWithApplicationType("non-existent-id", "stb")
+	result = DoesFeatureExistWithApplicationType(db.GetDefaultTenantId(), "non-existent-id", "stb")
 	assert.Equal(t, result, false)
 }

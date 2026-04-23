@@ -463,7 +463,7 @@ func TestDeleteTelemetryProfileChangeHandler_Success(t *testing.T) {
 
 	// Cleanup: the change should be removed after test
 	if changeID, ok := change["id"].(string); ok && changeID != "" {
-		xchange.DeleteOneChange(changeID)
+		xchange.DeleteOneChange(db.GetDefaultTenantId(), changeID)
 	}
 }
 
@@ -520,9 +520,9 @@ func TestDeleteTelemetryProfileChangeHandler_ErrorResponse(t *testing.T) {
 	var change map[string]interface{}
 	_ = json.Unmarshal(rr.Body.Bytes(), &change)
 	if changeID, ok := change["id"].(string); ok && changeID != "" {
-		xchange.DeleteOneChange(changeID)
+		xchange.DeleteOneChange(db.GetDefaultTenantId(), changeID)
 	}
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 // ========== Tests for PostTelemetryProfileFilteredHandler ==========
@@ -567,8 +567,8 @@ func TestPostTelemetryProfileFilteredHandler_Success(t *testing.T) {
 	assert.True(t, headerValue != "" || len(profiles) >= 2)
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved1.ID)
-	xlogupload.DeletePermanentTelemetryProfile(saved2.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved1.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved2.ID)
 }
 
 func TestPostTelemetryProfileFilteredHandler_MissingPageNumber(t *testing.T) {
@@ -646,7 +646,7 @@ func TestPostTelemetryProfileFilteredHandler_WithNameFilter(t *testing.T) {
 	assert.GreaterOrEqual(t, len(profiles), 1)
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestPostTelemetryProfileFilteredHandler_EmptyBody(t *testing.T) {
@@ -690,9 +690,9 @@ func TestAddTelemetryProfileEntryChangeHandler_Success(t *testing.T) {
 
 	// Cleanup
 	if changeID, ok := change["id"].(string); ok && changeID != "" {
-		xchange.DeleteOneChange(changeID)
+		xchange.DeleteOneChange(db.GetDefaultTenantId(), changeID)
 	}
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestAddTelemetryProfileEntryChangeHandler_MissingId(t *testing.T) {
@@ -749,7 +749,7 @@ func TestAddTelemetryProfileEntryChangeHandler_InvalidJSON(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestAddTelemetryProfileEntryChangeHandler_DuplicateEntry(t *testing.T) {
@@ -772,7 +772,7 @@ func TestAddTelemetryProfileEntryChangeHandler_DuplicateEntry(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), "already exists")
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestAddTelemetryProfileEntryChangeHandler_MultipleEntries(t *testing.T) {
@@ -799,9 +799,9 @@ func TestAddTelemetryProfileEntryChangeHandler_MultipleEntries(t *testing.T) {
 	var change map[string]interface{}
 	_ = json.Unmarshal(rr.Body.Bytes(), &change)
 	if changeID, ok := change["id"].(string); ok && changeID != "" {
-		xchange.DeleteOneChange(changeID)
+		xchange.DeleteOneChange(db.GetDefaultTenantId(), changeID)
 	}
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 // ========== Tests for RemoveTelemetryProfileEntryHandler ==========
@@ -838,7 +838,7 @@ func TestRemoveTelemetryProfileEntryHandler_Success(t *testing.T) {
 	assert.Equal(t, 1, len(updated.TelemetryProfile))
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestRemoveTelemetryProfileEntryHandler_MissingId(t *testing.T) {
@@ -895,7 +895,7 @@ func TestRemoveTelemetryProfileEntryHandler_InvalidJSON(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestRemoveTelemetryProfileEntryHandler_EntryNotFound(t *testing.T) {
@@ -923,7 +923,7 @@ func TestRemoveTelemetryProfileEntryHandler_EntryNotFound(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), "does not exist")
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestRemoveTelemetryProfileEntryHandler_MultipleEntries(t *testing.T) {
@@ -955,7 +955,7 @@ func TestRemoveTelemetryProfileEntryHandler_MultipleEntries(t *testing.T) {
 	assert.Equal(t, 1, len(updated.TelemetryProfile))
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 // ========== Tests for RemoveTelemetryProfileEntryChangeHandler ==========
@@ -994,9 +994,9 @@ func TestRemoveTelemetryProfileEntryChangeHandler_Success(t *testing.T) {
 
 	// Cleanup
 	if changeID, ok := change["id"].(string); ok && changeID != "" {
-		xchange.DeleteOneChange(changeID)
+		xchange.DeleteOneChange(db.GetDefaultTenantId(), changeID)
 	}
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestRemoveTelemetryProfileEntryChangeHandler_MissingId(t *testing.T) {
@@ -1053,7 +1053,7 @@ func TestRemoveTelemetryProfileEntryChangeHandler_InvalidJSON(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestRemoveTelemetryProfileEntryChangeHandler_EntryNotFound(t *testing.T) {
@@ -1081,7 +1081,7 @@ func TestRemoveTelemetryProfileEntryChangeHandler_EntryNotFound(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), "does not exist")
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestRemoveTelemetryProfileEntryChangeHandler_MultipleEntries(t *testing.T) {
@@ -1113,9 +1113,9 @@ func TestRemoveTelemetryProfileEntryChangeHandler_MultipleEntries(t *testing.T) 
 
 	// Cleanup
 	if changeID, ok := change["id"].(string); ok && changeID != "" {
-		xchange.DeleteOneChange(changeID)
+		xchange.DeleteOneChange(db.GetDefaultTenantId(), changeID)
 	}
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 // ========== Tests for DeleteTelemetryProfileHandler ==========
@@ -1203,7 +1203,7 @@ func TestAddTelemetryProfileEntryHandler_Success(t *testing.T) {
 	assert.Equal(t, 2, len(updated.TelemetryProfile)) // original + new entry
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestAddTelemetryProfileEntryHandler_MissingId(t *testing.T) {
@@ -1260,5 +1260,5 @@ func TestAddTelemetryProfileEntryHandler_InvalidJSON(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }

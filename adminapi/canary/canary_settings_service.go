@@ -28,35 +28,35 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func SetCanarySetting(canarySettings *common.CanarySettings) *common.ResponseEntity {
+func SetCanarySetting(tenantId string, canarySettings *common.CanarySettings) *common.ResponseEntity {
 	if err := canarySettings.Validate(); err != nil {
 		return common.NewResponseEntityWithStatus(http.StatusBadRequest, err, nil)
 	}
 
 	// Save all canary settings
 	if canarySettings.CanaryMaxSize != nil {
-		if _, err := common.SetAppSetting(common.PROP_CANARY_MAXSIZE, *canarySettings.CanaryMaxSize); err != nil {
+		if _, err := common.SetAppSetting(tenantId, common.PROP_CANARY_MAXSIZE, *canarySettings.CanaryMaxSize); err != nil {
 			errorStr := fmt.Sprintf("Unable to save %s: %s", common.PROP_CANARY_MAXSIZE, err.Error())
 			log.Error(errorStr)
 			return common.NewResponseEntityWithStatus(http.StatusInternalServerError, errors.New(errorStr), nil)
 		}
 	}
 	if canarySettings.CanaryDistributionPercentage != nil {
-		if _, err := common.SetAppSetting(common.PROP_CANARY_DISTRIBUTION_PERCENTAGE, *canarySettings.CanaryDistributionPercentage); err != nil {
+		if _, err := common.SetAppSetting(tenantId, common.PROP_CANARY_DISTRIBUTION_PERCENTAGE, *canarySettings.CanaryDistributionPercentage); err != nil {
 			errorStr := fmt.Sprintf("Unable to save %s: %s", common.PROP_CANARY_DISTRIBUTION_PERCENTAGE, err.Error())
 			log.Error(errorStr)
 			return common.NewResponseEntityWithStatus(http.StatusInternalServerError, errors.New(errorStr), nil)
 		}
 	}
 	if canarySettings.CanaryFwUpgradeStartTime != nil {
-		if _, err := common.SetAppSetting(common.PROP_CANARY_FW_UPGRADE_STARTTIME, *canarySettings.CanaryFwUpgradeStartTime); err != nil {
+		if _, err := common.SetAppSetting(tenantId, common.PROP_CANARY_FW_UPGRADE_STARTTIME, *canarySettings.CanaryFwUpgradeStartTime); err != nil {
 			errorStr := fmt.Sprintf("Unable to save %s: %s", common.PROP_CANARY_FW_UPGRADE_STARTTIME, err.Error())
 			log.Error(errorStr)
 			return common.NewResponseEntityWithStatus(http.StatusInternalServerError, errors.New(errorStr), nil)
 		}
 	}
 	if canarySettings.CanaryFwUpgradeEndTime != nil {
-		if _, err := common.SetAppSetting(common.PROP_CANARY_FW_UPGRADE_ENDTIME, *canarySettings.CanaryFwUpgradeEndTime); err != nil {
+		if _, err := common.SetAppSetting(tenantId, common.PROP_CANARY_FW_UPGRADE_ENDTIME, *canarySettings.CanaryFwUpgradeEndTime); err != nil {
 			errorStr := fmt.Sprintf("Unable to save %s: %s", common.PROP_CANARY_FW_UPGRADE_ENDTIME, err.Error())
 			log.Error(errorStr)
 			return common.NewResponseEntityWithStatus(http.StatusInternalServerError, errors.New(errorStr), nil)
@@ -65,8 +65,8 @@ func SetCanarySetting(canarySettings *common.CanarySettings) *common.ResponseEnt
 	return common.NewResponseEntityWithStatus(http.StatusNoContent, nil, nil)
 }
 
-func GetCanarySettings() (*common.CanarySettings, error) {
-	settings, err := common.GetAppSettings()
+func GetCanarySettings(tenantId string) (*common.CanarySettings, error) {
+	settings, err := common.GetAppSettings(tenantId)
 	if err != nil {
 		return nil, err
 	}

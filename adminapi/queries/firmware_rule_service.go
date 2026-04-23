@@ -88,6 +88,8 @@ func honoredByFirmwareRule(context map[string]string, rule *corefw.FirmwareRule)
 		return false
 	}
 
+	tenantId := context[common.TENANT_ID]
+
 	fwVersion, filterByFW := xutil.FindEntryInContext(context, cFirmwareRuleFirmwareVersion, false)
 	if filterByFW {
 		appAction := rule.ApplicableAction
@@ -95,7 +97,7 @@ func honoredByFirmwareRule(context map[string]string, rule *corefw.FirmwareRule)
 			return false
 		}
 		configId := appAction.ConfigId
-		ruleConfig, _ := coreef.GetFirmwareConfigOneDB(configId)
+		ruleConfig, _ := coreef.GetFirmwareConfigOneDB(tenantId, configId)
 		if ruleConfig == nil || !strings.Contains(strings.ToLower(ruleConfig.Description), strings.ToLower(fwVersion)) {
 			return false
 		}
@@ -113,7 +115,7 @@ func honoredByFirmwareRule(context map[string]string, rule *corefw.FirmwareRule)
 
 	actionType, filterByActionType := xutil.FindEntryInContext(context, cFirmwareRuleApplicableActionType, false)
 	if filterByActionType && !util.IsBlank(actionType) {
-		template, err := corefw.GetFirmwareRuleTemplateOneDB(rule.GetTemplateId())
+		template, err := corefw.GetFirmwareRuleTemplateOneDB(tenantId, rule.GetTemplateId())
 		if err == nil && template.Editable {
 			if rule.ApplicableAction != nil {
 				baseName := strings.ToLower(string(rule.ApplicableAction.ActionType))
@@ -138,13 +140,13 @@ func filterFirmwareRulesByContext(dbrules []*corefw.FirmwareRule, firmwareContex
 	return filteredRules
 }
 
-func putSizesOfFirmwareRulesByTypeIntoHeaders(dbrules []*corefw.FirmwareRule) (headers map[string]string) {
+func putSizesOfFirmwareRulesByTypeIntoHeaders(tenantId string, dbrules []*corefw.FirmwareRule) (headers map[string]string) {
 	ruleCnt := 0
 	blkFilterCnt := 0
 	defPropCnt := 0
 
 	for _, rule := range dbrules {
-		template, err := corefw.GetFirmwareRuleTemplateOneDB(rule.GetTemplateId())
+		template, err := corefw.GetFirmwareRuleTemplateOneDB(tenantId, rule.GetTemplateId())
 		if err == nil && template.Editable {
 			if rule.ApplicableAction != nil {
 				if rule.ApplicableAction.ActionType.CaseIgnoreEquals(cFirmwareRule) {
@@ -198,10 +200,10 @@ func generateFirmwareRulePageByContext(dbrules []*corefw.FirmwareRule, contextMa
 	return extractFirmwareRulePage(dbrules, pageNum, pageSize), nil
 }
 
-func firmwareRuleFilterByActionType(dbrules []*corefw.FirmwareRule, actionType string) (result []*corefw.FirmwareRule) {
+func firmwareRuleFilterByActionType(tenantId string, dbrules []*corefw.FirmwareRule, actionType string) (result []*corefw.FirmwareRule) {
 	filteredRules := make([]*corefw.FirmwareRule, 0)
 	for _, rule := range dbrules {
-		template, err := corefw.GetFirmwareRuleTemplateOneDB(rule.GetTemplateId())
+		template, err := corefw.GetFirmwareRuleTemplateOneDB(tenantId, rule.GetTemplateId())
 		if err == nil && template.Editable {
 			baseName := strings.ToLower(string(rule.ApplicableAction.ActionType))
 			givenName := strings.ToLower(actionType)
@@ -213,17 +215,17 @@ func firmwareRuleFilterByActionType(dbrules []*corefw.FirmwareRule, actionType s
 	return filteredRules
 }
 
-func importOrUpdateAllFirmwareRules(firmwareRules []*corefw.FirmwareRule, appType string, fields log.Fields) (importResult map[string][]string) {
+func importOrUpdateAllFirmwareRules(tenantId string, firmwareRules []*corefw.FirmwareRule, appType string, fields log.Fields) (importResult map[string][]string) {
 	result := make(map[string][]string)
 	result["IMPORTED"] = []string{}
 	result["NOT_IMPORTED"] = []string{}
 	for _, entity := range firmwareRules {
 		entity := entity
-		entityOnDb, err := corefw.GetFirmwareRuleOneDB(entity.ID)
+		entityOnDb, err := corefw.GetFirmwareRuleOneDB(tenantId, entity.ID)
 		if err == nil {
-			err = checkRuleTypeAndUpdate(*entity, entityOnDb, appType, fields)
+			err = checkRuleTypeAndUpdate(tenantId, *entity, entityOnDb, appType, fields)
 		} else {
-			err = checkRuleTypeAndCreate(entity, appType, fields)
+			err = checkRuleTypeAndCreate(tenantId, entity, appType, fields)
 		}
 		if err == nil {
 			result["IMPORTED"] = append(result["IMPORTED"], entity.Name)
@@ -235,7 +237,7 @@ func importOrUpdateAllFirmwareRules(firmwareRules []*corefw.FirmwareRule, appTyp
 	return result
 }
 
-func checkRuleTypeAndCreate(firmwareRule *corefw.FirmwareRule, appType string, fields log.Fields) error {
+func checkRuleTypeAndCreate(tenantId string, firmwareRule *corefw.FirmwareRule, appType string, fields log.Fields) error {
 	if util.IsBlank(firmwareRule.ID) {
 		firmwareRule.ID = uuid.New().String()
 	}
@@ -244,22 +246,22 @@ func checkRuleTypeAndCreate(firmwareRule *corefw.FirmwareRule, appType string, f
 		if ipRuleBean == nil {
 			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Unable to convert FirmwareRule into PercentageBean")
 		}
-		val := CreatePercentageBean(ipRuleBean, appType, fields)
+		val := CreatePercentageBean(tenantId, ipRuleBean, appType, fields)
 		if val.Status == http.StatusCreated {
 			return nil
 		}
 		return xwcommon.NewRemoteErrorAS(val.Status, val.Error.Error())
 	}
-	return createFirmwareRule(*firmwareRule, appType, true)
+	return createFirmwareRule(tenantId, *firmwareRule, appType, true)
 }
 
-func checkRuleTypeAndUpdate(firmwareRule corefw.FirmwareRule, entityOnDb *corefw.FirmwareRule, appType string, fields log.Fields) error {
+func checkRuleTypeAndUpdate(tenantId string, firmwareRule corefw.FirmwareRule, entityOnDb *corefw.FirmwareRule, appType string, fields log.Fields) error {
 	if firmwareRule.Type == corefw.ENV_MODEL_RULE {
 		ipRuleBean := coreef.ConvertFirmwareRuleToPercentageBean(&firmwareRule)
 		if ipRuleBean == nil {
 			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Unable to convert FirmwareRule into PercentageBean")
 		}
-		val := UpdatePercentageBean(ipRuleBean, appType, fields)
+		val := UpdatePercentageBean(tenantId, ipRuleBean, appType, fields)
 		// assert (val != nil)
 		if val.Status == http.StatusOK {
 			return nil
@@ -269,37 +271,37 @@ func checkRuleTypeAndUpdate(firmwareRule corefw.FirmwareRule, entityOnDb *corefw
 	if entityOnDb.ApplicationType != firmwareRule.ApplicationType {
 		return xwcommon.NewRemoteErrorAS(http.StatusConflict, "ApplicationType cannot be changed. Existing:"+entityOnDb.ApplicationType+" New: "+firmwareRule.ApplicationType)
 	}
-	return updateFirmwareRule(firmwareRule, appType, true)
+	return updateFirmwareRule(tenantId, firmwareRule, appType, true)
 }
 
-func createFirmwareRule(entity corefw.FirmwareRule, appType string, validateNameNRule bool) error {
-	if err := beforeCreatingFirmwareRule(entity); err != nil {
+func createFirmwareRule(tenantId string, entity corefw.FirmwareRule, appType string, validateNameNRule bool) error {
+	if err := beforeCreatingFirmwareRule(tenantId, entity); err != nil {
 		return err
 	}
-	return saveFirmwareRule(entity, appType, validateNameNRule)
+	return saveFirmwareRule(tenantId, entity, appType, validateNameNRule)
 }
 
-func updateFirmwareRule(entity corefw.FirmwareRule, appType string, validateNameNRule bool) error {
-	if err := beforeUpdatingFirmwareRule(entity); err != nil {
+func updateFirmwareRule(tenantId string, entity corefw.FirmwareRule, appType string, validateNameNRule bool) error {
+	if err := beforeUpdatingFirmwareRule(tenantId, entity); err != nil {
 		return err
 	}
-	return saveFirmwareRule(entity, appType, validateNameNRule)
+	return saveFirmwareRule(tenantId, entity, appType, validateNameNRule)
 }
 
-func beforeCreatingFirmwareRule(entity corefw.FirmwareRule) error {
-	if _, err := corefw.GetFirmwareRuleOneDB(entity.ID); err == nil {
+func beforeCreatingFirmwareRule(tenantId string, entity corefw.FirmwareRule) error {
+	if _, err := corefw.GetFirmwareRuleOneDB(tenantId, entity.ID); err == nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Entity with id: "+entity.ID+" already exists")
 
 	}
 	return nil
 }
 
-func beforeUpdatingFirmwareRule(firmwarerule corefw.FirmwareRule) error {
+func beforeUpdatingFirmwareRule(tenantId string, firmwarerule corefw.FirmwareRule) error {
 	id := firmwarerule.ID
 	if util.IsBlank(id) {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FirmwareRule id is empty")
 	}
-	entityOnDb, err := corefw.GetFirmwareRuleOneDB(id)
+	entityOnDb, err := corefw.GetFirmwareRuleOneDB(tenantId, id)
 	if err != nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Entity with id: "+id+" does not exist")
 
@@ -310,21 +312,21 @@ func beforeUpdatingFirmwareRule(firmwarerule corefw.FirmwareRule) error {
 	return nil
 }
 
-func saveFirmwareRule(entity corefw.FirmwareRule, appType string, validateNameNRule bool) error {
-	if err := beforeSavingFirmwareRule(entity, appType, validateNameNRule); err != nil {
+func saveFirmwareRule(tenantId string, entity corefw.FirmwareRule, appType string, validateNameNRule bool) error {
+	if err := beforeSavingFirmwareRule(tenantId, entity, appType, validateNameNRule); err != nil {
 		return err
 	}
-	return corefw.CreateFirmwareRuleOneDB(&entity)
+	return corefw.CreateFirmwareRuleOneDB(tenantId, &entity)
 }
 
-func superBeforeSavingFirmwareRule(entity corefw.FirmwareRule, validateNameNRule bool) error {
+func superBeforeSavingFirmwareRule(tenantId string, entity corefw.FirmwareRule, validateNameNRule bool) error {
 	if err := normalizeFirmwareRuleOnSave(entity); err != nil {
 		return err
 	}
-	return validateFirmwareRuleOnSave(entity, validateNameNRule)
+	return validateFirmwareRuleOnSave(tenantId, entity, validateNameNRule)
 }
 
-func beforeSavingFirmwareRule(entity corefw.FirmwareRule, appType string, validateNameNRule bool) error {
+func beforeSavingFirmwareRule(tenantId string, entity corefw.FirmwareRule, appType string, validateNameNRule bool) error {
 	if util.IsBlank(entity.ApplicationType) {
 		entity.ApplicationType = appType
 		// Can be done only after PermissionService is migrated
@@ -333,7 +335,7 @@ func beforeSavingFirmwareRule(entity corefw.FirmwareRule, appType string, valida
 		return xwcommon.NewRemoteErrorAS(http.StatusConflict, "ApplicationType conflict")
 	}
 	entity.Updated = util.GetTimestamp()
-	return superBeforeSavingFirmwareRule(entity, validateNameNRule)
+	return superBeforeSavingFirmwareRule(tenantId, entity, validateNameNRule)
 }
 
 func normalizeFirmwareRuleOnSave(firmwareRule corefw.FirmwareRule) error {
@@ -345,8 +347,8 @@ func normalizeFirmwareRuleOnSave(firmwareRule corefw.FirmwareRule) error {
 	return nil
 }
 
-func validateFirmwareRuleOnSave(firmwareRule corefw.FirmwareRule, validateNameNRule bool) error {
-	err := validateOneFirmewareRule(firmwareRule)
+func validateFirmwareRuleOnSave(tenantId string, firmwareRule corefw.FirmwareRule, validateNameNRule bool) error {
+	err := validateOneFirmewareRule(tenantId, firmwareRule)
 	if err != nil {
 		return err
 	}
@@ -354,7 +356,7 @@ func validateFirmwareRuleOnSave(firmwareRule corefw.FirmwareRule, validateNameNR
 		return nil
 	}
 
-	rules, err := corefw.GetFirmwareRuleAllAsListByApplicationType(firmwareRule.ApplicationType)
+	rules, err := corefw.GetFirmwareRuleAllAsListByApplicationType(tenantId, firmwareRule.ApplicationType)
 	if err != nil {
 		if err.Error() == common.NotFound.Error() {
 			return nil
@@ -383,17 +385,17 @@ func validateAgainstAllFirmwareRules(ruleToCheck corefw.FirmwareRule, existingRu
 	return nil
 }
 
-func validateOneFirmewareRule(firmwareRule corefw.FirmwareRule) error {
+func validateOneFirmewareRule(tenantId string, firmwareRule corefw.FirmwareRule) error {
 	if util.IsBlank(firmwareRule.GetName()) {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Name is empty")
 
 	}
 
-	err := superValidate(firmwareRule)
+	err := superValidate(tenantId, firmwareRule)
 	if err != nil {
 		return err
 	}
-	err = validateTemplateConsistency(firmwareRule)
+	err = validateTemplateConsistency(tenantId, firmwareRule)
 	if err != nil {
 		return err
 	}
@@ -403,12 +405,12 @@ func validateOneFirmewareRule(firmwareRule corefw.FirmwareRule) error {
 		return err
 	}
 
-	err = validateApplicableAction(firmwareRule)
+	err = validateApplicableAction(tenantId, firmwareRule)
 	if err != nil {
 		return err
 	}
 
-	err = validateMacListReferences(firmwareRule)
+	err = validateMacListReferences(tenantId, firmwareRule)
 	if err != nil {
 		return err
 	}
@@ -416,22 +418,22 @@ func validateOneFirmewareRule(firmwareRule corefw.FirmwareRule) error {
 	return xshared.ValidateApplicationType(firmwareRule.ApplicationType)
 }
 
-func superValidate(entity corefw.FirmwareRule) error {
+func superValidate(tenantId string, entity corefw.FirmwareRule) error {
 	if entity.GetRule() == nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, entity.Name+": Rule is empty")
 	}
 	if err := ValidateRuleStructure(entity.GetRule()); err != nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, entity.Name+": "+err.Error())
 	}
-	if err := RunGlobalValidation(*entity.GetRule(), GetFirmwareRuleAllowedOperations); err != nil {
+	if err := RunGlobalValidation(tenantId, *entity.GetRule(), GetFirmwareRuleAllowedOperations); err != nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, entity.Name+": "+err.Error())
 	}
 	return nil
 }
 
-func validateTemplateConsistency(rule corefw.FirmwareRule) error {
+func validateTemplateConsistency(tenantId string, rule corefw.FirmwareRule) error {
 	templateId := rule.GetTemplateId()
-	template, _ := corefw.GetFirmwareRuleTemplateOneDB(templateId) // TODO should I pass false as a parameter
+	template, _ := corefw.GetFirmwareRuleTemplateOneDB(tenantId, templateId) // TODO should I pass false as a parameter
 
 	if template == nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, rule.Name+": Can't create rule from non existing template: "+templateId)
@@ -512,7 +514,7 @@ func checkFreeArgExists(firmwareRule corefw.FirmwareRule) error {
 	return nil
 }
 
-func validateApplicableAction(rule corefw.FirmwareRule) error {
+func validateApplicableAction(tenantId string, rule corefw.FirmwareRule) error {
 	action := rule.ApplicableAction
 	if action == nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, rule.Name+": Applicable action must not be null")
@@ -520,19 +522,19 @@ func validateApplicableAction(rule corefw.FirmwareRule) error {
 	}
 
 	if action.ActionType == corefw.RULE {
-		return validateRuleAction(rule, *action)
+		return validateRuleAction(tenantId, rule, *action)
 	} else if action.ActionType == corefw.DEFINE_PROPERTIES {
-		return validateDefinePropertiesApplicableAction(*action, rule.Type, &rule)
+		return validateDefinePropertiesApplicableAction(tenantId, *action, rule.Type, &rule)
 	}
 	return nil
 }
 
-func validateRuleAction(firmwareRule corefw.FirmwareRule, action corefw.ApplicableAction) error {
+func validateRuleAction(tenantId string, firmwareRule corefw.FirmwareRule, action corefw.ApplicableAction) error {
 	if util.IsBlank(action.ConfigId) {
 		return nil // noop rule
 	}
 
-	err := validateConfigId(firmwareRule, action.ConfigId)
+	err := validateConfigId(tenantId, firmwareRule, action.ConfigId)
 	if err != nil {
 		return err
 	}
@@ -544,7 +546,7 @@ func validateRuleAction(firmwareRule corefw.FirmwareRule, action corefw.Applicab
 		for _, entry := range configEntries {
 
 			configId := entry.ConfigId
-			err = validateConfigId(firmwareRule, configId)
+			err = validateConfigId(tenantId, firmwareRule, configId)
 			if err != nil {
 				return err
 			}
@@ -572,13 +574,13 @@ func validateRuleAction(firmwareRule corefw.FirmwareRule, action corefw.Applicab
 	return nil
 }
 
-func validateConfigId(firmwareRule corefw.FirmwareRule, configId string) error {
+func validateConfigId(tenantId string, firmwareRule corefw.FirmwareRule, configId string) error {
 	if util.IsBlank(configId) {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, firmwareRule.Name+": ConfigId could not be blank")
 
 	}
 
-	firmwareConfig, _ := coreef.GetFirmwareConfigOneDB(configId)
+	firmwareConfig, _ := coreef.GetFirmwareConfigOneDB(tenantId, configId)
 
 	if firmwareConfig == nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, firmwareRule.Name+": config '"+configId+"' doesn't exist")
@@ -592,10 +594,10 @@ func validateConfigId(firmwareRule corefw.FirmwareRule, configId string) error {
 	return nil
 }
 
-func validateDefinePropertiesApplicableAction(action corefw.ApplicableAction, templateType string, rule *corefw.FirmwareRule) error {
+func validateDefinePropertiesApplicableAction(tenantId string, action corefw.ApplicableAction, templateType string, rule *corefw.FirmwareRule) error {
 	if !util.IsBlank(templateType) {
 		properties := action.Properties
-		err := validateApplicableActionPropertiesGeneric(templateType, properties, rule)
+		err := validateApplicableActionPropertiesGeneric(tenantId, templateType, properties, rule)
 		if err != nil {
 			return err
 		}
@@ -607,8 +609,8 @@ func validateDefinePropertiesApplicableAction(action corefw.ApplicableAction, te
 	return nil
 }
 
-func validateApplicableActionPropertiesGeneric(templateType string, propertiesFromRule map[string]string, rule *corefw.FirmwareRule) error {
-	template, _ := corefw.GetFirmwareRuleTemplateOneDBWithId(templateType)
+func validateApplicableActionPropertiesGeneric(tenantId string, templateType string, propertiesFromRule map[string]string, rule *corefw.FirmwareRule) error {
+	template, _ := corefw.GetFirmwareRuleTemplateOneDBWithId(tenantId, templateType)
 	if template != nil {
 		templateAction := template.ApplicableAction
 		if templateAction.ActionType == corefw.DEFINE_PROPERTIES_TEMPLATE {
@@ -914,8 +916,8 @@ func getFreeArgNames(freeArgs []*re.FreeArg) (result []string) {
 	return result
 }
 
-func GetFirmwareRuleById(id string) *corefw.FirmwareRule {
-	fr, err := corefw.GetFirmwareRuleOneDB(id)
+func GetFirmwareRuleById(tenantId string, id string) *corefw.FirmwareRule {
+	fr, err := corefw.GetFirmwareRuleOneDB(tenantId, id)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareRuleById: %v", err))
 		return nil
@@ -924,13 +926,13 @@ func GetFirmwareRuleById(id string) *corefw.FirmwareRule {
 }
 
 // validateMacListReferences validates that all MAC lists referenced in the firmware rule exist
-func validateMacListReferences(firmwareRule corefw.FirmwareRule) error {
+func validateMacListReferences(tenantId string, firmwareRule corefw.FirmwareRule) error {
 	if firmwareRule.GetRule() == nil {
 		return nil
 	}
 	macListIds := re.GetFixedArgsFromRuleByFreeArgAndOperation(*firmwareRule.GetRule(), "eStbMac", re.StandardOperationInList)
 	for _, macListId := range macListIds {
-		macList, err := shared.GetGenericNamedListOneByTypeNonCached(macListId, shared.MAC_LIST)
+		macList, err := shared.GetGenericNamedListOneByTypeNonCached(tenantId, macListId, shared.MAC_LIST)
 		if err != nil && !strings.Contains(err.Error(), "not found") {
 			return xwcommon.NewRemoteErrorAS(http.StatusInternalServerError,
 				fmt.Sprintf("%s (id=%s): Error retrieving MAC list '%s': %v", firmwareRule.Name, firmwareRule.ID, macListId, err))

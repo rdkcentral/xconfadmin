@@ -37,11 +37,9 @@ import (
 	oshttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
 
-	// "github.com/rdkcentral/xconfadmin/taggingapi/tag" // No longer needed - tag refactored
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	"github.com/rdkcentral/xconfwebconfig/db"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
@@ -87,12 +85,13 @@ func DeleteAllEntities() {
 	}
 
 	// Real DB cleanup (only used if mock is disabled)
+	tenantId := db.GetDefaultTenantId()
 	for _, tableInfo := range db.GetAllTableInfo() {
 		if err := truncateTable(tableInfo.TableName); err != nil {
 			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
 		}
-		if tableInfo.CacheData {
-			db.GetCachedSimpleDao().RefreshAll(tableInfo.TableName)
+		if tableInfo.Cached {
+			db.GetCachedSimpleDao().RefreshAll(tenantId, tableInfo.TableName)
 		}
 	}
 }
@@ -101,7 +100,7 @@ func truncateTable(tableName string) error {
 	dbClient := db.GetDatabaseClient()
 	cassandraClient, ok := dbClient.(*db.CassandraClient)
 	if ok {
-		return cassandraClient.DeleteAllXconfData(tableName)
+		return cassandraClient.DeleteAllXconfData(db.GetDefaultTenantId(), tableName)
 	}
 	return nil
 }
@@ -207,10 +206,10 @@ func ImportTableData(data []interface{}) error {
 	var err error
 	for _, row := range data {
 		switch row.(TableData).Tablename {
-		case "TABLE_ENVIRONMENT":
+		case "TABLE_ENVIRONMENTS":
 			var tabletype = shared.Environment{}
 			err = json.Unmarshal([]byte(row.(TableData).Tablerow), &tabletype)
-			err = SetOneInDao(ds.TABLE_ENVIRONMENT, tabletype.ID, &tabletype)
+			err = SetOneInDao(db.TABLE_ENVIRONMENTS, tabletype.ID, &tabletype)
 			break
 		case "TABLE_GENERIC_NS_LIST":
 			var humptyStrList = []string{
@@ -229,26 +228,26 @@ func ImportTableData(data []interface{}) error {
 
 			tabletype.TypeName = "IP_LIST"
 			tabletype.Data = ipList
-			err = SetOneInDao(ds.TABLE_GENERIC_NS_LIST, tabletype.ID, tabletype)
+			err = SetOneInDao(db.TABLE_GENERIC_NS_LIST, tabletype.ID, tabletype)
 			break
-		case "TABLE_FIRMWARE_CONFIG":
+		case "TABLE_FIRMWARE_CONFIGS":
 			var firmwareConfig = coreef.NewEmptyFirmwareConfig()
 			err = json.Unmarshal([]byte(row.(TableData).Tablerow), &firmwareConfig)
-			err = SetOneInDao(ds.TABLE_FIRMWARE_CONFIG, firmwareConfig.ID, firmwareConfig)
+			err = SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, firmwareConfig.ID, firmwareConfig)
 			break
 
-		case "TABLE_FIRMWARE_RULE":
+		case "TABLE_FIRMWARE_RULES":
 			var firmwareRule = corefw.NewEmptyFirmwareRule()
 			var data_str = row.(TableData).Tablerow
 			err = json.Unmarshal([]byte(data_str), &firmwareRule)
-			err = SetOneInDao(ds.TABLE_FIRMWARE_RULE, firmwareRule.ID, firmwareRule)
+			err = SetOneInDao(db.TABLE_FIRMWARE_RULES, firmwareRule.ID, firmwareRule)
 			break
 
-		case "TABLE_SINGLETON_FILTER_VALUE":
+		case "TABLE_SINGLETON_FILTER_VALUES":
 			var data_str = row.(TableData).Tablerow
 			locationRoundRobinFilter := coreef.NewEmptyDownloadLocationRoundRobinFilterValue()
 			err = json.Unmarshal([]byte(data_str), &locationRoundRobinFilter)
-			err = SetOneInDao(ds.TABLE_SINGLETON_FILTER_VALUE, locationRoundRobinFilter.ID, locationRoundRobinFilter)
+			err = SetOneInDao(db.TABLE_SINGLETON_FILTER_VALUES, locationRoundRobinFilter.ID, locationRoundRobinFilter)
 			break
 		}
 
@@ -333,7 +332,7 @@ func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 
 // initDB - local implementation to avoid circular dependency
 func initDB() {
-	CreateFirmwareRuleTemplates() // Initialize FirmwareRule templates
+	CreateFirmwareRuleTemplates(db.GetDefaultTenantId()) // Initialize FirmwareRule templates
 	//initAppSettings()             // Initialize Application settings
 }
 
@@ -661,12 +660,12 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 }
 
 func TestAllQueriesApis(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
 	//server, _ := SetupTestEnvironment()
 	DeleteAllEntities()
 
 	table_data := []interface{}{
-		TableData{Tablename: "TABLE_ENVIRONMENT", Tablerow: `{"id":"AX061AEI","updated":1591604177484,"description":"RT1319"}`},
+		TableData{Tablename: "TABLE_ENVIRONMENTS", Tablerow: `{"id":"AX061AEI","updated":1591604177484,"description":"RT1319"}`},
 		TableData{Tablename: "TABLE_GENERIC_NS_LIST", Tablerow: ``},
 		TableData{Tablename: "TABLE_FIRMWARE_CONFIG", Tablerow: `{"id":"207dc5a5-d324-4e2e-9daf-5017ed98f8f3","updated":1558520642121,"description":"CPEAUTO_FW_AA:AA:AA:AA:AA:AA","supportedModelIds":["XCONFTESTMODEL"],"firmwareDownloadProtocol":"http","firmwareFilename":"DPC3941_3.3p17s1_DEV_sey-test","firmwareVersion":"DPC3941_3.3p17s1_DEV_sey-test","rebootImmediately":false,"applicationType":"stb"}`},
 		TableData{Tablename: "TABLE_FIRMWARE_RULE", Tablerow: `{"id":"437afab9-cbe3-4e4d-b175-220865e0f720","name":" Cisco Arris XG1","rule":{"negated":false,"compoundParts":[{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"ipAddress"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":""}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"env"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"VBN"}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"model"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"MX011ANC"}}}}}]},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"e675358b-506d-48f8-86c5-c8c8e3bb6254","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"IP_RULE","active":true}`},

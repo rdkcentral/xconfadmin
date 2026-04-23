@@ -40,7 +40,7 @@ func findPrioritizableById(itemId string, prioritizables []core.Prioritizable) b
 	return false
 }
 
-func ChangePrioritizablePriorities(prioritizable core.Prioritizable, newPriority int, applicationType string) ([]core.Prioritizable, error) {
+func ChangePrioritizablePriorities(tenantId string, prioritizable core.Prioritizable, newPriority int, applicationType string) ([]core.Prioritizable, error) {
 	if newPriority <= 0 {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, fmt.Sprintf("Invalid priority value %v", newPriority))
 	}
@@ -52,7 +52,7 @@ func ChangePrioritizablePriorities(prioritizable core.Prioritizable, newPriority
 	if !findPrioritizableById(prioritizable.GetID(), reorganizedPrioritizables) {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Updated prioritizable '%s' is not present in reorganized prioritizables", prioritizable.GetID()))
 	}
-	if err := SaveFeatureRules(reorganizedPrioritizables); err != nil {
+	if err := SaveFeatureRules(tenantId, reorganizedPrioritizables); err != nil {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, fmt.Sprintf("Failed to save prioritizable after priority reorganization: %s", err.Error()))
 	}
 	log.Info("Priority of Prioritizable " + prioritizable.GetID() + " has been changed, oldPriority=" + strconv.Itoa(oldPriority) + ", newPriority=" + strconv.Itoa(newPriority))

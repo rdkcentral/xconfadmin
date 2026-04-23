@@ -183,13 +183,13 @@ func TestCancelChangeHandlerWithSyntheticChange(t *testing.T) {
 	c.ApplicationType = shared.STB
 	c.Author = "author"
 	c.Operation = xwchange.Create
-	if err := xchange.CreateOneChange(c); err != nil {
+	if err := xchange.CreateOneChange(db.GetDefaultTenantId(), c); err != nil {
 		t.Fatalf("failed to persist change: %v", err)
 	}
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/cancel/"+c.ID+"?applicationType=stb", nil)
 	rr := execChangeReq(r, nil)
 	assert.Equal(t, http.StatusOK, rr.Code)
-	assert.Nil(t, xchange.GetOneChange(c.ID))
+	assert.Nil(t, xchange.GetOneChange(db.GetDefaultTenantId(), c.ID))
 }
 
 func TestGetApprovedHandlerEmpty(t *testing.T) {
@@ -267,11 +267,11 @@ func TestRevertChangeHandler_RevertCreateOperation(t *testing.T) {
 		NewEntity:       profile,
 	}
 	approvedChange := xwchange.ApprovedChange(*change)
-	err := xchange.SetOneApprovedChange(&approvedChange)
+	err := xchange.SetOneApprovedChange(db.GetDefaultTenantId(), &approvedChange)
 	assert.Nil(t, err)
 
 	// Verify profile exists before revert
-	assert.NotNil(t, logupload.GetOnePermanentTelemetryProfile(profile.ID))
+	assert.NotNil(t, logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), profile.ID))
 
 	// Execute revert
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/revert/"+approvedChange.ID+"?applicationType=stb", nil)
@@ -281,10 +281,10 @@ func TestRevertChangeHandler_RevertCreateOperation(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify approved change was deleted
-	assert.Nil(t, xchange.GetOneApprovedChange(approvedChange.ID))
+	assert.Nil(t, xchange.GetOneApprovedChange(db.GetDefaultTenantId(), approvedChange.ID))
 
 	// Verify profile was deleted (CREATE operation reverted)
-	assert.Nil(t, logupload.GetOnePermanentTelemetryProfile(profile.ID))
+	assert.Nil(t, logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), profile.ID))
 }
 
 func TestRevertChangeHandler_RevertUpdateOperation(t *testing.T) {
@@ -310,7 +310,7 @@ func TestRevertChangeHandler_RevertUpdateOperation(t *testing.T) {
 			},
 		},
 	}
-	err := xlogupload.SetOnePermanentTelemetryProfile(oldProfile.ID, oldProfile)
+	err := xlogupload.SetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), oldProfile.ID, oldProfile)
 	assert.Nil(t, err)
 
 	// Create a copy of oldProfile for storing in the Change object
@@ -353,7 +353,7 @@ func TestRevertChangeHandler_RevertUpdateOperation(t *testing.T) {
 	}
 
 	// Update the profile to the new version
-	err = xlogupload.SetOnePermanentTelemetryProfile(newProfile.ID, newProfile)
+	err = xlogupload.SetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), newProfile.ID, newProfile)
 	assert.Nil(t, err)
 
 	// Create an approved change for UPDATE operation
@@ -369,11 +369,11 @@ func TestRevertChangeHandler_RevertUpdateOperation(t *testing.T) {
 		NewEntity:       newProfile,
 	}
 	approvedChange := xwchange.ApprovedChange(*change)
-	err = xchange.SetOneApprovedChange(&approvedChange)
+	err = xchange.SetOneApprovedChange(db.GetDefaultTenantId(), &approvedChange)
 	assert.Nil(t, err)
 
 	// Verify profile has new name before revert
-	currentProfile := logupload.GetOnePermanentTelemetryProfile(newProfile.ID)
+	currentProfile := logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), newProfile.ID)
 	assert.NotNil(t, currentProfile)
 	assert.Equal(t, "updated-name", currentProfile.Name)
 
@@ -385,7 +385,7 @@ func TestRevertChangeHandler_RevertUpdateOperation(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify approved change was deleted
-	assert.Nil(t, xchange.GetOneApprovedChange(approvedChange.ID))
+	assert.Nil(t, xchange.GetOneApprovedChange(db.GetDefaultTenantId(), approvedChange.ID))
 
 	// Note: The actual profile reversion is tested in service layer tests
 	// Here we just verify the handler processes the request correctly
@@ -402,11 +402,11 @@ func TestRevertChangeHandler_RevertDeleteOperation(t *testing.T) {
 	deletedProfile := createTestPermanentTelemetryProfile("revert-delete-profile", "stb")
 
 	// Verify profile exists initially
-	existingProfile := logupload.GetOnePermanentTelemetryProfile(deletedProfile.ID)
+	existingProfile := logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), deletedProfile.ID)
 	assert.NotNil(t, existingProfile, "Profile should exist before delete")
 
 	// Delete the profile to simulate a delete operation
-	xlogupload.DeletePermanentTelemetryProfile(deletedProfile.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), deletedProfile.ID)
 
 	// Note: We skip checking if profile is actually deleted as this can vary
 	// based on caching and storage implementation. The key test is the handler behavior.
@@ -423,7 +423,7 @@ func TestRevertChangeHandler_RevertDeleteOperation(t *testing.T) {
 		OldEntity:       deletedProfile,
 	}
 	approvedChange := xwchange.ApprovedChange(*change)
-	err := xchange.SetOneApprovedChange(&approvedChange)
+	err := xchange.SetOneApprovedChange(db.GetDefaultTenantId(), &approvedChange)
 	assert.Nil(t, err)
 
 	// Execute revert
@@ -434,7 +434,7 @@ func TestRevertChangeHandler_RevertDeleteOperation(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify approved change was deleted
-	assert.Nil(t, xchange.GetOneApprovedChange(approvedChange.ID))
+	assert.Nil(t, xchange.GetOneApprovedChange(db.GetDefaultTenantId(), approvedChange.ID))
 
 	// Note: The actual profile restoration is tested in service layer tests
 	// Here we just verify the handler processes the request correctly
@@ -458,7 +458,7 @@ func TestRevertChangeHandler_ResponseHeaders(t *testing.T) {
 		NewEntity:       profile,
 	}
 	approvedChange := xwchange.ApprovedChange(*change)
-	err := xchange.SetOneApprovedChange(&approvedChange)
+	err := xchange.SetOneApprovedChange(db.GetDefaultTenantId(), &approvedChange)
 	assert.Nil(t, err)
 
 	// Execute revert
@@ -506,24 +506,24 @@ func TestRevertChangeHandler_MultipleReverts(t *testing.T) {
 	}
 	approvedChange2 := xwchange.ApprovedChange(*change2)
 
-	err := xchange.SetOneApprovedChange(&approvedChange1)
+	err := xchange.SetOneApprovedChange(db.GetDefaultTenantId(), &approvedChange1)
 	assert.Nil(t, err)
-	err = xchange.SetOneApprovedChange(&approvedChange2)
+	err = xchange.SetOneApprovedChange(db.GetDefaultTenantId(), &approvedChange2)
 	assert.Nil(t, err)
 
 	// Revert first change
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/revert/"+approvedChange1.ID+"?applicationType=stb", nil)
 	rr := execChangeReq(r, nil)
 	assert.Equal(t, http.StatusOK, rr.Code)
-	assert.Nil(t, xchange.GetOneApprovedChange(approvedChange1.ID))
-	assert.Nil(t, logupload.GetOnePermanentTelemetryProfile(profile1.ID))
+	assert.Nil(t, xchange.GetOneApprovedChange(db.GetDefaultTenantId(), approvedChange1.ID))
+	assert.Nil(t, logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), profile1.ID))
 
 	// Revert second change
 	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/revert/"+approvedChange2.ID+"?applicationType=stb", nil)
 	rr = execChangeReq(r, nil)
 	assert.Equal(t, http.StatusOK, rr.Code)
-	assert.Nil(t, xchange.GetOneApprovedChange(approvedChange2.ID))
-	assert.Nil(t, logupload.GetOnePermanentTelemetryProfile(profile2.ID))
+	assert.Nil(t, xchange.GetOneApprovedChange(db.GetDefaultTenantId(), approvedChange2.ID))
+	assert.Nil(t, logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), profile2.ID))
 }
 
 func TestRevertChangeHandler_DuplicateRevertAttempt(t *testing.T) {
@@ -544,7 +544,7 @@ func TestRevertChangeHandler_DuplicateRevertAttempt(t *testing.T) {
 		NewEntity:       profile,
 	}
 	approvedChange := xwchange.ApprovedChange(*change)
-	err := xchange.SetOneApprovedChange(&approvedChange)
+	err := xchange.SetOneApprovedChange(db.GetDefaultTenantId(), &approvedChange)
 	assert.Nil(t, err)
 
 	// First revert should succeed
@@ -582,7 +582,7 @@ func createTestPermanentTelemetryProfile(name string, applicationType string) *l
 		},
 	}
 	// Persist the profile
-	err := xlogupload.SetOnePermanentTelemetryProfile(profile.ID, profile)
+	err := xlogupload.SetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), profile.ID, profile)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create test profile: %v", err))
 	}
@@ -590,9 +590,9 @@ func createTestPermanentTelemetryProfile(name string, applicationType string) *l
 }
 
 func cleanupAllApprovedChanges() {
-	approvedChanges := xchange.GetApprovedChangeList()
+	approvedChanges := xchange.GetApprovedChangeList(db.GetDefaultTenantId())
 	for _, ac := range approvedChanges {
-		xchange.DeleteOneApprovedChange(ac.ID)
+		xchange.DeleteOneApprovedChange(db.GetDefaultTenantId(), ac.ID)
 	}
 }
 
@@ -719,7 +719,7 @@ func TestCancelChangeHandler_SuccessWithHeaders(t *testing.T) {
 		Author:          "testuser",
 		Operation:       xwchange.Create,
 	}
-	err := xchange.CreateOneChange(change)
+	err := xchange.CreateOneChange(db.GetDefaultTenantId(), change)
 	assert.Nil(t, err)
 
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/cancel/"+change.ID+"?applicationType=stb", nil)
@@ -1024,16 +1024,16 @@ func TestGetChangesFilteredHandler_SuccessWithHeaders(t *testing.T) {
 
 // Helper function to cleanup all changes
 func cleanupAllChanges() {
-	changes := xchange.GetChangeList()
+	changes := xchange.GetChangeList(db.GetDefaultTenantId())
 	for _, change := range changes {
-		xchange.DeleteOneChange(change.ID)
+		xchange.DeleteOneChange(db.GetDefaultTenantId(), change.ID)
 	}
 }
 
 func cleanupAllPermanentTelemetryProfiles() {
-	profiles := logupload.GetPermanentTelemetryProfileList()
+	profiles := logupload.GetPermanentTelemetryProfileList(db.GetDefaultTenantId())
 	for _, profile := range profiles {
-		xlogupload.DeletePermanentTelemetryProfile(profile.ID)
+		xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), profile.ID)
 	}
 }
 
@@ -1059,7 +1059,7 @@ func TestGetProfileChangesHandler_SuccessWithChanges(t *testing.T) {
 			Operation:       xwchange.Create,
 			Updated:         int64(1000000 + i),
 		}
-		err := xchange.CreateOneChange(change)
+		err := xchange.CreateOneChange(db.GetDefaultTenantId(), change)
 		assert.Nil(t, err)
 	}
 
@@ -1094,8 +1094,8 @@ func TestGetProfileChangesHandler_SuccessSortedByUpdated(t *testing.T) {
 		Updated:         9000,
 	}
 
-	xchange.CreateOneChange(change1)
-	xchange.CreateOneChange(change2)
+	xchange.CreateOneChange(db.GetDefaultTenantId(), change1)
+	xchange.CreateOneChange(db.GetDefaultTenantId(), change2)
 
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/changes?applicationType=stb", nil)
 	rr := execChangeReq(r, nil)
@@ -1130,7 +1130,7 @@ func TestRevertChangeHandler_SuccessWithHeaders(t *testing.T) {
 			},
 		},
 	}
-	err := xlogupload.SetOnePermanentTelemetryProfile(profile.ID, profile)
+	err := xlogupload.SetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), profile.ID, profile)
 	assert.Nil(t, err)
 
 	approvedChange := &xwchange.ApprovedChange{
@@ -1142,7 +1142,7 @@ func TestRevertChangeHandler_SuccessWithHeaders(t *testing.T) {
 		Operation:       xwchange.Create,
 		NewEntity:       profile,
 	}
-	err = xchange.SetOneApprovedChange(approvedChange)
+	err = xchange.SetOneApprovedChange(db.GetDefaultTenantId(), approvedChange)
 	assert.Nil(t, err)
 
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/revert/"+approvedChange.ID+"?applicationType=stb", nil)
@@ -1164,7 +1164,7 @@ func TestCancelChangeHandler_SuccessDeletesChange(t *testing.T) {
 		Author:          "testuser",
 		Operation:       xwchange.Create,
 	}
-	err := xchange.CreateOneChange(change)
+	err := xchange.CreateOneChange(db.GetDefaultTenantId(), change)
 	assert.Nil(t, err)
 
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/cancel/"+change.ID+"?applicationType=stb", nil)
@@ -1174,20 +1174,20 @@ func TestCancelChangeHandler_SuccessDeletesChange(t *testing.T) {
 	assert.NotEmpty(t, rr.Header())
 
 	// Verify change was deleted
-	deletedChange := xchange.GetOneChange(change.ID)
+	deletedChange := xchange.GetOneChange(db.GetDefaultTenantId(), change.ID)
 	assert.Nil(t, deletedChange)
 }
 
 // createHeadersMap Coverage Tests
 func TestCreateHeadersMap_ValidApplicationType(t *testing.T) {
-	headers := createHeadersMap("stb")
+	headers := createHeadersMap(db.GetDefaultTenantId(), "stb")
 	assert.NotNil(t, headers)
 	assert.Contains(t, headers, "pendingChangesSize")
 	assert.Contains(t, headers, "approvedChangesSize")
 }
 
 func TestCreateHeadersMap_EmptyApplicationType(t *testing.T) {
-	headers := createHeadersMap("")
+	headers := createHeadersMap(db.GetDefaultTenantId(), "")
 	assert.NotNil(t, headers)
 	// Should still create map even with empty string
 	assert.Contains(t, headers, "pendingChangesSize")
@@ -1208,7 +1208,7 @@ func TestChangesGeneratePage_WithChanges(t *testing.T) {
 			Author:          "testuser",
 			Operation:       xwchange.Create,
 		}
-		xchange.CreateOneChange(change)
+		xchange.CreateOneChange(db.GetDefaultTenantId(), change)
 	}
 
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/grouped?pageNumber=1&pageSize=10&applicationType=stb", nil)
@@ -1230,7 +1230,7 @@ func TestApprovedChangesGeneratePage_WithApprovedChanges(t *testing.T) {
 			Author:          "testuser",
 			Operation:       xwchange.Create,
 		}
-		xchange.SetOneApprovedChange(approvedChange)
+		xchange.SetOneApprovedChange(db.GetDefaultTenantId(), approvedChange)
 	}
 
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/groupedApproved?pageNumber=1&pageSize=10&applicationType=stb", nil)
@@ -1261,8 +1261,8 @@ func TestGetChangedEntityIdsHandler_SuccessWithEntityIds(t *testing.T) {
 		Operation:       xwchange.Update,
 	}
 
-	xchange.CreateOneChange(change1)
-	xchange.CreateOneChange(change2)
+	xchange.CreateOneChange(db.GetDefaultTenantId(), change1)
+	xchange.CreateOneChange(db.GetDefaultTenantId(), change2)
 
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/entityIds?applicationType=stb", nil)
 	rr := execChangeReq(r, nil)
@@ -1286,7 +1286,7 @@ func TestGetApprovedFilteredHandler_SuccessWithCustomPageSize(t *testing.T) {
 			Author:          "testuser",
 			Operation:       xwchange.Create,
 		}
-		xchange.SetOneApprovedChange(approvedChange)
+		xchange.SetOneApprovedChange(db.GetDefaultTenantId(), approvedChange)
 	}
 
 	body := []byte(`{}`)
@@ -1309,7 +1309,7 @@ func TestGetApprovedFilteredHandler_SuccessWithSearchContext(t *testing.T) {
 		Author:          "searchuser",
 		Operation:       xwchange.Create,
 	}
-	xchange.SetOneApprovedChange(approvedChange)
+	xchange.SetOneApprovedChange(db.GetDefaultTenantId(), approvedChange)
 
 	body := []byte(`{"author":"searchuser"}`)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/approved/filtered?pageNumber=1&pageSize=10&applicationType=stb", bytes.NewReader(body))

@@ -7,9 +7,8 @@ import (
 	"strings"
 
 	core "github.com/rdkcentral/xconfadmin/shared"
-	util "github.com/rdkcentral/xconfadmin/util"
-
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfadmin/util"
+	"github.com/rdkcentral/xconfwebconfig/db"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -118,8 +117,8 @@ func NewLogFileInf() interface{} {
 	return &LogFile{}
 }
 
-func SetLogFile(id string, logFile *LogFile) error {
-	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_LOG_FILE, id, logFile)
+func SetLogFile(tennantId string, id string, logFile *LogFile) error {
+	err := db.GetCachedSimpleDao().SetOne(tennantId, db.TABLE_LOG_FILES, id, logFile)
 	if err != nil {
 		log.Warn("error saving logFile ")
 	}
@@ -147,9 +146,9 @@ func NewLogFilesGroupsInf() interface{} {
 	return &LogFilesGroups{}
 }
 
-func GetLogFileGroupsList(size int) ([]*LogFilesGroups, error) {
+func GetLogFileGroupsList(tenantId string, size int) ([]*LogFilesGroups, error) {
 	var logFilesGroupsList []*LogFilesGroups
-	logFilesGroupsInst, err := ds.GetCachedSimpleDao().GetAllAsList(ds.TABLE_LOG_FILES_GROUPS, size)
+	logFilesGroupsInst, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_LOG_FILE_GROUPS, size)
 	if err != nil {
 		log.Warn("no logFilesGroups found ")
 		return nil, err

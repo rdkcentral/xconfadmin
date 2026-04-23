@@ -28,6 +28,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	xchange "github.com/rdkcentral/xconfadmin/shared/change"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
@@ -60,7 +61,7 @@ func seedCreateChange(t *testing.T, name string) *xwchange.TelemetryTwoChange {
 	ch.EntityType = xchange.TelemetryTwoProfile
 	ch.ApplicationType = "stb"
 	ch.Author = "tester"
-	if err := xchange.CreateOneTelemetryTwoChange(ch); err != nil {
+	if err := xchange.CreateOneTelemetryTwoChange(db.GetDefaultTenantId(), ch); err != nil {
 		t.Fatalf("seed err: %v", err)
 	}
 	return ch
@@ -83,7 +84,7 @@ func TestApproveAndCancelAndRevertHandlers(t *testing.T) {
 	CancelTwoChangeHandler(rr2, r2)
 	assert.Equal(t, http.StatusOK, rr2.Code)
 	// revert previously approved change
-	approved := xchange.GetOneApprovedTelemetryTwoChange(ch.ID)
+	approved := xchange.GetOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), ch.ID)
 	r3 := httptest.NewRequest("GET", fmt.Sprintf("/xconfAdminService/telemetry/v2/change/revert/%s?applicationType=stb", approved.ID), nil)
 	r3 = mux.SetURLVars(r3, map[string]string{"approveId": approved.ID})
 	rr3 := httptest.NewRecorder()
@@ -151,8 +152,8 @@ func TestGetTwoChangesFilteredHandler_Success(t *testing.T) {
 	assert.GreaterOrEqual(t, len(changes), 2)
 
 	// Cleanup
-	xchange.DeleteOneTelemetryTwoChange(ch1.ID)
-	xchange.DeleteOneTelemetryTwoChange(ch2.ID)
+	xchange.DeleteOneTelemetryTwoChange(db.GetDefaultTenantId(), ch1.ID)
+	xchange.DeleteOneTelemetryTwoChange(db.GetDefaultTenantId(), ch2.ID)
 }
 
 func TestGetTwoChangesFilteredHandler_WithContextFilter(t *testing.T) {
@@ -175,7 +176,7 @@ func TestGetTwoChangesFilteredHandler_WithContextFilter(t *testing.T) {
 	assert.GreaterOrEqual(t, len(changes), 1)
 
 	// Cleanup
-	xchange.DeleteOneTelemetryTwoChange(ch.ID)
+	xchange.DeleteOneTelemetryTwoChange(db.GetDefaultTenantId(), ch.ID)
 }
 
 func TestGetTwoChangesFilteredHandler_MissingPageNumber(t *testing.T) {
@@ -268,7 +269,7 @@ func TestGetApprovedTwoChangesFilteredHandler_Success(t *testing.T) {
 
 	// Cleanup
 	for _, ac := range approvedChanges {
-		xchange.DeleteOneApprovedTelemetryTwoChange(ac.ID)
+		xchange.DeleteOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), ac.ID)
 	}
 }
 
@@ -297,7 +298,7 @@ func TestGetApprovedTwoChangesFilteredHandler_WithFilter(t *testing.T) {
 
 	// Cleanup
 	for _, ac := range approvedChanges {
-		xchange.DeleteOneApprovedTelemetryTwoChange(ac.ID)
+		xchange.DeleteOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), ac.ID)
 	}
 }
 
@@ -361,8 +362,8 @@ func TestRevertTwoChangesHandler_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr2.Code)
 
 	// Get approved change IDs
-	approved1 := xchange.GetOneApprovedTelemetryTwoChange(ch.ID)
-	approved2 := xchange.GetOneApprovedTelemetryTwoChange(ch2.ID)
+	approved1 := xchange.GetOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), ch.ID)
+	approved2 := xchange.GetOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), ch2.ID)
 	assert.NotNil(t, approved1)
 	assert.NotNil(t, approved2)
 
@@ -450,17 +451,17 @@ func TestApproveTwoChangesHandler_Success(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify changes were approved
-	approved1 := xchange.GetOneApprovedTelemetryTwoChange(ch1.ID)
-	approved2 := xchange.GetOneApprovedTelemetryTwoChange(ch2.ID)
+	approved1 := xchange.GetOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), ch1.ID)
+	approved2 := xchange.GetOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), ch2.ID)
 	assert.NotNil(t, approved1)
 	assert.NotNil(t, approved2)
 
 	// Cleanup
 	if approved1 != nil {
-		xchange.DeleteOneApprovedTelemetryTwoChange(approved1.ID)
+		xchange.DeleteOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), approved1.ID)
 	}
 	if approved2 != nil {
-		xchange.DeleteOneApprovedTelemetryTwoChange(approved2.ID)
+		xchange.DeleteOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), approved2.ID)
 	}
 }
 
@@ -524,12 +525,12 @@ func TestApproveTwoChangesHandler_MixedValidInvalid(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify the valid one got approved
-	approved := xchange.GetOneApprovedTelemetryTwoChange(ch.ID)
+	approved := xchange.GetOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), ch.ID)
 	assert.NotNil(t, approved)
 
 	// Cleanup
 	if approved != nil {
-		xchange.DeleteOneApprovedTelemetryTwoChange(approved.ID)
+		xchange.DeleteOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), approved.ID)
 	}
 }
 
@@ -564,7 +565,7 @@ func TestGetApprovedTwoChangesHandler_Success(t *testing.T) {
 
 	// Cleanup
 	for _, ac := range approvedChanges {
-		xchange.DeleteOneApprovedTelemetryTwoChange(ac.ID)
+		xchange.DeleteOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), ac.ID)
 	}
 }
 
@@ -601,6 +602,6 @@ func TestGetApprovedTwoChangesHandler_ApplicationTypeFilter(t *testing.T) {
 	// Verify all returned changes are for stb application type
 	for _, ac := range approvedChanges {
 		assert.Equal(t, "stb", ac.ApplicationType)
-		xchange.DeleteOneApprovedTelemetryTwoChange(ac.ID)
+		xchange.DeleteOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), ac.ID)
 	}
 }

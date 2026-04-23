@@ -47,15 +47,15 @@ const (
 )
 
 var dcmRuleTableMutex sync.Mutex
-var dcmRuleTableLock = db.NewDistributedLock(db.TABLE_DCM_RULE, 10)
+var dcmRuleTableLock = db.NewDistributedLock(db.TABLE_DCM_RULES, 10)
 
-func GetDcmFormulaAll() []*logupload.DCMGenericRule {
-	dcmformularules := logupload.GetDCMGenericRuleListForAS()
+func GetDcmFormulaAll(tenantId string) []*logupload.DCMGenericRule {
+	dcmformularules := logupload.GetDCMGenericRuleListForAS(tenantId)
 	return dcmformularules
 }
 
-func GetDcmFormula(id string) *logupload.DCMGenericRule {
-	dcmformula := logupload.GetOneDCMGenericRule(id)
+func GetDcmFormula(tenantId string, id string) *logupload.DCMGenericRule {
+	dcmformula := logupload.GetOneDCMGenericRule(tenantId, id)
 	if dcmformula != nil {
 		return dcmformula
 	}
@@ -63,21 +63,21 @@ func GetDcmFormula(id string) *logupload.DCMGenericRule {
 
 }
 
-func validateIfExists(id string, appType string) error {
-	existingFormula := GetDcmFormula(id)
+func validateIfExists(tenantId string, id string, appType string) error {
+	existingFormula := GetDcmFormula(tenantId, id)
 	if existingFormula == nil || existingFormula.ApplicationType != appType {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id "+id+" does not exist ")
 	}
 	return nil
 }
 
-func DeleteDcmFormulabyId(id string, appType string) *xcommon.ResponseEntity {
-	err := validateIfExists(id, appType)
+func DeleteDcmFormulabyId(tenantId string, id string, appType string) *xcommon.ResponseEntity {
+	err := validateIfExists(tenantId, id, appType)
 	if err != nil {
 		return xcommon.NewResponseEntityWithStatus(http.StatusNotFound, err, nil)
 	}
 
-	err = DeleteOneDcmFormula(id, appType)
+	err = DeleteOneDcmFormula(tenantId, id, appType)
 	if err != nil {
 		return xcommon.NewResponseEntityWithStatus(http.StatusInternalServerError, err, nil)
 	}
@@ -85,57 +85,57 @@ func DeleteDcmFormulabyId(id string, appType string) *xcommon.ResponseEntity {
 	return xcommon.NewResponseEntityWithStatus(http.StatusNoContent, nil, nil)
 }
 
-func SaveDcmRules(itemList []core.Prioritizable) error {
+func SaveDcmRules(tenantId string, itemList []core.Prioritizable) error {
 	for _, item := range itemList {
 		rule := item.(*logupload.DCMGenericRule)
-		if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, rule.GetID(), rule); err != nil {
+		if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_DCM_RULES, rule.GetID(), rule); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func DeleteOneDcmFormula(id string, appType string) error {
-	existingRule := logupload.GetOneDCMGenericRule(id)
+func DeleteOneDcmFormula(tenantId string, id string, appType string) error {
+	existingRule := logupload.GetOneDCMGenericRule(tenantId, id)
 	if existingRule == nil {
 		return fmt.Errorf("Entity with id %s does not exist", id)
 	}
-	err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_DCM_RULE, id)
+	err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_DCM_RULES, id)
 	if err != nil {
 		return err
 	}
-	devicesettings := logupload.GetOneDeviceSettings(id)
+	devicesettings := logupload.GetOneDeviceSettings(tenantId, id)
 	if devicesettings != nil {
-		err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_DEVICE_SETTINGS, id)
+		err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_DEVICE_SETTINGS, id)
 		if err != nil {
 			return err
 		}
 	}
-	loguploadsettings := logupload.GetOneLogUploadSettings(id)
+	loguploadsettings := logupload.GetOneLogUploadSettings(tenantId, id)
 	if loguploadsettings != nil {
-		err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_LOG_UPLOAD_SETTINGS, id)
+		err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_LOG_UPLOAD_SETTINGS, id)
 		if err != nil {
 			return err
 		}
 	}
-	vodsettings := logupload.GetOneVodSettings(id)
+	vodsettings := logupload.GetOneVodSettings(tenantId, id)
 	if vodsettings != nil {
-		err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_VOD_SETTINGS, id)
+		err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_VOD_SETTINGS, id)
 		if err != nil {
 			return err
 		}
 	}
 
-	dcmRulesByAppType := GetDcmRulesByApplicationType(appType)
+	dcmRulesByAppType := GetDcmRulesByApplicationType(tenantId, appType)
 	prioritizableRules := DcmRulesToPrioritizables(dcmRulesByAppType)
-	err = SaveDcmRules(queries.PackPriorities(prioritizableRules, existingRule))
+	err = SaveDcmRules(tenantId, queries.PackPriorities(prioritizableRules, existingRule))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func dcmRuleValidate(dfrule *logupload.DCMGenericRule) *xwhttp.ResponseEntity {
+func dcmRuleValidate(tenantId string, dfrule *logupload.DCMGenericRule) *xwhttp.ResponseEntity {
 	if dfrule == nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("DCM formula Rule should be specified"), nil)
 	}
@@ -160,7 +160,7 @@ func dcmRuleValidate(dfrule *logupload.DCMGenericRule) *xwhttp.ResponseEntity {
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
-	err = queries.RunGlobalValidation(*dfrule.GetRule(), queries.GetFirmwareRuleAllowedOperations)
+	err = queries.RunGlobalValidation(tenantId, *dfrule.GetRule(), queries.GetFirmwareRuleAllowedOperations)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
@@ -168,7 +168,7 @@ func dcmRuleValidate(dfrule *logupload.DCMGenericRule) *xwhttp.ResponseEntity {
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
-	dfrules := GetDcmFormulaAll()
+	dfrules := GetDcmFormulaAll(tenantId)
 	for _, exdfrule := range dfrules {
 		if exdfrule.ApplicationType != dfrule.ApplicationType {
 			continue
@@ -215,31 +215,31 @@ func DcmRulesToPrioritizables(dcmRules []*logupload.DCMGenericRule) []core.Prior
 	return prioritizables
 }
 
-func CreateDcmRule(dfrule *logupload.DCMGenericRule, appType string) *xwhttp.ResponseEntity {
-	if existingRule := logupload.GetOneDCMGenericRule(dfrule.ID); existingRule != nil {
+func CreateDcmRule(tenantId string, dfrule *logupload.DCMGenericRule, appType string) *xwhttp.ResponseEntity {
+	if existingRule := logupload.GetOneDCMGenericRule(tenantId, dfrule.ID); existingRule != nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s already exists", dfrule.ID), nil)
 	}
 	if dfrule.ApplicationType != appType {
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s ApplicationType doesn't match", dfrule.ID), nil)
 	}
-	if respEntity := dcmRuleValidate(dfrule); respEntity.Error != nil {
+	if respEntity := dcmRuleValidate(tenantId, dfrule); respEntity.Error != nil {
 		return respEntity
 	}
 
-	dcmRulesByAppType := GetDcmRulesByApplicationType(dfrule.ApplicationType)
+	dcmRulesByAppType := GetDcmRulesByApplicationType(tenantId, dfrule.ApplicationType)
 	changedDcmRules := queries.AddNewPrioritizableAndReorganizePriorities(dfrule, DcmRulesToPrioritizables(dcmRulesByAppType))
 	for _, entry := range changedDcmRules {
 		entry.(*logupload.DCMGenericRule).Updated = util.GetTimestamp()
-		if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, entry.GetID(), entry); err != nil {
+		if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_DCM_RULES, entry.GetID(), entry); err != nil {
 			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 		}
 	}
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, dfrule)
 }
 
-func GetDcmRulesByApplicationType(applicationType string) []*logupload.DCMGenericRule {
+func GetDcmRulesByApplicationType(tenantId string, applicationType string) []*logupload.DCMGenericRule {
 	list := []*logupload.DCMGenericRule{}
-	result := GetDcmFormulaAll()
+	result := GetDcmFormulaAll(tenantId)
 	for _, DcmRule := range result {
 		if DcmRule.ApplicationType == applicationType {
 			list = append(list, DcmRule)
@@ -248,7 +248,7 @@ func GetDcmRulesByApplicationType(applicationType string) []*logupload.DCMGeneri
 	return list
 }
 
-func UpdateDcmRule(incomingFormula *logupload.DCMGenericRule, appType string) *xwhttp.ResponseEntity {
+func UpdateDcmRule(tenantId string, incomingFormula *logupload.DCMGenericRule, appType string) *xwhttp.ResponseEntity {
 	if util.IsBlank(incomingFormula.ID) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("ID is empty"), nil)
 	}
@@ -256,29 +256,29 @@ func UpdateDcmRule(incomingFormula *logupload.DCMGenericRule, appType string) *x
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s ApplicationType doesn't match", incomingFormula.ID), nil)
 	}
 
-	existingFormula := logupload.GetOneDCMGenericRule(incomingFormula.ID)
+	existingFormula := logupload.GetOneDCMGenericRule(tenantId, incomingFormula.ID)
 	if existingFormula == nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s does not exist", incomingFormula.ID), nil)
 	}
 	if existingFormula.ApplicationType != incomingFormula.ApplicationType {
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("ApplicationType in db %s doesn't match the ApplicationType %s in req", existingFormula.ApplicationType, incomingFormula.ApplicationType), nil)
 	}
-	respEntity := dcmRuleValidate(incomingFormula)
+	respEntity := dcmRuleValidate(tenantId, incomingFormula)
 	if respEntity.Error != nil {
 		return respEntity
 	}
 
 	if incomingFormula.Priority == existingFormula.Priority {
 		incomingFormula.Updated = util.GetTimestamp()
-		if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, incomingFormula.ID, incomingFormula); err != nil {
+		if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_DCM_RULES, incomingFormula.ID, incomingFormula); err != nil {
 			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 		}
 	} else {
-		formulasByApplicationType := GetDcmRulesByApplicationType(incomingFormula.ApplicationType)
+		formulasByApplicationType := GetDcmRulesByApplicationType(tenantId, incomingFormula.ApplicationType)
 		changedFormulae := queries.UpdatePrioritizablePriorityAndReorganize(incomingFormula, DcmRulesToPrioritizables(formulasByApplicationType), existingFormula.Priority)
 		for _, entry := range changedFormulae {
 			entry.(*logupload.DCMGenericRule).Updated = util.GetTimestamp()
-			if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, entry.GetID(), entry); err != nil {
+			if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_DCM_RULES, entry.GetID(), entry); err != nil {
 				return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 			}
 		}
@@ -322,7 +322,7 @@ func DcmFormulaRuleGeneratePageWithContext(dfrules []*logupload.DCMGenericRule, 
 }
 
 func DcmFormulaFilterByContext(searchContext map[string]string) []*logupload.DCMGenericRule {
-	dcmFormulaRules := logupload.GetDCMGenericRuleListForAS()
+	dcmFormulaRules := logupload.GetDCMGenericRuleListForAS(searchContext[xwcommon.TENANT_ID])
 	dcmFormulaRuleList := []*logupload.DCMGenericRule{}
 	for _, dcmRule := range dcmFormulaRules {
 		if dcmRule == nil {
@@ -353,7 +353,7 @@ func DcmFormulaFilterByContext(searchContext map[string]string) []*logupload.DCM
 	return dcmFormulaRuleList
 }
 
-func importFormula(formulaWithSettings *logupload.FormulaWithSettings, overwrite bool, appType string) *xwhttp.ResponseEntity {
+func importFormula(tenantId string, formulaWithSettings *logupload.FormulaWithSettings, overwrite bool, appType string) *xwhttp.ResponseEntity {
 	formula := formulaWithSettings.Formula
 	deviceSettings := formulaWithSettings.DeviceSettings
 	logUploadSettings := formulaWithSettings.LogUpLoadSettings
@@ -374,7 +374,7 @@ func importFormula(formulaWithSettings *logupload.FormulaWithSettings, overwrite
 				logUploadSettings.Schedule.TimeZone = logupload.UTC
 			}
 		}
-		if respEntity := DeviceSettingsValidate(deviceSettings); respEntity.Error != nil {
+		if respEntity := DeviceSettingsValidate(tenantId, deviceSettings); respEntity.Error != nil {
 			return respEntity
 		}
 	}
@@ -388,7 +388,7 @@ func importFormula(formulaWithSettings *logupload.FormulaWithSettings, overwrite
 		if util.IsBlank(logUploadSettings.Schedule.TimeZone) {
 			logUploadSettings.Schedule.TimeZone = logupload.UTC
 		}
-		if respEntity := LogUploadSettingsValidate(logUploadSettings); respEntity.Error != nil {
+		if respEntity := LogUploadSettingsValidate(tenantId, logUploadSettings); respEntity.Error != nil {
 			return respEntity
 		}
 	}
@@ -399,46 +399,46 @@ func importFormula(formulaWithSettings *logupload.FormulaWithSettings, overwrite
 		if formula.ApplicationType != vodSettings.ApplicationType {
 			return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("vodSettings ApplicationType mismatch"), nil)
 		}
-		if respEntity := VodSettingsValidate(vodSettings); respEntity.Error != nil {
+		if respEntity := VodSettingsValidate(tenantId, vodSettings); respEntity.Error != nil {
 			return respEntity
 		}
 	}
 
 	if overwrite {
-		if respEntity := UpdateDcmRule(formula, appType); respEntity.Error != nil {
+		if respEntity := UpdateDcmRule(tenantId, formula, appType); respEntity.Error != nil {
 			return respEntity
 		}
 		if deviceSettings != nil {
-			if respEntity := UpdateDeviceSettings(deviceSettings, appType); respEntity.Error != nil {
+			if respEntity := UpdateDeviceSettings(tenantId, deviceSettings, appType); respEntity.Error != nil {
 				return respEntity
 			}
 		}
 		if logUploadSettings != nil {
-			if respEntity := UpdateLogUploadSettings(logUploadSettings, appType); respEntity.Error != nil {
+			if respEntity := UpdateLogUploadSettings(tenantId, logUploadSettings, appType); respEntity.Error != nil {
 				return respEntity
 			}
 		}
 		if vodSettings != nil {
-			if respEntity := UpdateVodSettings(vodSettings, appType); respEntity.Error != nil {
+			if respEntity := UpdateVodSettings(tenantId, vodSettings, appType); respEntity.Error != nil {
 				return respEntity
 			}
 		}
 	} else {
-		if respEntity := CreateDcmRule(formula, appType); respEntity.Error != nil {
+		if respEntity := CreateDcmRule(tenantId, formula, appType); respEntity.Error != nil {
 			return respEntity
 		}
 		if deviceSettings != nil {
-			if respEntity := CreateDeviceSettings(deviceSettings, appType); respEntity.Error != nil {
+			if respEntity := CreateDeviceSettings(tenantId, deviceSettings, appType); respEntity.Error != nil {
 				return respEntity
 			}
 		}
 		if logUploadSettings != nil {
-			if respEntity := CreateLogUploadSettings(logUploadSettings, appType); respEntity.Error != nil {
+			if respEntity := CreateLogUploadSettings(tenantId, logUploadSettings, appType); respEntity.Error != nil {
 				return respEntity
 			}
 		}
 		if vodSettings != nil {
-			if respEntity := CreateVodSettings(vodSettings, appType); respEntity.Error != nil {
+			if respEntity := CreateVodSettings(tenantId, vodSettings, appType); respEntity.Error != nil {
 				return respEntity
 			}
 		}
@@ -447,7 +447,7 @@ func importFormula(formulaWithSettings *logupload.FormulaWithSettings, overwrite
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, formulaWithSettings)
 }
 
-func importFormulas(formulaWithSettingsList []*logupload.FormulaWithSettings, appType string, overwrite bool) map[string]xhttp.EntityMessage {
+func importFormulas(tenantId string, formulaWithSettingsList []*logupload.FormulaWithSettings, appType string, overwrite bool) map[string]xhttp.EntityMessage {
 	entitiesMap := map[string]xhttp.EntityMessage{}
 
 	sort.Slice(formulaWithSettingsList, func(i, j int) bool {
@@ -456,7 +456,7 @@ func importFormulas(formulaWithSettingsList []*logupload.FormulaWithSettings, ap
 
 	for _, formulaWithSettings := range formulaWithSettingsList {
 		formula := formulaWithSettings.Formula
-		respEntity := importFormula(formulaWithSettings, overwrite, appType)
+		respEntity := importFormula(tenantId, formulaWithSettings, overwrite, appType)
 		if respEntity.Error != nil {
 			entityMessage := xhttp.EntityMessage{
 				Status:  common.ENTITY_STATUS_FAILURE,

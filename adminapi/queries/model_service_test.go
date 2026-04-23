@@ -20,13 +20,14 @@ package queries
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/stretchr/testify/assert"
 )
 
 // Test GetModels
 func TestGetModels(t *testing.T) {
-	result := GetModels()
+	result := GetModels(db.GetDefaultTenantId())
 	assert.NotNil(t, result)
 	assert.IsType(t, []*shared.ModelResponse{}, result)
 }
@@ -34,7 +35,7 @@ func TestGetModels(t *testing.T) {
 func TestGetModels_ConsistentReturn(t *testing.T) {
 	// Multiple calls should return consistent non-nil results
 	for i := 0; i < 3; i++ {
-		result := GetModels()
+		result := GetModels(db.GetDefaultTenantId())
 		assert.NotNil(t, result)
 		assert.True(t, len(result) >= 0)
 	}
@@ -42,24 +43,24 @@ func TestGetModels_ConsistentReturn(t *testing.T) {
 
 // Test GetModel
 func TestGetModel_ValidId(t *testing.T) {
-	result := GetModel("TEST-MODEL-123")
+	result := GetModel(db.GetDefaultTenantId(), "TEST-MODEL-123")
 	// Result depends on DB state
 	assert.True(t, result != nil || result == nil)
 }
 
 func TestGetModel_EmptyId(t *testing.T) {
-	result := GetModel("")
+	result := GetModel(db.GetDefaultTenantId(), "")
 	// Should handle empty ID
 	assert.Nil(t, result)
 }
 
 func TestGetModel_LowercaseId(t *testing.T) {
-	result := GetModel("test-model")
+	result := GetModel(db.GetDefaultTenantId(), "test-model")
 	assert.True(t, result != nil || result == nil)
 }
 
 func TestGetModel_MixedCaseId(t *testing.T) {
-	result := GetModel("Test-Model-123")
+	result := GetModel(db.GetDefaultTenantId(), "Test-Model-123")
 	assert.True(t, result != nil || result == nil)
 }
 
@@ -72,25 +73,25 @@ func TestGetModel_SpecialCharacters(t *testing.T) {
 
 	for _, id := range testIds {
 		assert.NotPanics(t, func() {
-			GetModel(id)
+			GetModel(db.GetDefaultTenantId(), id)
 		})
 	}
 }
 
 // Test IsExistModel
 func TestIsExistModel_EmptyId(t *testing.T) {
-	result := IsExistModel("")
+	result := IsExistModel(db.GetDefaultTenantId(), "")
 	assert.False(t, result)
 }
 
 func TestIsExistModel_ValidId(t *testing.T) {
-	result := IsExistModel("TEST-MODEL")
+	result := IsExistModel(db.GetDefaultTenantId(), "TEST-MODEL")
 	// Result depends on DB state
 	assert.True(t, result == true || result == false)
 }
 
 func TestIsExistModel_NonExistentModel(t *testing.T) {
-	result := IsExistModel("NON-EXISTENT-MODEL-XYZ-123")
+	result := IsExistModel(db.GetDefaultTenantId(), "NON-EXISTENT-MODEL-XYZ-123")
 	// Should return false for non-existent model
 	assert.True(t, result == true || result == false)
 }
@@ -104,7 +105,7 @@ func TestIsExistModel_MultipleIds(t *testing.T) {
 	}
 
 	for _, id := range testIds {
-		result := IsExistModel(id)
+		result := IsExistModel(db.GetDefaultTenantId(), id)
 		assert.True(t, result == true || result == false)
 	}
 }
@@ -114,7 +115,7 @@ func TestIsExistModel_MultipleIds(t *testing.T) {
 
 func TestCreateModel_EmptyModel(t *testing.T) {
 	model := &shared.Model{}
-	result := CreateModel(model)
+	result := CreateModel(db.GetDefaultTenantId(), model)
 	assert.NotNil(t, result)
 	// Should return error response for invalid model
 }
@@ -124,7 +125,7 @@ func TestCreateModel_ValidModel(t *testing.T) {
 		ID:          "TEST-MODEL-NEW",
 		Description: "Test Model Description",
 	}
-	result := CreateModel(model)
+	result := CreateModel(db.GetDefaultTenantId(), model)
 	assert.NotNil(t, result)
 	// Result depends on validation and DB state
 }
@@ -134,7 +135,7 @@ func TestCreateModel_LowercaseId(t *testing.T) {
 		ID:          "test-model-lowercase",
 		Description: "Test Model",
 	}
-	result := CreateModel(model)
+	result := CreateModel(db.GetDefaultTenantId(), model)
 	assert.NotNil(t, result)
 	// ID should be converted to uppercase
 }
@@ -144,7 +145,7 @@ func TestCreateModel_IdWithSpaces(t *testing.T) {
 		ID:          "  TEST MODEL  ",
 		Description: "Test Model",
 	}
-	result := CreateModel(model)
+	result := CreateModel(db.GetDefaultTenantId(), model)
 	assert.NotNil(t, result)
 	// Spaces should be trimmed
 }
@@ -154,7 +155,7 @@ func TestCreateModel_IdWithSpaces(t *testing.T) {
 
 func TestUpdateModel_EmptyModel(t *testing.T) {
 	model := &shared.Model{}
-	result := UpdateModel(model)
+	result := UpdateModel(db.GetDefaultTenantId(), model)
 	assert.NotNil(t, result)
 }
 
@@ -163,7 +164,7 @@ func TestUpdateModel_ValidModel(t *testing.T) {
 		ID:          "EXISTING-MODEL",
 		Description: "Updated Description",
 	}
-	result := UpdateModel(model)
+	result := UpdateModel(db.GetDefaultTenantId(), model)
 	assert.NotNil(t, result)
 	// Will fail if model doesn't exist, but should not panic
 }
@@ -173,25 +174,25 @@ func TestUpdateModel_NonExistentModel(t *testing.T) {
 		ID:          "NON-EXISTENT-MODEL-XYZ",
 		Description: "Description",
 	}
-	result := UpdateModel(model)
+	result := UpdateModel(db.GetDefaultTenantId(), model)
 	assert.NotNil(t, result)
 	// Should return not found error
 }
 
 // Test DeleteModel
 func TestDeleteModel_EmptyId(t *testing.T) {
-	result := DeleteModel("")
+	result := DeleteModel(db.GetDefaultTenantId(), "")
 	assert.NotNil(t, result)
 }
 
 func TestDeleteModel_ValidId(t *testing.T) {
-	result := DeleteModel("TEST-MODEL-TO-DELETE")
+	result := DeleteModel(db.GetDefaultTenantId(), "TEST-MODEL-TO-DELETE")
 	assert.NotNil(t, result)
 	// Result depends on DB state and usage validation
 }
 
 func TestDeleteModel_NonExistentId(t *testing.T) {
-	result := DeleteModel("NON-EXISTENT-MODEL-DELETE")
+	result := DeleteModel(db.GetDefaultTenantId(), "NON-EXISTENT-MODEL-DELETE")
 	assert.NotNil(t, result)
 	// Should return error for non-existent model
 }
@@ -200,7 +201,7 @@ func TestDeleteModel_MultipleAttempts(t *testing.T) {
 	// Test deleting same ID multiple times doesn't panic
 	testId := "TEST-DELETE-MULTIPLE"
 	for i := 0; i < 3; i++ {
-		result := DeleteModel(testId)
+		result := DeleteModel(db.GetDefaultTenantId(), testId)
 		assert.NotNil(t, result)
 	}
 }
@@ -209,7 +210,7 @@ func TestDeleteModel_MultipleAttempts(t *testing.T) {
 func TestGetModel_VeryLongId(t *testing.T) {
 	longId := "VERY-LONG-MODEL-ID-" + "REPEATED-" + "MANY-" + "TIMES"
 	assert.NotPanics(t, func() {
-		GetModel(longId)
+		GetModel(db.GetDefaultTenantId(), longId)
 	})
 }
 
@@ -222,7 +223,7 @@ func TestIsExistModel_CaseSensitivity(t *testing.T) {
 	}
 
 	for _, id := range testIds {
-		result := IsExistModel(id)
+		result := IsExistModel(db.GetDefaultTenantId(), id)
 		assert.True(t, result == true || result == false)
 	}
 }
@@ -232,7 +233,7 @@ func TestCreateModel_SpecialCharactersInDescription(t *testing.T) {
 		ID:          "TEST-SPECIAL-CHARS",
 		Description: "Description with @#$%^&*() special chars",
 	}
-	result := CreateModel(model)
+	result := CreateModel(db.GetDefaultTenantId(), model)
 	assert.NotNil(t, result)
 }
 
@@ -241,18 +242,18 @@ func TestUpdateModel_ChangeDescription(t *testing.T) {
 		ID:          "TEST-UPDATE-DESC",
 		Description: "New Description",
 	}
-	result := UpdateModel(model)
+	result := UpdateModel(db.GetDefaultTenantId(), model)
 	assert.NotNil(t, result)
 }
 
 func TestGetModels_ReturnsSliceNotNil(t *testing.T) {
-	result := GetModels()
+	result := GetModels(db.GetDefaultTenantId())
 	assert.NotNil(t, result)
 	assert.IsType(t, []*shared.ModelResponse{}, result)
 }
 
 func TestIsExistModel_EmptyStringReturnsFalse(t *testing.T) {
-	result := IsExistModel("")
+	result := IsExistModel(db.GetDefaultTenantId(), "")
 	assert.False(t, result, "Empty ID should return false")
 }
 
@@ -262,15 +263,15 @@ func TestCreateModel_DuplicateId(t *testing.T) {
 		ID:          "DUPLICATE-TEST",
 		Description: "First",
 	}
-	result1 := CreateModel(model)
+	result1 := CreateModel(db.GetDefaultTenantId(), model)
 	assert.NotNil(t, result1)
-	
+
 	// Try creating again with same ID
 	model2 := &shared.Model{
 		ID:          "DUPLICATE-TEST",
 		Description: "Second",
 	}
-	result2 := CreateModel(model2)
+	result2 := CreateModel(db.GetDefaultTenantId(), model2)
 	assert.NotNil(t, result2)
 	// Should return conflict error if first succeeded
 }
@@ -280,7 +281,7 @@ func TestUpdateModel_LowercaseToUppercase(t *testing.T) {
 		ID:          "lowercase-model-id",
 		Description: "Test",
 	}
-	result := UpdateModel(model)
+	result := UpdateModel(db.GetDefaultTenantId(), model)
 	assert.NotNil(t, result)
 	// ID should be converted to uppercase
 }
@@ -294,7 +295,7 @@ func TestDeleteModel_SpecialCharacters(t *testing.T) {
 
 	for _, id := range testIds {
 		assert.NotPanics(t, func() {
-			DeleteModel(id)
+			DeleteModel(db.GetDefaultTenantId(), id)
 		})
 	}
 }

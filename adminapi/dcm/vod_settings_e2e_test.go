@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"testing"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"gotest.tools/assert"
@@ -34,7 +34,7 @@ func ImportVodSettingsTableData(data []string, tabletype logupload.VodSettings) 
 	var err error
 	for _, row := range data {
 		err = json.Unmarshal([]byte(row), &tabletype)
-		err = setOneInDao(ds.TABLE_VOD_SETTINGS, tabletype.ID, &tabletype)
+		err = setOneInDao(db.TABLE_VOD_SETTINGS, tabletype.ID, &tabletype)
 	}
 	return err
 }

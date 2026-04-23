@@ -41,7 +41,8 @@ import (
 
 func GetTelemetryProfilesByContext(searchContext map[string]string) []*logupload.PermanentTelemetryProfile {
 	filteredProfiles := []*logupload.PermanentTelemetryProfile{}
-	profiles := logupload.GetPermanentTelemetryProfileList()
+	tenantId := searchContext[xwcommon.TENANT_ID]
+	profiles := logupload.GetPermanentTelemetryProfileList(tenantId)
 	for _, profile := range profiles {
 		if applicationType, ok := xutil.FindEntryInContext(searchContext, xwcommon.APPLICATION_TYPE, false); ok {
 			if profile.ApplicationType != applicationType {
@@ -58,16 +59,16 @@ func GetTelemetryProfilesByContext(searchContext map[string]string) []*logupload
 	return filteredProfiles
 }
 
-func UpdatePermanentTelemetryProfile(updatedProfile *logupload.PermanentTelemetryProfile) (*logupload.PermanentTelemetryProfile, error) {
+func UpdatePermanentTelemetryProfile(tenantId string, updatedProfile *logupload.PermanentTelemetryProfile) (*logupload.PermanentTelemetryProfile, error) {
 	normalizeOnSaveAfterApproving(updatedProfile)
-	err := beforeUpdating(updatedProfile)
+	err := beforeUpdating(tenantId, updatedProfile)
 	if err != nil {
 		return nil, err
 	}
-	if err := beforeSavingPermanentTelemetryProfile(updatedProfile); err != nil {
+	if err := beforeSavingPermanentTelemetryProfile(tenantId, updatedProfile); err != nil {
 		return nil, err
 	}
-	err = xlogupload.SetOnePermanentTelemetryProfile(updatedProfile.ID, updatedProfile)
+	err = xlogupload.SetOnePermanentTelemetryProfile(tenantId, updatedProfile.ID, updatedProfile)
 	if err != nil {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, err.Error())
 	}
@@ -76,7 +77,8 @@ func UpdatePermanentTelemetryProfile(updatedProfile *logupload.PermanentTelemetr
 
 func CreatePermanentTelemetryProfile(r *http.Request, profile *logupload.PermanentTelemetryProfile) (*logupload.PermanentTelemetryProfile, error) {
 	normalizeOnSaveAfterApproving(profile)
-	err := beforeCreating(profile)
+	tenantId := xwhttp.GetTenantId(r, "")
+	err := beforeCreating(tenantId, profile)
 	if err != nil {
 		return nil, err
 	}
@@ -87,17 +89,18 @@ func SavePermanentTelemetryProfile(r *http.Request, entity *logupload.PermanentT
 	if err := auth.ValidateWrite(r, entity.ApplicationType, auth.TELEMETRY_ENTITY); err != nil {
 		return nil, err
 	}
-	if err := beforeSavingPermanentTelemetryProfile(entity); err != nil {
+	tenantId := xwhttp.GetTenantId(r, "")
+	if err := beforeSavingPermanentTelemetryProfile(tenantId, entity); err != nil {
 		return nil, err
 	}
-	if err := xlogupload.SetOnePermanentTelemetryProfile(entity.ID, entity); err != nil {
+	if err := xlogupload.SetOnePermanentTelemetryProfile(tenantId, entity.ID, entity); err != nil {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, err.Error())
 	}
 	return entity, nil
 }
 
-func ValidateTelemetryProfilePendingChanges(entity *logupload.PermanentTelemetryProfile) error {
-	pendingEntities := xchange.GetChangeList()
+func ValidateTelemetryProfilePendingChanges(tenantId string, entity *logupload.PermanentTelemetryProfile) error {
+	pendingEntities := xchange.GetChangeList(tenantId)
 	for _, change := range pendingEntities {
 		if change.ID != entity.ID {
 			if &change.NewEntity != nil && entity.EqualChangeData(change.NewEntity) {
@@ -110,11 +113,11 @@ func ValidateTelemetryProfilePendingChanges(entity *logupload.PermanentTelemetry
 	return nil
 }
 
-func beforeSavingPermanentTelemetryProfile(entity *logupload.PermanentTelemetryProfile) error {
+func beforeSavingPermanentTelemetryProfile(tenantId string, entity *logupload.PermanentTelemetryProfile) error {
 	if err := entity.Validate(); err != nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, err.Error())
 	}
-	if err := validateAll(entity); err != nil {
+	if err := validateAll(tenantId, entity); err != nil {
 		return err
 	}
 	return nil
@@ -131,12 +134,12 @@ func normalizeOnSaveAfterApproving(profile *logupload.PermanentTelemetryProfile)
 	}
 }
 
-func beforeCreating(entity *logupload.PermanentTelemetryProfile) error {
+func beforeCreating(tenantId string, entity *logupload.PermanentTelemetryProfile) error {
 	id := entity.ID
 	if id == "" {
 		entity.ID = uuid.New().String()
 	} else {
-		existingEntity := logupload.GetOnePermanentTelemetryProfile(id)
+		existingEntity := logupload.GetOnePermanentTelemetryProfile(tenantId, id)
 		if existingEntity != nil {
 			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Entity with id: "+id+" already exists")
 		}
@@ -144,20 +147,20 @@ func beforeCreating(entity *logupload.PermanentTelemetryProfile) error {
 	return nil
 }
 
-func beforeUpdating(updatedProfile *logupload.PermanentTelemetryProfile) error {
+func beforeUpdating(tenantId string, updatedProfile *logupload.PermanentTelemetryProfile) error {
 	id := updatedProfile.ID
 	if id == "" {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity id is empty")
 	}
-	existingEntity := logupload.GetOnePermanentTelemetryProfile(id)
+	existingEntity := logupload.GetOnePermanentTelemetryProfile(tenantId, id)
 	if existingEntity == nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
 	return nil
 }
 
-func validateAll(entity *logupload.PermanentTelemetryProfile) error {
-	existingEntities := logupload.GetPermanentTelemetryProfileList() //[]*PermanentTelemetryProfile
+func validateAll(tenantId string, entity *logupload.PermanentTelemetryProfile) error {
+	existingEntities := logupload.GetPermanentTelemetryProfileList(tenantId) //[]*PermanentTelemetryProfile
 	for _, profile := range existingEntities {
 		if profile.ID != entity.ID && profile.Name == entity.Name {
 			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "PermanentProfile with such name exists: "+entity.Name)
@@ -171,20 +174,21 @@ func DeletePermanentTelemetryProfile(r *http.Request, id string) (*logupload.Per
 	if err != nil {
 		return nil, err
 	}
-	profile, err := beforeRemoving(id, writeApplication)
+	tenantId := xwhttp.GetTenantId(r, "")
+	profile, err := beforeRemoving(tenantId, id, writeApplication)
 	if err != nil {
 		return nil, err
 	}
-	xlogupload.DeletePermanentTelemetryProfile(id)
+	xlogupload.DeletePermanentTelemetryProfile(tenantId, id)
 	return profile, nil
 }
 
-func beforeRemoving(id string, writeApplication string) (*logupload.PermanentTelemetryProfile, error) {
-	entity := logupload.GetOnePermanentTelemetryProfile(id)
+func beforeRemoving(tenantId string, id string, writeApplication string) (*logupload.PermanentTelemetryProfile, error) {
+	entity := logupload.GetOnePermanentTelemetryProfile(tenantId, id)
 	if entity == nil || !xshared.ApplicationTypeEquals(writeApplication, entity.ApplicationType) {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
-	if err := validateUsage(id); err != nil {
+	if err := validateUsage(tenantId, id); err != nil {
 		return nil, err
 	}
 	return entity, nil
@@ -227,8 +231,8 @@ func buildToDeleteChange(oldEntity *logupload.PermanentTelemetryProfile, applica
 	return change
 }
 
-func validateUsage(id string) error {
-	all := logupload.GetTelemetryRuleListForAs() //[]*TelemetryRule
+func validateUsage(tenantId string, id string) error {
+	all := logupload.GetTelemetryRuleListForAs(tenantId) //[]*TelemetryRule
 	for _, rule := range all {
 		if rule.BoundTelemetryID == id {
 			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Can't delete profile as it's used in telemetry rule: "+rule.Name)
@@ -242,14 +246,15 @@ func WriteCreateChange(r *http.Request, profile *logupload.PermanentTelemetryPro
 	if err := auth.ValidateWrite(r, profile.ApplicationType, auth.TELEMETRY_ENTITY); err != nil {
 		return nil, err
 	}
-	if err := beforeCreating(profile); err != nil {
+	tenantId := xwhttp.GetTenantId(r, "")
+	if err := beforeCreating(tenantId, profile); err != nil {
 		return nil, err
 	}
-	if err := beforeSavingPermanentTelemetryProfile(profile); err != nil {
+	if err := beforeSavingPermanentTelemetryProfile(tenantId, profile); err != nil {
 		return nil, err
 	}
 
-	if err := ValidateTelemetryProfilePendingChanges(profile); err != nil {
+	if err := ValidateTelemetryProfilePendingChanges(tenantId, profile); err != nil {
 		return nil, err
 	}
 
@@ -263,7 +268,7 @@ func WriteCreateChange(r *http.Request, profile *logupload.PermanentTelemetryPro
 	if err != nil {
 		return nil, err
 	}
-	if err := xchange.CreateOneChange(change); err != nil {
+	if err := xchange.CreateOneChange(tenantId, change); err != nil {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, err.Error())
 	}
 
@@ -274,18 +279,19 @@ func WriteUpdateChangeOrSave(r *http.Request, newProfile *logupload.PermanentTel
 	if err := auth.ValidateWrite(r, newProfile.ApplicationType, auth.TELEMETRY_ENTITY); err != nil {
 		return nil, err
 	}
-	if err := beforeUpdating(newProfile); err != nil {
+	tenantId := xwhttp.GetTenantId(r, "")
+	if err := beforeUpdating(tenantId, newProfile); err != nil {
 		return nil, err
 	}
-	if err := beforeSavingPermanentTelemetryProfile(newProfile); err != nil {
+	if err := beforeSavingPermanentTelemetryProfile(tenantId, newProfile); err != nil {
 		return nil, err
 	}
 
 	change := core_change.NewEmptyChange()
-	oldProfile := logupload.GetOnePermanentTelemetryProfile(newProfile.ID)
+	oldProfile := logupload.GetOnePermanentTelemetryProfile(tenantId, newProfile.ID)
 	if newProfile.EqualChangeData(oldProfile) {
 		normalizeOnSaveAfterApproving(newProfile)
-		if err := xlogupload.SetOnePermanentTelemetryProfile(newProfile.ID, newProfile); err != nil {
+		if err := xlogupload.SetOnePermanentTelemetryProfile(tenantId, newProfile.ID, newProfile); err != nil {
 			return nil, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, err.Error())
 		}
 	} else {
@@ -298,7 +304,7 @@ func WriteUpdateChangeOrSave(r *http.Request, newProfile *logupload.PermanentTel
 		if err != nil {
 			return nil, err
 		}
-		if err := xchange.CreateOneChange(change); err != nil {
+		if err := xchange.CreateOneChange(tenantId, change); err != nil {
 			return nil, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, err.Error())
 		}
 	}
@@ -311,7 +317,8 @@ func WriteDeleteChange(r *http.Request, profileId string) (*core_change.Change, 
 	if err != nil {
 		return nil, err
 	}
-	profile, err := beforeRemoving(profileId, writeApplication)
+	tenantId := xwhttp.GetTenantId(r, "")
+	profile, err := beforeRemoving(tenantId, profileId, writeApplication)
 	if err != nil {
 		return nil, err
 	}
@@ -324,21 +331,21 @@ func WriteDeleteChange(r *http.Request, profileId string) (*core_change.Change, 
 	if err != nil {
 		return nil, err
 	}
-	if err := xchange.CreateOneChange(change); err != nil {
+	if err := xchange.CreateOneChange(tenantId, change); err != nil {
 		return nil, err
 	}
 	return change, nil
 }
 
-func CreateTelemetryIds() *xwhttp.ResponseEntity {
+func CreateTelemetryIds(tenantId string) *xwhttp.ResponseEntity {
 	var migratedProfileNames []string
-	profiles := logupload.GetPermanentTelemetryProfileList()
+	profiles := logupload.GetPermanentTelemetryProfileList(tenantId)
 	if profiles == nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, fmt.Errorf("failed to load PermanentTelemetryProfile"), nil)
 	}
 	for _, profile := range profiles {
 		normalizeOnSaveAfterApproving(profile)
-		if err := xlogupload.SetOnePermanentTelemetryProfile(profile.ID, profile); err != nil {
+		if err := xlogupload.SetOnePermanentTelemetryProfile(tenantId, profile.ID, profile); err != nil {
 			log.Error(fmt.Sprintf("failed to set PermanentTelemetryProfile: %v", err))
 		} else {
 			migratedProfileNames = append(migratedProfileNames, profile.Name)

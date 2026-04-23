@@ -41,7 +41,7 @@ var useMockDatabase = false
 // Call this in TestMain to enable mock mode
 func InitMockDatabase() *mocks.MockCachedSimpleDao {
 	mockDaoInstance = mocks.NewMockCachedSimpleDao()
-	mockLockInstance = mocks.NewMockDistributedLock(db.TABLE_DCM_RULE, 10)
+	mockLockInstance = mocks.NewMockDistributedLock(db.TABLE_DCM_RULES, 10)
 	useMockDatabase = true
 	return mockDaoInstance
 }

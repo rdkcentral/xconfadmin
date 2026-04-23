@@ -14,23 +14,23 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func DoesFeatureExistWithApplicationType(id string, applicationType string) bool {
+func DoesFeatureExistWithApplicationType(tenantId string, id string, applicationType string) bool {
 	if id == "" {
 		return false
 	}
-	feature := xwrfc.GetOneFeature(id)
+	feature := xwrfc.GetOneFeature(tenantId, id)
 	return feature != nil && applicationType == feature.ApplicationType
 }
 
-func DoesFeatureExist(id string) bool {
+func DoesFeatureExist(tenantId string, id string) bool {
 	if id == "" {
 		return false
 	}
-	feature := xwrfc.GetOneFeature(id)
+	feature := xwrfc.GetOneFeature(tenantId, id)
 	return feature != nil
 }
 
-func IsValidFeature(feature *xwrfc.Feature) (bool, string) {
+func IsValidFeature(tenantId string, feature *xwrfc.Feature) (bool, string) {
 	errorMsg := ""
 	if feature == nil || feature.ApplicationType == "" {
 		errorMsg = "Application type is empty"
@@ -69,7 +69,7 @@ func IsValidFeature(feature *xwrfc.Feature) (bool, string) {
 			errorMsg = "Value is required"
 			return false, errorMsg
 		}
-		result, _ := xwshared.GetGenericNamedListOneDB(feature.WhitelistProperty.Value)
+		result, _ := xwshared.GetGenericNamedListOneDB(tenantId, feature.WhitelistProperty.Value)
 		if result == nil || result.TypeName != feature.WhitelistProperty.NamespacedListType {
 			errorMsg = fmt.Sprintf("%s with id %s does not exist", feature.WhitelistProperty.NamespacedListType, feature.WhitelistProperty.Value)
 			return false, errorMsg
@@ -86,8 +86,8 @@ func IsValidFeature(feature *xwrfc.Feature) (bool, string) {
 	return true, errorMsg
 }
 
-func DoesFeatureNameExistForAnotherIdForApplicationType(feature *xwrfc.Feature, applicationType string) bool {
-	contextMap := map[string]string{xwcommon.APPLICATION_TYPE: applicationType}
+func DoesFeatureNameExistForAnotherIdForApplicationType(tenantId string, feature *xwrfc.Feature, applicationType string) bool {
+	contextMap := map[string]string{xwcommon.APPLICATION_TYPE: applicationType, xwcommon.TENANT_ID: tenantId}
 	featureList := GetFilteredFeatureList(contextMap)
 	return DoesFeatureNameExistForAnotherIdInList(feature, featureList)
 }
@@ -103,7 +103,8 @@ func DoesFeatureNameExistForAnotherIdInList(feature *xwrfc.Feature, featureList 
 
 func GetFilteredFeatureList(searchContext map[string]string) []*xwrfc.Feature {
 	var featureList []*xwrfc.Feature
-	features, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_XCONF_FEATURE, 0)
+	tenantId := searchContext[xwcommon.TENANT_ID]
+	features, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_FEATURES, 0)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no feature found"))
 		return nil
@@ -118,15 +119,15 @@ func GetFilteredFeatureList(searchContext map[string]string) []*xwrfc.Feature {
 	return featureList
 }
 
-func DeleteOneFeature(featureId string) {
-	err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_XCONF_FEATURE, featureId)
+func DeleteOneFeature(tenantId string, featureId string) {
+	err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_FEATURES, featureId)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no feature found for featureId: %s", featureId))
 	}
 }
 
-func SetOneFeature(feature *xwrfc.Feature) (*xwrfc.Feature, error) {
-	err := db.GetCachedSimpleDao().SetOne(db.TABLE_XCONF_FEATURE, feature.ID, feature)
+func SetOneFeature(tenantId string, feature *xwrfc.Feature) (*xwrfc.Feature, error) {
+	err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_FEATURES, feature.ID, feature)
 	if err != nil {
 		log.Warn(fmt.Sprintf("error creating feature with featureId: %s", feature.ID))
 	}
@@ -135,7 +136,8 @@ func SetOneFeature(feature *xwrfc.Feature) (*xwrfc.Feature, error) {
 
 func GetFilteredFeatureEntityList(searchContext map[string]string) []*xwrfc.FeatureEntity {
 	var featureEntityList []*xwrfc.FeatureEntity
-	features, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_XCONF_FEATURE, 0)
+	tenantId := searchContext[xwcommon.TENANT_ID]
+	features, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_FEATURES, 0)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no feature found"))
 		return nil
@@ -150,20 +152,20 @@ func GetFilteredFeatureEntityList(searchContext map[string]string) []*xwrfc.Feat
 	return featureEntityList
 }
 
-func DoesFeatureExistInSomeApplicationType(id string) (bool, string) {
+func DoesFeatureExistInSomeApplicationType(tenantId string, id string) (bool, string) {
 	if id == "" {
 		return false, ""
 	}
-	feature := xwrfc.GetOneFeature(id)
+	feature := xwrfc.GetOneFeature(tenantId, id)
 	if feature == nil {
 		return false, ""
 	}
 	return true, feature.ApplicationType
 }
 
-func GetFeatureEntityList() []*rfc.FeatureEntity {
+func GetFeatureEntityList(tenantId string) []*rfc.FeatureEntity {
 	var featureEntityList []*rfc.FeatureEntity
-	features, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_XCONF_FEATURE, 0)
+	features, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_FEATURES, 0)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no feature found"))
 		return nil
@@ -175,8 +177,8 @@ func GetFeatureEntityList() []*rfc.FeatureEntity {
 	return featureEntityList
 }
 
-func GetFeatureRule(id string) *rfc.FeatureRule {
-	featureRule, err := db.GetCachedSimpleDao().GetOne(db.TABLE_FEATURE_CONTROL_RULE, id)
+func GetFeatureRule(tenantId string, id string) *rfc.FeatureRule {
+	featureRule, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_FEATURE_CONTROL_RULES, id)
 	if err != nil {
 		log.Warn("no featureRule found")
 		return nil
@@ -184,31 +186,31 @@ func GetFeatureRule(id string) *rfc.FeatureRule {
 	return featureRule.(*rfc.FeatureRule)
 }
 
-func SetFeatureRule(id string, featureRule *rfc.FeatureRule) error {
-	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_FEATURE_CONTROL_RULE, id, featureRule); err != nil {
+func SetFeatureRule(tenantId string, id string, featureRule *rfc.FeatureRule) error {
+	if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_FEATURE_CONTROL_RULES, id, featureRule); err != nil {
 		log.Error("cannot save featureRule to DB")
 		return err
 	}
 	return nil
 }
 
-func IsValidFeatureEntity(featureEntity *rfc.FeatureEntity) (bool, string) {
+func IsValidFeatureEntity(tenantId string, featureEntity *rfc.FeatureEntity) (bool, string) {
 	feature := featureEntity.CreateFeature()
-	return IsValidFeature(feature)
+	return IsValidFeature(tenantId, feature)
 }
 
-func DoesFeatureNameExistForAnotherEntityId(featureEntity *rfc.FeatureEntity) bool {
+func DoesFeatureNameExistForAnotherEntityId(tenantId string, featureEntity *rfc.FeatureEntity) bool {
 	feature := featureEntity.CreateFeature()
-	return DoesFeatureNameExistForAnotherId(feature)
+	return DoesFeatureNameExistForAnotherId(tenantId, feature)
 }
 
-func DoesFeatureNameExistForAnotherId(feature *rfc.Feature) bool {
-	featureList := rfc.GetFeatureList()
+func DoesFeatureNameExistForAnotherId(tenantId string, feature *rfc.Feature) bool {
+	featureList := rfc.GetFeatureList(tenantId)
 	return DoesFeatureNameExistForAnotherIdInList(feature, featureList)
 }
 
-func DeleteFeatureRule(id string) {
-	err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_FEATURE_CONTROL_RULE, id)
+func DeleteFeatureRule(tenantId string, id string) {
+	err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_FEATURE_CONTROL_RULES, id)
 	if err != nil {
 		log.Warn("delete featureRule failed")
 	}

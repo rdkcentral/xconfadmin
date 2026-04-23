@@ -25,16 +25,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	xchange "github.com/rdkcentral/xconfadmin/shared/change"
 	xadmin_logupload "github.com/rdkcentral/xconfadmin/shared/logupload"
-
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
-
 	"github.com/rdkcentral/xconfwebconfig/util"
-
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,7 +58,7 @@ func TestTelemetryTwoProfileCreateHandler(t *testing.T) {
 
 	assert.Equal(t, p, createdProfile)
 
-	dbProfile := logupload.GetOneTelemetryTwoProfile(p.ID)
+	dbProfile := logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Equal(t, *p, *dbProfile, "profile to create should match created profile in database")
 }
 
@@ -85,7 +82,7 @@ func TestTelemetryTwoProfileCreateChangeHandlerAndApproveIt(t *testing.T) {
 	assert.Empty(t, change.OldEntity, "old entity in create change should be nil")
 	assert.Equal(t, *p, *change.NewEntity, "new entity should match profile to create")
 
-	dbProfile := logupload.GetOneTelemetryTwoProfile(p.ID)
+	dbProfile := logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Empty(t, dbProfile, "profile before approval should not be present in database")
 
 	url = fmt.Sprintf("/xconfAdminService/telemetry/v2/change/approve/%v?%v", change.ID, queryParams)
@@ -95,10 +92,10 @@ func TestTelemetryTwoProfileCreateChangeHandlerAndApproveIt(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
-	dbProfile = logupload.GetOneTelemetryTwoProfile(p.ID)
+	dbProfile = logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Equal(t, *p, *dbProfile, "profile to create should match created profile in database")
 
-	approvedChange := xchange.GetOneApprovedTelemetryTwoChange(change.ID)
+	approvedChange := xchange.GetOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), change.ID)
 	assert.NotEmpty(t, approvedChange, "approved profile change should be created")
 	assert.Empty(t, approvedChange.OldEntity, "old entity should not present")
 	assert.Equal(t, *p, *approvedChange.NewEntity, "old entity should not present")
@@ -108,7 +105,7 @@ func TestTelemetryTwoProfileUpdateHandler(t *testing.T) {
 	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
-	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	changedProfile, _ := p.Clone()
 	changedProfile.Jsonconfig = changedTelemetryJsonConfig
@@ -127,7 +124,7 @@ func TestTelemetryTwoProfileUpdateHandler(t *testing.T) {
 
 	assert.Equal(t, *changedProfile, *updatedProfile)
 
-	dbProfile := logupload.GetOneTelemetryTwoProfile(p.ID)
+	dbProfile := logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
 	assert.NotEqual(t, p.Jsonconfig, dbProfile.Jsonconfig, "updated profile data should match")
 	assert.Equal(t, updatedProfile.Jsonconfig, dbProfile.Jsonconfig, "updated profile data should match")
 }
@@ -136,7 +133,7 @@ func TestTelemetryTwoProfileUpdateChangeHandler(t *testing.T) {
 	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
-	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	changedProfile, _ := p.Clone()
 	changedProfile.Jsonconfig = changedTelemetryJsonConfig
@@ -156,7 +153,7 @@ func TestTelemetryTwoProfileUpdateChangeHandler(t *testing.T) {
 	assert.Equal(t, *p, *change.OldEntity, "old entity should correspond to the profile before updating")
 	assert.Equal(t, *changedProfile, *change.NewEntity, "new entity should correspond to the profile to create")
 
-	dbProfile := logupload.GetOneTelemetryTwoProfile(p.ID)
+	dbProfile := logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Equal(t, *p, *dbProfile, "profile before approval should not be changed")
 
 	url = fmt.Sprintf("/xconfAdminService/telemetry/v2/change/approve/%v?%v", change.ID, queryParams)
@@ -166,11 +163,11 @@ func TestTelemetryTwoProfileUpdateChangeHandler(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
-	dbProfile = logupload.GetOneTelemetryTwoProfile(p.ID)
+	dbProfile = logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Equal(t, *changedProfile, *dbProfile, "profile to create should match created profile in database")
 	assert.Equal(t, changedTelemetryJsonConfig, dbProfile.Jsonconfig, "profile to create should match created profile in database")
 
-	approvedChange := xchange.GetOneApprovedTelemetryTwoChange(change.ID)
+	approvedChange := xchange.GetOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), change.ID)
 	assert.NotEmpty(t, approvedChange, "approved profile change should be created")
 	assert.Equal(t, *p, *approvedChange.OldEntity, "old entity should correspond to the profile before updating it")
 	assert.Equal(t, *changedProfile, *approvedChange.NewEntity, "new entity should correspond to the changed profile")
@@ -180,7 +177,7 @@ func TestTelemetryTwoProfileDeleteHandler(t *testing.T) {
 	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
-	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
 		{"applicationType", "stb"},
@@ -191,9 +188,9 @@ func TestTelemetryTwoProfileDeleteHandler(t *testing.T) {
 	rr := ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 
-	ds.GetCachedSimpleDao().RefreshAll(ds.TABLE_TELEMETRY_TWO_PROFILES)
+	db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES)
 
-	dbProfile := logupload.GetOneTelemetryTwoProfile(p.ID)
+	dbProfile := logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Empty(t, dbProfile, "profile after removal should not exist in db")
 }
 
@@ -201,7 +198,7 @@ func TestTelemetryTwoProfileDeleteChangeHandler(t *testing.T) {
 	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
-	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
 		{"applicationType", "stb"},
@@ -217,7 +214,7 @@ func TestTelemetryTwoProfileDeleteChangeHandler(t *testing.T) {
 	assert.Equal(t, *p, *change.OldEntity, "old entity should correspond profile before removing")
 	assert.Empty(t, change.NewEntity, "new entity should be empty")
 
-	dbProfile := logupload.GetOneTelemetryTwoProfile(p.ID)
+	dbProfile := logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Equal(t, *p, *dbProfile, "profile before approval should not be changed")
 
 	url = fmt.Sprintf("/xconfAdminService/telemetry/v2/change/approve/%v?%v", change.ID, queryParams)
@@ -227,12 +224,12 @@ func TestTelemetryTwoProfileDeleteChangeHandler(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
-	ds.GetCachedSimpleDao().RefreshAll(ds.TABLE_TELEMETRY_TWO_PROFILES)
+	db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES)
 
-	dbProfile = logupload.GetOneTelemetryTwoProfile(p.ID)
+	dbProfile = logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
 	assert.Empty(t, dbProfile, "profile after approval should be removed")
 
-	approvedChange := xchange.GetOneApprovedTelemetryTwoChange(change.ID)
+	approvedChange := xchange.GetOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), change.ID)
 	assert.NotEmpty(t, approvedChange, "approved profile change should be created")
 	assert.Equal(t, *p, *approvedChange.OldEntity, "old entity should correspond to the profile before removing it")
 	assert.Empty(t, approvedChange.NewEntity, "new entity should not be created")
@@ -271,7 +268,7 @@ func TestTelemetryTwoProfileListExport(t *testing.T) {
 	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
-	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}, {"export", "true"}})
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile?%v", queryParams)
@@ -287,7 +284,7 @@ func TestTelemetryTwoProfileListExport(t *testing.T) {
 func TestTelemetryTwoProfileGetByIdExport(t *testing.T) {
 	DeleteTelemetryEntities()
 	p := createTelemetryTwoProfile()
-	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}, {"export", "true"}})
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/%s?%v", p.ID, queryParams)
@@ -303,8 +300,8 @@ func TestTelemetryTwoProfileFilteredSuccess(t *testing.T) {
 	p1.Name = "Alpha"
 	p2 := createTelemetryTwoProfile()
 	p2.Name = "Beta"
-	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
-	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
+	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
+	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}, {"pageNumber", "1"}, {"pageSize", "10"}})
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/filtered?%v", queryParams)
@@ -319,8 +316,8 @@ func TestTelemetryTwoProfileByIdListSuccess(t *testing.T) {
 	DeleteTelemetryEntities()
 	p1 := createTelemetryTwoProfile()
 	p2 := createTelemetryTwoProfile()
-	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
-	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
+	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
+	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}})
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/byIdList?%v", queryParams)
@@ -361,8 +358,8 @@ func TestTelemetryTwoProfileEntitiesBatchUpdate(t *testing.T) {
 	// Set applicationType for both and store
 	p1.ApplicationType = "stb"
 	p2.ApplicationType = "stb"
-	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
-	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
+	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
+	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
 	// Update p1 normally
 	p1.Jsonconfig = changedTelemetryJsonConfig
 	// Force failure for p2 by changing applicationType (conflict)

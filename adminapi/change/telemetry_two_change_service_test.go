@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	xchange "github.com/rdkcentral/xconfadmin/shared/change"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/stretchr/testify/assert"
@@ -40,7 +40,7 @@ func seedChange(t *testing.T, op xwchange.ChangeOperation, oldP, newP *logupload
 	c.Operation = op
 	c.ApplicationType = "stb"
 	c.Author = "tester"
-	if err := xchange.CreateOneTelemetryTwoChange(c); err != nil {
+	if err := xchange.CreateOneTelemetryTwoChange(db.GetDefaultTenantId(), c); err != nil {
 		t.Fatalf("seed change: %v", err)
 	}
 	return c
@@ -49,24 +49,24 @@ func seedChange(t *testing.T, op xwchange.ChangeOperation, oldP, newP *logupload
 // local cleanup to avoid cross-package DeleteAllEntities dependency
 func cleanupChangeTest() {
 	tables := []string{
-		ds.TABLE_XCONF_TELEMETRY_TWO_CHANGE,
-		ds.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE,
-		ds.TABLE_TELEMETRY_TWO_PROFILES,
+		db.TABLE_TELEMETRY_TWO_CHANGES,
+		db.TABLE_TELEMETRY_APPROVED_TWO_CHANGES,
+		db.TABLE_TELEMETRY_TWO_PROFILES,
 	}
 	for _, tbl := range tables {
-		list, _ := ds.GetCachedSimpleDao().GetAllAsList(tbl, 0)
+		list, _ := db.GetCachedSimpleDao().GetAllAsList(db.GetDefaultTenantId(), tbl, 0)
 		for _, inst := range list {
 			// derive key by type assertion
 			switch v := inst.(type) {
 			case *logupload.TelemetryTwoProfile:
-				ds.GetCachedSimpleDao().DeleteOne(tbl, v.ID)
+				db.GetCachedSimpleDao().DeleteOne(db.GetDefaultTenantId(), tbl, v.ID)
 			case *xwchange.TelemetryTwoChange:
-				ds.GetCachedSimpleDao().DeleteOne(tbl, v.ID)
+				db.GetCachedSimpleDao().DeleteOne(db.GetDefaultTenantId(), tbl, v.ID)
 			case *xwchange.ApprovedTelemetryTwoChange:
-				ds.GetCachedSimpleDao().DeleteOne(tbl, v.ID)
+				db.GetCachedSimpleDao().DeleteOne(db.GetDefaultTenantId(), tbl, v.ID)
 			}
 		}
-		ds.GetCachedSimpleDao().RefreshAll(tbl)
+		db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), tbl)
 	}
 }
 
@@ -83,14 +83,14 @@ func TestApproveTelemetryTwoChange_CreateFlow(t *testing.T) {
 	approved, err := ApproveTelemetryTwoChange(r, c.ID)
 	assert.NoError(t, err)
 	assert.NotNil(t, approved)
-	stored := logupload.GetOneTelemetryTwoProfile(p.ID)
+	stored := logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
 	assert.NotNil(t, stored)
 }
 
 func TestApproveTelemetryTwoChange_UpdateFlow(t *testing.T) {
 	cleanupChangeTest()
 	orig := makeT2Profile("orig")
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, orig.ID, orig)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, orig.ID, orig)
 	updated, _ := orig.Clone()
 	updated.Jsonconfig = validTelemetryTwoJSON // still valid; change Version text to simulate update
 	updated.Name = "orig-upd"
@@ -99,21 +99,21 @@ func TestApproveTelemetryTwoChange_UpdateFlow(t *testing.T) {
 	approved, err := ApproveTelemetryTwoChange(r, c.ID)
 	assert.NoError(t, err)
 	assert.NotNil(t, approved)
-	stored := logupload.GetOneTelemetryTwoProfile(orig.ID)
+	stored := logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), orig.ID)
 	assert.Equal(t, updated.Jsonconfig, stored.Jsonconfig)
 }
 
 func TestApproveTelemetryTwoChange_DeleteFlow(t *testing.T) {
 	cleanupChangeTest()
 	orig := makeT2Profile("del")
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, orig.ID, orig)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, orig.ID, orig)
 	c := seedChange(t, xchange.Delete, orig, nil)
 	r := makeRequest("GET", "/x")
 	approved, err := ApproveTelemetryTwoChange(r, c.ID)
 	assert.NoError(t, err)
 	assert.NotNil(t, approved)
-	ds.GetCachedSimpleDao().RefreshAll(ds.TABLE_TELEMETRY_TWO_PROFILES)
-	assert.Nil(t, logupload.GetOneTelemetryTwoProfile(orig.ID))
+	db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES)
+	assert.Nil(t, logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), orig.ID))
 }
 
 func TestApproveTelemetryTwoChange_NotFound(t *testing.T) {
@@ -131,25 +131,25 @@ func TestApproveTelemetryTwoChanges_MixedBatch(t *testing.T) {
 	c1 := seedChange(t, xchange.Create, nil, p1)
 	// update ok
 	base := makeT2Profile("base")
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, base.ID, base)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, base.ID, base)
 	upd, _ := base.Clone()
 	upd.Jsonconfig = validTelemetryTwoJSON
 	upd.Name = "base-upd"
 	c2 := seedChange(t, xchange.Update, base, upd)
 	// delete missing entity -> will cause error when approving (entity not present?) we remove before approve
 	toDelete := makeT2Profile("gone")
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, toDelete.ID, toDelete)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, toDelete.ID, toDelete)
 	c3 := seedChange(t, xchange.Delete, toDelete, nil)
 	// corrupt store: remove entity so delete will fail (simulate conflict) by deleting manually so Delete telemetry profile returns not found -> error path
-	ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_TELEMETRY_TWO_PROFILES, toDelete.ID)
+	db.GetCachedSimpleDao().DeleteOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, toDelete.ID)
 
 	r := makeRequest("GET", "/x")
 	errs := ApproveTelemetryTwoChanges(r, []string{c1.ID, c2.ID, c3.ID})
 	// expect one error for delete
 	assert.Len(t, errs, 1)
 	// profiles for c1 and c2 should exist and updated
-	assert.NotNil(t, logupload.GetOneTelemetryTwoProfile(p1.ID))
-	assert.Equal(t, upd.Jsonconfig, logupload.GetOneTelemetryTwoProfile(base.ID).Jsonconfig)
+	assert.NotNil(t, logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p1.ID))
+	assert.Equal(t, upd.Jsonconfig, logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), base.ID).Jsonconfig)
 }
 
 func TestRevertTelemetryTwoChange_CreateAndDeleteFlows(t *testing.T) {
@@ -161,16 +161,16 @@ func TestRevertTelemetryTwoChange_CreateAndDeleteFlows(t *testing.T) {
 	approvedCreate, _ := ApproveTelemetryTwoChange(r, createChange.ID)
 	resp := RevertTelemetryTwoChange(r, approvedCreate.ID)
 	assert.Equal(t, http.StatusOK, resp.Status)
-	assert.Nil(t, logupload.GetOneTelemetryTwoProfile(p.ID))
+	assert.Nil(t, logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID))
 
 	// delete approval then revert (operation=delete) should recreate entity
 	p2 := makeT2Profile("revDelete")
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
 	delChange := seedChange(t, xchange.Delete, p2, nil)
 	approvedDel, _ := ApproveTelemetryTwoChange(r, delChange.ID)
 	resp2 := RevertTelemetryTwoChange(r, approvedDel.ID)
 	assert.Equal(t, http.StatusOK, resp2.Status)
-	assert.NotNil(t, logupload.GetOneTelemetryTwoProfile(p2.ID))
+	assert.NotNil(t, logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p2.ID))
 }
 
 func TestRevertTelemetryTwoChanges_Batch(t *testing.T) {
@@ -184,8 +184,8 @@ func TestRevertTelemetryTwoChanges_Batch(t *testing.T) {
 	a2, _ := ApproveTelemetryTwoChange(r, c2.ID)
 	errs := RevertTelemetryTwoChanges(r, []string{a1.ID, a2.ID})
 	assert.Empty(t, errs)
-	assert.Nil(t, logupload.GetOneTelemetryTwoProfile(p1.ID))
-	assert.Nil(t, logupload.GetOneTelemetryTwoProfile(p2.ID))
+	assert.Nil(t, logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p1.ID))
+	assert.Nil(t, logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p2.ID))
 }
 
 func TestPagingAndGroupingHelpers(t *testing.T) {
@@ -195,7 +195,7 @@ func TestPagingAndGroupingHelpers(t *testing.T) {
 		p := makeT2Profile("pg" + uuid.New().String())
 		seedChange(t, xchange.Create, nil, p)
 	}
-	all := xchange.GetAllTelemetryTwoChangeList()
+	all := xchange.GetAllTelemetryTwoChangeList(db.GetDefaultTenantId())
 	pg := GeneratePageTelemetryTwoChanges(all, 1, 2)
 	assert.Equal(t, 2, len(pg))
 	groups := GroupTelemetryTwoChanges(all)
@@ -205,7 +205,7 @@ func TestPagingAndGroupingHelpers(t *testing.T) {
 func TestApplyUpdateTelemetryTwoChange_Merge(t *testing.T) {
 	cleanupChangeTest()
 	orig := makeT2Profile("merge")
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_TELEMETRY_TWO_PROFILES, orig.ID, orig)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, orig.ID, orig)
 	upd, _ := orig.Clone()
 	upd.Jsonconfig = validTelemetryTwoJSON
 	upd.Name = "merge2"

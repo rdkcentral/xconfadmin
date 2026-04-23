@@ -43,8 +43,8 @@ import (
 	"github.com/google/uuid"
 )
 
-func validateUsageForTelemetryRule(Id string, app string) (string, error) {
-	tmRule := xlogupload.GetOneTelemetryRule(Id)
+func validateUsageForTelemetryRule(tenantId string, Id string, app string) (string, error) {
+	tmRule := xlogupload.GetOneTelemetryRule(tenantId, Id)
 	if tmRule == nil {
 		return fmt.Sprintf("Entity with id  %s does not exist ", Id), nil
 	}
@@ -54,8 +54,8 @@ func validateUsageForTelemetryRule(Id string, app string) (string, error) {
 	return "", nil
 }
 
-func DeleteTelemetryRulebyId(id string, app string) *xwhttp.ResponseEntity {
-	usage, err := validateUsageForTelemetryRule(id, app)
+func DeleteTelemetryRulebyId(tenantId string, id string, app string) *xwhttp.ResponseEntity {
+	usage, err := validateUsageForTelemetryRule(tenantId, id, app)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, err, nil)
 	}
@@ -64,7 +64,7 @@ func DeleteTelemetryRulebyId(id string, app string) *xwhttp.ResponseEntity {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, errors.New(usage), nil)
 	}
 
-	err = DeleteOneTelemetryRule(id)
+	err = DeleteOneTelemetryRule(tenantId, id)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -72,15 +72,15 @@ func DeleteTelemetryRulebyId(id string, app string) *xwhttp.ResponseEntity {
 	return xwhttp.NewResponseEntity(http.StatusNoContent, nil, nil)
 }
 
-func DeleteOneTelemetryRule(id string) error {
-	err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_TELEMETRY_RULES, id)
+func DeleteOneTelemetryRule(tenantId string, id string) error {
+	err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_TELEMETRY_RULES, id)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func telemetryRuleValidate(tmrule *xwlogupload.TelemetryRule) *xwhttp.ResponseEntity {
+func telemetryRuleValidate(tenantId string, tmrule *xwlogupload.TelemetryRule) *xwhttp.ResponseEntity {
 	if tmrule == nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("DCM formula Rule should be specified"), nil)
 	}
@@ -96,7 +96,7 @@ func telemetryRuleValidate(tmrule *xwlogupload.TelemetryRule) *xwhttp.ResponseEn
 	if xwutil.IsBlank(tmrule.BoundTelemetryID) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("BoundTelemetryID is empty"), nil)
 	} else {
-		profile := xwlogupload.GetOnePermanentTelemetryProfile(tmrule.BoundTelemetryID)
+		profile := xwlogupload.GetOnePermanentTelemetryProfile(tenantId, tmrule.BoundTelemetryID)
 		if profile == nil {
 			return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("BoundTelemetryID does not exist"), nil)
 		}
@@ -110,11 +110,11 @@ func telemetryRuleValidate(tmrule *xwlogupload.TelemetryRule) *xwhttp.ResponseEn
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
-	err = queries.RunGlobalValidation(*tmrule.GetRule(), queries.GetAllowedOperations)
+	err = queries.RunGlobalValidation(tenantId, *tmrule.GetRule(), queries.GetAllowedOperations)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
-	tmrules := xwlogupload.GetTelemetryRuleListForAs()
+	tmrules := xwlogupload.GetTelemetryRuleListForAs(tenantId)
 	for _, extmrule := range tmrules {
 		if extmrule.ApplicationType != tmrule.ApplicationType {
 			continue
@@ -136,11 +136,11 @@ func telemetryRuleValidate(tmrule *xwlogupload.TelemetryRule) *xwhttp.ResponseEn
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, nil)
 }
 
-func CreateTelemetryRule(tmrule *xwlogupload.TelemetryRule, app string) *xwhttp.ResponseEntity {
+func CreateTelemetryRule(tenantId string, tmrule *xwlogupload.TelemetryRule, app string) *xwhttp.ResponseEntity {
 	if xwutil.IsBlank(tmrule.ID) {
 		tmrule.ID = uuid.New().String()
 	} else {
-		existingRule := xlogupload.GetOneTelemetryRule(tmrule.ID)
+		existingRule := xlogupload.GetOneTelemetryRule(tenantId, tmrule.ID)
 		if existingRule != nil {
 			return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s already exists", tmrule.ID), nil)
 		}
@@ -149,7 +149,7 @@ func CreateTelemetryRule(tmrule *xwlogupload.TelemetryRule, app string) *xwhttp.
 	if tmrule.ApplicationType != app {
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s ApplicationType doesn't match", tmrule.ID), nil)
 	}
-	respEntity := telemetryRuleValidate(tmrule)
+	respEntity := telemetryRuleValidate(tenantId, tmrule)
 	if respEntity.Error != nil {
 		return respEntity
 	}
@@ -158,21 +158,21 @@ func CreateTelemetryRule(tmrule *xwlogupload.TelemetryRule, app string) *xwhttp.
 	}
 
 	tmrule.Updated = xwutil.GetTimestamp()
-	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_TELEMETRY_RULES, tmrule.ID, tmrule); err != nil {
+	if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_TELEMETRY_RULES, tmrule.ID, tmrule); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, tmrule)
 }
 
-func UpdateTelemetryRule(tmrule *xwlogupload.TelemetryRule, app string) *xwhttp.ResponseEntity {
+func UpdateTelemetryRule(tenantId string, tmrule *xwlogupload.TelemetryRule, app string) *xwhttp.ResponseEntity {
 	if xwutil.IsBlank(tmrule.ID) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New(" ID  is empty"), nil)
 	}
 	if tmrule.ApplicationType != app {
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s ApplicationType doesn't match", tmrule.ID), nil)
 	}
-	tmruleex, err := db.GetCachedSimpleDao().GetOne(db.TABLE_TELEMETRY_RULES, tmrule.ID)
+	tmruleex, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_TELEMETRY_RULES, tmrule.ID)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s does not exist", tmrule.ID), nil)
 	}
@@ -180,13 +180,13 @@ func UpdateTelemetryRule(tmrule *xwlogupload.TelemetryRule, app string) *xwhttp.
 	if tmruleDB.ApplicationType != tmrule.ApplicationType {
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("ApplicationType in db %s doesn't match the ApplicationType %s in req", tmruleDB.ApplicationType, tmrule.ApplicationType), nil)
 	}
-	respEntity := telemetryRuleValidate(tmrule)
+	respEntity := telemetryRuleValidate(tenantId, tmrule)
 	if respEntity.Error != nil {
 		return respEntity
 	}
 
 	tmrule.Updated = xwutil.GetTimestamp()
-	if err = db.GetCachedSimpleDao().SetOne(db.TABLE_TELEMETRY_RULES, tmrule.ID, tmrule); err != nil {
+	if err = db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_TELEMETRY_RULES, tmrule.ID, tmrule); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
@@ -229,7 +229,8 @@ func TelemetryRuleGeneratePageWithContext(tmrules []*xwlogupload.TelemetryRule, 
 }
 
 func TelemetryRuleFilterByContext(searchContext map[string]string) []*xwlogupload.TelemetryRule {
-	tmRules := xwlogupload.GetTelemetryRuleListForAs()
+	tenantId := searchContext[xwcommon.TENANT_ID]
+	tmRules := xwlogupload.GetTelemetryRuleListForAs(tenantId)
 	tmRuleList := []*xwlogupload.TelemetryRule{}
 	for _, tmRule := range tmRules {
 		if tmRule == nil {
@@ -287,8 +288,7 @@ func TelemetryRuleFilterByContext(searchContext map[string]string) []*xwloguploa
 			}
 		}
 		if telemetryProfile, ok := xutil.FindEntryInContext(searchContext, xcommon.PROFILE, false); ok {
-
-			telemetry := xwlogupload.GetOnePermanentTelemetryProfile(tmRule.BoundTelemetryID)
+			telemetry := xwlogupload.GetOnePermanentTelemetryProfile(tenantId, tmRule.BoundTelemetryID)
 			if telemetry != nil && !strings.Contains(strings.ToLower(telemetry.Name), strings.ToLower(telemetryProfile)) {
 				continue
 			}

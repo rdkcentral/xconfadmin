@@ -28,7 +28,7 @@ import (
 
 	"github.com/google/uuid"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
 	assert "gotest.tools/assert"
@@ -654,7 +654,7 @@ func TestPostChangePriorityHandler_ErrorPaths(t *testing.T) {
 	}`
 	var frt corefw.FirmwareRuleTemplate
 	json.Unmarshal([]byte(templateJSON), &frt)
-	SetOneInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE, frt.ID, &frt)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, frt.ID, &frt)
 
 	// Test with invalid priority (0)
 	req, err := http.NewRequest("POST", "/xconfAdminService/firmwareruletemplate/PRIORITY_TEST/priority/0", nil)
@@ -727,7 +727,7 @@ func TestPostChangePriorityHandler_Success(t *testing.T) {
 		}`
 		var frt corefw.FirmwareRuleTemplate
 		json.Unmarshal([]byte(templateJSON), &frt)
-		SetOneInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE, frt.ID, &frt)
+		SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, frt.ID, &frt)
 	}
 
 	// Change priority
@@ -810,7 +810,7 @@ func TestPostFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
 	}`
 	var frt corefw.FirmwareRuleTemplate
 	json.Unmarshal([]byte(templateJSON), &frt)
-	SetOneInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE, frt.ID, &frt)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, frt.ID, &frt)
 
 	templateData2 := `{
 		"id": "DUPLICATE_ID",
@@ -972,7 +972,7 @@ func TestPutFirmwareRuleTemplateEntitiesHandler_Success(t *testing.T) {
 	}`
 	var frt corefw.FirmwareRuleTemplate
 	json.Unmarshal([]byte(templateJSON), &frt)
-	SetOneInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE, frt.ID, &frt)
+	SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, frt.ID, &frt)
 
 	// Update it
 	updateData := `[{

@@ -129,7 +129,7 @@ const (
 )
 
 const (
-	TABLE_LOGS_KEY2_FIELD_NAME = "column1"
+	TABLE_CONFIG_CHANGE_LOGS_KEY2_FIELD_NAME = "column1"
 	LAST_CONFIG_LOG_ID         = "0"
 )
 

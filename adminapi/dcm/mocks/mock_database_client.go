@@ -40,7 +40,7 @@ func NewMockDatabaseClient() *MockDatabaseClient {
 }
 
 // AcquireLock implements the lock acquisition (no-op for tests)
-func (m *MockDatabaseClient) AcquireLock(lockName string, lockedBy string, ttlSeconds int) error {
+func (m *MockDatabaseClient) AcquireLock(tenantId string, lockName string, lockedBy string, ttlSeconds int) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.locks[lockName] = lockedBy
@@ -48,7 +48,7 @@ func (m *MockDatabaseClient) AcquireLock(lockName string, lockedBy string, ttlSe
 }
 
 // ReleaseLock implements the lock release (no-op for tests)
-func (m *MockDatabaseClient) ReleaseLock(lockName string, lockedBy string) error {
+func (m *MockDatabaseClient) ReleaseLock(tenantId string, lockName string, lockedBy string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	delete(m.locks, lockName)
@@ -61,61 +61,61 @@ func (m *MockDatabaseClient) SetUp() error    { return nil }
 func (m *MockDatabaseClient) TearDown() error { return nil }
 func (m *MockDatabaseClient) Close() error    { return nil }
 func (m *MockDatabaseClient) Sleep()          {}
-func (m *MockDatabaseClient) SetXconfData(tableName string, rowKey string, value []byte, ttl int) error {
+func (m *MockDatabaseClient) SetXconfData(tenantId string, tableName string, rowKey string, value []byte, ttl int) error {
 	return nil
 }
-func (m *MockDatabaseClient) GetXconfData(tableName string, rowKey string) ([]byte, error) {
+func (m *MockDatabaseClient) GetXconfData(tenantId string, tableName string, rowKey string) ([]byte, error) {
 	return nil, nil
 }
-func (m *MockDatabaseClient) GetAllXconfDataByKeys(tableName string, rowKeys []string) [][]byte {
+func (m *MockDatabaseClient) GetAllXconfDataByKeys(tenantId string, tableName string, rowKeys []string) [][]byte {
 	return nil
 }
-func (m *MockDatabaseClient) GetAllXconfKeys(tableName string) []string {
+func (m *MockDatabaseClient) GetAllXconfKeys(tenantId string, tableName string) []string {
 	return nil
 }
-func (m *MockDatabaseClient) GetAllXconfDataAsList(tableName string, maxResults int) [][]byte {
+func (m *MockDatabaseClient) GetAllXconfDataAsList(tenantId string, tableName string, maxResults int) [][]byte {
 	return nil
 }
-func (m *MockDatabaseClient) GetAllXconfDataAsMap(tableName string, maxResults int) map[string][]byte {
+func (m *MockDatabaseClient) GetAllXconfDataAsMap(tenantId string, tableName string, maxResults int) map[string][]byte {
 	return nil
 }
-func (m *MockDatabaseClient) DeleteXconfData(tableName string, rowKey string) error {
+func (m *MockDatabaseClient) DeleteXconfData(tenantId string, tableName string, rowKey string) error {
 	return nil
 }
-func (m *MockDatabaseClient) DeleteAllXconfData(tableName string) error {
+func (m *MockDatabaseClient) DeleteAllXconfData(tenantId string, tableName string) error {
 	return nil
 }
-func (m *MockDatabaseClient) GetAllXconfData(tableName string, rowKey string) [][]byte {
+func (m *MockDatabaseClient) GetAllXconfData(tenantId string, tableName string, rowKey string) [][]byte {
 	return nil
 }
-func (m *MockDatabaseClient) GetAllXconfDataTwoKeysRange(tableName string, rowKey interface{}, key2FieldName string, rangeInfo *db.RangeInfo) [][]byte {
+func (m *MockDatabaseClient) GetAllXconfDataTwoKeysRange(tenantId string, tableName string, rowKey interface{}, key2FieldName string, rangeInfo *db.RangeInfo) [][]byte {
 	return nil
 }
-func (m *MockDatabaseClient) GetAllXconfDataTwoKeysAsMap(tableName string, rowKey string, key2FieldName string, key2List []interface{}) map[interface{}][]byte {
+func (m *MockDatabaseClient) GetAllXconfDataTwoKeysAsMap(tenantId string, tableName string, rowKey string, key2FieldName string, key2List []interface{}) map[interface{}][]byte {
 	return nil
 }
-func (m *MockDatabaseClient) SetXconfDataTwoKeys(tableName string, rowKey interface{}, key2FieldName string, key2 interface{}, value []byte, ttl int) error {
+func (m *MockDatabaseClient) SetXconfDataTwoKeys(tenantId string, tableName string, rowKey interface{}, key2FieldName string, key2 interface{}, value []byte, ttl int) error {
 	return nil
 }
-func (m *MockDatabaseClient) GetXconfDataTwoKeys(tableName string, rowKey string, key2FieldName string, key2 interface{}) ([]byte, error) {
+func (m *MockDatabaseClient) GetXconfDataTwoKeys(tenantId string, tableName string, rowKey string, key2FieldName string, key2 interface{}) ([]byte, error) {
 	return nil, nil
 }
-func (m *MockDatabaseClient) DeleteXconfDataTwoKeys(tableName string, rowKey string, key2FieldName string, key2 interface{}) error {
+func (m *MockDatabaseClient) DeleteXconfDataTwoKeys(tenantId string, tableName string, rowKey string, key2FieldName string, key2 interface{}) error {
 	return nil
 }
-func (m *MockDatabaseClient) GetAllXconfTwoKeys(tableName string, key2FieldName string) []db.TwoKeys {
+func (m *MockDatabaseClient) GetAllXconfTwoKeys(tenantId string, tableName string, key2FieldName string) []db.TwoKeys {
 	return nil
 }
-func (m *MockDatabaseClient) GetAllXconfKey2s(tableName string, rowKey string, key2FieldName string) []interface{} {
+func (m *MockDatabaseClient) GetAllXconfKey2s(tenantId string, tableName string, rowKey string, key2FieldName string) []interface{} {
 	return nil
 }
-func (m *MockDatabaseClient) SetXconfCompressedData(tableName string, rowKey string, values [][]byte, ttl int) error {
+func (m *MockDatabaseClient) SetXconfCompressedData(tenantId string, tableName string, rowKey string, values [][]byte, ttl int) error {
 	return nil
 }
-func (m *MockDatabaseClient) GetXconfCompressedData(tableName string, rowKey string) ([]byte, error) {
+func (m *MockDatabaseClient) GetXconfCompressedData(tenantId string, tableName string, rowKey string) ([]byte, error) {
 	return nil, nil
 }
-func (m *MockDatabaseClient) GetAllXconfCompressedDataAsMap(tableName string) map[string][]byte {
+func (m *MockDatabaseClient) GetAllXconfCompressedDataAsMap(tenantId string, tableName string) map[string][]byte {
 	return nil
 }
 func (m *MockDatabaseClient) GetEcmMacFromPodTable(s string) (string, error) {
@@ -163,8 +163,17 @@ func (m *MockDatabaseClient) SetPrecookDataInXPC(RfcPrecookHash string, RfcPreco
 func (m *MockDatabaseClient) GetPrecookDataFromXPC(RfcPrecookHash string) ([]byte, string, error) {
 	return nil, "", nil
 }
-func (m *MockDatabaseClient) GetLockInfo(lockName string) (map[string]interface{}, error) {
+func (m *MockDatabaseClient) GetLockInfo(tenantId string, lockName string) (map[string]interface{}, error) {
 	return nil, nil
+}
+func (m *MockDatabaseClient) GetAllTenants() []*db.Tenant {
+	return nil
+}
+func (m *MockDatabaseClient) SetTenant(tenant *db.Tenant) error {
+	return nil
+}
+func (m *MockDatabaseClient) DeleteTenant(tenantId string) error {
+	return nil
 }
 
 // ExecuteBatch executes a batch of operations (stub for tests)

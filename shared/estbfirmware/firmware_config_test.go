@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	core "github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfwebconfig/db"
 )
 
 func TestNewEmptyFirmwareConfig(t *testing.T) {
@@ -119,7 +120,7 @@ func TestFirmwareConfig_Validate_Success(t *testing.T) {
 
 	// This test may fail if models don't exist in DB
 	// For now, test the structure
-	err := fc.Validate()
+	err := fc.Validate(db.GetDefaultTenantId())
 	// If error is about model not existing, that's expected in unit test environment
 	if err != nil && err.Error() != "Supported model list is empty" {
 		// Models may not be set up, so we accept model-related errors
@@ -130,7 +131,7 @@ func TestFirmwareConfig_Validate_Success(t *testing.T) {
 func TestFirmwareConfig_Validate_NilConfig(t *testing.T) {
 	var fc *FirmwareConfig = nil
 
-	err := fc.Validate()
+	err := fc.Validate(db.GetDefaultTenantId())
 	if err == nil {
 		t.Fatal("expected error for nil config")
 	}
@@ -147,7 +148,7 @@ func TestFirmwareConfig_Validate_EmptyDescription(t *testing.T) {
 		FirmwareVersion:  "v1.0",
 	}
 
-	err := fc.Validate()
+	err := fc.Validate(db.GetDefaultTenantId())
 	if err == nil {
 		t.Fatal("expected error for empty description")
 	}
@@ -164,7 +165,7 @@ func TestFirmwareConfig_Validate_EmptyFilename(t *testing.T) {
 		FirmwareVersion:  "v1.0",
 	}
 
-	err := fc.Validate()
+	err := fc.Validate(db.GetDefaultTenantId())
 	if err == nil {
 		t.Fatal("expected error for empty filename")
 	}
@@ -181,7 +182,7 @@ func TestFirmwareConfig_Validate_EmptyVersion(t *testing.T) {
 		FirmwareVersion:  "",
 	}
 
-	err := fc.Validate()
+	err := fc.Validate(db.GetDefaultTenantId())
 	if err == nil {
 		t.Fatal("expected error for empty version")
 	}
@@ -199,7 +200,7 @@ func TestFirmwareConfig_Validate_EmptySupportedModels(t *testing.T) {
 		SupportedModelIds: []string{},
 	}
 
-	err := fc.Validate()
+	err := fc.Validate(db.GetDefaultTenantId())
 	if err == nil {
 		t.Fatal("expected error for empty supported models")
 	}
@@ -219,7 +220,7 @@ func TestFirmwareConfig_Validate_InvalidDownloadProtocol(t *testing.T) {
 		ApplicationType:          core.STB,
 	}
 
-	err := fc.Validate()
+	err := fc.Validate(db.GetDefaultTenantId())
 	// Will fail on model check first, but if we had valid models, would fail on protocol
 	if err != nil && !contains(err.Error(), "FirmwareDownloadProtocol") && !contains(err.Error(), "does not exist") {
 		t.Logf("Got error (may be model-related): %v", err)
@@ -241,7 +242,7 @@ func TestFirmwareConfig_Validate_TooManyProperties(t *testing.T) {
 		fc.Properties[string(rune('a'+i))] = "value"
 	}
 
-	err := fc.Validate()
+	err := fc.Validate(db.GetDefaultTenantId())
 	// Will fail on model check first
 	if err != nil && !contains(err.Error(), "Max allowed number") && !contains(err.Error(), "does not exist") {
 		t.Logf("Got error: %v", err)
@@ -260,7 +261,7 @@ func TestFirmwareConfig_Validate_EmptyPropertyKey(t *testing.T) {
 		},
 	}
 
-	err := fc.Validate()
+	err := fc.Validate(db.GetDefaultTenantId())
 	// Will fail on model check first
 	if err != nil {
 		t.Logf("Got error: %v", err)

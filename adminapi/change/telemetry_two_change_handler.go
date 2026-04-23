@@ -50,6 +50,7 @@ func GetTwoProfileChangesHandler(w http.ResponseWriter, r *http.Request) {
 
 	searchContext := make(map[string]string)
 	searchContext[xwcommon.APPLICATION_TYPE] = applicationType
+	searchContext[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	changes := GetTelemetryTwoChangesByContext(searchContext)
 	sort.Slice(changes, func(i, j int) bool {
@@ -70,7 +71,9 @@ func GetApprovedTwoChangesHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	changes := xchange.GetApprovedTelemetryTwoChangesByApplicationType(applicationType)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	changes := xchange.GetApprovedTelemetryTwoChangesByApplicationType(tenantId, applicationType)
 	res, err := xhttp.ReturnJsonResponse(changes, r)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -85,7 +88,9 @@ func GetTwoChangeEntityIdsHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	entityIds := GetTelemetryTwoChangeEntityIds()
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	entityIds := GetTelemetryTwoChangeEntityIds(tenantId)
 	res, err := xhttp.ReturnJsonResponse(entityIds, r)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -226,7 +231,8 @@ func CancelTwoChangeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := DeleteTelemetryTwoChange(changeId); err != nil {
+	tenantId := xwhttp.GetTenantId(r, "")
+	if err := DeleteTelemetryTwoChange(tenantId, changeId); err != nil {
 		xhttp.AdminError(w, err)
 		return
 	}
@@ -256,7 +262,8 @@ func GetGroupedTwoChangesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	changes := xchange.GetAllTelemetryTwoChangeList()
+	tenantId := xwhttp.GetTenantId(r, "")
+	changes := xchange.GetAllTelemetryTwoChangeList(tenantId)
 	changesPerPage := GeneratePageTelemetryTwoChanges(changes, pageNumber, pageSize)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -292,7 +299,8 @@ func GetGroupedApprovedTwoChangesHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	changes := xchange.GetAllApprovedTelemetryTwoChangeList()
+	tenantId := xwhttp.GetTenantId(r, "")
+	changes := xchange.GetAllApprovedTelemetryTwoChangeList(tenantId)
 	changesPerPage := GeneratePageApprovedTelemetryTwoChanges(changes, pageNumber, pageSize)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -346,6 +354,7 @@ func GetApprovedTwoChangesFilteredHandler(w http.ResponseWriter, r *http.Request
 	}
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
+	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	approvedChanges := GetApprovedTelemetryTwoChangesByContext(contextMap)
 	approvedChangesPerPage := GeneratePageApprovedTelemetryTwoChanges(approvedChanges, pageNumber, pageSize)
@@ -397,6 +406,7 @@ func GetTwoChangesFilteredHandler(w http.ResponseWriter, r *http.Request) {
 		xutil.AddQueryParamsToContextMap(r, contextMap)
 	}
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
+	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	changes := GetTelemetryTwoChangesByContext(contextMap)
 	changesPerPage := GeneratePageTelemetryTwoChanges(changes, pageNumber, pageSize)

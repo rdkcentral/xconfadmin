@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	common "github.com/rdkcentral/xconfadmin/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,24 +22,24 @@ func TestSetCanarySettingValidationPass(t *testing.T) {
 		CanaryFwUpgradeEndTime:       &endTime,
 	}
 
-	result := SetCanarySetting(validSettings)
+	result := SetCanarySetting(db.GetDefaultTenantId(), validSettings)
 	assert.NotEqual(t, http.StatusBadRequest, result.Status)
 
 	validSettings.CanaryMaxSize = nil
-	result = SetCanarySetting(validSettings)
+	result = SetCanarySetting(db.GetDefaultTenantId(), validSettings)
 	assert.NotEqual(t, http.StatusBadRequest, result.Status)
 
 	validSettings.CanaryDistributionPercentage = nil
-	result = SetCanarySetting(validSettings)
+	result = SetCanarySetting(db.GetDefaultTenantId(), validSettings)
 	assert.NotEqual(t, http.StatusBadRequest, result.Status)
 
 	validSettings.CanaryFwUpgradeStartTime = nil
-	result = SetCanarySetting(validSettings)
+	result = SetCanarySetting(db.GetDefaultTenantId(), validSettings)
 	assert.NotEqual(t, http.StatusBadRequest, result.Status)
 
 }
 
 func TestGetCanarySettings(t *testing.T) {
-	_, err := GetCanarySettings()
+	_, err := GetCanarySettings(db.GetDefaultTenantId())
 	assert.Error(t, err, "Should return error when app settings are not set")
 }

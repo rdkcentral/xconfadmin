@@ -24,17 +24,13 @@ import (
 
 	"github.com/gorilla/mux"
 
-	xutil "github.com/rdkcentral/xconfadmin/util"
-
-	xcommon "github.com/rdkcentral/xconfadmin/common"
-
-	"github.com/rdkcentral/xconfwebconfig/common"
-	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
-
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
-
+	xutil "github.com/rdkcentral/xconfadmin/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
 func GetLogRepoSettingsHandler(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +40,8 @@ func GetLogRepoSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := GetLogRepoSettingsAll()
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetLogRepoSettingsAll(tenantId)
 	appRules := []*logupload.UploadRepository{}
 	for _, rule := range result {
 		if applicationType == rule.ApplicationType {
@@ -81,7 +78,9 @@ func GetLogRepoSettingsByIdHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, errorStr)
 		return
 	}
-	logreposettings := GetLogRepoSettings(id)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	logreposettings := GetLogRepoSettings(tenantId, id)
 	if logreposettings == nil {
 		errorStr := fmt.Sprintf("%v not found", id)
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, errorStr)
@@ -122,7 +121,8 @@ func GetLogRepoSettingsSizeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	final := []*logupload.UploadRepository{}
-	result := GetLogRepoSettingsAll()
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetLogRepoSettingsAll(tenantId)
 	for _, lr := range result {
 		if lr.ApplicationType == applicationType {
 			final = append(final, lr)
@@ -144,7 +144,8 @@ func GetLogRepoSettingsNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	final := []string{}
-	result := GetLogRepoSettingsAll()
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetLogRepoSettingsAll(tenantId)
 	for _, lr := range result {
 		if lr.ApplicationType == applicationType {
 			final = append(final, lr.Name)
@@ -171,7 +172,9 @@ func DeleteLogRepoSettingsByIdHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, errorStr)
 		return
 	}
-	respEntity := DeleteLogRepoSettingsbyId(id, applicationType)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	respEntity := DeleteLogRepoSettingsbyId(tenantId, id, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -378,14 +381,15 @@ func GetLogRepoSettingsExportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	allFormulas := GetDcmFormulaAll()
+	tenantId := xwhttp.GetTenantId(r, "")
+	allFormulas := GetDcmFormulaAll(tenantId)
 	lusList := []*logupload.LogUploadSettings{}
 
 	for _, DcmRule := range allFormulas {
 		if DcmRule.ApplicationType != appType {
 			continue
 		}
-		lus := logupload.GetOneLogUploadSettings(DcmRule.ID)
+		lus := logupload.GetOneLogUploadSettings(tenantId, DcmRule.ID)
 		lusList = append(lusList, lus)
 	}
 	response, err := xhttp.ReturnJsonResponse(lusList, r)

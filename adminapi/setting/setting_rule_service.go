@@ -26,7 +26,6 @@ import (
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi/dcm/settings"
 
-	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	"github.com/rdkcentral/xconfadmin/adminapi/queries"
 	"github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfadmin/util"
@@ -40,28 +39,28 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func GetAllSettingRules() []*logupload.SettingRule {
-	SettingRules := GetSettingRulesList()
+func GetAllSettingRules(tenantId string) []*logupload.SettingRule {
+	SettingRules := GetSettingRulesList(tenantId)
 	sort.Slice(SettingRules, func(i, j int) bool {
 		return strings.ToLower(SettingRules[i].Name) < strings.ToLower(SettingRules[j].Name)
 	})
 	return SettingRules
 }
 
-func GetOneSettingRule(id string) (*logupload.SettingRule, error) {
-	settingRule := GetSettingRule(id)
+func GetOneSettingRule(tenantId string, id string) (*logupload.SettingRule, error) {
+	settingRule := GetSettingRule(tenantId, id)
 	if settingRule == nil {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
 	return settingRule, nil
 }
 
-func DeleteSettingRule(id string, writeApplication string) (*logupload.SettingRule, error) {
-	entity, err := GetOneSettingRule(id)
+func DeleteSettingRule(tenantId string, id string, writeApplication string) (*logupload.SettingRule, error) {
+	entity, err := GetOneSettingRule(tenantId, id)
 	if err != nil {
 		return nil, err
 	}
-	err = validateUsage(id)
+	err = validateUsage(tenantId, id)
 	if err != nil {
 		return nil, err
 	}
@@ -69,12 +68,12 @@ func DeleteSettingRule(id string, writeApplication string) (*logupload.SettingRu
 		return nil, fmt.Errorf("Entity with id %s ApplicationType doesn't match", id)
 	}
 
-	DeleteSettingRuleOne(id)
+	DeleteSettingRuleOne(tenantId, id)
 	return entity, nil
 }
 
-func GetSettingRule(id string) *logupload.SettingRule {
-	settingRule, err := db.GetCachedSimpleDao().GetOne(db.TABLE_SETTING_RULES, id)
+func GetSettingRule(tenantId string, id string) *logupload.SettingRule {
+	settingRule, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_SETTING_RULES, id)
 	if err != nil {
 		log.Warn("no settingRule found")
 		return nil
@@ -82,24 +81,24 @@ func GetSettingRule(id string) *logupload.SettingRule {
 	return settingRule.(*logupload.SettingRule)
 }
 
-func DeleteSettingRuleOne(id string) {
-	err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_SETTING_RULES, id)
+func DeleteSettingRuleOne(tenantId string, id string) {
+	err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_SETTING_RULES, id)
 	if err != nil {
 		log.Warn("delete settingRule failed")
 	}
 }
 
-func SetSettingRule(id string, settingProfile *logupload.SettingRule) error {
-	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_SETTING_RULES, id, settingProfile); err != nil {
+func SetSettingRule(tenantId string, id string, settingProfile *logupload.SettingRule) error {
+	if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_SETTING_RULES, id, settingProfile); err != nil {
 		log.Error("cannot save SettingRule to DB")
 		return err
 	}
 	return nil
 }
 
-func GetSettingRulesList() []*logupload.SettingRule {
+func GetSettingRulesList(tenantId string) []*logupload.SettingRule {
 	var settingRules []*logupload.SettingRule
-	rulesData, err := db.GetCachedSimpleDao().GetAllAsMap(db.TABLE_SETTING_RULES)
+	rulesData, err := db.GetCachedSimpleDao().GetAllAsMap(tenantId, db.TABLE_SETTING_RULES)
 	if err == nil {
 		for idx := range rulesData {
 			settingRule := rulesData[idx].(*logupload.SettingRule)
@@ -109,8 +108,9 @@ func GetSettingRulesList() []*logupload.SettingRule {
 	return settingRules
 }
 
-func FindByContextSettingRule(r *http.Request, searchContext map[string]string) []*logupload.SettingRule {
-	rules := GetSettingRulesList()
+func FindByContextSettingRule(searchContext map[string]string) []*logupload.SettingRule {
+	tenantId, _ := util.FindEntryInContext(searchContext, xwcommon.TENANT_ID, false)
+	rules := GetSettingRulesList(tenantId)
 	rulesFound := []*logupload.SettingRule{}
 	for _, rule := range rules {
 		if rule == nil {
@@ -143,8 +143,7 @@ func FindByContextSettingRule(r *http.Request, searchContext map[string]string) 
 	return rulesFound
 }
 
-func validateSettingRule(r *http.Request, entity *logupload.SettingRule) error {
-	auth.ValidateWrite(r, entity.ApplicationType, auth.DCM_ENTITY)
+func validateSettingRule(tenantId string, entity *logupload.SettingRule) error {
 	msg := validatePropertiesSettingRule(entity)
 	if msg != "" {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, msg)
@@ -159,7 +158,7 @@ func validateSettingRule(r *http.Request, entity *logupload.SettingRule) error {
 	if err := queries.ValidateRuleStructure(&entity.Rule); err != nil {
 		return err
 	}
-	if err := queries.RunGlobalValidation(entity.Rule, queries.GetAllowedOperations); err != nil {
+	if err := queries.RunGlobalValidation(tenantId, entity.Rule, queries.GetAllowedOperations); err != nil {
 		return err
 	}
 	return nil
@@ -175,8 +174,8 @@ func validatePropertiesSettingRule(entity *logupload.SettingRule) string {
 	return ""
 }
 
-func validateAllSettingRule(ruleToCheck *logupload.SettingRule) error {
-	existingSettingRules := GetAllSettingRules()
+func validateAllSettingRule(tenantId string, ruleToCheck *logupload.SettingRule) error {
+	existingSettingRules := GetAllSettingRules(tenantId)
 	for _, settingRule := range existingSettingRules {
 		if settingRule.ID == ruleToCheck.ID {
 			continue
@@ -194,8 +193,8 @@ func validateAllSettingRule(ruleToCheck *logupload.SettingRule) error {
 	return nil
 }
 
-func validateUsageSettingRule(id string) error {
-	all := GetSettingRulesList()
+func validateUsageSettingRule(tenantId string, id string) error {
+	all := GetSettingRulesList(tenantId)
 	for _, rule := range all {
 		if rule.BoundSettingID == id {
 			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Can't delete profile as it's used in setting rule: "+rule.Name)
@@ -217,23 +216,12 @@ func SettingRulesGeneratePage(list []*logupload.SettingRule, page int, pageSize 
 	return list[startIndex:lastIndex]
 }
 
-func beforeCreatingSettingRule(r *http.Request, entity *logupload.SettingRule) error {
+func beforeCreatingSettingRule(tenantId string, writeApplication string, entity *logupload.SettingRule) error {
 	id := entity.ID
-	//todo:
-	//String writeApplication = getPermissionService().getWriteApplication();
 	if id == "" {
 		entity.ID = uuid.New().String()
 	} else {
-		existingEntity := GetSettingRule(id)
-		//if (existingEntity != null && !ApplicationType.equals(existingEntity.getApplicationType(), entity.getApplicationType())) {
-		//    throw new EntityExistsException("Entity with id: " + id + " already exists in " + existingEntity.getApplicationType() + " application");
-		//} else if (existingEntity != null && ApplicationType.equals(existingEntity.getApplicationType(), writeApplication)) {
-		//    throw new EntityExistsException("Entity with id: " + id + " already exists");
-		//}
-		writeApplication, err := auth.CanWrite(r, auth.DCM_ENTITY)
-		if err != nil {
-			return err
-		}
+		existingEntity := GetSettingRule(tenantId, id)
 		if existingEntity != nil && !shared.ApplicationTypeEquals(existingEntity.ApplicationType, entity.ApplicationType) {
 			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Entity with id: "+id+" already exists in "+existingEntity.ApplicationType+" application")
 		} else if existingEntity != nil && shared.ApplicationTypeEquals(existingEntity.ApplicationType, writeApplication) {
@@ -243,19 +231,12 @@ func beforeCreatingSettingRule(r *http.Request, entity *logupload.SettingRule) e
 	return nil
 }
 
-func beforeUpdatingSettingRule(r *http.Request, entity *logupload.SettingRule) error {
+func beforeUpdatingSettingRule(tenantId string, writeApplication string, entity *logupload.SettingRule) error {
 	id := entity.ID
 	if id == "" {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Entity id is empty")
 	}
-	existingEntity := GetSettingRule(id)
-	//todo:
-	//String writeApplication = getPermissionService().getWriteApplication();
-	//if (existingEntity == null || !ApplicationType.equals(existingEntity.getApplicationType(), writeApplication)) {
-	writeApplication, err := auth.CanWrite(r, auth.DCM_ENTITY)
-	if err != nil {
-		return err
-	}
+	existingEntity := GetSettingRule(tenantId, id)
 	if !shared.ApplicationTypeEquals(existingEntity.ApplicationType, writeApplication) {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
@@ -265,62 +246,54 @@ func beforeUpdatingSettingRule(r *http.Request, entity *logupload.SettingRule) e
 	return nil
 }
 
-func beforeSavingSettingRule(r *http.Request, entity *logupload.SettingRule) error {
-	//todo:
-	//if (entity != null && StringUtils.isBlank(entity.getApplicationType())) {
-	//	entity.setApplicationType(getPermissionService().getWriteApplication());
-	//}
+func beforeSavingSettingRule(tenantId string, writeApplication string, entity *logupload.SettingRule) error {
 	if entity != nil && entity.ApplicationType == "" {
-		application, err := auth.CanWrite(r, auth.DCM_ENTITY)
-		if err != nil {
-			return err
-		}
-		entity.ApplicationType = application
+		entity.ApplicationType = writeApplication
 	}
 	if entity != nil && !entity.Rule.Equals(re.NewEmptyRule()) {
 		re.NormalizeConditions(&entity.Rule)
 	}
-	err := validateSettingRule(r, entity)
+	err := validateSettingRule(tenantId, entity)
 	if err != nil {
 		return err
 	}
-	err = validateAllSettingRule(entity)
+	err = validateAllSettingRule(tenantId, entity)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func CreateSettingRule(r *http.Request, entity *logupload.SettingRule) error {
-	err := beforeCreatingSettingRule(r, entity)
+func CreateSettingRule(tenantId string, writeApplication string, entity *logupload.SettingRule) error {
+	err := beforeCreatingSettingRule(tenantId, writeApplication, entity)
 	if err != nil {
 		return err
 	}
-	err = beforeSavingSettingRule(r, entity)
+	err = beforeSavingSettingRule(tenantId, writeApplication, entity)
 	if err != nil {
 		return err
 	}
-	return SetSettingRule(entity.ID, entity)
+	return SetSettingRule(tenantId, entity.ID, entity)
 }
 
-func UpdateSettingRule(r *http.Request, entity *logupload.SettingRule) error {
-	err := beforeUpdatingSettingRule(r, entity)
+func UpdateSettingRule(tenantId string, writeApplication string, entity *logupload.SettingRule) error {
+	err := beforeUpdatingSettingRule(tenantId, writeApplication, entity)
 	if err != nil {
 		return err
 	}
-	err = beforeSavingSettingRule(r, entity)
+	err = beforeSavingSettingRule(tenantId, writeApplication, entity)
 	if err != nil {
 		return err
 	}
-	return SetSettingRule(entity.ID, entity)
+	return SetSettingRule(tenantId, entity.ID, entity)
 }
 
 func GetSettingRulesWithConfig(settingTypes []string, context map[string]string) map[string][]*logupload.SettingRule {
 	result := make(map[string][]*logupload.SettingRule)
-
+	tenantId := context[xwcommon.TENANT_ID]
 	for _, settingType := range settingTypes {
 		settingRule := settings.GetSettingsRuleByTypeForContext(settingType, context)
-		settingProfile := settings.GetSettingProfileBySettingRule(settingRule)
+		settingProfile := settings.GetSettingProfileBySettingRule(tenantId, settingRule)
 		if settingProfile == nil {
 			continue
 		}

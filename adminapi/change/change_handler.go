@@ -87,7 +87,9 @@ func ApproveChangeHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	headerMap := createHeadersMap(applicationType)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	headerMap := createHeadersMap(tenantId, applicationType)
 	xwhttp.WriteXconfResponseWithHeaders(w, headerMap, http.StatusOK, nil)
 }
 
@@ -111,6 +113,8 @@ func RevertChangeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
+
 	approveId, found := mux.Vars(r)[xcommon.APPROVE_ID]
 	if !found || approveId == "" {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("%v is invalid", xcommon.APPROVE_ID))
@@ -122,7 +126,7 @@ func RevertChangeHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	headerMap := createHeadersMap(applicationType)
+	headerMap := createHeadersMap(tenantId, applicationType)
 	xwhttp.WriteXconfResponseWithHeaders(w, headerMap, http.StatusOK, nil)
 }
 
@@ -132,6 +136,8 @@ func CancelChangeHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
+
+	tenantId := xwhttp.GetTenantId(r, "")
 
 	changeId, found := mux.Vars(r)[xcommon.CHANGE_ID]
 	if !found || changeId == "" {
@@ -144,14 +150,14 @@ func CancelChangeHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	headerMap := createHeadersMap(applicationType)
+	headerMap := createHeadersMap(tenantId, applicationType)
 	xwhttp.WriteXconfResponseWithHeaders(w, headerMap, http.StatusOK, nil)
 }
 
-func createHeadersMap(applicationType string) map[string]string {
+func createHeadersMap(tenantId string, applicationType string) map[string]string {
 	headerMap := make(map[string]string, 2)
-	changeListAll := xchange.GetChangeList()
-	approvedChangeListAll := xchange.GetApprovedChangeList()
+	changeListAll := xchange.GetChangeList(tenantId)
+	approvedChangeListAll := xchange.GetApprovedChangeList(tenantId)
 	var lenChangeList int = len(changeListAll)
 	var lenApprovedChangeList int = len(approvedChangeListAll)
 	var changeList = []*xwchange.Change{}
@@ -210,8 +216,9 @@ func GetGroupedChangesHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-
-	changeList := xchange.GetChangeList()
+	
+	tenantId := xwhttp.GetTenantId(r, "")
+	changeList := xchange.GetChangeList(tenantId)
 	sort.Slice(changeList, func(i, j int) bool {
 		return changeList[i].Updated < changeList[j].Updated
 	})
@@ -221,7 +228,7 @@ func GetGroupedChangesHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal changeMap error: %v", err))
 	}
-	headerMap := createHeadersMap(applicationType)
+	headerMap := createHeadersMap(tenantId, applicationType)
 	xwhttp.WriteXconfResponseWithHeaders(w, headerMap, http.StatusOK, response)
 }
 
@@ -257,7 +264,8 @@ func GetGroupedApprovedChangesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	changeList := xchange.GetApprovedChangeList()
+	tenantId := xwhttp.GetTenantId(r, "")
+	changeList := xchange.GetApprovedChangeList(tenantId)
 	sort.Slice(changeList, func(i, j int) bool {
 		return changeList[j].Updated < changeList[i].Updated
 	})
@@ -269,7 +277,7 @@ func GetGroupedApprovedChangesHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal ApprovedChangesMap error: %v", err))
 	}
-	headerMap := createHeadersMap(applicationType)
+	headerMap := createHeadersMap(tenantId, applicationType)
 	xwhttp.WriteXconfResponseWithHeaders(w, headerMap, http.StatusOK, response)
 }
 
@@ -315,6 +323,8 @@ func ApproveChangesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
+
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
@@ -336,7 +346,7 @@ func ApproveChangesHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal ApprovedChangesMap error: %v", err))
 	}
-	headerMap := createHeadersMap(applicationType)
+	headerMap := createHeadersMap(tenantId, applicationType)
 	xwhttp.WriteXconfResponseWithHeaders(w, headerMap, http.StatusOK, response)
 }
 

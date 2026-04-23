@@ -20,6 +20,7 @@ package mocks
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,14 +33,14 @@ func TestNewMockDatabaseClient(t *testing.T) {
 // TestMockDatabaseClient_AcquireLock tests acquiring lock
 func TestMockDatabaseClient_AcquireLock(t *testing.T) {
 	client := NewMockDatabaseClient()
-	err := client.AcquireLock("test-lock", "owner-123", 60)
+	err := client.AcquireLock(db.GetDefaultTenantId(), "test-lock", "owner-123", 60)
 	assert.Nil(t, err)
 }
 
 // TestMockDatabaseClient_ReleaseLock tests releasing lock
 func TestMockDatabaseClient_ReleaseLock(t *testing.T) {
 	client := NewMockDatabaseClient()
-	err := client.ReleaseLock("test-cf", "test-key")
+	err := client.ReleaseLock(db.GetDefaultTenantId(), "test-cf", "test-key")
 	assert.Nil(t, err)
 }
 

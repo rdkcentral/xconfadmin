@@ -44,9 +44,9 @@ const (
 	cVodSettingsPageSize   = "pageSize"
 )
 
-func GetVodSettingsList() []*logupload.VodSettings {
+func GetVodSettingsList(tenantId string) []*logupload.VodSettings {
 	all := []*logupload.VodSettings{}
-	vodSettingsList, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_VOD_SETTINGS, 0)
+	vodSettingsList, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_VOD_SETTINGS, 0)
 	if err != nil {
 		log.Warn("no VodSettings found")
 		return all
@@ -60,33 +60,33 @@ func GetVodSettingsList() []*logupload.VodSettings {
 	return all
 }
 
-func GetVodSettingsAll() []*logupload.VodSettings {
+func GetVodSettingsAll(tenantId string) []*logupload.VodSettings {
 	result := []*logupload.VodSettings{}
-	result = GetVodSettingsList()
+	result = GetVodSettingsList(tenantId)
 	return result
 }
 
-func GetVodSettings(id string) *logupload.VodSettings {
-	vodsettings := logupload.GetOneVodSettings(id)
+func GetVodSettings(tenantId string, id string) *logupload.VodSettings {
+	vodsettings := logupload.GetOneVodSettings(tenantId, id)
 	if vodsettings != nil {
 		return vodsettings
 	}
 	return nil
 }
 
-func validateUsageForVodSettings(Id string, app string) (string, error) {
-	vs := GetVodSettings(Id)
+func validateUsageForVodSettings(tenantId string, id string, app string) (string, error) {
+	vs := GetVodSettings(tenantId, id)
 	if vs == nil {
-		return fmt.Sprintf("Entity with id  %s does not exist ", Id), nil
+		return fmt.Sprintf("Entity with id  %s does not exist ", id), nil
 	}
 	if vs.ApplicationType != app {
-		return fmt.Sprintf("Entity with id  %s does not exist ,ApplicationType mismatch", Id), nil
+		return fmt.Sprintf("Entity with id  %s does not exist ,ApplicationType mismatch", id), nil
 	}
 	return "", nil
 }
 
-func DeleteVodSettingsbyId(id string, app string) *xwhttp.ResponseEntity {
-	usage, err := validateUsageForVodSettings(id, app)
+func DeleteVodSettingsbyId(tenantId string, id string, app string) *xwhttp.ResponseEntity {
+	usage, err := validateUsageForVodSettings(tenantId, id, app)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, err, nil)
 	}
@@ -95,7 +95,7 @@ func DeleteVodSettingsbyId(id string, app string) *xwhttp.ResponseEntity {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, errors.New(usage), nil)
 	}
 
-	err = DeleteOneVodSettings(id)
+	err = DeleteOneVodSettings(tenantId, id)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -103,15 +103,15 @@ func DeleteVodSettingsbyId(id string, app string) *xwhttp.ResponseEntity {
 	return xwhttp.NewResponseEntity(http.StatusNoContent, nil, nil)
 }
 
-func DeleteOneVodSettings(id string) error {
-	err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_VOD_SETTINGS, id)
+func DeleteOneVodSettings(tenantId string, id string) error {
+	err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_VOD_SETTINGS, id)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func VodSettingsValidate(vs *logupload.VodSettings) *xwhttp.ResponseEntity {
+func VodSettingsValidate(tenantId string, vs *logupload.VodSettings) *xwhttp.ResponseEntity {
 	if vs == nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("VodSettings should be specified"), nil)
 	}
@@ -149,7 +149,7 @@ func VodSettingsValidate(vs *logupload.VodSettings) *xwhttp.ResponseEntity {
 		}
 	}
 
-	vsrules := GetVodSettingsAll()
+	vsrules := GetVodSettingsAll(tenantId)
 	for _, exvsrule := range vsrules {
 		if exvsrule.ApplicationType != vs.ApplicationType {
 			continue
@@ -164,8 +164,8 @@ func VodSettingsValidate(vs *logupload.VodSettings) *xwhttp.ResponseEntity {
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, nil)
 }
 
-func CreateVodSettings(vs *logupload.VodSettings, app string) *xwhttp.ResponseEntity {
-	if existingSettings := logupload.GetOneVodSettings(vs.ID); existingSettings != nil {
+func CreateVodSettings(tenantId string, vs *logupload.VodSettings, app string) *xwhttp.ResponseEntity {
+	if existingSettings := logupload.GetOneVodSettings(tenantId, vs.ID); existingSettings != nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(fmt.Sprintf("Entity with id %s already exists", vs.ID)), nil)
 	}
 	if vs.ApplicationType == "" {
@@ -173,36 +173,36 @@ func CreateVodSettings(vs *logupload.VodSettings, app string) *xwhttp.ResponseEn
 	} else if vs.ApplicationType != app {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(fmt.Sprintf("Entity with id %s ApplicationType mismatch", vs.ID)), nil)
 	}
-	respEntity := VodSettingsValidate(vs)
+	respEntity := VodSettingsValidate(tenantId, vs)
 	if respEntity.Error != nil {
 		return respEntity
 	}
 
 	vs.Updated = xutil.GetTimestamp()
-	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vs.ID, vs); err != nil {
+	if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_VOD_SETTINGS, vs.ID, vs); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, vs)
 }
 
-func UpdateVodSettings(vs *logupload.VodSettings, app string) *xwhttp.ResponseEntity {
+func UpdateVodSettings(tenantId string, vs *logupload.VodSettings, app string) *xwhttp.ResponseEntity {
 	if xwutil.IsBlank(vs.ID) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("ID is empty"), nil)
 	}
-	existingSettings := logupload.GetOneVodSettings(vs.ID)
+	existingSettings := logupload.GetOneVodSettings(tenantId, vs.ID)
 	if existingSettings == nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(fmt.Sprintf("Entity with id %s does not exists", vs.ID)), nil)
 	}
 	if existingSettings.ApplicationType != vs.ApplicationType {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(fmt.Sprintf("ApplicationType can not be changed")), nil)
 	}
-	if respEntity := VodSettingsValidate(vs); respEntity.Error != nil {
+	if respEntity := VodSettingsValidate(tenantId, vs); respEntity.Error != nil {
 		return respEntity
 	}
 
 	vs.Updated = xwutil.GetTimestamp()
-	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vs.ID, vs); err != nil {
+	if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_VOD_SETTINGS, vs.ID, vs); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
@@ -244,7 +244,7 @@ func VodSettingsGeneratePageWithContext(vsrules []*logupload.VodSettings, contex
 }
 
 func VodSettingsFilterByContext(searchContext map[string]string) []*logupload.VodSettings {
-	vodSettingsRules := GetVodSettingsList()
+	vodSettingsRules := GetVodSettingsList(searchContext[xwcommon.TENANT_ID])
 	vodSettingsRuleList := []*logupload.VodSettings{}
 	for _, vsRule := range vodSettingsRules {
 		if vsRule == nil {

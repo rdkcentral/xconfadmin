@@ -27,7 +27,7 @@ import (
 	"gotest.tools/assert"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
@@ -85,15 +85,15 @@ func TestFindByContext_NameFilter(t *testing.T) {
 	rule2 := createTestTelemetryTwoRule("AnotherRule", "stb", []string{})
 	rule3 := createTestTelemetryTwoRule("TestRule3", "stb", []string{})
 
-	logupload.SetOneTelemetryTwoRule(rule1.ID, rule1)
-	logupload.SetOneTelemetryTwoRule(rule2.ID, rule2)
-	logupload.SetOneTelemetryTwoRule(rule3.ID, rule3)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule1.ID, rule1)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule2.ID, rule2)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule3.ID, rule3)
 
 	t.Run("FilterByName_Found", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.NAME_UPPER: "TestRule",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 2, len(results))
 		// Verify both TestRule1 and TestRule3 are returned
 		foundNames := make(map[string]bool)
@@ -108,7 +108,7 @@ func TestFindByContext_NameFilter(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.NAME_UPPER: "NonExistent",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 0, len(results))
 	})
 
@@ -116,7 +116,7 @@ func TestFindByContext_NameFilter(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.NAME_UPPER: "",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		// Empty string should return all rules
 		assert.Equal(t, 3, len(results))
 	})
@@ -125,7 +125,7 @@ func TestFindByContext_NameFilter(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.NAME_UPPER: "testrule",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 2, len(results))
 	})
 }
@@ -138,23 +138,23 @@ func TestFindByContext_ProfileFilter(t *testing.T) {
 	profile1 := createTestTelemetryTwoProfile("Profile1", "stb")
 	profile2 := createTestTelemetryTwoProfile("TestProfile", "stb")
 
-	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profile1.ID, profile1)
-	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profile2.ID, profile2)
+	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, profile1.ID, profile1)
+	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, profile2.ID, profile2)
 
 	// Create rules with different profile bindings
 	rule1 := createTestTelemetryTwoRule("Rule1", "stb", []string{profile1.ID})
 	rule2 := createTestTelemetryTwoRule("Rule2", "stb", []string{profile2.ID})
 	rule3 := createTestTelemetryTwoRule("Rule3", "stb", []string{}) // No profiles
 
-	logupload.SetOneTelemetryTwoRule(rule1.ID, rule1)
-	logupload.SetOneTelemetryTwoRule(rule2.ID, rule2)
-	logupload.SetOneTelemetryTwoRule(rule3.ID, rule3)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule1.ID, rule1)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule2.ID, rule2)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule3.ID, rule3)
 
 	t.Run("FilterByProfile_Found", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.PROFILE: "Profile1",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, "Rule1", results[0].Name)
 	})
@@ -163,7 +163,7 @@ func TestFindByContext_ProfileFilter(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.PROFILE: "NonExistentProfile",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 0, len(results))
 	})
 
@@ -171,7 +171,7 @@ func TestFindByContext_ProfileFilter(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.PROFILE: "Profile1",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		// Rule3 with no profiles should not be included
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, "Rule1", results[0].Name)
@@ -181,7 +181,7 @@ func TestFindByContext_ProfileFilter(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.PROFILE: "testprofile",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, "Rule2", results[0].Name)
 	})
@@ -200,14 +200,14 @@ func TestFindByContext_FreeArgFilter(t *testing.T) {
 	cond2 := re.NewCondition(coreef.RuleFactoryMAC, re.StandardOperationIs, re.NewFixedArg("AA:BB:CC:DD:EE:FF"))
 	rule2.Rule = re.Rule{Condition: cond2}
 
-	logupload.SetOneTelemetryTwoRule(rule1.ID, rule1)
-	logupload.SetOneTelemetryTwoRule(rule2.ID, rule2)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule1.ID, rule1)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule2.ID, rule2)
 
 	t.Run("FilterByFreeArg_Found", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.FREE_ARG: "model",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, "Rule1", results[0].Name)
 	})
@@ -216,7 +216,7 @@ func TestFindByContext_FreeArgFilter(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.FREE_ARG: "nonexistent",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 0, len(results))
 	})
 
@@ -224,7 +224,7 @@ func TestFindByContext_FreeArgFilter(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.FREE_ARG: "MAC",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, "Rule2", results[0].Name)
 	})
@@ -236,13 +236,13 @@ func TestFindByContext_FixedArgFilter_CollectionValue(t *testing.T) {
 
 	// Create rule with collection fixed arg
 	rule1 := createTestTelemetryTwoRuleWithCollectionFixedArg("Rule1", "stb")
-	logupload.SetOneTelemetryTwoRule(rule1.ID, rule1)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule1.ID, rule1)
 
 	t.Run("FilterByFixedArg_CollectionValue_Found", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.FIXED_ARG: "testvalue",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, "Rule1", results[0].Name)
 	})
@@ -251,7 +251,7 @@ func TestFindByContext_FixedArgFilter_CollectionValue(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.FIXED_ARG: "notinlist",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 0, len(results))
 	})
 
@@ -259,7 +259,7 @@ func TestFindByContext_FixedArgFilter_CollectionValue(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.FIXED_ARG: "VALUE1",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, "Rule1", results[0].Name)
 	})
@@ -273,13 +273,13 @@ func TestFindByContext_FixedArgFilter_StringValue(t *testing.T) {
 	rule1 := createTestTelemetryTwoRule("Rule1", "stb", []string{})
 	// rule1 already has string fixed arg "TEST_MODEL"
 
-	logupload.SetOneTelemetryTwoRule(rule1.ID, rule1)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule1.ID, rule1)
 
 	t.Run("FilterByFixedArg_StringValue_Found", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.FIXED_ARG: "TEST_MODEL",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, "Rule1", results[0].Name)
 	})
@@ -288,7 +288,7 @@ func TestFindByContext_FixedArgFilter_StringValue(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.FIXED_ARG: "MODEL",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
 	})
 
@@ -296,7 +296,7 @@ func TestFindByContext_FixedArgFilter_StringValue(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.FIXED_ARG: "NONEXISTENT",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 0, len(results))
 	})
 
@@ -304,7 +304,7 @@ func TestFindByContext_FixedArgFilter_StringValue(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.FIXED_ARG: "test_model",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
 	})
 }
@@ -317,13 +317,13 @@ func TestFindByContext_FixedArgFilter_ExistsOperation(t *testing.T) {
 	rule1 := createTestTelemetryTwoRule("Rule1", "stb", []string{})
 	cond := re.NewCondition(coreef.RuleFactoryMODEL, re.StandardOperationExists, nil)
 	rule1.Rule = re.Rule{Condition: cond}
-	logupload.SetOneTelemetryTwoRule(rule1.ID, rule1)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule1.ID, rule1)
 
 	t.Run("FilterByFixedArg_ExistsOperation_Skipped", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.FIXED_ARG: "anything",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		// Should not match because EXISTS operation doesn't have a string value to compare
 		assert.Equal(t, 0, len(results))
 	})
@@ -336,14 +336,14 @@ func TestFindByContext_ApplicationTypeFilter(t *testing.T) {
 	rule1 := createTestTelemetryTwoRule("Rule1", "stb", []string{})
 	rule2 := createTestTelemetryTwoRule("Rule2", "xhome", []string{})
 
-	logupload.SetOneTelemetryTwoRule(rule1.ID, rule1)
-	logupload.SetOneTelemetryTwoRule(rule2.ID, rule2)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule1.ID, rule1)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule2.ID, rule2)
 
 	t.Run("FilterByApplicationType_STB", func(t *testing.T) {
 		searchContext := map[string]string{
 			xwcommon.APPLICATION_TYPE: "stb",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, "Rule1", results[0].Name)
 	})
@@ -352,7 +352,7 @@ func TestFindByContext_ApplicationTypeFilter(t *testing.T) {
 		searchContext := map[string]string{
 			xwcommon.APPLICATION_TYPE: shared.ALL,
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 2, len(results))
 	})
 
@@ -360,7 +360,7 @@ func TestFindByContext_ApplicationTypeFilter(t *testing.T) {
 		searchContext := map[string]string{
 			xwcommon.APPLICATION_TYPE: "",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 2, len(results))
 	})
 }
@@ -370,22 +370,22 @@ func TestFindByContext_CombinedFilters(t *testing.T) {
 	defer DeleteTelemetryEntities()
 
 	profile1 := createTestTelemetryTwoProfile("TestProfile", "stb")
-	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profile1.ID, profile1)
+	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, profile1.ID, profile1)
 
 	rule1 := createTestTelemetryTwoRule("TestRule1", "stb", []string{profile1.ID})
 	rule2 := createTestTelemetryTwoRule("TestRule2", "stb", []string{})
 	rule3 := createTestTelemetryTwoRule("OtherRule", "xhome", []string{})
 
-	logupload.SetOneTelemetryTwoRule(rule1.ID, rule1)
-	logupload.SetOneTelemetryTwoRule(rule2.ID, rule2)
-	logupload.SetOneTelemetryTwoRule(rule3.ID, rule3)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule1.ID, rule1)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule2.ID, rule2)
+	logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule3.ID, rule3)
 
 	t.Run("CombinedFilters_NameAndApplicationType", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.NAME_UPPER:        "TestRule",
 			xwcommon.APPLICATION_TYPE: "stb",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 2, len(results))
 	})
 
@@ -394,7 +394,7 @@ func TestFindByContext_CombinedFilters(t *testing.T) {
 			xcommon.NAME_UPPER: "TestRule",
 			xcommon.PROFILE:    "TestProfile",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, "TestRule1", results[0].Name)
 	})
@@ -407,7 +407,7 @@ func TestFindByContext_CombinedFilters(t *testing.T) {
 			xcommon.FREE_ARG:          "model",
 			xcommon.FIXED_ARG:         "TEST_MODEL",
 		}
-		results := findByContext(nil, searchContext)
+		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, "TestRule1", results[0].Name)
 	})
@@ -419,7 +419,7 @@ func TestGetOne_ErrorCondition(t *testing.T) {
 
 	t.Run("GetOne_NotFound_ReturnsRemoteError", func(t *testing.T) {
 		nonExistentID := uuid.New().String()
-		result, err := GetOne(nonExistentID)
+		result, err := GetOne(db.GetDefaultTenantId(), nonExistentID)
 
 		assert.Assert(t, result == nil)
 		assert.Assert(t, err != nil)
@@ -428,9 +428,9 @@ func TestGetOne_ErrorCondition(t *testing.T) {
 
 	t.Run("GetOne_Success", func(t *testing.T) {
 		rule := createTestTelemetryTwoRule("TestRule", "stb", []string{})
-		logupload.SetOneTelemetryTwoRule(rule.ID, rule)
+		logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule.ID, rule)
 
-		result, err := GetOne(rule.ID)
+		result, err := GetOne(db.GetDefaultTenantId(), rule.ID)
 		assert.Assert(t, err == nil)
 		assert.Assert(t, result != nil)
 		assert.Equal(t, rule.ID, result.ID)
@@ -444,7 +444,7 @@ func TestDelete_ErrorCondition(t *testing.T) {
 
 	t.Run("Delete_NotFound_ReturnsRemoteError", func(t *testing.T) {
 		nonExistentID := uuid.New().String()
-		result, err := Delete(nonExistentID)
+		result, err := Delete(db.GetDefaultTenantId(), nonExistentID)
 
 		assert.Assert(t, result == nil)
 		assert.Assert(t, err != nil)
@@ -453,9 +453,9 @@ func TestDelete_ErrorCondition(t *testing.T) {
 
 	t.Run("Delete_Success", func(t *testing.T) {
 		rule := createTestTelemetryTwoRule("TestRule", "stb", []string{})
-		logupload.SetOneTelemetryTwoRule(rule.ID, rule)
+		logupload.SetOneTelemetryTwoRule(db.GetDefaultTenantId(), rule.ID, rule)
 
-		result, err := Delete(rule.ID)
+		result, err := Delete(db.GetDefaultTenantId(), rule.ID)
 		assert.Assert(t, err == nil)
 		assert.Assert(t, result != nil)
 		assert.Equal(t, rule.ID, result.ID)

@@ -36,7 +36,7 @@ import (
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
@@ -788,11 +788,11 @@ func createTagFeatureRule(tagNameForRule string) *rfc.Feature {
 }
 
 func setFeatureRule(featureRule *rfc.FeatureRule) {
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, featureRule.Id, featureRule)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FEATURE_CONTROL_RULES, featureRule.Id, featureRule)
 }
 
 func setFeature(feature *rfc.Feature) {
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_XCONF_FEATURE, feature.ID, feature)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FEATURES, feature.ID, feature)
 }
 
 func createAndSaveFeature() *rfc.Feature {

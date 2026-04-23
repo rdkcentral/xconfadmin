@@ -23,6 +23,7 @@ import (
 
 	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
 
 	"github.com/google/uuid"
@@ -33,7 +34,7 @@ func TestFeatureGetPostPutDeleteImport(t *testing.T) {
 	DeleteAllEntities()
 
 	// test GET ALL
-	featureList := GetAllFeatureEntity()
+	featureList := GetAllFeatureEntity(db.GetDefaultTenantId())
 	assert.Equal(t, len(featureList), 0)
 
 	id1 := uuid.New().String()
@@ -51,12 +52,12 @@ func TestFeatureGetPostPutDeleteImport(t *testing.T) {
 
 	// test POST
 	applicationType := "stb"
-	fe, err := PostFeatureEntity(featureEntity1, applicationType)
+	fe, err := PostFeatureEntity(db.GetDefaultTenantId(), featureEntity1, applicationType)
 	// assert feature returned matches feature passed in
 	assertFeatureEntity(t, fe, featureEntity1)
 	assert.NilError(t, err)
 	// assert feature is in db
-	featureList = GetAllFeatureEntity()
+	featureList = GetAllFeatureEntity(db.GetDefaultTenantId())
 	assert.Equal(t, len(featureList), 1)
 	assertFeatureEntity(t, featureList[0], featureEntity1)
 
@@ -72,16 +73,16 @@ func TestFeatureGetPostPutDeleteImport(t *testing.T) {
 	assertFeatureEntity(t, featureList[0], featureEntity1)
 
 	// test GET BY ID
-	fe = GetFeatureEntityById(featureEntity1.ID)
+	fe = GetFeatureEntityById(db.GetDefaultTenantId(), featureEntity1.ID)
 	assertFeatureEntity(t, fe, featureEntity1)
 
 	// test PUT
 	featureEntity1.Name = "newName"
-	fe, err = PutFeatureEntity(featureEntity1, applicationType)
+	fe, err = PutFeatureEntity(db.GetDefaultTenantId(), featureEntity1, applicationType)
 	assertFeatureEntity(t, fe, featureEntity1)
 	assert.NilError(t, err)
 
-	fe = GetFeatureEntityById(featureEntity1.ID)
+	fe = GetFeatureEntityById(db.GetDefaultTenantId(), featureEntity1.ID)
 	assertFeatureEntity(t, fe, featureEntity1)
 
 	// test IMPORT
@@ -99,39 +100,39 @@ func TestFeatureGetPostPutDeleteImport(t *testing.T) {
 	featureEntity2 := feature2.CreateFeatureEntity()
 
 	featureEntityList := []*rfc.FeatureEntity{featureEntity1, featureEntity2}
-	featureImportMap := ImportOrUpdateAllFeatureEntity(featureEntityList, applicationType)
+	featureImportMap := ImportOrUpdateAllFeatureEntity(db.GetDefaultTenantId(), featureEntityList, applicationType)
 	assert.Equal(t, len(featureImportMap["IMPORTED"]), 2)
 	assert.Equal(t, len(featureImportMap["NOT_IMPORTED"]), 0)
 	assert.Equal(t, featureImportMap["IMPORTED"][0], featureEntity1.ID)
 	assert.Equal(t, featureImportMap["IMPORTED"][1], featureEntity2.ID)
 
 	// use GET to check import
-	fe = GetFeatureEntityById(featureEntity1.ID)
+	fe = GetFeatureEntityById(db.GetDefaultTenantId(), featureEntity1.ID)
 	assertFeatureEntity(t, fe, featureEntity1)
 
-	fe = GetFeatureEntityById(featureEntity2.ID)
+	fe = GetFeatureEntityById(db.GetDefaultTenantId(), featureEntity2.ID)
 	assertFeatureEntity(t, fe, featureEntity2)
 
 	// test DELETE
-	DeleteFeatureById(featureEntity1.ID)
+	xrfc.DeleteOneFeature(db.GetDefaultTenantId(), featureEntity1.ID)
 	time.Sleep(1 * time.Second)
-	fe = GetFeatureEntityById(featureEntity1.ID)
+	fe = GetFeatureEntityById(db.GetDefaultTenantId(), featureEntity1.ID)
 	assert.Equal(t, fe == nil, true)
 
-	DeleteFeatureById(featureEntity2.ID)
+	xrfc.DeleteOneFeature(db.GetDefaultTenantId(), featureEntity2.ID)
 	time.Sleep(1 * time.Second)
-	fe = GetFeatureEntityById(featureEntity2.ID)
+	fe = GetFeatureEntityById(db.GetDefaultTenantId(), featureEntity2.ID)
 	assert.Equal(t, fe == nil, true)
 }
 
 func TestDoesFeatureExist(t *testing.T) {
 	DeleteAllEntities()
 
-	doesFeatureExist := xrfc.DoesFeatureExist("")
+	doesFeatureExist := xrfc.DoesFeatureExist(db.GetDefaultTenantId(), "")
 	assert.Equal(t, doesFeatureExist, false)
 
 	id := uuid.New().String()
-	doesFeatureExist = xrfc.DoesFeatureExist(id)
+	doesFeatureExist = xrfc.DoesFeatureExist(db.GetDefaultTenantId(), id)
 	assert.Equal(t, doesFeatureExist, false)
 
 	// feature := createAndSaveFeature()
@@ -169,23 +170,23 @@ func TestDoesFeatureInstanceExist(t *testing.T) {
 	featureEntity2 := feature2.CreateFeatureEntity()
 
 	// no features exist in db
-	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherEntityId(featureEntity1)
+	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherEntityId(db.GetDefaultTenantId(), featureEntity1)
 	assert.Equal(t, doesFeatureInstanceExist, false)
 
 	// different feature in db
-	PostFeatureEntity(featureEntity2, applicationType)
-	doesFeatureInstanceExist = xrfc.DoesFeatureNameExistForAnotherEntityId(featureEntity1)
+	PostFeatureEntity(db.GetDefaultTenantId(), featureEntity2, applicationType)
+	doesFeatureInstanceExist = xrfc.DoesFeatureNameExistForAnotherEntityId(db.GetDefaultTenantId(), featureEntity1)
 	assert.Equal(t, doesFeatureInstanceExist, false)
 
 	// diff feature with same featureInstance in db
 	featureEntity1.FeatureName = "featureName2"
-	doesFeatureInstanceExist = xrfc.DoesFeatureNameExistForAnotherEntityId(featureEntity1)
+	doesFeatureInstanceExist = xrfc.DoesFeatureNameExistForAnotherEntityId(db.GetDefaultTenantId(), featureEntity1)
 	assert.Equal(t, doesFeatureInstanceExist, true)
 
 	// same exact feature in db
 	featureEntity1.FeatureName = "featureName1"
-	PostFeatureEntity(featureEntity1, applicationType)
-	doesFeatureInstanceExist = xrfc.DoesFeatureNameExistForAnotherEntityId(featureEntity1)
+	PostFeatureEntity(db.GetDefaultTenantId(), featureEntity1, applicationType)
+	doesFeatureInstanceExist = xrfc.DoesFeatureNameExistForAnotherEntityId(db.GetDefaultTenantId(), featureEntity1)
 	assert.Equal(t, doesFeatureInstanceExist, false)
 }
 

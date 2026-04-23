@@ -42,45 +42,46 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func GetAll() []*xwlogupload.TelemetryTwoRule {
-	telemetryTwoRules := xwlogupload.GetTelemetryTwoRuleListForAS()
+func GetAll(tenantId string) []*xwlogupload.TelemetryTwoRule {
+	telemetryTwoRules := xwlogupload.GetTelemetryTwoRuleListForAS(tenantId)
 	sort.Slice(telemetryTwoRules, func(i, j int) bool {
 		return strings.ToLower(telemetryTwoRules[i].Name) < strings.ToLower(telemetryTwoRules[j].Name)
 	})
 	return telemetryTwoRules
 }
 
-func GetOne(id string) (*xwlogupload.TelemetryTwoRule, error) {
-	settingProfile := xlogupload.GetOneTelemetryTwoRule(id)
+func GetOne(tenantId, id string) (*xwlogupload.TelemetryTwoRule, error) {
+	settingProfile := xlogupload.GetOneTelemetryTwoRule(tenantId, id)
 	if settingProfile == nil {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
 	return settingProfile, nil
 }
 
-func Delete(id string) (*xwlogupload.TelemetryTwoRule, error) {
-	entity, err := GetOne(id)
+func Delete(tenantId, id string) (*xwlogupload.TelemetryTwoRule, error) {
+	entity, err := GetOne(tenantId, id)
 	if err != nil {
 		return nil, err
 	}
 	if entity == nil {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
-	DeleteTelemetryTwoRule(id)
+	DeleteTelemetryTwoRule(tenantId, id)
 	return entity, nil
 }
 
-func DeleteTelemetryTwoRule(id string) {
-	err := xlogupload.DeleteTelemetryTwoRule(id)
+func DeleteTelemetryTwoRule(tenantId string, id string) {
+	err := xlogupload.DeleteTelemetryTwoRule(tenantId, id)
 	if err != nil {
 		log.Warn("delete settingProfile failed")
 	}
 }
 
-func findByContext(r *http.Request, searchContext map[string]string) []*xwlogupload.TelemetryTwoRule {
+func findByContext(searchContext map[string]string) []*xwlogupload.TelemetryTwoRule {
 	telemetryTwoRulesFound := []*xwlogupload.TelemetryTwoRule{}
 
-	telemetryTwoRules := xwlogupload.GetTelemetryTwoRuleListForAS()
+	tenantId := searchContext[xwcommon.TENANT_ID]
+	telemetryTwoRules := xwlogupload.GetTelemetryTwoRuleListForAS(tenantId)
 	for _, telemetryTwoRule := range telemetryTwoRules {
 		if applicationType, ok := xutil.FindEntryInContext(searchContext, xwcommon.APPLICATION_TYPE, false); ok {
 			if applicationType != "" && applicationType != shared.ALL {
@@ -102,7 +103,7 @@ func findByContext(r *http.Request, searchContext map[string]string) []*xwlogupl
 			}
 			telemetryprofileNameMatch := false
 			for _, telemetryId := range telemetryTwoRule.BoundTelemetryIDs {
-				telemetry := xwlogupload.GetOneTelemetryTwoProfile(telemetryId)
+				telemetry := xwlogupload.GetOneTelemetryTwoProfile(tenantId, telemetryId)
 				if telemetry != nil && strings.Contains(strings.ToLower(telemetry.Name), strings.ToLower(telemetrytwoprofile)) {
 					telemetryprofileNameMatch = true
 					break
@@ -155,15 +156,15 @@ func findByContext(r *http.Request, searchContext map[string]string) []*xwlogupl
 	return telemetryTwoRulesFound
 }
 
-func validate(entity *xwlogupload.TelemetryTwoRule) error {
-	msg := validateProperties(entity)
+func validate(tenantId string, entity *xwlogupload.TelemetryTwoRule) error {
+	msg := validateProperties(tenantId, entity)
 	if msg != "" {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, msg)
 	}
 	return nil
 }
 
-func validateProperties(entity *xwlogupload.TelemetryTwoRule) string {
+func validateProperties(tenantId string, entity *xwlogupload.TelemetryTwoRule) string {
 	if entity.Name == "" {
 		return "Name is empty"
 	}
@@ -177,7 +178,7 @@ func validateProperties(entity *xwlogupload.TelemetryTwoRule) string {
 		if boundTelemetryId == "" {
 			continue
 		}
-		if logupload.GetOneTelemetryTwoProfile(boundTelemetryId) == nil {
+		if logupload.GetOneTelemetryTwoProfile(tenantId, boundTelemetryId) == nil {
 			return "Telemetry 2.0 profile with id: " + boundTelemetryId + " does not exist"
 		}
 	}
@@ -212,12 +213,12 @@ func TelemetryTwoRulesGeneratePage(list []*xwlogupload.TelemetryTwoRule, page in
 	return list[startIndex:lastIndex]
 }
 
-func beforeCreating(entity *xwlogupload.TelemetryTwoRule, writeApplication string) error {
+func beforeCreating(tenantId string, entity *xwlogupload.TelemetryTwoRule, writeApplication string) error {
 	id := entity.ID
 	if id == "" {
 		entity.ID = uuid.New().String()
 	} else {
-		existingEntity := xlogupload.GetOneTelemetryTwoRule(id)
+		existingEntity := xlogupload.GetOneTelemetryTwoRule(tenantId, id)
 		if existingEntity != nil && !xshared.ApplicationTypeEquals(existingEntity.ApplicationType, entity.ApplicationType) {
 			return xwcommon.NewRemoteErrorAS(http.StatusConflict, "Entity with id: "+id+" already exists in "+existingEntity.ApplicationType+" application")
 		} else if existingEntity != nil && xshared.ApplicationTypeEquals(existingEntity.ApplicationType, writeApplication) {
@@ -227,12 +228,12 @@ func beforeCreating(entity *xwlogupload.TelemetryTwoRule, writeApplication strin
 	return nil
 }
 
-func beforeUpdating(entity *xwlogupload.TelemetryTwoRule, writeApplication string) error {
+func beforeUpdating(tenantId string, entity *xwlogupload.TelemetryTwoRule, writeApplication string) error {
 	id := entity.ID
 	if id == "" {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Entity id is empty")
 	}
-	existingEntity := xlogupload.GetOneTelemetryTwoRule(id)
+	existingEntity := xlogupload.GetOneTelemetryTwoRule(tenantId, id)
 	if !xshared.ApplicationTypeEquals(existingEntity.ApplicationType, writeApplication) {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity with id: "+id+" does not exist")
 	}
@@ -242,7 +243,7 @@ func beforeUpdating(entity *xwlogupload.TelemetryTwoRule, writeApplication strin
 	return nil
 }
 
-func beforeSaving(entity *xwlogupload.TelemetryTwoRule, writeApplication string) error {
+func beforeSaving(tenantId string, entity *xwlogupload.TelemetryTwoRule, writeApplication string) error {
 	if entity != nil && entity.ApplicationType == "" {
 		entity.ApplicationType = writeApplication
 	}
@@ -254,11 +255,11 @@ func beforeSaving(entity *xwlogupload.TelemetryTwoRule, writeApplication string)
 		return fmt.Errorf("Current ApplicationType %s doesn't match with entity's ApplicationType: %s", writeApplication, entity.ApplicationType)
 	}
 
-	err := validate(entity)
+	err := validate(tenantId, entity)
 	if err != nil {
 		return err
 	}
-	all := xwlogupload.GetTelemetryTwoRuleListForAS()
+	all := xwlogupload.GetTelemetryTwoRuleListForAS(tenantId)
 	err = validateAll(entity, all)
 	if err != nil {
 		return err
@@ -266,34 +267,34 @@ func beforeSaving(entity *xwlogupload.TelemetryTwoRule, writeApplication string)
 	return nil
 }
 
-func Create(entity *xwlogupload.TelemetryTwoRule, writeApplication string) error {
-	err := beforeCreating(entity, writeApplication)
+func Create(tenantId string, entity *xwlogupload.TelemetryTwoRule, writeApplication string) error {
+	err := beforeCreating(tenantId, entity, writeApplication)
 	if err != nil {
 		return err
 	}
-	err = beforeSaving(entity, writeApplication)
+	err = beforeSaving(tenantId, entity, writeApplication)
 	if err != nil {
 		return err
 	}
-	err = queries.RunGlobalValidation(*entity.GetRule(), queries.GetAllowedOperations)
+	err = queries.RunGlobalValidation(tenantId, *entity.GetRule(), queries.GetAllowedOperations)
 	if err != nil {
 		return err
 	}
-	return xlogupload.SetOneTelemetryTwoRule(entity.ID, entity)
+	return xlogupload.SetOneTelemetryTwoRule(tenantId, entity.ID, entity)
 }
 
-func Update(entity *xwlogupload.TelemetryTwoRule, writeApplication string) error {
-	err := beforeUpdating(entity, writeApplication)
+func Update(tenantId string, entity *xwlogupload.TelemetryTwoRule, writeApplication string) error {
+	err := beforeUpdating(tenantId, entity, writeApplication)
 	if err != nil {
 		return err
 	}
-	err = beforeSaving(entity, writeApplication)
+	err = beforeSaving(tenantId, entity, writeApplication)
 	if err != nil {
 		return err
 	}
-	err = queries.RunGlobalValidation(*entity.GetRule(), queries.GetAllowedOperations)
+	err = queries.RunGlobalValidation(tenantId, *entity.GetRule(), queries.GetAllowedOperations)
 	if err != nil {
 		return err
 	}
-	return xlogupload.SetOneTelemetryTwoRule(entity.ID, entity)
+	return xlogupload.SetOneTelemetryTwoRule(tenantId, entity.ID, entity)
 }

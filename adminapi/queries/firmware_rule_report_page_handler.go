@@ -30,7 +30,6 @@ import (
 
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
-
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
@@ -57,10 +56,10 @@ func PostFirmwareRuleReportPageHandler(w http.ResponseWriter, r *http.Request) {
 	header["Content-Disposition"] = "attachment; filename=filename=report.xls"
 	header["Content-Type"] = "application/vnd.ms-excel"
 
-	macRules, _ := db.GetSimpleDao().GetAllByKeys(db.TABLE_FIRMWARE_RULE, macRuleIds)
-
-	macIds := getMacAddresses(macRules)
-	reportBytes, err := doReport(macIds)
+	tenantId := xwhttp.GetTenantId(r, "")
+	macRules, _ := db.GetSimpleDao().GetAllByKeys(tenantId, db.TABLE_FIRMWARE_RULES, macRuleIds)
+	macIds := getMacAddresses(tenantId, macRules)
+	reportBytes, err := doReport(tenantId, macIds)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -73,14 +72,14 @@ func PostFirmwareRuleReportPageHandler(w http.ResponseWriter, r *http.Request) {
 	xwhttp.WriteXconfResponseWithHeaders(w, header, http.StatusOK, nil)
 }
 
-func getMacAddresses(macRuleIds []interface{}) []string {
+func getMacAddresses(tenantId string, macRuleIds []interface{}) []string {
 	resultMap := make(map[string]bool)
 	for _, genrule := range macRuleIds {
 		rule := genrule.(*corefw.FirmwareRule)
 		if rule.GetRule() != nil {
 			macListIds := re.GetFixedArgsFromRuleByFreeArgAndOperation(*rule.GetRule(), "eStbMac", re.StandardOperationInList)
 			for _, macListId := range macListIds {
-				macList, err := shared.GetGenericNamedListOneDB(macListId)
+				macList, err := shared.GetGenericNamedListOneDB(tenantId, macListId)
 				if err == nil {
 					for _, item := range macList.Data {
 						resultMap[item] = true

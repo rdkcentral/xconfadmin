@@ -30,12 +30,12 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
-func UpdateIpFilter(applicationType string, ipFilter *coreef.IpFilter) *xwhttp.ResponseEntity {
-	if err := firmware.ValidateRuleName(ipFilter.Id, ipFilter.Name, applicationType); err != nil {
+func UpdateIpFilter(tenantId string, applicationType string, ipFilter *coreef.IpFilter) *xwhttp.ResponseEntity {
+	if err := firmware.ValidateRuleName(tenantId, ipFilter.Id, ipFilter.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	if ipFilter.IpAddressGroup != nil && IsChangedIpAddressGroup(ipFilter.IpAddressGroup) {
+	if ipFilter.IpAddressGroup != nil && IsChangedIpAddressGroup(tenantId, ipFilter.IpAddressGroup) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest,
 			fmt.Errorf("IP address group denoted by '%s' does not match any existing ipAddressGroup", ipFilter.IpAddressGroup.Name), nil)
 	}
@@ -50,7 +50,7 @@ func UpdateIpFilter(applicationType string, ipFilter *coreef.IpFilter) *xwhttp.R
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	err := corefw.CreateFirmwareRuleOneDB(firmwareRule)
+	err := corefw.CreateFirmwareRuleOneDB(tenantId, firmwareRule)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -62,14 +62,14 @@ func UpdateIpFilter(applicationType string, ipFilter *coreef.IpFilter) *xwhttp.R
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, ipFilter)
 }
 
-func DeleteIpsFilter(name string, applicationType string) *xwhttp.ResponseEntity {
-	ipFilter, err := coreef.IpFilterByName(name, applicationType)
+func DeleteIpsFilter(tenantId string, name string, applicationType string) *xwhttp.ResponseEntity {
+	ipFilter, err := coreef.IpFilterByName(tenantId, name, applicationType)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
 	if ipFilter != nil {
-		err = corefw.DeleteOneFirmwareRule(ipFilter.Id)
+		err = corefw.DeleteOneFirmwareRule(tenantId, ipFilter.Id)
 		if err != nil {
 			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 		}

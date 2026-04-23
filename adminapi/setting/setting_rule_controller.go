@@ -49,7 +49,9 @@ func GetSettingRulesAllExport(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		xhttp.AdminError(w, err)
 	}
-	all := GetAllSettingRules()
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	all := GetAllSettingRules(tenantId)
 	settingRules := []*logupload.SettingRule{}
 	for _, entity := range all {
 		if entity.ApplicationType == applicationType {
@@ -79,7 +81,9 @@ func GetSettingRuleOneExport(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Id is blank")
 		return
 	}
-	settingRule, _ := GetOneSettingRule(id)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	settingRule, _ := GetOneSettingRule(tenantId, id)
 	if settingRule == nil {
 		invalid := "Entity with id: " + id + " does not exist"
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, invalid)
@@ -116,7 +120,9 @@ func DeleteOneSettingRulesHandler(w http.ResponseWriter, r *http.Request) {
 		xwhttp.WriteXconfResponse(w, http.StatusMethodNotAllowed, nil)
 		return
 	}
-	_, err = DeleteSettingRule(id, applicationType)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	_, err = DeleteSettingRule(tenantId, id, applicationType)
 	if err != nil {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
 		return
@@ -164,8 +170,9 @@ func GetSettingRulesFilteredWithPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
+	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
-	settingRules := FindByContextSettingRule(r, contextMap)
+	settingRules := FindByContextSettingRule(contextMap)
 	sort.Slice(settingRules, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(settingRules[i].Name), strings.ToLower(settingRules[j].Name)) < 0
 	})
@@ -179,7 +186,7 @@ func GetSettingRulesFilteredWithPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateSettingRuleHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := auth.CanWrite(r, auth.DCM_ENTITY)
+	applicationType, err := auth.CanWrite(r, auth.DCM_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -199,7 +206,9 @@ func CreateSettingRuleHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	err = CreateSettingRule(r, &settingRules)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	err = CreateSettingRule(tenantId, applicationType, &settingRules)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -212,7 +221,7 @@ func CreateSettingRuleHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateSettingRulesPackageHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := auth.CanWrite(r, auth.DCM_ENTITY)
+	applicationType, err := auth.CanWrite(r, auth.DCM_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -229,10 +238,12 @@ func CreateSettingRulesPackageHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, response)
 		return
 	}
+
+	tenantId := xwhttp.GetTenantId(r, "")
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
-		err := CreateSettingRule(r, &entity)
+		err := CreateSettingRule(tenantId, applicationType, &entity)
 		if err == nil {
 			entityMessage := xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_SUCCESS,
@@ -253,7 +264,7 @@ func CreateSettingRulesPackageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateSettingRulesHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := auth.CanWrite(r, auth.DCM_ENTITY)
+	applicationType, err := auth.CanWrite(r, auth.DCM_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -274,7 +285,8 @@ func UpdateSettingRulesHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = UpdateSettingRule(r, &settingRules)
+	tenantId := xwhttp.GetTenantId(r, "")
+	err = UpdateSettingRule(tenantId, applicationType, &settingRules)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -287,7 +299,7 @@ func UpdateSettingRulesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateSettingRulesPackageHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := auth.CanWrite(r, auth.DCM_ENTITY)
+	applicationType, err := auth.CanWrite(r, auth.DCM_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -303,10 +315,12 @@ func UpdateSettingRulesPackageHandler(w http.ResponseWriter, r *http.Request) {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(response))
 		return
 	}
+
+	tenantId := xwhttp.GetTenantId(r, "")
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
-		err := UpdateSettingRule(r, &entity)
+		err := UpdateSettingRule(tenantId, applicationType, &entity)
 		if err == nil {
 			entityMessage := xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_SUCCESS,
@@ -370,6 +384,7 @@ func SettingTestPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
+	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	result := make(map[string]interface{})
 	result["result"] = GetSettingRulesWithConfig(settingTypes, contextMap)

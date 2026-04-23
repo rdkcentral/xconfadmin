@@ -25,7 +25,8 @@ import (
 	"github.com/google/uuid"
 	"gotest.tools/assert"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
@@ -34,7 +35,7 @@ import (
 func storeTelemetryProfile(rule *xwlogupload.TimestampedRule, profile *xwlogupload.TelemetryProfile) {
 	ruleBytes, _ := json.Marshal(rule)
 	// Use helper function that works with both mock and real DAO
-	SetOneInDao(ds.TABLE_TELEMETRY, string(ruleBytes), *profile)
+	SetOneInDao(db.TABLE_TELEMETRY_PROFILES, string(ruleBytes), *profile)
 }
 
 // TestDropTelemetryFor_Success tests successful telemetry profile drop
@@ -51,7 +52,7 @@ func TestDropTelemetryFor_Success(t *testing.T) {
 	storeTelemetryProfile(rule, profile)
 
 	// Drop the telemetry profile
-	result := DropTelemetryFor("estbMacAddress", "AA:BB:CC:DD:EE:FF")
+	result := DropTelemetryFor(db.GetDefaultTenantId(), "estbMacAddress", "AA:BB:CC:DD:EE:FF")
 
 	// Verify results
 	assert.Assert(t, len(result) > 0, "Should return dropped profiles")
@@ -64,7 +65,7 @@ func TestDropTelemetryFor_NoMatch(t *testing.T) {
 	DeleteTelemetryEntities()
 
 	// Drop with no matching profiles
-	result := DropTelemetryFor("estbMacAddress", "BB:BB:BB:BB:BB:BB")
+	result := DropTelemetryFor(db.GetDefaultTenantId(), "estbMacAddress", "BB:BB:BB:BB:BB:BB")
 
 	// Verify empty result
 	assert.Equal(t, 0, len(result), "Should return empty list when no matches")
@@ -86,7 +87,7 @@ func TestDropTelemetryFor_MultipleProfiles(t *testing.T) {
 	}
 
 	// Drop all matching profiles
-	//result := DropTelemetryFor("estbMacAddress", mac)
+	//result := DropTelemetryFor(db.GetDefaultTenantId(), "estbMacAddress", mac)
 
 	// Verify multiple profiles were dropped
 	//assert.Assert(t, len(result) >= 3, "Should return all dropped profiles")
@@ -103,7 +104,8 @@ func TestGetMatchedRules_Success(t *testing.T) {
 
 	// Test matching context
 	context := map[string]string{
-		"estbMacAddress": "DD:DD:DD:DD:DD:DD",
+		"estbMacAddress":   "DD:DD:DD:DD:DD:DD",
+		xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 	}
 	matched := getMatchedRules(context)
 
@@ -122,7 +124,8 @@ func TestGetMatchedRules_NoMatch(t *testing.T) {
 
 	// Test non-matching context
 	context := map[string]string{
-		"estbMacAddress": "FF:FF:FF:FF:FF:FF",
+		"estbMacAddress":   "FF:FF:FF:FF:FF:FF",
+		xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 	}
 	matched := getMatchedRules(context)
 
@@ -134,7 +137,9 @@ func TestGetMatchedRules_NoMatch(t *testing.T) {
 func TestGetMatchedRules_EmptyContext(t *testing.T) {
 	DeleteTelemetryEntities()
 
-	context := map[string]string{}
+	context := map[string]string{
+		xwcommon.TENANT_ID: db.GetDefaultTenantId(),
+	}
 	matched := getMatchedRules(context)
 
 	// Should return empty or no matches
@@ -159,7 +164,8 @@ func TestGetMatchedRules_MultipleMatches(t *testing.T) {
 
 	// Test matching context
 	context := map[string]string{
-		"estbMacAddress": mac,
+		"estbMacAddress":   mac,
+		xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 	}
 	matched := getMatchedRules(context)
 
@@ -185,11 +191,11 @@ func TestGetAvailableDescriptors_Success(t *testing.T) {
 		BoundTelemetryID: uuid.New().String(),
 	}
 
-	_ = SetOneInDao(ds.TABLE_TELEMETRY_RULES, rule1.ID, rule1)
-	_ = SetOneInDao(ds.TABLE_TELEMETRY_RULES, rule2.ID, rule2)
+	_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, rule1.ID, rule1)
+	_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, rule2.ID, rule2)
 
 	// Get descriptors
-	descriptors := GetAvailableDescriptors("stb")
+	descriptors := GetAvailableDescriptors(db.GetDefaultTenantId(), "stb")
 
 	// Verify results
 	assert.Assert(t, len(descriptors) >= 2, "Should return descriptors")
@@ -227,11 +233,11 @@ func TestGetAvailableDescriptors_FilterByApplicationType(t *testing.T) {
 		BoundTelemetryID: uuid.New().String(),
 	}
 
-	_ = SetOneInDao(ds.TABLE_TELEMETRY_RULES, ruleStb.ID, ruleStb)
-	_ = SetOneInDao(ds.TABLE_TELEMETRY_RULES, ruleXhome.ID, ruleXhome)
+	_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, ruleStb.ID, ruleStb)
+	_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, ruleXhome.ID, ruleXhome)
 
 	// Get descriptors for "stb" only
-	descriptors := GetAvailableDescriptors("stb")
+	descriptors := GetAvailableDescriptors(db.GetDefaultTenantId(), "stb")
 
 	// Verify only stb rules are returned
 	for _, desc := range descriptors {
@@ -269,11 +275,11 @@ func TestGetAvailableDescriptors_EmptyApplicationType(t *testing.T) {
 		BoundTelemetryID: uuid.New().String(),
 	}
 
-	_ = SetOneInDao(ds.TABLE_TELEMETRY_RULES, rule1.ID, rule1)
-	_ = SetOneInDao(ds.TABLE_TELEMETRY_RULES, rule2.ID, rule2)
+	_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, rule1.ID, rule1)
+	_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, rule2.ID, rule2)
 
 	// Get descriptors with empty application type
-	descriptors := GetAvailableDescriptors("")
+	descriptors := GetAvailableDescriptors(db.GetDefaultTenantId(), "")
 
 	// Should return all rules or rules with empty application type
 	assert.Assert(t, descriptors != nil, "Should return non-nil descriptors")
@@ -283,7 +289,7 @@ func TestGetAvailableDescriptors_EmptyApplicationType(t *testing.T) {
 func TestGetAvailableDescriptors_NoRules(t *testing.T) {
 	DeleteTelemetryEntities()
 
-	descriptors := GetAvailableDescriptors("stb")
+	descriptors := GetAvailableDescriptors(db.GetDefaultTenantId(), "stb")
 
 	// Should return empty list
 	assert.Equal(t, 0, len(descriptors), "Should return empty list when no rules")
@@ -305,11 +311,11 @@ func TestGetAvailableProfileDescriptors_Success(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	_ = SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, profile1.ID, profile1)
-	_ = SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, profile2.ID, profile2)
+	_ = SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profile1.ID, profile1)
+	_ = SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profile2.ID, profile2)
 
 	// Get descriptors
-	descriptors := GetAvailableProfileDescriptors("stb")
+	descriptors := GetAvailableProfileDescriptors(db.GetDefaultTenantId(), "stb")
 
 	// Verify results
 	assert.Assert(t, len(descriptors) >= 2, "Should return descriptors")
@@ -345,11 +351,11 @@ func TestGetAvailableProfileDescriptors_FilterByApplicationType(t *testing.T) {
 		ApplicationType: "xhome",
 	}
 
-	_ = SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, profileStb.ID, profileStb)
-	_ = SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, profileXhome.ID, profileXhome)
+	_ = SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profileStb.ID, profileStb)
+	_ = SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profileXhome.ID, profileXhome)
 
 	// Get descriptors for "stb" only
-	descriptors := GetAvailableProfileDescriptors("stb")
+	descriptors := GetAvailableProfileDescriptors(db.GetDefaultTenantId(), "stb")
 
 	// Verify only stb profiles are returned
 	for _, desc := range descriptors {
@@ -385,11 +391,11 @@ func TestGetAvailableProfileDescriptors_EmptyApplicationType(t *testing.T) {
 		ApplicationType: "",
 	}
 
-	_ = SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, profile1.ID, profile1)
-	_ = SetOneInDao(ds.TABLE_PERMANENT_TELEMETRY, profile2.ID, profile2)
+	_ = SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profile1.ID, profile1)
+	_ = SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profile2.ID, profile2)
 
 	// Get descriptors with empty application type
-	descriptors := GetAvailableProfileDescriptors("")
+	descriptors := GetAvailableProfileDescriptors(db.GetDefaultTenantId(), "")
 
 	// Should return all profiles or profiles with empty application type
 	assert.Assert(t, descriptors != nil, "Should return non-nil descriptors")
@@ -399,7 +405,7 @@ func TestGetAvailableProfileDescriptors_EmptyApplicationType(t *testing.T) {
 func TestGetAvailableProfileDescriptors_NoProfiles(t *testing.T) {
 	DeleteTelemetryEntities()
 
-	descriptors := GetAvailableProfileDescriptors("stb")
+	descriptors := GetAvailableProfileDescriptors(db.GetDefaultTenantId(), "stb")
 
 	// Should return empty list
 	assert.Equal(t, 0, len(descriptors), "Should return empty list when no profiles")
@@ -462,7 +468,7 @@ func TestCreateTelemetryProfile(t *testing.T) {
 	profile.Name = "Test Create Profile"
 
 	// Create and store the profile
-	timestampedRule := CreateTelemetryProfile("estbMacAddress", "11:22:33:44:55:66", profile)
+	timestampedRule := CreateTelemetryProfile(db.GetDefaultTenantId(), "estbMacAddress", "11:22:33:44:55:66", profile)
 
 	// Verify rule was created
 	assert.Assert(t, timestampedRule != nil, "Timestamped rule should not be nil")
@@ -489,7 +495,7 @@ func TestDropTelemetryFor_ComplexConditions(t *testing.T) {
 	storeTelemetryProfile(rule2, profile2)
 
 	// Drop profiles by MAC address - should only drop profile1
-	result := DropTelemetryFor("estbMacAddress", "AA:AA:AA:AA:AA:AA")
+	result := DropTelemetryFor(db.GetDefaultTenantId(), "estbMacAddress", "AA:AA:AA:AA:AA:AA")
 
 	// Verify only matching profile was dropped
 	foundProfile1 := false

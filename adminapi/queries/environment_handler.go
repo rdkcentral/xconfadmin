@@ -24,6 +24,7 @@ import (
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xutil "github.com/rdkcentral/xconfadmin/util"
 
+	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
@@ -59,7 +60,8 @@ func UpdateEnvironmentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respEntity := UpdateEnvironment(&upEnv)
+	tenantId := xwhttp.GetTenantId(r, "")
+	respEntity := UpdateEnvironment(tenantId, &upEnv)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -94,6 +96,7 @@ func PostEnvironmentFilteredHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	xutil.AddQueryParamsToContextMap(r, contextMap)
+	contextMap[common.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	evrules := EnvironmentFilterByContext(contextMap)
 	sizeHeader := xhttp.CreateNumberOfItemsHttpHeaders(len(evrules))
@@ -128,10 +131,12 @@ func PostEnvironmentEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, response)
 		return
 	}
+
+	tenantId := xwhttp.GetTenantId(r, "")
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
-		respEntity := CreateEnvironment(&entity)
+		respEntity := CreateEnvironment(tenantId, &entity)
 		if respEntity.Status != http.StatusCreated {
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_FAILURE,
@@ -169,10 +174,12 @@ func PutEnvironmentEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, response)
 		return
 	}
+
+	tenantId := xwhttp.GetTenantId(r, "")
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
-		respEntity := UpdateEnvironment(&entity)
+		respEntity := UpdateEnvironment(tenantId, &entity)
 		if respEntity.Status == http.StatusOK {
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_SUCCESS,

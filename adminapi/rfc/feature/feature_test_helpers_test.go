@@ -94,8 +94,8 @@ func DeleteAllEntities() {
 		if err := truncateTable(tableInfo.TableName); err != nil {
 			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
 		}
-		if tableInfo.CacheData {
-			db.GetCachedSimpleDao().RefreshAll(tableInfo.TableName)
+		if tableInfo.Cached {
+			db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), tableInfo.TableName)
 		}
 	}
 }
@@ -104,7 +104,7 @@ func truncateTable(tableName string) error {
 	dbClient := db.GetDatabaseClient()
 	cassandraClient, ok := dbClient.(*db.CassandraClient)
 	if ok {
-		return cassandraClient.DeleteAllXconfData(tableName)
+		return cassandraClient.DeleteAllXconfData(db.GetDefaultTenantId(), tableName)
 	}
 	return nil
 }

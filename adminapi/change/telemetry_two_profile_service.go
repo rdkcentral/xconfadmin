@@ -34,6 +34,7 @@ import (
 	xlogupload "github.com/rdkcentral/xconfadmin/shared/logupload"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	xwshared "github.com/rdkcentral/xconfwebconfig/shared"
 	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
@@ -43,9 +44,9 @@ import (
 	"github.com/google/uuid"
 )
 
-func GetTelemetryTwoProfilesByIdList(appType string, idList []string) []xwlogupload.TelemetryTwoProfile {
+func GetTelemetryTwoProfilesByIdList(tenantId string, appType string, idList []string) []xwlogupload.TelemetryTwoProfile {
 	telemetryTwoProfiles := []xwlogupload.TelemetryTwoProfile{}
-	list := xlogupload.GetAllTelemetryTwoProfileList(appType)
+	list := xlogupload.GetAllTelemetryTwoProfileList(tenantId, appType)
 	for _, profile := range list {
 		for _, id := range idList {
 			if profile.ID == id {
@@ -62,15 +63,18 @@ func WriteCreateChangeTelemetryTwoProfile(r *http.Request, profile *xwlogupload.
 	if err != nil {
 		return nil, err
 	}
-	if err := beforeCreatingTelemetryTwoProfile(profile, applicationType); err != nil {
+
+	tenantId := xwhttp.GetTenantId(r, "")
+
+	if err := beforeCreatingTelemetryTwoProfile(tenantId, profile, applicationType); err != nil {
 		return nil, err
 	}
 
-	if err := beforeSavingTelemetryTwoProfile(profile); err != nil {
+	if err := beforeSavingTelemetryTwoProfile(tenantId, profile); err != nil {
 		return nil, err
 	}
 
-	if err := ValidateTelemetryTwoProfilePendingChanges(profile); err != nil {
+	if err := ValidateTelemetryTwoProfilePendingChanges(tenantId, profile); err != nil {
 		return nil, err
 	}
 
@@ -78,7 +82,7 @@ func WriteCreateChangeTelemetryTwoProfile(r *http.Request, profile *xwlogupload.
 		return nil, err
 	}
 	change := buildToCreateTelemetryTwoChange(profile, applicationType, auth.GetUserNameOrUnknown(r))
-	if err := xchange.CreateOneTelemetryTwoChange(change); err != nil {
+	if err := xchange.CreateOneTelemetryTwoChange(tenantId, change); err != nil {
 		return nil, err
 	}
 	return change, nil
@@ -89,18 +93,21 @@ func WriteUpdateChangeOrSaveTelemetryTwoProfile(r *http.Request, newProfile *xwl
 	if err != nil {
 		return nil, err
 	}
-	if err := beforeUpdatingTelemetryTwoProfile(newProfile, applicationType); err != nil {
+
+	tenantId := xwhttp.GetTenantId(r, "")
+
+	if err := beforeUpdatingTelemetryTwoProfile(tenantId, newProfile, applicationType); err != nil {
 		return nil, err
 	}
-	if err := beforeSavingTelemetryTwoProfile(newProfile); err != nil {
+	if err := beforeSavingTelemetryTwoProfile(tenantId, newProfile); err != nil {
 		return nil, err
 	}
 
 	var change *xwchange.TelemetryTwoChange
 
-	oldProfile := xlogupload.GetOneTelemetryTwoProfile(newProfile.ID)
+	oldProfile := xlogupload.GetOneTelemetryTwoProfile(tenantId, newProfile.ID)
 	if newProfile.Equals(oldProfile) {
-		if err := xlogupload.SetOneTelemetryTwoProfile(newProfile); err != nil {
+		if err := xlogupload.SetOneTelemetryTwoProfile(tenantId, newProfile); err != nil {
 			return nil, err
 		}
 	} else {
@@ -111,7 +118,7 @@ func WriteUpdateChangeOrSaveTelemetryTwoProfile(r *http.Request, newProfile *xwl
 		if err := beforeSavingTelemetryTwoChange(r, change); err != nil {
 			return nil, err
 		}
-		if err := xchange.CreateOneTelemetryTwoChange(change); err != nil {
+		if err := xchange.CreateOneTelemetryTwoChange(tenantId, change); err != nil {
 			return nil, err
 		}
 
@@ -124,7 +131,10 @@ func WriteDeleteChangeTelemetryTwoProfile(r *http.Request, id string) (*xwchange
 	if err != nil {
 		return nil, err
 	}
-	deleteProfile, err := beforeRemovingTelemetryTwoProfile(id, applicationType)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+
+	deleteProfile, err := beforeRemovingTelemetryTwoProfile(tenantId, id, applicationType)
 	if err != nil {
 		return nil, err
 	}
@@ -132,22 +142,27 @@ func WriteDeleteChangeTelemetryTwoProfile(r *http.Request, id string) (*xwchange
 		return nil, err
 	}
 	change := buildToDeleteTelemetryTwoChange(deleteProfile, applicationType, auth.GetUserNameOrUnknown(r))
-	err = xchange.CreateOneTelemetryTwoChange(change)
+	err = xchange.CreateOneTelemetryTwoChange(tenantId, change)
 	if err != nil {
 		return nil, err
 	}
 	return change, nil
 }
 
-func GetTelemetryTwoProfilesByContext(searchContext map[string]string) []*xwlogupload.TelemetryTwoProfile {
+func GetTelemetryTwoProfilesByContext(contextMap map[string]string) []*xwlogupload.TelemetryTwoProfile {
 	filteredProfiles := []*xwlogupload.TelemetryTwoProfile{}
-	applicationType, ok := xutil.FindEntryInContext(searchContext, shared.APPLICATION_TYPE, false)
+	applicationType, ok := xutil.FindEntryInContext(contextMap, shared.APPLICATION_TYPE, false)
 	if !ok {
 		return filteredProfiles
 	}
-	profiles := xlogupload.GetAllTelemetryTwoProfileList(applicationType)
+	tenantId, ok := xutil.FindEntryInContext(contextMap, xwcommon.TENANT_ID, false)
+	if !ok {
+		return filteredProfiles
+	}
+
+	profiles := xlogupload.GetAllTelemetryTwoProfileList(tenantId, applicationType)
 	for _, profile := range profiles {
-		if name, ok := xutil.FindEntryInContext(searchContext, xcommon.NAME_UPPER, false); ok {
+		if name, ok := xutil.FindEntryInContext(contextMap, xcommon.NAME_UPPER, false); ok {
 			if !xutil.ContainsIgnoreCase(profile.Name, name) {
 				continue
 			}
@@ -179,13 +194,16 @@ func CreateTelemetryTwoProfile(r *http.Request, newProfile *xwlogupload.Telemetr
 	if err != nil {
 		return nil, err
 	}
-	if err := beforeCreatingTelemetryTwoProfile(newProfile, applicationType); err != nil {
+
+	tenantId := xwhttp.GetTenantId(r, "")
+
+	if err := beforeCreatingTelemetryTwoProfile(tenantId, newProfile, applicationType); err != nil {
 		return nil, err
 	}
-	if err := beforeSavingTelemetryTwoProfile(newProfile); err != nil {
+	if err := beforeSavingTelemetryTwoProfile(tenantId, newProfile); err != nil {
 		return nil, err
 	}
-	if err := xlogupload.SetOneTelemetryTwoProfile(newProfile); err != nil {
+	if err := xlogupload.SetOneTelemetryTwoProfile(tenantId, newProfile); err != nil {
 		return nil, err
 	}
 	return newProfile, nil
@@ -196,13 +214,16 @@ func UpdateTelemetryTwoProfile(r *http.Request, profile *xwlogupload.TelemetryTw
 	if err != nil {
 		return nil, err
 	}
-	if err := beforeUpdatingTelemetryTwoProfile(profile, applicationType); err != nil {
+
+	tenantId := xwhttp.GetTenantId(r, "")
+
+	if err := beforeUpdatingTelemetryTwoProfile(tenantId, profile, applicationType); err != nil {
 		return nil, err
 	}
-	if err := beforeSavingTelemetryTwoProfile(profile); err != nil {
+	if err := beforeSavingTelemetryTwoProfile(tenantId, profile); err != nil {
 		return nil, err
 	}
-	if err := xlogupload.SetOneTelemetryTwoProfile(profile); err != nil {
+	if err := xlogupload.SetOneTelemetryTwoProfile(tenantId, profile); err != nil {
 		return nil, err
 	}
 	return profile, nil
@@ -213,20 +234,21 @@ func DeleteTelemetryTwoProfile(r *http.Request, id string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := beforeRemovingTelemetryTwoProfile(id, applicationType); err != nil {
+	tenantId := xwhttp.GetTenantId(r, "")
+	if _, err := beforeRemovingTelemetryTwoProfile(tenantId, id, applicationType); err != nil {
 		return err
 	}
-	if err := xlogupload.DeleteTelemetryTwoProfile(id); err != nil {
+	if err := xlogupload.DeleteTelemetryTwoProfile(tenantId, id); err != nil {
 		return err
 	}
 	return nil
 }
 
-func beforeCreatingTelemetryTwoProfile(entity *xwlogupload.TelemetryTwoProfile, writeApplication string) error {
+func beforeCreatingTelemetryTwoProfile(tenantId string, entity *xwlogupload.TelemetryTwoProfile, writeApplication string) error {
 	if entity.ID == "" {
 		entity.ID = uuid.New().String()
 	} else {
-		existingEntity := xwlogupload.GetOneTelemetryTwoProfile(entity.ID)
+		existingEntity := xwlogupload.GetOneTelemetryTwoProfile(tenantId, entity.ID)
 		if existingEntity != nil {
 			if !xshared.ApplicationTypeEquals(existingEntity.ApplicationType, entity.ApplicationType) {
 				return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Entity with id: %s already exists in %s application", entity.ID, existingEntity.ApplicationType))
@@ -239,11 +261,11 @@ func beforeCreatingTelemetryTwoProfile(entity *xwlogupload.TelemetryTwoProfile, 
 	return nil
 }
 
-func beforeUpdatingTelemetryTwoProfile(entity *xwlogupload.TelemetryTwoProfile, writeApplication string) error {
+func beforeUpdatingTelemetryTwoProfile(tenantId string, entity *xwlogupload.TelemetryTwoProfile, writeApplication string) error {
 	if entity.ID == "" {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Entity id is empty")
 	}
-	existingEntity := xwlogupload.GetOneTelemetryTwoProfile(entity.ID)
+	existingEntity := xwlogupload.GetOneTelemetryTwoProfile(tenantId, entity.ID)
 	if existingEntity == nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", entity.ID))
 	} else {
@@ -257,19 +279,19 @@ func beforeUpdatingTelemetryTwoProfile(entity *xwlogupload.TelemetryTwoProfile, 
 	return nil
 }
 
-func beforeSavingTelemetryTwoProfile(entity *xwlogupload.TelemetryTwoProfile) error {
+func beforeSavingTelemetryTwoProfile(tenantId string, entity *xwlogupload.TelemetryTwoProfile) error {
 	// Type attribute is mandatory and currently there is only one type and it is TelemetryTwoProfile.
 	entity.Type = "TelemetryTwoProfile"
 
 	if err := entity.Validate(); err != nil {
 		return err
 	}
-	existingEntities := xlogupload.GetAllTelemetryTwoProfileList(entity.ApplicationType)
+	existingEntities := xlogupload.GetAllTelemetryTwoProfileList(tenantId, entity.ApplicationType)
 	return entity.ValidateAll(existingEntities)
 }
 
-func ValidateTelemetryTwoProfilePendingChanges(entity *xwlogupload.TelemetryTwoProfile) error {
-	telemetryTwoProfilechanges := xchange.GetAllTelemetryTwoChangeList()
+func ValidateTelemetryTwoProfilePendingChanges(tenantId string, entity *xwlogupload.TelemetryTwoProfile) error {
+	telemetryTwoProfilechanges := xchange.GetAllTelemetryTwoChangeList(tenantId)
 	for _, change := range telemetryTwoProfilechanges {
 		if change.ID != entity.ID {
 			if change.NewEntity != nil && entity.EqualChangeData(change.NewEntity) {
@@ -282,19 +304,19 @@ func ValidateTelemetryTwoProfilePendingChanges(entity *xwlogupload.TelemetryTwoP
 	return nil
 }
 
-func beforeRemovingTelemetryTwoProfile(id string, writeApplication string) (*xwlogupload.TelemetryTwoProfile, error) {
-	entity := xwlogupload.GetOneTelemetryTwoProfile(id)
+func beforeRemovingTelemetryTwoProfile(tenantId string, id string, writeApplication string) (*xwlogupload.TelemetryTwoProfile, error) {
+	entity := xwlogupload.GetOneTelemetryTwoProfile(tenantId, id)
 	if entity == nil || !shared.ApplicationTypeEquals(writeApplication, entity.ApplicationType) {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id))
 	}
-	if err := validateUsageTelemetryTwoProfile(id); err != nil {
+	if err := validateUsageTelemetryTwoProfile(tenantId, id); err != nil {
 		return nil, err
 	}
 	return entity, nil
 }
 
-func validateUsageTelemetryTwoProfile(id string) error {
-	all := xwlogupload.GetTelemetryTwoRuleListForAS() // []*TelemetryTwoRule
+func validateUsageTelemetryTwoProfile(tenantId string, id string) error {
+	all := xwlogupload.GetTelemetryTwoRuleListForAS(tenantId) // []*TelemetryTwoRule
 	for _, rule := range all {
 		if util.Contains(rule.BoundTelemetryIDs, id) {
 			return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Can't delete profile as it's used in telemetry rule: %s", rule.Name))
@@ -304,11 +326,11 @@ func validateUsageTelemetryTwoProfile(id string) error {
 	return nil
 }
 
-func TelemetryTwoTestPageFilterByContext(searchContext map[string]string) []*xwlogupload.TelemetryTwoRule {
+func TelemetryTwoTestPageFilterByContext(tenantId string, searchContext map[string]string) []*xwlogupload.TelemetryTwoRule {
 	var keyMatch bool
 	var valueMatch bool
 	TelemetryRuleList := []*xwlogupload.TelemetryTwoRule{}
-	TelemetryRules := xwlogupload.GetTelemetryTwoRuleListForAS()
+	TelemetryRules := xwlogupload.GetTelemetryTwoRuleListForAS(tenantId)
 	for _, tmRule := range TelemetryRules {
 		if tmRule == nil {
 			continue

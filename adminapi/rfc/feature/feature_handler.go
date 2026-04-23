@@ -52,15 +52,16 @@ func GetFeaturesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	_, isExport := r.URL.Query()["export"]
 	if isExport {
-		featureEntityList := GetFeatureEntityListByApplicationTypeSorted(applicationType)
+		featureEntityList := GetFeatureEntityListByApplicationTypeSorted(tenantId, applicationType)
 		filename := fmt.Sprintf("%s_%s", xcommon.ExportFileNames_ALL_FEATURES, applicationType)
 		header := xhttp.CreateContentDispositionHeader(filename)
 		response, _ := util.XConfJSONMarshal(featureEntityList, true)
 		xwhttp.WriteXconfResponseWithHeaders(w, header, http.StatusOK, []byte(response))
 	} else {
-		features := GetFeaturesByApplicationTypeSorted(applicationType)
+		features := GetFeaturesByApplicationTypeSorted(tenantId, applicationType)
 		response, _ := util.XConfJSONMarshal(features, true)
 		xwhttp.WriteXconfResponse(w, http.StatusOK, []byte(response))
 	}
@@ -78,9 +79,11 @@ func GetFeatureByIdHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Id is blank")
 		return
 	}
+
+	tenantId := xwhttp.GetTenantId(r, "")
 	_, isExport := r.URL.Query()["export"]
 	if isExport {
-		featureEntity := GetFeatureEntityById(id)
+		featureEntity := GetFeatureEntityById(tenantId, id)
 		if featureEntity == nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id))
 			return
@@ -95,7 +98,7 @@ func GetFeatureByIdHandler(w http.ResponseWriter, r *http.Request) {
 		response, _ := util.XConfJSONMarshal(featureEntityList, true)
 		xwhttp.WriteXconfResponseWithHeaders(w, header, http.StatusOK, []byte(response))
 	} else {
-		feature := GetFeatureById(id)
+		feature := GetFeatureById(tenantId, id)
 		if feature == nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id))
 			return
@@ -121,16 +124,18 @@ func DeleteFeatureByIdHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Id is blank")
 		return
 	}
-	if !xrfc.DoesFeatureExistWithApplicationType(id, applicationType) {
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	if !xrfc.DoesFeatureExistWithApplicationType(tenantId, id, applicationType) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id))
 		return
 	}
-	isFeatureUsed, featureName := IsFeatureUsedInFeatureRule(id)
+	isFeatureUsed, featureName := IsFeatureUsedInFeatureRule(tenantId, id)
 	if isFeatureUsed {
 		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, fmt.Sprintf("This Feature linked to FeatureRule with name: %s", featureName))
 		return
 	}
-	DeleteFeatureById(id)
+	DeleteFeatureById(tenantId, id)
 	xwhttp.WriteXconfResponse(w, http.StatusNoContent, []byte(""))
 }
 
@@ -154,7 +159,8 @@ func PutFeatureEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entitiesMap := ImportFeatureEntities(featureEntityList, true, applicationType)
+	tenantId := xwhttp.GetTenantId(r, "")
+	entitiesMap := ImportFeatureEntities(tenantId, featureEntityList, true, applicationType)
 	response, _ := util.XConfJSONMarshal(entitiesMap, true)
 	xwhttp.WriteXconfResponse(w, http.StatusOK, []byte(response))
 }
@@ -179,7 +185,8 @@ func PostFeatureEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entitiesMap := ImportFeatureEntities(featureEntityList, false, applicationType)
+	tenantId := xwhttp.GetTenantId(r, "")
+	entitiesMap := ImportFeatureEntities(tenantId, featureEntityList, false, applicationType)
 	response, _ := util.XConfJSONMarshal(entitiesMap, true)
 	xwhttp.WriteXconfResponse(w, http.StatusOK, []byte(response))
 }
@@ -203,9 +210,10 @@ func PostFeatureHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	tenantId := xwhttp.GetTenantId(r, "")
 	feature := featureEntity.CreateFeature()
 
-	if xrfc.DoesFeatureExist(feature.ID) {
+	if xrfc.DoesFeatureExist(tenantId, feature.ID) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, fmt.Sprintf("Entity with id: %s already exists", feature.ID))
 		return
 	}
@@ -213,17 +221,17 @@ func PostFeatureHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, fmt.Sprintf("Entity with id: %s applicationType doesn't match", feature.ID))
 		return
 	}
-	isValid, errorMsg := xrfc.IsValidFeature(feature)
+	isValid, errorMsg := xrfc.IsValidFeature(tenantId, feature)
 	if !isValid {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, errorMsg)
 		return
 	}
-	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherIdForApplicationType(feature, applicationType)
+	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherIdForApplicationType(tenantId, feature, applicationType)
 	if doesFeatureInstanceExist {
 		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, fmt.Sprintf("Feature with such featureInstance already exists: %s", feature.FeatureName))
 		return
 	}
-	feature, err = FeaturePost(feature)
+	feature, err = FeaturePost(tenantId, feature)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
 	}
@@ -250,27 +258,29 @@ func PutFeatureHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	tenantId := xwhttp.GetTenantId(r, "")
 	feature := featureEntity.CreateFeature()
 	if feature.ID == "" {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Entity id is empty")
 		return
 	}
 
-	if !xrfc.DoesFeatureExistWithApplicationType(feature.ID, applicationType) {
+	if !xrfc.DoesFeatureExistWithApplicationType(tenantId, feature.ID, applicationType) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("Entity with id: %s does not exist", feature.ID))
 		return
 	}
-	isValid, errorMsg := xrfc.IsValidFeature(feature)
+	isValid, errorMsg := xrfc.IsValidFeature(tenantId, feature)
 	if !isValid {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, errorMsg)
 		return
 	}
-	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherIdForApplicationType(feature, applicationType)
+	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherIdForApplicationType(tenantId, feature, applicationType)
 	if doesFeatureInstanceExist {
 		xhttp.WriteAdminErrorResponse(w, http.StatusConflict, fmt.Sprintf("Feature with such featureInstance already exists: %s", feature.FeatureName))
 		return
 	}
-	feature, err = PutFeature(feature)
+	feature, err = PutFeature(tenantId, feature)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
 	}
@@ -314,6 +324,7 @@ func GetFeaturesFilteredHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
+	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	features := GetFeatureFiltered(contextMap)
 	sort.SliceStable(features, func(i, j int) bool {
@@ -344,7 +355,8 @@ func GetFeaturesByIdListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	features := GetFeaturesByIdList(featureIdList)
+	tenantId := xwhttp.GetTenantId(r, "")
+	features := GetFeaturesByIdList(tenantId, featureIdList)
 	response, _ := util.JSONMarshal(features)
 	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
 }

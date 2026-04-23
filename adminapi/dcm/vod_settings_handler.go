@@ -26,17 +26,13 @@ import (
 
 	"github.com/rdkcentral/xconfadmin/common"
 
-	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
-
-	xutil "github.com/rdkcentral/xconfadmin/util"
-
-	xwutil "github.com/rdkcentral/xconfwebconfig/util"
-
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
-
+	xutil "github.com/rdkcentral/xconfadmin/util"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	xwutil "github.com/rdkcentral/xconfwebconfig/util"
 )
 
 func GetVodSettingsHandler(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +42,8 @@ func GetVodSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := GetVodSettingsAll()
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetVodSettingsAll(tenantId)
 	appRules := []*logupload.VodSettings{}
 	for _, rule := range result {
 		if applicationType == rule.ApplicationType {
@@ -71,7 +68,9 @@ func GetVodSettingsByIdHandler(w http.ResponseWriter, r *http.Request) {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(errorStr))
 		return
 	}
-	vodsettings := GetVodSettings(id)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	vodsettings := GetVodSettings(tenantId, id)
 	if vodsettings == nil {
 		errorStr := fmt.Sprintf("%v not found", id)
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, errorStr)
@@ -94,7 +93,8 @@ func GetVodSettingsSizeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	final := []*logupload.VodSettings{}
-	result := GetVodSettingsAll()
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetVodSettingsAll(tenantId)
 	for _, vs := range result {
 		if vs.ApplicationType == applicationType {
 			final = append(final, vs)
@@ -112,7 +112,8 @@ func GetVodSettingsNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	final := []string{}
-	result := GetVodSettingsAll()
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetVodSettingsAll(tenantId)
 	for _, vs := range result {
 		if vs.ApplicationType == applicationType {
 			final = append(final, vs.Name)
@@ -135,7 +136,9 @@ func DeleteVodSettingsByIdHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, errorStr)
 		return
 	}
-	respEntity := DeleteVodSettingsbyId(id, applicationType)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	respEntity := DeleteVodSettingsbyId(tenantId, id, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -163,7 +166,9 @@ func CreateVodSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	respEntity := CreateVodSettings(&newvs, applicationType)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	respEntity := CreateVodSettings(tenantId, &newvs, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -197,7 +202,9 @@ func UpdateVodSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	respEntity := UpdateVodSettings(&newvsrule, applicationType)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	respEntity := UpdateVodSettings(tenantId, &newvsrule, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -234,6 +241,7 @@ func PostVodSettingsFilteredWithParamsHandler(w http.ResponseWriter, r *http.Req
 	}
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
+	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	vsrules := VodSettingsFilterByContext(contextMap)
 	sizeHeader := xhttp.CreateNumberOfItemsHttpHeaders(len(vsrules))
@@ -253,14 +261,15 @@ func GetVodSettingExportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	allFormulas := GetDcmFormulaAll()
+	tenantId := xwhttp.GetTenantId(r, "")
+	allFormulas := GetDcmFormulaAll(tenantId)
 	vodList := []*logupload.VodSettings{}
 
 	for _, DcmRule := range allFormulas {
 		if DcmRule.ApplicationType != appType {
 			continue
 		}
-		vodSetting := GetVodSettings(DcmRule.ID)
+		vodSetting := GetVodSettings(tenantId, DcmRule.ID)
 		vodList = append(vodList, vodSetting)
 	}
 	response, err := xhttp.ReturnJsonResponse(vodList, r)

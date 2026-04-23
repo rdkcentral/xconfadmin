@@ -34,7 +34,6 @@ import (
 	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfadmin/util"
 
-	xcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
@@ -56,8 +55,8 @@ var canaryNameRegex = regexp.MustCompile(`[^-a-zA-Z0-9_.' ]+`)
 
 // Service APIs for Percent Filter Rule
 
-func GetOnePercentageBeanFromDB(id string) (*coreef.PercentageBean, error) {
-	frule, err := firmware.GetFirmwareRuleOneDB(id)
+func GetOnePercentageBeanFromDB(tenantId string, id string) (*coreef.PercentageBean, error) {
+	frule, err := firmware.GetFirmwareRuleOneDB(tenantId, id)
 	if err != nil {
 		return nil, err
 	}
@@ -66,8 +65,8 @@ func GetOnePercentageBeanFromDB(id string) (*coreef.PercentageBean, error) {
 	return bean, nil
 }
 
-func GetAllGlobalPercentageBeansAsRuleFromDB(applicationType string, sortByName bool) ([]*firmware.FirmwareRule, error) {
-	frules, err := firmware.GetFirmwareRuleAllAsListDBForAdmin()
+func GetAllGlobalPercentageBeansAsRuleFromDB(tenantId string, applicationType string, sortByName bool) ([]*firmware.FirmwareRule, error) {
+	frules, err := firmware.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
 	if err != nil {
 		return nil, err
 	}
@@ -89,8 +88,8 @@ func GetAllGlobalPercentageBeansAsRuleFromDB(applicationType string, sortByName 
 	return result, nil
 }
 
-func GetAllPercentageBeansFromDB(applicationType string, sortByName bool, convert bool) ([]*coreef.PercentageBean, error) {
-	firmwareRules, err := firmware.GetFirmwareRuleAllAsListDBForAdmin()
+func GetAllPercentageBeansFromDB(tenantId string, applicationType string, sortByName bool, convert bool) ([]*coreef.PercentageBean, error) {
+	firmwareRules, err := firmware.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +100,7 @@ func GetAllPercentageBeansFromDB(applicationType string, sortByName bool, conver
 		if frule.ApplicationType == applicationType && frule.Type == firmware.ENV_MODEL_RULE {
 			bean := coreef.ConvertFirmwareRuleToPercentageBean(frule)
 			if convert {
-				replaceFieldsWithFirmwareVersion(bean)
+				replaceFieldsWithFirmwareVersion(tenantId, bean)
 			}
 			result = append(result, bean)
 		}
@@ -116,13 +115,13 @@ func GetAllPercentageBeansFromDB(applicationType string, sortByName bool, conver
 	return result, nil
 }
 
-func GetPercentageBeanFilterFieldValues(fieldName string, applicationType string) (map[string][]interface{}, error) {
-	fieldValues, err := getPercentageBeanFieldValues(fieldName, applicationType)
+func GetPercentageBeanFilterFieldValues(tenantId string, fieldName string, applicationType string) (map[string][]interface{}, error) {
+	fieldValues, err := getPercentageBeanFieldValues(tenantId, fieldName, applicationType)
 	if err != nil {
 		return nil, err
 	}
 
-	globalFieldValues := getGlobalPercentageFields(fieldName, applicationType)
+	globalFieldValues := getGlobalPercentageFields(tenantId, fieldName, applicationType)
 	for fieldValue := range globalFieldValues {
 		fieldValues[fieldValue] = struct{}{}
 	}
@@ -137,11 +136,11 @@ func GetPercentageBeanFilterFieldValues(fieldName string, applicationType string
 	return result, nil
 }
 
-func getGlobalPercentageFields(fieldName string, applicationType string) map[interface{}]struct{} {
+func getGlobalPercentageFields(tenantId string, fieldName string, applicationType string) map[interface{}]struct{} {
 	resultFieldValues := make(map[interface{}]struct{})
 
 	globalPercentageId := GetGlobalPercentageIdByApplication(applicationType)
-	globalPercentageRule, err := firmware.GetFirmwareRuleOneDB(globalPercentageId)
+	globalPercentageRule, err := firmware.GetFirmwareRuleOneDB(tenantId, globalPercentageId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetGlobalPercentageFields: %v", err))
 		if fieldName == PERCENTAGE_FIELD_NAME {
@@ -159,10 +158,10 @@ func getGlobalPercentageFields(fieldName string, applicationType string) map[int
 	return resultFieldValues
 }
 
-func getPercentageBeanFieldValues(fieldName string, applicationType string) (map[interface{}]struct{}, error) {
+func getPercentageBeanFieldValues(tenantId string, fieldName string, applicationType string) (map[interface{}]struct{}, error) {
 	resultFieldValues := make(map[interface{}]struct{})
 
-	beans, err := GetAllPercentageBeansFromDB(applicationType, false, true)
+	beans, err := GetAllPercentageBeansFromDB(tenantId, applicationType, false, true)
 	if err != nil {
 		return nil, err
 	}
@@ -223,8 +222,8 @@ func GetStructFieldValues(fieldName string, structValue reflect.Value) []interfa
 	return resultFieldValues
 }
 
-func CreatePercentageBean(bean *coreef.PercentageBean, applicationType string, fields log.Fields) *xwhttp.ResponseEntity {
-	_, err := firmware.GetFirmwareRuleOneDB(bean.ID)
+func CreatePercentageBean(tenantId string, bean *coreef.PercentageBean, applicationType string, fields log.Fields) *xwhttp.ResponseEntity {
+	_, err := firmware.GetFirmwareRuleOneDB(tenantId, bean.ID)
 	if err == nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s Already Exist", bean.ID), nil)
 	}
@@ -233,19 +232,19 @@ func CreatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s ApplicationType doesn't match", bean.ID), nil)
 	}
 
-	if err := validatePercentageBeanReferences(bean); err != nil {
+	if err := validatePercentageBeanReferences(tenantId, bean); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	if err := firmware.ValidateRuleName(bean.ID, bean.Name, applicationType); err != nil {
+	if err := firmware.ValidateRuleName(tenantId, bean.ID, bean.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	if err := bean.ValidateForAS(); err != nil {
+	if err := bean.ValidateForAS(tenantId); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	beans, err := GetAllPercentageBeansFromDB(bean.ApplicationType, false, true)
+	beans, err := GetAllPercentageBeansFromDB(tenantId, bean.ApplicationType, false, true)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -258,21 +257,21 @@ func CreatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 
 	fRule := coreef.ConvertPercentageBeanToFirmwareRule(*bean)
 	re.NormalizeConditions(&fRule.Rule)
-	if err := firmware.CreateFirmwareRuleOneDB(fRule); err != nil {
+	if err := firmware.CreateFirmwareRuleOneDB(tenantId, fRule); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
 	newBean := coreef.ConvertFirmwareRuleToPercentageBean(fRule)
-	createCanaries(newBean, nil, fields)
+	createCanaries(tenantId, newBean, nil, fields)
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, newBean)
 }
 
-func UpdatePercentageBean(bean *coreef.PercentageBean, applicationType string, fields log.Fields) *xwhttp.ResponseEntity {
+func UpdatePercentageBean(tenantId string, bean *coreef.PercentageBean, applicationType string, fields log.Fields) *xwhttp.ResponseEntity {
 	if xutil.IsBlank(bean.ID) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("Entity id is empty"), nil)
 	}
 
-	fRule, err := firmware.GetFirmwareRuleOneDB(bean.ID)
+	fRule, err := firmware.GetFirmwareRuleOneDB(tenantId, bean.ID)
 	if fRule == nil || err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("Entity with id: %s does not exist", bean.ID), nil)
 	}
@@ -283,19 +282,19 @@ func UpdatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("ApplicationType cannot be changed: Existing value:%s New Value: %s", fRule.ApplicationType, bean.ApplicationType), nil)
 	}
 
-	if err := validatePercentageBeanReferences(bean); err != nil {
+	if err := validatePercentageBeanReferences(tenantId, bean); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	if err := firmware.ValidateRuleName(bean.ID, bean.Name, applicationType); err != nil {
+	if err := firmware.ValidateRuleName(tenantId, bean.ID, bean.Name, applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	if err := bean.ValidateForAS(); err != nil {
+	if err := bean.ValidateForAS(tenantId); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	beans, err := GetAllPercentageBeansFromDB(bean.ApplicationType, false, true)
+	beans, err := GetAllPercentageBeansFromDB(tenantId, bean.ApplicationType, false, true)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -308,40 +307,40 @@ func UpdatePercentageBean(bean *coreef.PercentageBean, applicationType string, f
 
 	newRule := coreef.ConvertPercentageBeanToFirmwareRule(*bean)
 	re.NormalizeConditions(&newRule.Rule)
-	if err := firmware.CreateFirmwareRuleOneDB(newRule); err != nil {
+	if err := firmware.CreateFirmwareRuleOneDB(tenantId, newRule); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
 	newBean := coreef.ConvertFirmwareRuleToPercentageBean(newRule)
-	createCanaries(newBean, fRule, fields)
+	createCanaries(tenantId, newBean, fRule, fields)
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, newBean)
 }
 
-func DeletePercentageBean(id string, app string) *xwhttp.ResponseEntity {
-	fRule, err := firmware.GetFirmwareRuleOneDB(id)
+func DeletePercentageBean(tenantId string, id string, app string) *xwhttp.ResponseEntity {
+	fRule, err := firmware.GetFirmwareRuleOneDB(tenantId, id)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, fmt.Errorf("Entity with id: %s does not exist", id), nil)
 	}
 	if fRule.ApplicationType != app {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, fmt.Errorf("Entity with id: %s ApplicationType doesn't match", id), nil)
 	}
-	if err = firmware.DeleteOneFirmwareRule(fRule.ID); err != nil {
+	if err = firmware.DeleteOneFirmwareRule(tenantId, fRule.ID); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
 	return xwhttp.NewResponseEntity(http.StatusNoContent, nil, nil)
 }
 
-func validatePercentageBeanReferences(bean *coreef.PercentageBean) error {
+func validatePercentageBeanReferences(tenantId string, bean *coreef.PercentageBean) error {
 	if xutil.IsBlank(bean.Model) {
 		return errors.New("Model is empty")
 	}
 	normalizedModel := strings.ToUpper(strings.TrimSpace(bean.Model))
-	if !common.IsExistModel(normalizedModel) {
+	if !common.IsExistModel(tenantId, normalizedModel) {
 		return fmt.Errorf("Model: %s does not exist", normalizedModel)
 	}
 
-	if !xutil.IsBlank(bean.Whitelist) && GetNamespacedListByIdAndType(bean.Whitelist, shared.IP_LIST) == nil {
+	if !xutil.IsBlank(bean.Whitelist) && GetNamespacedListByIdAndType(tenantId, bean.Whitelist, shared.IP_LIST) == nil {
 		return fmt.Errorf("IP address list '%s' does not exist", bean.Whitelist)
 	}
 
@@ -350,7 +349,7 @@ func validatePercentageBeanReferences(bean *coreef.PercentageBean) error {
 		if err != nil {
 			return err
 		}
-		err = RunGlobalValidation(*bean.OptionalConditions, GetFeatureRuleAllowedOperations)
+		err = RunGlobalValidation(tenantId, *bean.OptionalConditions, GetFeatureRuleAllowedOperations)
 		if err != nil {
 			return err
 		}
@@ -359,7 +358,7 @@ func validatePercentageBeanReferences(bean *coreef.PercentageBean) error {
 	return nil
 }
 
-func createCanaries(newBean *coreef.PercentageBean, oldRule *firmware.FirmwareRule, fields log.Fields) {
+func createCanaries(tenantId string, newBean *coreef.PercentageBean, oldRule *firmware.FirmwareRule, fields log.Fields) {
 	fields["canaryPercentFilterName"] = newBean.Name
 	tfields := xwcommon.CopyLogFields(fields) // used only for the CreateCanary call
 	fields = xwcommon.FilterLogFields(fields)
@@ -521,15 +520,15 @@ func createCanaries(newBean *coreef.PercentageBean, oldRule *firmware.FirmwareRu
 	}
 
 	// loop through canary list to create canaries in XDAS
-	size := common.GetIntAppSetting(common.PROP_CANARY_MAXSIZE, common.CanarySize)
-	distPercentage := common.GetFloat64AppSetting(common.PROP_CANARY_DISTRIBUTION_PERCENTAGE, common.CanaryDistributionPercentage)
+	size := common.GetIntAppSetting(tenantId, common.PROP_CANARY_MAXSIZE, common.CanarySize)
+	distPercentage := common.GetFloat64AppSetting(tenantId, common.PROP_CANARY_DISTRIBUTION_PERCENTAGE, common.CanaryDistributionPercentage)
 	for _, canaryConfigEntry := range canaryConfigList {
 		go func(canaryConfigEntry firmware.ConfigEntry) {
 			partnerId, err := getPartnerOptionalCondition(newBean)
 			if err != nil {
 				log.WithFields(fields).Errorf("Error getting partnerId from optional condition, err=%+v", err)
 			} else {
-				firmwareConfig, err := coreef.GetFirmwareConfigOneDB(canaryConfigEntry.ConfigId)
+				firmwareConfig, err := coreef.GetFirmwareConfigOneDB(tenantId, canaryConfigEntry.ConfigId)
 				if err != nil {
 					log.WithFields(fields).Errorf("Error looking up firmware config in DB, configId=%s", canaryConfigEntry.ConfigId)
 				} else {
@@ -538,7 +537,7 @@ func createCanaries(newBean *coreef.PercentageBean, oldRule *firmware.FirmwareRu
 					timeZoneList := common.CanaryTimezoneList
 
 					if common.CanarySyndicatePartnerSet.Contains(partnerId) {
-						partnerTimezoneStr := common.GetStringAppSetting(common.PROP_CANARY_TIMEZONE_LIST + "_" + partnerId)
+						partnerTimezoneStr := common.GetStringAppSetting(tenantId, common.PROP_CANARY_TIMEZONE_LIST+"_"+partnerId)
 						if partnerTimezoneStr != "" {
 							timeZoneList = strings.Split(partnerTimezoneStr, ",")
 						}
@@ -676,7 +675,8 @@ func PercentageBeanRuleGeneratePageWithContext(pbrules []*coreef.PercentageBean,
 
 func PercentageBeanFilterByContext(searchContext map[string]string, applicationType string) []*coreef.PercentageBean {
 	percentageBeansSearchResult := []*coreef.PercentageBean{}
-	percentageBeans, err := GetAllPercentageBeansFromDB(applicationType, true, false)
+	tenantId := searchContext[xwcommon.TENANT_ID]
+	percentageBeans, err := GetAllPercentageBeansFromDB(tenantId, applicationType, true, false)
 	if err != nil {
 		return percentageBeansSearchResult
 	}
@@ -698,7 +698,7 @@ func PercentageBeanFilterByContext(searchContext map[string]string, applicationT
 			}
 		}
 		if lkg, ok := util.FindEntryInContext(searchContext, cPercentageBeanlastknowngood, false); ok {
-			fc, err := coreef.GetFirmwareConfigOneDB(pbRule.LastKnownGood)
+			fc, err := coreef.GetFirmwareConfigOneDB(tenantId, pbRule.LastKnownGood)
 			if err != nil {
 				continue
 			}
@@ -708,7 +708,7 @@ func PercentageBeanFilterByContext(searchContext map[string]string, applicationT
 			}
 		}
 		if intver, ok := util.FindEntryInContext(searchContext, cPercentageBeanintermediateversion, false); ok {
-			fc, err := coreef.GetFirmwareConfigOneDB(pbRule.IntermediateVersion)
+			fc, err := coreef.GetFirmwareConfigOneDB(tenantId, pbRule.IntermediateVersion)
 			if err != nil {
 				continue
 			}
@@ -722,7 +722,7 @@ func PercentageBeanFilterByContext(searchContext map[string]string, applicationT
 			}
 		}
 
-		if model, ok := util.FindEntryInContext(searchContext, xcommon.MODEL, false); ok {
+		if model, ok := util.FindEntryInContext(searchContext, xwcommon.MODEL, false); ok {
 			if !strings.Contains(strings.ToLower(pbRule.Model), strings.ToLower(model)) {
 				continue
 			}
@@ -761,14 +761,14 @@ func containsMinCheckVersion(versionToSearch string, firmwareVersions []string) 
 	return false
 }
 
-func replaceFieldsWithFirmwareVersion(bean *coreef.PercentageBean) *coreef.PercentageBean {
+func replaceFieldsWithFirmwareVersion(tenantId string, bean *coreef.PercentageBean) *coreef.PercentageBean {
 	if bean.LastKnownGood != "" {
-		firmwareVersion := coreef.GetFirmwareVersion(bean.LastKnownGood)
+		firmwareVersion := coreef.GetFirmwareVersion(tenantId, bean.LastKnownGood)
 		bean.LastKnownGood = firmwareVersion
 	}
 
 	if bean.IntermediateVersion != "" {
-		firmwareVersion := coreef.GetFirmwareVersion(bean.IntermediateVersion)
+		firmwareVersion := coreef.GetFirmwareVersion(tenantId, bean.IntermediateVersion)
 		bean.IntermediateVersion = firmwareVersion
 	}
 
@@ -776,7 +776,7 @@ func replaceFieldsWithFirmwareVersion(bean *coreef.PercentageBean) *coreef.Perce
 		firmwareVersionDistributions := make([]*firmware.ConfigEntry, 0)
 		for _, dist := range bean.Distributions {
 			if dist.ConfigId != "" {
-				firmwareVersion := coreef.GetFirmwareVersion(dist.ConfigId)
+				firmwareVersion := coreef.GetFirmwareVersion(tenantId, dist.ConfigId)
 				if firmwareVersion != "" {
 					firmwareconfigentry := firmware.NewConfigEntry(firmwareVersion, dist.StartPercentRange, dist.EndPercentRange)
 					firmwareconfigentry.IsCanaryDisabled = dist.IsCanaryDisabled
@@ -793,9 +793,9 @@ func replaceFieldsWithFirmwareVersion(bean *coreef.PercentageBean) *coreef.Perce
 	return bean
 }
 
-func CreateWakeupPoolList(applicationType string, force bool, fields log.Fields) error {
+func CreateWakeupPoolList(tenantId string, applicationType string, force bool, fields log.Fields) error {
 	deviceType := "VIDEO"
-	percentageBeans, err := GetAllPercentageBeansFromDB(applicationType, true, false)
+	percentageBeans, err := GetAllPercentageBeansFromDB(tenantId, applicationType, true, false)
 	if err != nil {
 		log.WithFields(fields).Errorf("Failed to get percentage beans: %v", err)
 		return err
@@ -813,12 +813,12 @@ func CreateWakeupPoolList(applicationType string, force bool, fields log.Fields)
 			}
 			timeZoneList := common.CanaryTimezoneList
 			if common.CanarySyndicatePartnerSet.Contains(partnerId) {
-				partnerTimezoneStr := common.GetStringAppSetting(common.PROP_CANARY_TIMEZONE_LIST + "_" + partnerId)
+				partnerTimezoneStr := common.GetStringAppSetting(tenantId, common.PROP_CANARY_TIMEZONE_LIST+"_"+partnerId)
 				if partnerTimezoneStr != "" {
 					timeZoneList = strings.Split(partnerTimezoneStr, ",")
 				}
 			}
-			size := common.GetIntAppSetting(common.PROP_CANARY_MAXSIZE, common.CanarySize)
+			size := common.GetIntAppSetting(tenantId, common.PROP_CANARY_MAXSIZE, common.CanarySize)
 
 			var distributions []xhttp.WakeupPoolDistribution
 			for _, dist := range bean.Distributions {

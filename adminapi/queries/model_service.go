@@ -24,19 +24,16 @@ import (
 	"strconv"
 	"strings"
 
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/util"
 	"github.com/rdkcentral/xconfwebconfig/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
-
-	"github.com/rdkcentral/xconfadmin/util"
-	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	xwutil "github.com/rdkcentral/xconfwebconfig/util"
-
-	xcommon "github.com/rdkcentral/xconfadmin/common"
-
-	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	xwutil "github.com/rdkcentral/xconfwebconfig/util"
 )
 
 const (
@@ -47,9 +44,9 @@ const (
 	cModelID                   = xwcommon.ID
 )
 
-func GetModels() []*shared.ModelResponse {
+func GetModels(tenantId string) []*shared.ModelResponse {
 	result := []*shared.ModelResponse{}
-	models := shared.GetAllModelList()
+	models := shared.GetAllModelList(tenantId)
 	for _, model := range models {
 		resp := model.CreateModelResponse()
 		result = append(result, resp)
@@ -57,19 +54,19 @@ func GetModels() []*shared.ModelResponse {
 	return result
 }
 
-func GetModel(id string) *shared.ModelResponse {
-	model := shared.GetOneModel(id)
+func GetModel(tenantId string, id string) *shared.ModelResponse {
+	model := shared.GetOneModel(tenantId, id)
 	if model != nil {
 		return model.CreateModelResponse()
 	}
 	return nil
 }
 
-func IsExistModel(id string) bool {
-	return id != "" && shared.GetOneModel(id) != nil
+func IsExistModel(tenantId string, id string) bool {
+	return id != "" && shared.GetOneModel(tenantId, id) != nil
 }
 
-func CreateModel(model *shared.Model) *xwhttp.ResponseEntity {
+func CreateModel(tenantId string, model *shared.Model) *xwhttp.ResponseEntity {
 	// Model's ID (name) is stored in uppercase
 	model.ID = strings.ToUpper(strings.TrimSpace(model.ID))
 
@@ -78,14 +75,14 @@ func CreateModel(model *shared.Model) *xwhttp.ResponseEntity {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, model.ID)
 	}
 
-	existingModel := shared.GetOneModel(model.ID)
+	existingModel := shared.GetOneModel(tenantId, model.ID)
 	if existingModel != nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New("\"Model with current name already exists\""), model.ID)
 
 	}
 
 	model.Updated = xwutil.GetTimestamp()
-	env, err := shared.SetOneModel(model)
+	env, err := shared.SetOneModel(tenantId, model)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, model)
 	}
@@ -93,7 +90,7 @@ func CreateModel(model *shared.Model) *xwhttp.ResponseEntity {
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, env)
 }
 
-func UpdateModel(model *shared.Model) *xwhttp.ResponseEntity {
+func UpdateModel(tenantId string, model *shared.Model) *xwhttp.ResponseEntity {
 	// Model's ID (name) is stored in uppercase
 	model.ID = strings.ToUpper(strings.TrimSpace(model.ID))
 
@@ -102,13 +99,13 @@ func UpdateModel(model *shared.Model) *xwhttp.ResponseEntity {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, model)
 	}
 
-	existingModel := shared.GetOneModel(model.ID)
+	existingModel := shared.GetOneModel(tenantId, model.ID)
 	if existingModel == nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, errors.New(model.ID+" model does not exist"), model)
 	}
 
 	model.Updated = xwutil.GetTimestamp()
-	env, err := shared.SetOneModel(model)
+	env, err := shared.SetOneModel(tenantId, model)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, model)
 	}
@@ -116,18 +113,18 @@ func UpdateModel(model *shared.Model) *xwhttp.ResponseEntity {
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, env)
 }
 
-func DeleteModel(id string) *xcommon.ResponseEntity {
-	err := validateUsageForModel(id)
+func DeleteModel(tenantId string, id string) *xcommon.ResponseEntity {
+	err := validateUsageForModel(tenantId, id)
 	if err != nil {
 		return xcommon.NewResponseEntity(err, id)
 	}
 	//TODO - Use NewResponseEntity at either one place
-	existingModel := shared.GetOneModel(id)
+	existingModel := shared.GetOneModel(tenantId, id)
 	if existingModel == nil {
 		return xcommon.NewResponseEntityWithStatus(http.StatusNotFound, errors.New("Entity with id: "+id+" does not exist"), id)
 	}
 
-	err = shared.DeleteOneModel(id)
+	err = shared.DeleteOneModel(tenantId, id)
 	if err != nil {
 		return xcommon.NewResponseEntityWithStatus(http.StatusInternalServerError, err, id)
 	}
@@ -136,20 +133,20 @@ func DeleteModel(id string) *xcommon.ResponseEntity {
 }
 
 // Return usage info if Model is used by a rule, empty string otherwise
-func validateUsageForModel(modelId string) error {
+func validateUsageForModel(tenantId string, modelId string) error {
 	// Check for usage in all Rules
 	ruleTables := []string{
-		ds.TABLE_DCM_RULE,
-		ds.TABLE_FIRMWARE_RULE_TEMPLATE,
-		ds.TABLE_TELEMETRY_RULES,
-		ds.TABLE_TELEMETRY_TWO_RULES,
-		ds.TABLE_FEATURE_CONTROL_RULE,
-		ds.TABLE_SETTING_RULES,
-		ds.TABLE_FIRMWARE_RULE,
+		db.TABLE_DCM_RULES,
+		db.TABLE_FIRMWARE_RULE_TEMPLATES,
+		db.TABLE_TELEMETRY_RULES,
+		db.TABLE_TELEMETRY_TWO_RULES,
+		db.TABLE_FEATURE_CONTROL_RULES,
+		db.TABLE_SETTING_RULES,
+		db.TABLE_FIRMWARE_RULES,
 	}
 
 	for _, tableName := range ruleTables {
-		resultMap, err := ds.GetCachedSimpleDao().GetAllAsMap(tableName)
+		resultMap, err := db.GetCachedSimpleDao().GetAllAsMap(tenantId, tableName)
 		if err != nil {
 			return err
 		}
@@ -166,7 +163,7 @@ func validateUsageForModel(modelId string) error {
 	}
 
 	// Check for usage in FirmwareConfig
-	list, err := coreef.GetFirmwareConfigAsListDB()
+	list, err := coreef.GetFirmwareConfigAsListDB(tenantId)
 	if err != nil && err.Error() != common.NotFound.Error() {
 		return xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, err.Error())
 	}

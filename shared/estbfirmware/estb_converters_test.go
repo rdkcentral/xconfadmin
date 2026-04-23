@@ -19,6 +19,7 @@ package estbfirmware
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
@@ -330,7 +331,7 @@ func TestConvertFirmwareRuleToRebootFilter(t *testing.T) {
 		Name: "Reboot Rule",
 	}
 
-	filter := ConvertFirmwareRuleToRebootFilter(firmwareRule)
+	filter := ConvertFirmwareRuleToRebootFilter(db.GetDefaultTenantId(), firmwareRule)
 
 	if filter == nil {
 		t.Fatal("expected non-nil filter")
@@ -470,7 +471,7 @@ func TestConvertConditionsForRebootFilter(t *testing.T) {
 	}
 
 	// Call the function - should not panic
-	convertConditionsForRebootFilter(firmwareRule, rebootFilter)
+	convertConditionsForRebootFilter(db.GetDefaultTenantId(), firmwareRule, rebootFilter)
 
 	// The function doesn't initialize Environments/Models if rule has no conditions
 	// Just verify it completed without error
@@ -485,7 +486,7 @@ func TestRebootImmediatelyFiltersByName(t *testing.T) {
 		}
 	}()
 
-	filter, err := RebootImmediatelyFiltersByName("stb", "test-filter")
+	filter, err := RebootImmediatelyFiltersByName(db.GetDefaultTenantId(), "stb", "test-filter")
 	if err != nil {
 		t.Logf("DB error expected in test environment: %v", err)
 		return
@@ -624,7 +625,7 @@ func TestRebootImmediatelyFiltersByName_NotFound(t *testing.T) {
 		}
 	}()
 
-	filter, err := RebootImmediatelyFiltersByName("stb", "non-existent-filter")
+	filter, err := RebootImmediatelyFiltersByName(db.GetDefaultTenantId(), "stb", "non-existent-filter")
 
 	if err != nil {
 		t.Logf("DB error (expected in test environment): %v", err)
@@ -645,7 +646,7 @@ func TestRebootImmediatelyFiltersByName_DifferentApplicationType(t *testing.T) {
 		}
 	}()
 
-	filter, err := RebootImmediatelyFiltersByName("xhome", "test-filter")
+	filter, err := RebootImmediatelyFiltersByName(db.GetDefaultTenantId(), "xhome", "test-filter")
 
 	if err != nil {
 		t.Logf("DB error (expected in test environment): %v", err)
@@ -672,7 +673,7 @@ func TestConvertConditionsForRebootFilter_WithEnvironments(t *testing.T) {
 	}
 
 	// Call the function - should handle gracefully even with empty rules
-	convertConditionsForRebootFilter(firmwareRule, rebootFilter)
+	convertConditionsForRebootFilter(db.GetDefaultTenantId(), firmwareRule, rebootFilter)
 
 	// Function should not panic
 	t.Log("convertConditionsForRebootFilter executed successfully with empty rule")
@@ -691,7 +692,7 @@ func TestConvertConditionsForRebootFilter_WithModels(t *testing.T) {
 		Name: "Test Filter",
 	}
 
-	convertConditionsForRebootFilter(firmwareRule, rebootFilter)
+	convertConditionsForRebootFilter(db.GetDefaultTenantId(), firmwareRule, rebootFilter)
 
 	// Verify it doesn't crash
 	t.Log("convertConditionsForRebootFilter executed successfully")
@@ -710,7 +711,7 @@ func TestConvertConditionsForRebootFilter_WithMacAddressSingle(t *testing.T) {
 		Name: "Test Filter",
 	}
 
-	convertConditionsForRebootFilter(firmwareRule, rebootFilter)
+	convertConditionsForRebootFilter(db.GetDefaultTenantId(), firmwareRule, rebootFilter)
 
 	// Should not panic
 	t.Log("convertConditionsForRebootFilter executed successfully")
@@ -729,7 +730,7 @@ func TestConvertConditionsForRebootFilter_WithMacAddressCollection(t *testing.T)
 		Name: "Test Filter",
 	}
 
-	convertConditionsForRebootFilter(firmwareRule, rebootFilter)
+	convertConditionsForRebootFilter(db.GetDefaultTenantId(), firmwareRule, rebootFilter)
 
 	// Should execute without error
 	t.Log("convertConditionsForRebootFilter completed")
@@ -748,7 +749,7 @@ func TestConvertConditionsForRebootFilter_WithIPAddressGroup(t *testing.T) {
 		Name: "Test Filter",
 	}
 
-	convertConditionsForRebootFilter(firmwareRule, rebootFilter)
+	convertConditionsForRebootFilter(db.GetDefaultTenantId(), firmwareRule, rebootFilter)
 
 	// Verify no panic
 	t.Log("convertConditionsForRebootFilter executed successfully")

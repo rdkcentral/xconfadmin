@@ -46,9 +46,9 @@ const (
 	cDeviceSettingsPageSize   = "pageSize"
 )
 
-func GetDeviceSettingsList() []*logupload.DeviceSettings {
+func GetDeviceSettingsList(tenantId string) []*logupload.DeviceSettings {
 	all := []*logupload.DeviceSettings{}
-	deviceSettingsList, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_DEVICE_SETTINGS, 0)
+	deviceSettingsList, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_DEVICE_SETTINGS, 0)
 	if err != nil {
 		log.Warn("no DeviceSettings found")
 		return all
@@ -62,14 +62,14 @@ func GetDeviceSettingsList() []*logupload.DeviceSettings {
 	return all
 }
 
-func GetDeviceSettingsAll() []*logupload.DeviceSettings {
+func GetDeviceSettingsAll(tenantId string) []*logupload.DeviceSettings {
 	result := []*logupload.DeviceSettings{}
-	result = GetDeviceSettingsList()
+	result = GetDeviceSettingsList(tenantId)
 	return result
 }
 
-func GetDeviceSettings(id string) *logupload.DeviceSettings {
-	devicesettings := logupload.GetOneDeviceSettings(id)
+func GetDeviceSettings(tenantId string, id string) *logupload.DeviceSettings {
+	devicesettings := logupload.GetOneDeviceSettings(tenantId, id)
 	if devicesettings != nil {
 		return devicesettings
 	}
@@ -77,8 +77,8 @@ func GetDeviceSettings(id string) *logupload.DeviceSettings {
 
 }
 
-func validateUsageForDeviceSettings(Id string, app string) (string, error) {
-	ds := GetDeviceSettings(Id)
+func validateUsageForDeviceSettings(tenantId string, Id string, app string) (string, error) {
+	ds := GetDeviceSettings(tenantId, Id)
 	if ds == nil {
 		return fmt.Sprintf("Entity with id  %s does not exist ", Id), nil
 	}
@@ -88,8 +88,8 @@ func validateUsageForDeviceSettings(Id string, app string) (string, error) {
 	return "", nil
 }
 
-func DeleteDeviceSettingsbyId(id string, app string) *xwhttp.ResponseEntity {
-	usage, err := validateUsageForDeviceSettings(id, app)
+func DeleteDeviceSettingsbyId(tenantId string, id string, app string) *xwhttp.ResponseEntity {
+	usage, err := validateUsageForDeviceSettings(tenantId, id, app)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, err, nil)
 	}
@@ -98,7 +98,7 @@ func DeleteDeviceSettingsbyId(id string, app string) *xwhttp.ResponseEntity {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, errors.New(usage), nil)
 	}
 
-	err = DeleteOneDeviceSettings(id)
+	err = DeleteOneDeviceSettings(tenantId, id)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -106,15 +106,15 @@ func DeleteDeviceSettingsbyId(id string, app string) *xwhttp.ResponseEntity {
 	return xwhttp.NewResponseEntity(http.StatusNoContent, nil, nil)
 }
 
-func DeleteOneDeviceSettings(id string) error {
-	err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_DEVICE_SETTINGS, id)
+func DeleteOneDeviceSettings(tenantId string, id string) error {
+	err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_DEVICE_SETTINGS, id)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func DeviceSettingsValidate(ds *logupload.DeviceSettings) *xwhttp.ResponseEntity {
+func DeviceSettingsValidate(tenantId string, ds *logupload.DeviceSettings) *xwhttp.ResponseEntity {
 	if ds == nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("DeviceSettings should be specified"), nil)
 	}
@@ -151,7 +151,7 @@ func DeviceSettingsValidate(ds *logupload.DeviceSettings) *xwhttp.ResponseEntity
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	dsrules := GetDeviceSettingsList()
+	dsrules := GetDeviceSettingsList(tenantId)
 	for _, exdsrule := range dsrules {
 		if exdsrule.ApplicationType != ds.ApplicationType {
 			continue
@@ -166,8 +166,8 @@ func DeviceSettingsValidate(ds *logupload.DeviceSettings) *xwhttp.ResponseEntity
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, nil)
 }
 
-func CreateDeviceSettings(dset *logupload.DeviceSettings, app string) *xwhttp.ResponseEntity {
-	if existingSettings := logupload.GetOneDeviceSettings(dset.ID); existingSettings != nil {
+func CreateDeviceSettings(tenantId string, dset *logupload.DeviceSettings, app string) *xwhttp.ResponseEntity {
+	if existingSettings := logupload.GetOneDeviceSettings(tenantId, dset.ID); existingSettings != nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s already exists", dset.ID), nil)
 	}
 	if dset.ApplicationType == "" {
@@ -175,23 +175,23 @@ func CreateDeviceSettings(dset *logupload.DeviceSettings, app string) *xwhttp.Re
 	} else if dset.ApplicationType != app {
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s ApplicationType doesn't match", dset.ID), nil)
 	}
-	if respEntity := DeviceSettingsValidate(dset); respEntity.Error != nil {
+	if respEntity := DeviceSettingsValidate(tenantId, dset); respEntity.Error != nil {
 		return respEntity
 	}
 
 	dset.Updated = util.GetTimestamp()
-	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DEVICE_SETTINGS, dset.ID, dset); err != nil {
+	if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_DEVICE_SETTINGS, dset.ID, dset); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, dset)
 }
 
-func UpdateDeviceSettings(dset *logupload.DeviceSettings, app string) *xwhttp.ResponseEntity {
+func UpdateDeviceSettings(tenantId string, dset *logupload.DeviceSettings, app string) *xwhttp.ResponseEntity {
 	if util.IsBlank(dset.ID) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("ID is empty"), nil)
 	}
-	existingSettings := logupload.GetOneDeviceSettings(dset.ID)
+	existingSettings := logupload.GetOneDeviceSettings(tenantId, dset.ID)
 	if existingSettings == nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s does not exists", dset.ID), nil)
 	}
@@ -201,12 +201,12 @@ func UpdateDeviceSettings(dset *logupload.DeviceSettings, app string) *xwhttp.Re
 	if existingSettings.ApplicationType != dset.ApplicationType {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New("ApplicationType can not be changed"), nil)
 	}
-	if respEntity := DeviceSettingsValidate(dset); respEntity.Error != nil {
+	if respEntity := DeviceSettingsValidate(tenantId, dset); respEntity.Error != nil {
 		return respEntity
 	}
 
 	dset.Updated = util.GetTimestamp()
-	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DEVICE_SETTINGS, dset.ID, dset); err != nil {
+	if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_DEVICE_SETTINGS, dset.ID, dset); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, dset)
@@ -247,7 +247,7 @@ func DeviceSettingsGeneratePageWithContext(dsrules []*logupload.DeviceSettings, 
 }
 
 func DeviceSettingsFilterByContext(searchContext map[string]string) []*logupload.DeviceSettings {
-	deviceSettingsRules := GetDeviceSettingsList()
+	deviceSettingsRules := GetDeviceSettingsList(searchContext[xwcommon.TENANT_ID])
 	deviceSettingsRuleList := []*logupload.DeviceSettings{}
 	for _, dsRule := range deviceSettingsRules {
 		if dsRule == nil {

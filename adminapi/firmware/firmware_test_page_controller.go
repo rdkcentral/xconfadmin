@@ -67,13 +67,16 @@ func GetFirmwareTestPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
+	context[xwcommon.TENANT_ID] = tenantId
+
 	// If input has any of these search-paramters, validate their values
 	searchValidators := map[string]ValueValidator{
 		xwcommon.ENV: func(id string) bool {
-			return id != "" && xwshared.GetOneEnvironment(id) != nil
+			return id != "" && xwshared.GetOneEnvironment(tenantId, id) != nil
 		},
 		xwcommon.MODEL: func(id string) bool {
-			return id != "" && xwshared.GetOneModel(id) != nil
+			return id != "" && xwshared.GetOneModel(tenantId, id) != nil
 		},
 		xwcommon.IP_ADDRESS: func(val string) bool {
 			return xwshared.NewIpAddress(val) != nil

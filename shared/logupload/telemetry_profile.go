@@ -13,17 +13,17 @@ import (
 
 const PermanentTelemetryProfileConst = "PermanentTelemetryProfile"
 
-func SetOnePermanentTelemetryProfile(rowKey string, profile *logupload.PermanentTelemetryProfile) error {
-	return logupload.GetCachedSimpleDaoFunc().SetOne(db.TABLE_PERMANENT_TELEMETRY, rowKey, profile)
+func SetOnePermanentTelemetryProfile(tenantId string, rowKey string, profile *logupload.PermanentTelemetryProfile) error {
+	return logupload.GetCachedSimpleDaoFunc().SetOne(tenantId, db.TABLE_PERMANENT_TELEMETRY_PROFILES, rowKey, profile)
 }
 
-func DeletePermanentTelemetryProfile(rowKey string) {
-	logupload.GetCachedSimpleDaoFunc().DeleteOne(db.TABLE_PERMANENT_TELEMETRY, rowKey)
+func DeletePermanentTelemetryProfile(tenantId string, rowKey string) {
+	logupload.GetCachedSimpleDaoFunc().DeleteOne(tenantId, db.TABLE_PERMANENT_TELEMETRY_PROFILES, rowKey)
 }
 
-func GetPermanentTelemetryProfileListByApplicationType(applicationType string) []*logupload.PermanentTelemetryProfile {
+func GetPermanentTelemetryProfileListByApplicationType(tenantId string, applicationType string) []*logupload.PermanentTelemetryProfile {
 	result := []*logupload.PermanentTelemetryProfile{}
-	list := GetPermanentTelemetryProfileList()
+	list := GetPermanentTelemetryProfileList(tenantId)
 	for _, profile := range list {
 		if profile.ApplicationType == applicationType {
 			result = append(result, profile)
@@ -32,9 +32,9 @@ func GetPermanentTelemetryProfileListByApplicationType(applicationType string) [
 	return result
 }
 
-func GetPermanentTelemetryProfileList() []*logupload.PermanentTelemetryProfile {
+func GetPermanentTelemetryProfileList(tenantId string) []*logupload.PermanentTelemetryProfile {
 	all := []*logupload.PermanentTelemetryProfile{}
-	list, err := logupload.GetCachedSimpleDaoFunc().GetAllAsList(db.TABLE_PERMANENT_TELEMETRY, 0)
+	list, err := logupload.GetCachedSimpleDaoFunc().GetAllAsList(tenantId, db.TABLE_PERMANENT_TELEMETRY_PROFILES, 0)
 	if err != nil {
 		log.Warn("no TelemetryProfile found")
 		return nil
@@ -53,9 +53,9 @@ func NewEmptyPermanentTelemetryProfile() *logupload.PermanentTelemetryProfile {
 	}
 }
 
-func GetTelemetryTwoProfileListByApplicationType(applicationType string) []*logupload.TelemetryTwoProfile {
+func GetTelemetryTwoProfileListByApplicationType(tenantId string, applicationType string) []*logupload.TelemetryTwoProfile {
 	result := []*logupload.TelemetryTwoProfile{}
-	list := GetAllTelemetryTwoProfileList(applicationType)
+	list := GetAllTelemetryTwoProfileList(tenantId, applicationType)
 	for _, profile := range list {
 		if profile.ApplicationType == applicationType {
 			result = append(result, profile)
@@ -64,9 +64,9 @@ func GetTelemetryTwoProfileListByApplicationType(applicationType string) []*logu
 	return result
 }
 
-func GetAllTelemetryTwoProfileList(appType string) []*logupload.TelemetryTwoProfile {
+func GetAllTelemetryTwoProfileList(tenantId string, appType string) []*logupload.TelemetryTwoProfile {
 	result := []*logupload.TelemetryTwoProfile{}
-	list, err := logupload.GetCachedSimpleDaoFunc().GetAllAsList(db.TABLE_TELEMETRY_TWO_PROFILES, 0)
+	list, err := logupload.GetCachedSimpleDaoFunc().GetAllAsList(tenantId, db.TABLE_TELEMETRY_TWO_PROFILES, 0)
 	if err != nil {
 		log.Warn("no TelemetryTwoProfile found")
 		return nil
@@ -88,8 +88,8 @@ func NewEmptyTelemetryTwoProfile() *logupload.TelemetryTwoProfile {
 	}
 }
 
-func GetOneTelemetryTwoProfile(rowKey string) *logupload.TelemetryTwoProfile {
-	telemetryInst, err := logupload.GetCachedSimpleDaoFunc().GetOne(db.TABLE_TELEMETRY_TWO_PROFILES, rowKey)
+func GetOneTelemetryTwoProfile(tenantId string, rowKey string) *logupload.TelemetryTwoProfile {
+	telemetryInst, err := logupload.GetCachedSimpleDaoFunc().GetOne(tenantId, db.TABLE_TELEMETRY_TWO_PROFILES, rowKey)
 	if err != nil {
 		log.Warn("no TelemetryTwoProfile found for " + rowKey)
 		return nil
@@ -98,20 +98,20 @@ func GetOneTelemetryTwoProfile(rowKey string) *logupload.TelemetryTwoProfile {
 	return telemetry
 }
 
-func SetOneTelemetryTwoProfile(profile *logupload.TelemetryTwoProfile) error {
-	return logupload.GetCachedSimpleDaoFunc().SetOne(db.TABLE_TELEMETRY_TWO_PROFILES, profile.ID, profile)
+func SetOneTelemetryTwoProfile(tenantId string, profile *logupload.TelemetryTwoProfile) error {
+	return logupload.GetCachedSimpleDaoFunc().SetOne(tenantId, db.TABLE_TELEMETRY_TWO_PROFILES, profile.ID, profile)
 }
 
-func DeleteTelemetryTwoProfile(rowKey string) error {
-	return logupload.GetCachedSimpleDaoFunc().DeleteOne(db.TABLE_TELEMETRY_TWO_PROFILES, rowKey)
+func DeleteTelemetryTwoProfile(tenantId string, rowKey string) error {
+	return logupload.GetCachedSimpleDaoFunc().DeleteOne(tenantId, db.TABLE_TELEMETRY_TWO_PROFILES, rowKey)
 }
 
-func SetOneTelemetryProfile(rowKey string, telemetry *logupload.TelemetryProfile) {
-	logupload.GetCachedSimpleDaoFunc().SetOne(db.TABLE_TELEMETRY, rowKey, telemetry)
+func SetOneTelemetryProfile(tenantId string, rowKey string, telemetry *logupload.TelemetryProfile) {
+	logupload.GetCachedSimpleDaoFunc().SetOne(tenantId, db.TABLE_TELEMETRY_PROFILES, rowKey, telemetry)
 }
 
-func GetTimestampedRulesPointer() []*logupload.TimestampedRule {
-	timestampedRuleSet, err := logupload.GetCachedSimpleDaoFunc().GetKeys(db.TABLE_TELEMETRY)
+func GetTimestampedRulesPointer(tenantId string) []*logupload.TimestampedRule {
+	timestampedRuleSet, err := logupload.GetCachedSimpleDaoFunc().GetKeys(tenantId, db.TABLE_TELEMETRY_PROFILES)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no TimestampedRule found"))
 		return nil
@@ -126,8 +126,8 @@ func GetTimestampedRulesPointer() []*logupload.TimestampedRule {
 	return rules
 }
 
-func GetOneTelemetryRule(id string) *logupload.TelemetryRule {
-	tRuleOne, err := logupload.GetCachedSimpleDaoFunc().GetOne(db.TABLE_TELEMETRY_RULES, id)
+func GetOneTelemetryRule(tenantId string, id string) *logupload.TelemetryRule {
+	tRuleOne, err := logupload.GetCachedSimpleDaoFunc().GetOne(tenantId, db.TABLE_TELEMETRY_RULES, id)
 	if err != nil {
 		log.Warn("no TelemetryRule found")
 		return nil
@@ -136,8 +136,8 @@ func GetOneTelemetryRule(id string) *logupload.TelemetryRule {
 	return tRule
 }
 
-func GetOneTelemetryTwoRule(rowKey string) *logupload.TelemetryTwoRule {
-	telemetryInst, err := logupload.GetCachedSimpleDaoFunc().GetOne(db.TABLE_TELEMETRY_TWO_RULES, rowKey)
+func GetOneTelemetryTwoRule(tenantId string, rowKey string) *logupload.TelemetryTwoRule {
+	telemetryInst, err := logupload.GetCachedSimpleDaoFunc().GetOne(tenantId, db.TABLE_TELEMETRY_TWO_RULES, rowKey)
 	if err != nil {
 		log.Warn("no telemetryProfile found for " + rowKey)
 		return nil
@@ -146,16 +146,16 @@ func GetOneTelemetryTwoRule(rowKey string) *logupload.TelemetryTwoRule {
 	return telemetry
 }
 
-func SetOneTelemetryTwoRule(rowKey string, telemetry *logupload.TelemetryTwoRule) error {
-	return logupload.GetCachedSimpleDaoFunc().SetOne(db.TABLE_TELEMETRY_TWO_RULES, rowKey, telemetry)
+func SetOneTelemetryTwoRule(tenantId string, rowKey string, telemetry *logupload.TelemetryTwoRule) error {
+	return logupload.GetCachedSimpleDaoFunc().SetOne(tenantId, db.TABLE_TELEMETRY_TWO_RULES, rowKey, telemetry)
 }
 
-func DeleteTelemetryTwoRule(rowKey string) error {
-	return logupload.GetCachedSimpleDaoFunc().DeleteOne(db.TABLE_TELEMETRY_TWO_RULES, rowKey)
+func DeleteTelemetryTwoRule(tenantId string, rowKey string) error {
+	return logupload.GetCachedSimpleDaoFunc().DeleteOne(tenantId, db.TABLE_TELEMETRY_TWO_RULES, rowKey)
 }
 
-func GetOnePermanentTelemetryProfile(rowKey string) *logupload.PermanentTelemetryProfile {
-	telemetryInst, err := logupload.GetCachedSimpleDaoFunc().GetOne(db.TABLE_PERMANENT_TELEMETRY, rowKey)
+func GetOnePermanentTelemetryProfile(tenantId string, rowKey string) *logupload.PermanentTelemetryProfile {
+	telemetryInst, err := logupload.GetCachedSimpleDaoFunc().GetOne(tenantId, db.TABLE_PERMANENT_TELEMETRY_PROFILES, rowKey)
 	if err != nil {
 		log.Warn("no telemetryProfile found for " + rowKey)
 		return nil

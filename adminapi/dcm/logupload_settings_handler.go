@@ -24,15 +24,12 @@ import (
 
 	"github.com/gorilla/mux"
 
-	xutil "github.com/rdkcentral/xconfadmin/util"
-
-	"github.com/rdkcentral/xconfwebconfig/common"
-	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
-
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
-
+	xutil "github.com/rdkcentral/xconfadmin/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
 func GetLogUploadSettingsHandler(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +39,8 @@ func GetLogUploadSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := GetLogUploadSettingsList()
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetLogUploadSettingsList(tenantId)
 	appRules := []*logupload.LogUploadSettings{}
 	for _, rule := range result {
 		if applicationType == rule.ApplicationType {
@@ -71,7 +69,9 @@ func GetLogUploadSettingsByIdHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, errorStr)
 		return
 	}
-	loguploadsettings := logupload.GetOneLogUploadSettings(id)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	loguploadsettings := logupload.GetOneLogUploadSettings(tenantId, id)
 	if loguploadsettings == nil {
 		errorStr := fmt.Sprintf("%v not found", id)
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, errorStr)
@@ -98,7 +98,8 @@ func GetLogUploadSettingsSizeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	final := []*logupload.LogUploadSettings{}
-	result := GetLogUploadSettingsList()
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetLogUploadSettingsList(tenantId)
 	for _, lu := range result {
 		if lu.ApplicationType == applicationType {
 			final = append(final, lu)
@@ -120,7 +121,8 @@ func GetLogUploadSettingsNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	final := []string{}
-	result := GetLogUploadSettingsList()
+	tenantId := xwhttp.GetTenantId(r, "")
+	result := GetLogUploadSettingsList(tenantId)
 	for _, lu := range result {
 		if lu.ApplicationType == applicationType {
 			final = append(final, lu.Name)
@@ -148,7 +150,8 @@ func DeleteLogUploadSettingsByIdHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	respEntity := DeleteLogUploadSettingsbyId(id, applicationType)
+	tenantId := xwhttp.GetTenantId(r, "")
+	respEntity := DeleteLogUploadSettingsbyId(tenantId, id, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -176,7 +179,9 @@ func CreateLogUploadSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	respEntity := CreateLogUploadSettings(&newlu, applicationType)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	respEntity := CreateLogUploadSettings(tenantId, &newlu, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -210,7 +215,9 @@ func UpdateLogUploadSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	respEntity := UpdateLogUploadSettings(&newlurule, applicationType)
+
+	tenantId := xwhttp.GetTenantId(r, "")
+	respEntity := UpdateLogUploadSettings(tenantId, &newlurule, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -247,6 +254,7 @@ func PostLogUploadSettingsFilteredWithParamsHandler(w http.ResponseWriter, r *ht
 	}
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[common.APPLICATION_TYPE] = applicationType
+	contextMap[common.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	lurules := LogUploadSettingsFilterByContext(contextMap)
 	sizeHeader := xhttp.CreateNumberOfItemsHttpHeaders(len(lurules))

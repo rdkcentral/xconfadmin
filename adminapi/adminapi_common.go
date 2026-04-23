@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
+	"github.com/rdkcentral/xconfwebconfig/db"
 
 	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
 	common "github.com/rdkcentral/xconfadmin/common"
@@ -113,49 +114,50 @@ func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 }
 
 func initDB() {
-	queries.CreateFirmwareRuleTemplates() // Initialize FirmwareRule templates
-	initAppSettings()                     // Initialize Application settings
+	defaultTenantId := db.GetDefaultTenantId()
+	queries.CreateFirmwareRuleTemplates(defaultTenantId) // Initialize FirmwareRule templates
+	initAppSettings(defaultTenantId)                     // Initialize Application settings
 }
 
-func initAppSettings() {
-	settings, err := common.GetAppSettings()
+func initAppSettings(tenantId string) {
+	settings, err := common.GetAppSettings(tenantId)
 	if err != nil {
 		panic(err)
 	}
 	if _, ok := settings[common.PROP_LOCKDOWN_ENABLED]; !ok {
-		common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, false)
+		common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_ENABLED, false)
 	}
 	if _, ok := settings[common.PROP_CANARY_MAXSIZE]; !ok {
-		common.SetAppSetting(common.PROP_CANARY_MAXSIZE, common.CanarySize)
+		common.SetAppSetting(tenantId, common.PROP_CANARY_MAXSIZE, common.CanarySize)
 	}
 	if _, ok := settings[common.PROP_CANARY_DISTRIBUTION_PERCENTAGE]; !ok {
-		common.SetAppSetting(common.PROP_CANARY_DISTRIBUTION_PERCENTAGE, common.CanaryDistributionPercentage)
+		common.SetAppSetting(tenantId, common.PROP_CANARY_DISTRIBUTION_PERCENTAGE, common.CanaryDistributionPercentage)
 	}
 	if _, ok := settings[common.PROP_CANARY_FW_UPGRADE_STARTTIME]; !ok {
-		common.SetAppSetting(common.PROP_CANARY_FW_UPGRADE_STARTTIME, common.CanaryFwUpgradeStartTime)
+		common.SetAppSetting(tenantId, common.PROP_CANARY_FW_UPGRADE_STARTTIME, common.CanaryFwUpgradeStartTime)
 	}
 	if _, ok := settings[common.PROP_CANARY_FW_UPGRADE_ENDTIME]; !ok {
-		common.SetAppSetting(common.PROP_CANARY_FW_UPGRADE_ENDTIME, common.CanaryFwUpgradeEndTime)
+		common.SetAppSetting(tenantId, common.PROP_CANARY_FW_UPGRADE_ENDTIME, common.CanaryFwUpgradeEndTime)
 	}
 
 	if _, ok := settings[common.PROP_LOCKDOWN_STARTTIME]; !ok {
-		common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, common.DefaultLockdownStartTime)
+		common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_STARTTIME, common.DefaultLockdownStartTime)
 	}
 
 	if _, ok := settings[common.PROP_LOCKDOWN_ENDTIME]; !ok {
-		common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, common.DefaultLockdownEndTime)
+		common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_ENDTIME, common.DefaultLockdownEndTime)
 	}
 
 	if _, ok := settings[common.PROP_LOCKDOWN_MODULES]; !ok {
-		common.SetAppSetting(common.PROP_LOCKDOWN_MODULES, common.DefaultLockdownModules)
+		common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_MODULES, common.DefaultLockdownModules)
 	}
 
 	if _, ok := settings[common.PROP_PRECOOK_LOCKDOWN_ENABLED]; !ok {
-		common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, common.DefaultPrecookLockdownEnabled)
+		common.SetAppSetting(tenantId, common.PROP_PRECOOK_LOCKDOWN_ENABLED, common.DefaultPrecookLockdownEnabled)
 	}
 
 	if _, ok := settings[common.PROP_CANARY_TIMEZONE_LIST]; !ok {
-		common.SetAppSetting(common.PROP_CANARY_TIMEZONE_LIST, common.DefaultCanaryTimezone)
+		common.SetAppSetting(tenantId, common.PROP_CANARY_TIMEZONE_LIST, common.DefaultCanaryTimezone)
 	}
 
 }

@@ -22,6 +22,8 @@ import (
 	"net/http"
 	"testing"
 
+	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/stretchr/testify/assert"
@@ -31,40 +33,40 @@ import (
 
 func TestFirmwareConfigServiceAdditional(t *testing.T) {
 	// Test GetFirmwareConfigsByModelIdsAndApplication with nil
-	configs := GetFirmwareConfigsByModelIdsAndApplication(nil, "stb")
+	configs := GetFirmwareConfigsByModelIdsAndApplication(db.GetDefaultTenantId(), nil, "stb")
 	assert.NotNil(t, configs)
 
 	// Test with empty model IDs
-	configs = GetFirmwareConfigsByModelIdsAndApplication([]string{}, "stb")
+	configs = GetFirmwareConfigsByModelIdsAndApplication(db.GetDefaultTenantId(), []string{}, "stb")
 	assert.NotNil(t, configs)
 
 	// Test with single model ID
-	configs = GetFirmwareConfigsByModelIdsAndApplication([]string{"MODEL1"}, "stb")
+	configs = GetFirmwareConfigsByModelIdsAndApplication(db.GetDefaultTenantId(), []string{"MODEL1"}, "stb")
 	assert.NotNil(t, configs)
 
 	// Test with multiple model IDs
-	configs = GetFirmwareConfigsByModelIdsAndApplication([]string{"MODEL1", "MODEL2"}, "stb")
+	configs = GetFirmwareConfigsByModelIdsAndApplication(db.GetDefaultTenantId(), []string{"MODEL1", "MODEL2"}, "stb")
 	assert.NotNil(t, configs)
 
 	// Test GetFirmwareConfigsByModelIdAndApplicationType with empty
-	configs2 := GetFirmwareConfigsByModelIdAndApplicationType("", "stb")
+	configs2 := GetFirmwareConfigsByModelIdAndApplicationType(db.GetDefaultTenantId(), "", "stb")
 	assert.NotNil(t, configs2)
 
 	// Test with specific model
-	configs2 = GetFirmwareConfigsByModelIdAndApplicationType("MODEL1", "stb")
+	configs2 = GetFirmwareConfigsByModelIdAndApplicationType(db.GetDefaultTenantId(), "MODEL1", "stb")
 	assert.NotNil(t, configs2)
 
 	// Test GetFirmwareConfigsByModelIdAndApplicationTypeAS
-	configsAS := GetFirmwareConfigsByModelIdAndApplicationTypeAS("", "stb")
+	configsAS := GetFirmwareConfigsByModelIdAndApplicationTypeAS(db.GetDefaultTenantId(), "", "stb")
 	assert.NotNil(t, configsAS)
 
-	configsAS = GetFirmwareConfigsByModelIdAndApplicationTypeAS("MODEL1", "stb")
+	configsAS = GetFirmwareConfigsByModelIdAndApplicationTypeAS(db.GetDefaultTenantId(), "MODEL1", "stb")
 	assert.NotNil(t, configsAS)
 }
 
 func TestFirmwareConfigValidation(t *testing.T) {
 	// Test IsValidFirmwareConfigByModelIds with empty
-	isValid := IsValidFirmwareConfigByModelIds("", "", nil)
+	isValid := IsValidFirmwareConfigByModelIds(db.GetDefaultTenantId(), "", "", nil)
 	assert.False(t, isValid)
 
 	// Test with non-nil config but empty model
@@ -73,59 +75,59 @@ func TestFirmwareConfigValidation(t *testing.T) {
 		Description:     "Test",
 		FirmwareVersion: "1.0",
 	}
-	isValid = IsValidFirmwareConfigByModelIds("", "stb", fc)
+	isValid = IsValidFirmwareConfigByModelIds(db.GetDefaultTenantId(), "", "stb", fc)
 	assert.False(t, isValid)
 
 	// Test IsValidFirmwareConfigByModelIdList with nil
-	isValid = IsValidFirmwareConfigByModelIdList(nil, "stb", nil)
+	isValid = IsValidFirmwareConfigByModelIdList(db.GetDefaultTenantId(), nil, "stb", nil)
 	assert.False(t, isValid)
 
 	// Test with empty list
 	modelIds := []string{}
-	isValid = IsValidFirmwareConfigByModelIdList(&modelIds, "stb", nil)
+	isValid = IsValidFirmwareConfigByModelIdList(db.GetDefaultTenantId(), &modelIds, "stb", nil)
 	assert.False(t, isValid)
 
 	// Test with non-nil config
-	isValid = IsValidFirmwareConfigByModelIdList(&modelIds, "stb", fc)
+	isValid = IsValidFirmwareConfigByModelIdList(db.GetDefaultTenantId(), &modelIds, "stb", fc)
 	_ = isValid
 }
 
 func TestModelServiceAdditional(t *testing.T) {
 	// Test IsExistModel with various inputs
-	exists := IsExistModel("")
+	exists := IsExistModel(db.GetDefaultTenantId(), "")
 	assert.False(t, exists)
 
-	exists = IsExistModel("NONEXISTENT_MODEL")
+	exists = IsExistModel(db.GetDefaultTenantId(), "NONEXISTENT_MODEL")
 	_ = exists
 
 	// Test GetModel with empty
-	model := GetModel("")
+	model := GetModel(db.GetDefaultTenantId(), "")
 	_ = model
 
 	// Test GetModels
-	models := GetModels()
+	models := GetModels(db.GetDefaultTenantId())
 	assert.NotNil(t, models)
 }
 
 func TestEnvironmentServiceAdditional(t *testing.T) {
 	// Test GetEnvironment with various inputs
-	env := GetEnvironment("")
+	env := GetEnvironment(db.GetDefaultTenantId(), "")
 	_ = env
 
-	env = GetEnvironment("NONEXISTENT")
+	env = GetEnvironment(db.GetDefaultTenantId(), "NONEXISTENT")
 	_ = env
 
 	// Test IsExistEnvironment
-	exists := IsExistEnvironment("")
+	exists := IsExistEnvironment(db.GetDefaultTenantId(), "")
 	assert.False(t, exists)
 
-	exists = IsExistEnvironment("NONEXISTENT")
+	exists = IsExistEnvironment(db.GetDefaultTenantId(), "NONEXISTENT")
 	_ = exists
 }
 
 func TestFeatureServiceAdditional(t *testing.T) {
 	// Test GetAllFeatureEntity
-	features := GetAllFeatureEntity()
+	features := GetAllFeatureEntity(db.GetDefaultTenantId())
 	assert.NotNil(t, features)
 
 	// Test GetFeatureEntityFiltered with various contexts
@@ -138,36 +140,36 @@ func TestFeatureServiceAdditional(t *testing.T) {
 	assert.NotNil(t, features)
 
 	// Test GetFeatureEntityById
-	feature := GetFeatureEntityById("")
+	feature := GetFeatureEntityById(db.GetDefaultTenantId(), "")
 	_ = feature
 
-	feature = GetFeatureEntityById("NONEXISTENT")
+	feature = GetFeatureEntityById(db.GetDefaultTenantId(), "NONEXISTENT")
 	_ = feature
 }
 
 func TestFeatureRuleServiceAdditional(t *testing.T) {
 	// Test GetAllFeatureRulesByType
-	rules := GetAllFeatureRulesByType("")
+	rules := GetAllFeatureRulesByType(db.GetDefaultTenantId(), "")
 	assert.NotNil(t, rules)
 
-	rules = GetAllFeatureRulesByType("stb")
+	rules = GetAllFeatureRulesByType(db.GetDefaultTenantId(), "stb")
 	assert.NotNil(t, rules)
 
-	rules = GetAllFeatureRulesByType("xhome")
+	rules = GetAllFeatureRulesByType(db.GetDefaultTenantId(), "xhome")
 	assert.NotNil(t, rules)
 
 	// Test GetOne
-	rule := GetOne("")
+	rule := xrfc.GetFeatureRule(db.GetDefaultTenantId(), "")
 	_ = rule
 
-	rule = GetOne("NONEXISTENT")
+	rule = xrfc.GetFeatureRule(db.GetDefaultTenantId(), "NONEXISTENT")
 	_ = rule
 
 	// Test GetFeatureRulesSize
-	size := GetFeatureRulesSize("")
+	size := GetFeatureRulesSize(db.GetDefaultTenantId(), "")
 	assert.GreaterOrEqual(t, size, 0)
 
-	size = GetFeatureRulesSize("stb")
+	size = GetFeatureRulesSize(db.GetDefaultTenantId(), "stb")
 	assert.GreaterOrEqual(t, size, 0)
 
 	// Test GetAllowedNumberOfFeatures
@@ -177,53 +179,53 @@ func TestFeatureRuleServiceAdditional(t *testing.T) {
 
 func TestTimeFilterServiceAdditional(t *testing.T) {
 	// Test GetOneByEnvModel with various inputs
-	bean := GetOneByEnvModel("", "", "")
+	bean := GetOneByEnvModel(db.GetDefaultTenantId(), "", "", "")
 	_ = bean
 
-	bean = GetOneByEnvModel("MODEL1", "ENV1", "stb")
+	bean = GetOneByEnvModel(db.GetDefaultTenantId(), "MODEL1", "ENV1", "stb")
 	_ = bean
 
-	bean = GetOneByEnvModel("", "ENV1", "stb")
+	bean = GetOneByEnvModel(db.GetDefaultTenantId(), "", "ENV1", "stb")
 	_ = bean
 
-	bean = GetOneByEnvModel("MODEL1", "", "stb")
+	bean = GetOneByEnvModel(db.GetDefaultTenantId(), "MODEL1", "", "stb")
 	_ = bean
 }
 
 func TestPercentFilterServiceAdditional(t *testing.T) {
 	// Test GetPercentFilter with various app types
-	filter, err := GetPercentFilter("")
+	filter, err := GetPercentFilter(db.GetDefaultTenantId(), "")
 	if err == nil {
 		_ = filter
 	}
 
-	filter, err = GetPercentFilter("stb")
+	filter, err = GetPercentFilter(db.GetDefaultTenantId(), "stb")
 	if err == nil {
 		assert.NotNil(t, filter)
 	}
 
-	filter, err = GetPercentFilter("xhome")
+	filter, err = GetPercentFilter(db.GetDefaultTenantId(), "xhome")
 	if err == nil {
 		_ = filter
 	}
 
 	// Test GetPercentFilterFieldValues
-	values, err := GetPercentFilterFieldValues("", "stb")
+	values, err := GetPercentFilterFieldValues(db.GetDefaultTenantId(), "", "stb")
 	if err == nil {
 		_ = values
 	}
 
-	values, err = GetPercentFilterFieldValues("firmwareVersion", "stb")
+	values, err = GetPercentFilterFieldValues(db.GetDefaultTenantId(), "firmwareVersion", "stb")
 	if err == nil {
 		assert.NotNil(t, values)
 	}
 
-	values, err = GetPercentFilterFieldValues("model", "stb")
+	values, err = GetPercentFilterFieldValues(db.GetDefaultTenantId(), "model", "stb")
 	if err == nil {
 		assert.NotNil(t, values)
 	}
 
-	values, err = GetPercentFilterFieldValues("environment", "stb")
+	values, err = GetPercentFilterFieldValues(db.GetDefaultTenantId(), "environment", "stb")
 	if err == nil {
 		_ = values
 	}
@@ -249,19 +251,19 @@ func TestNamespacedListValidationAdditional(t *testing.T) {
 
 func TestFirmwareConfigGettersAdditional(t *testing.T) {
 	// Test GetFirmwareConfigId with various combinations
-	id := GetFirmwareConfigId("", "")
+	id := GetFirmwareConfigId(db.GetDefaultTenantId(), "", "")
 	_ = id
 
-	id = GetFirmwareConfigId("1.0.0", "")
+	id = GetFirmwareConfigId(db.GetDefaultTenantId(), "1.0.0", "")
 	_ = id
 
-	id = GetFirmwareConfigId("", "stb")
+	id = GetFirmwareConfigId(db.GetDefaultTenantId(), "", "stb")
 	_ = id
 
-	id = GetFirmwareConfigId("1.0.0", "stb")
+	id = GetFirmwareConfigId(db.GetDefaultTenantId(), "1.0.0", "stb")
 	_ = id
 
-	id = GetFirmwareConfigId("TEST_VERSION", "xhome")
+	id = GetFirmwareConfigId(db.GetDefaultTenantId(), "TEST_VERSION", "xhome")
 	_ = id
 }
 
@@ -273,19 +275,19 @@ func TestCreateUpdateDeleteFlows(t *testing.T) {
 	}
 
 	// Create
-	response := CreateModel(model)
+	response := CreateModel(db.GetDefaultTenantId(), model)
 	if response.Error == nil {
 		// Get
-		retrieved := GetModel("FLOW_TEST_MODEL_001")
+		retrieved := GetModel(db.GetDefaultTenantId(), "FLOW_TEST_MODEL_001")
 		_ = retrieved
 
 		// Update
 		model.Description = "Updated Flow Test Model"
-		response = UpdateModel(model)
+		response = UpdateModel(db.GetDefaultTenantId(), model)
 		_ = response
 
 		// Delete
-		_ = DeleteModel("FLOW_TEST_MODEL_001")
+		_ = DeleteModel(db.GetDefaultTenantId(), "FLOW_TEST_MODEL_001")
 	}
 }
 
@@ -299,19 +301,19 @@ func TestFirmwareConfigFlows(t *testing.T) {
 	}
 
 	// Create
-	response := CreateFirmwareConfig(fc, "stb")
+	response := CreateFirmwareConfig(db.GetDefaultTenantId(), fc, "stb")
 	if response.Error == nil {
 		// Get
-		retrieved := GetFirmwareConfigById("FLOW_TEST_FC_001")
+		retrieved := GetFirmwareConfigById(db.GetDefaultTenantId(), "FLOW_TEST_FC_001")
 		_ = retrieved
 
 		// Update
 		fc.Description = "Updated Flow Test FC"
-		response = UpdateFirmwareConfig(fc, "stb")
+		response = UpdateFirmwareConfig(db.GetDefaultTenantId(), fc, "stb")
 		_ = response
 
 		// Delete
-		response = DeleteFirmwareConfig("FLOW_TEST_FC_001", "stb")
+		response = DeleteFirmwareConfig(db.GetDefaultTenantId(), "FLOW_TEST_FC_001", "stb")
 		_ = response
 	}
 }
@@ -321,10 +323,10 @@ func TestGetFirmwareConfigsWithDifferentTypes(t *testing.T) {
 	appTypes := []string{"", "stb", "xhome"}
 
 	for _, appType := range appTypes {
-		configs := GetFirmwareConfigs(appType)
+		configs := GetFirmwareConfigs(db.GetDefaultTenantId(), appType)
 		assert.NotNil(t, configs)
 
-		configsAS := GetFirmwareConfigsAS(appType)
+		configsAS := GetFirmwareConfigsAS(db.GetDefaultTenantId(), appType)
 		// Accept nil or empty slice as valid when no data exists
 		if configsAS != nil {
 			assert.IsType(t, []*coreef.FirmwareConfig{}, configsAS)
@@ -337,11 +339,11 @@ func TestModelOperationsWithEmptyDescription(t *testing.T) {
 		ID:          "TEST_EMPTY_DESC_001",
 		Description: "",
 	}
-	response := CreateModel(model)
+	response := CreateModel(db.GetDefaultTenantId(), model)
 	assert.NotNil(t, response)
 
 	if response.Error == nil {
-		_ = DeleteModel("TEST_EMPTY_DESC_001")
+		_ = DeleteModel(db.GetDefaultTenantId(), "TEST_EMPTY_DESC_001")
 	}
 }
 
@@ -353,7 +355,7 @@ func TestFirmwareConfigOperationsWithEmptyFields(t *testing.T) {
 		FirmwareVersion: "1.0",
 		ApplicationType: "stb",
 	}
-	response := CreateFirmwareConfig(fc, "stb")
+	response := CreateFirmwareConfig(db.GetDefaultTenantId(), fc, "stb")
 	assert.NotNil(t, response)
 
 	// Test with empty version
@@ -363,7 +365,7 @@ func TestFirmwareConfigOperationsWithEmptyFields(t *testing.T) {
 		FirmwareVersion: "",
 		ApplicationType: "stb",
 	}
-	response = CreateFirmwareConfig(fc2, "stb")
+	response = CreateFirmwareConfig(db.GetDefaultTenantId(), fc2, "stb")
 	assert.NotNil(t, response)
 	assert.NotNil(t, response.Error)
 }
@@ -377,17 +379,17 @@ func TestMultipleModelCreationAndDeletion(t *testing.T) {
 			ID:          id,
 			Description: "Multi Test Model " + id,
 		}
-		response := CreateModel(model)
+		response := CreateModel(db.GetDefaultTenantId(), model)
 		if response.Error == nil {
 			// Verify existence
-			exists := IsExistModel(id)
+			exists := IsExistModel(db.GetDefaultTenantId(), id)
 			_ = exists
 		}
 	}
 
 	// Clean up
 	for _, id := range models {
-		_ = DeleteModel(id)
+		_ = DeleteModel(db.GetDefaultTenantId(), id)
 	}
 }
 
@@ -433,10 +435,10 @@ func TestMultipleFirmwareConfigsByModel(t *testing.T) {
 	models := []string{"", "MODEL1", "MODEL2", "NONEXISTENT"}
 
 	for _, modelId := range models {
-		configs := GetFirmwareConfigsByModelIdAndApplicationType(modelId, "stb")
+		configs := GetFirmwareConfigsByModelIdAndApplicationType(db.GetDefaultTenantId(), modelId, "stb")
 		assert.NotNil(t, configs)
 
-		configsAS := GetFirmwareConfigsByModelIdAndApplicationTypeAS(modelId, "stb")
+		configsAS := GetFirmwareConfigsByModelIdAndApplicationTypeAS(db.GetDefaultTenantId(), modelId, "stb")
 		assert.NotNil(t, configsAS)
 	}
 }
@@ -450,16 +452,16 @@ func TestBatchModelOperations(t *testing.T) {
 	}
 
 	for _, model := range models {
-		response := CreateModel(&model)
+		response := CreateModel(db.GetDefaultTenantId(), &model)
 		_ = response
 	}
 
 	// Retrieve all
-	allModels := GetModels()
+	allModels := GetModels(db.GetDefaultTenantId())
 	assert.NotNil(t, allModels)
 
 	// Clean up
 	for _, model := range models {
-		_ = DeleteModel(model.ID)
+		_ = DeleteModel(db.GetDefaultTenantId(), model.ID)
 	}
 }

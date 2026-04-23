@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/rdkcentral/xconfadmin/util"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	"gotest.tools/assert"
 )
@@ -28,7 +29,7 @@ func TestGetLastConfigLog(t *testing.T) {
 	mac := "AA:BB:CC:DD:EE:FF"
 
 	// Test with non-existent MAC
-	result := GetLastConfigLog(mac)
+	result := GetLastConfigLog(db.GetDefaultTenantId(), mac)
 
 	// Should return nil for non-existent entry
 	assert.Assert(t, result == nil, "Expected nil for non-existent MAC")
@@ -38,7 +39,7 @@ func TestGetConfigChangeLogsOnly(t *testing.T) {
 	mac := "11:22:33:44:55:66"
 
 	// Test with non-existent MAC
-	result := GetConfigChangeLogsOnly(mac)
+	result := GetConfigChangeLogsOnly(db.GetDefaultTenantId(), mac)
 
 	// Should return empty slice for non-existent entry
 	assert.Assert(t, result != nil, "Expected non-nil slice")
@@ -56,7 +57,7 @@ func TestSetLastConfigLog(t *testing.T) {
 	}
 
 	// Test setting the log
-	err := SetLastConfigLog(mac, configLog)
+	err := SetLastConfigLog(db.GetDefaultTenantId(), mac, configLog)
 
 	// Should not return error (DB may not be initialized in test, but function should execute)
 	// We're just testing that the function doesn't panic
@@ -74,7 +75,7 @@ func TestSetConfigChangeLog(t *testing.T) {
 	}
 
 	// Test setting the log
-	err := SetConfigChangeLog(mac, configLog)
+	err := SetConfigChangeLog(db.GetDefaultTenantId(), mac, configLog)
 
 	// Should not panic (may return error if DB not initialized, but that's ok)
 	_ = err
@@ -92,7 +93,7 @@ func TestGetLastConfigLog_Integration(t *testing.T) {
 	}
 
 	// Try to set it
-	err := SetLastConfigLog(mac, configLog)
+	err := SetLastConfigLog(db.GetDefaultTenantId(), mac, configLog)
 	if err != nil {
 		// DB might not be initialized, skip the rest
 		t.Logf("DB not initialized, skipping integration test: %v", err)
@@ -100,7 +101,7 @@ func TestGetLastConfigLog_Integration(t *testing.T) {
 	}
 
 	// Try to retrieve it
-	retrieved := GetLastConfigLog(mac)
+	retrieved := GetLastConfigLog(db.GetDefaultTenantId(), mac)
 	if retrieved != nil {
 		assert.Equal(t, "Integration test", retrieved.Explanation, "Should retrieve the same explanation")
 	}
@@ -116,7 +117,7 @@ func TestGetConfigChangeLogsOnly_AfterSet(t *testing.T) {
 	}
 
 	// Try to set it
-	err := SetConfigChangeLog(mac, configLog)
+	err := SetConfigChangeLog(db.GetDefaultTenantId(), mac, configLog)
 	if err != nil {
 		// DB might not be initialized, skip the rest
 		t.Logf("DB not initialized, skipping test: %v", err)
@@ -124,7 +125,7 @@ func TestGetConfigChangeLogsOnly_AfterSet(t *testing.T) {
 	}
 
 	// Try to retrieve logs
-	logs := GetConfigChangeLogsOnly(mac)
+	logs := GetConfigChangeLogsOnly(db.GetDefaultTenantId(), mac)
 	assert.Assert(t, logs != nil, "Should return non-nil slice")
 }
 
@@ -132,7 +133,7 @@ func TestGetCurrentId(t *testing.T) {
 	mac := "DD:EE:FF:11:22:33"
 
 	// Test with non-existent MAC - should return error or default ID
-	id, err := GetCurrentId(mac)
+	id, err := GetCurrentId(db.GetDefaultTenantId(), mac)
 	if err != nil {
 		t.Logf("DB error expected in test environment: %v", err)
 		return
@@ -346,7 +347,7 @@ func TestGetCurrentId_NoLogs(t *testing.T) {
 	// Use a unique MAC that likely has no logs
 	mac := "AA:BB:CC:DD:EE:01"
 
-	result, err := GetCurrentId(mac)
+	result, err := GetCurrentId(db.GetDefaultTenantId(), mac)
 
 	// In test environment, database may not be configured
 	// The function should handle this gracefully
@@ -366,7 +367,7 @@ func TestGetCurrentId_FunctionExists(t *testing.T) {
 	// Even if the database is not configured
 	mac := "TEST:MAC:ADDRESS"
 
-	_, err := GetCurrentId(mac)
+	_, err := GetCurrentId(db.GetDefaultTenantId(), mac)
 
 	// We just verify it doesn't panic
 	// Error is expected in test environment without proper DB config
@@ -380,7 +381,7 @@ func TestNumberToColumnName_Format(t *testing.T) {
 	// The function uses numberToColumnName internally
 	mac := "FORMAT:TEST:MAC"
 
-	result, err := GetCurrentId(mac)
+	result, err := GetCurrentId(db.GetDefaultTenantId(), mac)
 
 	if err == nil {
 		// Verify the format matches pattern: prefix_number
@@ -503,7 +504,7 @@ func TestNumberToColumnName(t *testing.T) {
 func TestGetCurrentId_EmptyLogs(t *testing.T) {
 	mac := "FF:EE:DD:CC:BB:AA"
 
-	id, err := GetCurrentId(mac)
+	id, err := GetCurrentId(db.GetDefaultTenantId(), mac)
 	if err != nil {
 		// DB might not be initialized
 		t.Logf("DB error expected: %v", err)
@@ -520,7 +521,7 @@ func TestGetConfigChangeLogsOnly_Sorting(t *testing.T) {
 	mac := "AA:11:22:33:44:55"
 
 	// Get logs (may be empty if DB not initialized)
-	logs := GetConfigChangeLogsOnly(mac)
+	logs := GetConfigChangeLogsOnly(db.GetDefaultTenantId(), mac)
 	assert.Assert(t, logs != nil, "Should return non-nil slice")
 
 	// If we have logs, verify they're sorted in descending order
@@ -552,7 +553,7 @@ func TestSetLastConfigLog_Marshaling(t *testing.T) {
 		HasMinimumFirmware: true,
 	}
 
-	err := SetLastConfigLog(mac, configLog)
+	err := SetLastConfigLog(db.GetDefaultTenantId(), mac, configLog)
 	// Function should execute without panic
 	_ = err
 	assert.Assert(t, true, "SetLastConfigLog with complex data executed")
@@ -570,7 +571,7 @@ func TestSetConfigChangeLog_IDAssignment(t *testing.T) {
 	// ID should be empty initially
 	assert.Equal(t, "", configLog.ID)
 
-	err := SetConfigChangeLog(mac, configLog)
+	err := SetConfigChangeLog(db.GetDefaultTenantId(), mac, configLog)
 	if err != nil {
 		// DB might not be initialized, but we tested the function execution
 		t.Logf("DB error (expected in test): %v", err)
@@ -582,7 +583,7 @@ func TestGetLastConfigLog_TypeAssertion(t *testing.T) {
 	mac := "DD:44:55:66:77:88"
 
 	// Even if DB returns something, type assertion should work
-	result := GetLastConfigLog(mac)
+	result := GetLastConfigLog(db.GetDefaultTenantId(), mac)
 	// Result is either nil or *sharedef.ConfigChangeLog
 	if result != nil {
 		assert.Assert(t, result.ID != "", "Should have an ID if not nil")
@@ -593,7 +594,7 @@ func TestGetLastConfigLog_TypeAssertion(t *testing.T) {
 func TestGetConfigChangeLogsOnly_FilterLastLog(t *testing.T) {
 	mac := "EE:55:66:77:88:99"
 
-	logs := GetConfigChangeLogsOnly(mac)
+	logs := GetConfigChangeLogsOnly(db.GetDefaultTenantId(), mac)
 	assert.Assert(t, logs != nil, "Should return non-nil slice")
 
 	// Verify no log has ID == LAST_CONFIG_LOG_ID
@@ -608,7 +609,7 @@ func TestGetCurrentId_WithExistingLogs(t *testing.T) {
 	mac := "11:AA:BB:CC:DD:EE"
 
 	// Try to get current ID - may fail if DB not configured
-	id, err := GetCurrentId(mac)
+	id, err := GetCurrentId(db.GetDefaultTenantId(), mac)
 	if err != nil {
 		t.Logf("DB not configured (expected): %v", err)
 		return
@@ -643,7 +644,7 @@ func TestSetConfigChangeLog_WithValidData(t *testing.T) {
 		},
 	}
 
-	err := SetConfigChangeLog(mac, configLog)
+	err := SetConfigChangeLog(db.GetDefaultTenantId(), mac, configLog)
 	if err == nil {
 		// ID should be assigned by SetConfigChangeLog
 		assert.Assert(t, configLog.ID != "", "ID should be assigned")
@@ -666,14 +667,14 @@ func TestGetLastConfigLog_WithSet(t *testing.T) {
 		},
 	}
 
-	err := SetLastConfigLog(mac, configLog)
+	err := SetLastConfigLog(db.GetDefaultTenantId(), mac, configLog)
 	if err != nil {
 		t.Logf("DB not configured: %v", err)
 		return
 	}
 
 	// Try to retrieve it
-	retrieved := GetLastConfigLog(mac)
+	retrieved := GetLastConfigLog(db.GetDefaultTenantId(), mac)
 	if retrieved != nil {
 		assert.Equal(t, "Test get after set", retrieved.Explanation)
 	}
@@ -689,7 +690,7 @@ func TestGetConfigChangeLogsOnly_WithMultipleLogs(t *testing.T) {
 			Updated:     util.GetTimestamp() + int64(i*1000),
 			Explanation: "Test log " + string(rune(i+'0')),
 		}
-		err := SetConfigChangeLog(mac, configLog)
+		err := SetConfigChangeLog(db.GetDefaultTenantId(), mac, configLog)
 		if err != nil {
 			t.Logf("DB not configured: %v", err)
 			return
@@ -697,7 +698,7 @@ func TestGetConfigChangeLogsOnly_WithMultipleLogs(t *testing.T) {
 	}
 
 	// Retrieve all logs
-	logs := GetConfigChangeLogsOnly(mac)
+	logs := GetConfigChangeLogsOnly(db.GetDefaultTenantId(), mac)
 	assert.Assert(t, logs != nil, "Should return non-nil slice")
 
 	// Logs should be sorted by descending Updated time
@@ -733,7 +734,7 @@ func TestGetCurrentId_BoundsLogic(t *testing.T) {
 	mac := "55:EE:FF:00:11:22"
 
 	// This tests the logic where count cycles through BOUNDS
-	id, err := GetCurrentId(mac)
+	id, err := GetCurrentId(db.GetDefaultTenantId(), mac)
 	if err != nil {
 		t.Logf("DB not configured: %v", err)
 		return
@@ -756,7 +757,7 @@ func TestSetLastConfigLog_ErrorHandling(t *testing.T) {
 	}
 
 	// SetLastConfigLog should handle marshaling internally
-	err := SetLastConfigLog(mac, configLog)
+	err := SetLastConfigLog(db.GetDefaultTenantId(), mac, configLog)
 	// May succeed or fail depending on DB, but shouldn't panic
 	_ = err
 	assert.Assert(t, true, "Function executed without panic")
@@ -771,7 +772,7 @@ func TestSetConfigChangeLog_GetCurrentIdError(t *testing.T) {
 		Explanation: "Test error propagation",
 	}
 
-	err := SetConfigChangeLog(mac, configLog)
+	err := SetConfigChangeLog(db.GetDefaultTenantId(), mac, configLog)
 	// If GetCurrentId fails, SetConfigChangeLog should also fail
 	// But in test environment, DB might not be configured
 	_ = err
@@ -799,7 +800,7 @@ func TestGetConfigChangeLogsOnly_EmptyResult(t *testing.T) {
 	mac := "88:11:22:33:44:55"
 
 	// Get logs for non-existent MAC
-	logs := GetConfigChangeLogsOnly(mac)
+	logs := GetConfigChangeLogsOnly(db.GetDefaultTenantId(), mac)
 	assert.Assert(t, logs != nil, "Should return non-nil slice")
 	// Should return empty slice
 	assert.Equal(t, 0, len(logs), "Should have no logs for new MAC")

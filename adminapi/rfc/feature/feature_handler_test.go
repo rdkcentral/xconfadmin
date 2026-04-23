@@ -225,7 +225,7 @@ func TestPostFeatureSuccessAndConflicts(t *testing.T) {
 func TestGetFeatureByIdSuccessExportAndNotFound(t *testing.T) {
 	cleanDB()
 	fe := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe.CreateFeature())
 	url := fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb", fe.ID)
 	r := httptest.NewRequest(http.MethodGet, url, nil)
 	rr := executeRequest(r)
@@ -245,7 +245,7 @@ func TestGetFeatureByIdSuccessExportAndNotFound(t *testing.T) {
 func TestPutFeatureSuccessAndNotFound(t *testing.T) {
 	cleanDB()
 	fe := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe.CreateFeature())
 	fe.ConfigData["extra"] = "123"
 	b, _ := json.Marshal(fe)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
@@ -262,7 +262,7 @@ func TestPutFeatureSuccessAndNotFound(t *testing.T) {
 func TestDeleteFeatureByIdSuccessAndNotFound(t *testing.T) {
 	cleanDB()
 	fe := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe.CreateFeature())
 	url := fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb", fe.ID)
 	r := httptest.NewRequest(http.MethodDelete, url, nil)
 	rr := executeRequest(r)
@@ -278,7 +278,7 @@ func TestGetFeaturesFilteredPagingAndInvalid(t *testing.T) {
 	// Create a few features for testing pagination
 	for i := 0; i < 5; i++ {
 		fe := buildFeatureEntity("stb")
-		_, _ = FeaturePost(fe.CreateFeature())
+		_, _ = FeaturePost(db.GetDefaultTenantId(), fe.CreateFeature())
 	}
 
 	t.Run("ValidPaginationRequest", func(t *testing.T) {
@@ -350,8 +350,8 @@ func TestGetFeaturesByIdList(t *testing.T) {
 	cleanDB()
 	fe1 := buildFeatureEntity("stb")
 	fe2 := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe1.CreateFeature())
-	_, _ = FeaturePost(fe2.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe1.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe2.CreateFeature())
 	ids := []string{fe1.ID, fe2.ID}
 	b, _ := json.Marshal(ids)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature/byIdList?applicationType=stb", bytes.NewReader(b))
@@ -372,7 +372,7 @@ func TestGetFeatureByIdHandler_ExportNotFound(t *testing.T) {
 func TestDeleteFeatureByIdHandler_FeatureUsedInRule(t *testing.T) {
 	cleanDB()
 	fe := buildFeatureEntity("stb")
-	feat, _ := FeaturePost(fe.CreateFeature())
+	feat, _ := FeaturePost(db.GetDefaultTenantId(), fe.CreateFeature())
 	// Create a feature rule that uses this feature
 	fr := &xwrfc.FeatureRule{
 		Id:              uuid.NewString(),
@@ -381,7 +381,7 @@ func TestDeleteFeatureByIdHandler_FeatureUsedInRule(t *testing.T) {
 		FeatureIds:      []string{feat.ID},
 		Priority:        1,
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FEATURE_CONTROL_RULE, fr.Id, fr)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FEATURE_CONTROL_RULES, fr.Id, fr)
 	// Try to delete the feature - should fail with conflict
 	url := fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb", feat.ID)
 	r := httptest.NewRequest(http.MethodDelete, url, nil)
@@ -413,7 +413,7 @@ func TestPostFeatureHandler_InvalidFeature_BlankName(t *testing.T) {
 func TestPostFeatureHandler_DuplicateFeatureInstance(t *testing.T) {
 	cleanDB()
 	fe1 := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe1.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe1.CreateFeature())
 	// Create new feature with different ID but same FeatureName
 	fe2 := buildFeatureEntity("stb")
 	fe2.FeatureName = fe1.FeatureName
@@ -447,7 +447,7 @@ func TestPutFeatureHandler_EmptyId(t *testing.T) {
 func TestPutFeatureHandler_InvalidFeature_BlankName(t *testing.T) {
 	cleanDB()
 	fe := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe.CreateFeature())
 	// Make feature invalid - blank Name should fail validation
 	fe.Name = ""
 	b, _ := json.Marshal(fe)
@@ -460,9 +460,9 @@ func TestPutFeatureHandler_InvalidFeature_BlankName(t *testing.T) {
 func TestPutFeatureHandler_DuplicateFeatureInstance(t *testing.T) {
 	cleanDB()
 	fe1 := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe1.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe1.CreateFeature())
 	fe2 := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe2.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe2.CreateFeature())
 	// Try to update fe2 with fe1's FeatureName
 	fe2.FeatureName = fe1.FeatureName
 	fe2.FeatureInstance = fe1.FeatureInstance
@@ -578,7 +578,7 @@ func TestGetFeaturesFilteredHandler_WithContextFilters(t *testing.T) {
 	// Create a few features
 	for i := 0; i < 3; i++ {
 		fe := buildFeatureEntity("stb")
-		_, _ = FeaturePost(fe.CreateFeature())
+		_, _ = FeaturePost(db.GetDefaultTenantId(), fe.CreateFeature())
 	}
 	// Filter with context
 	contextMap := map[string]string{"key": "value"}
@@ -617,9 +617,9 @@ func cleanDB() {
 	// Real database cleanup (only for integration tests)
 	for _, ti := range db.GetAllTableInfo() {
 		c := db.GetDatabaseClient().(*db.CassandraClient)
-		_ = c.DeleteAllXconfData(ti.TableName)
-		if ti.CacheData {
-			db.GetCachedSimpleDao().RefreshAll(ti.TableName)
+		_ = c.DeleteAllXconfData(db.GetDefaultTenantId(), ti.TableName)
+		if ti.Cached {
+			db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), ti.TableName)
 		}
 	}
 }

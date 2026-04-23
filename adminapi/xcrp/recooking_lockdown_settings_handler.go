@@ -24,7 +24,6 @@ func GetXcrpConnector() *xhttp.XcrpConnector {
 }
 
 func PostRecookingLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
-
 	if !auth.HasWritePermissionForTool(r) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "No write permission: tools")
 		return
@@ -54,14 +53,15 @@ func PostRecookingLockdownSettingsHandler(w http.ResponseWriter, r *http.Request
 
 	dao.GetCacheManager().ForceSyncChanges()
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	var lockdownSettingFromDB *common.LockdownSettings
-	lockdownSettingFromDB, err = lockdown.GetLockdownSettings()
+	lockdownSettingFromDB, err = lockdown.GetLockdownSettings(tenantId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if isLockdownMode() && *(lockdownSettingFromDB.LockdownModules) == "rfc" {
+	if isLockdownMode(tenantId) && *(lockdownSettingFromDB.LockdownModules) == "rfc" {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Lockdown rfc is enabled.")
 		return
 	}
@@ -94,7 +94,7 @@ func PostRecookingLockdownSettingsHandler(w http.ResponseWriter, r *http.Request
 		LockdownEndTime:   &lockdownEndTime,
 		LockdownModules:   &lockdownModules,
 	}
-	respEntity := lockdown.SetLockdownSetting(&lockdownSettings)
+	respEntity := lockdown.SetLockdownSetting(tenantId, &lockdownSettings)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -102,7 +102,7 @@ func PostRecookingLockdownSettingsHandler(w http.ResponseWriter, r *http.Request
 
 	log.Infof("Precook lockdown settings in EDT, lockdownStartTime: %v, lockdownEndTime: %v, lockdownModules: %v, lockdownEnabled: %v", lockdownStartTime, lockdownEndTime, lockdownModules, lockdownEnabled)
 
-	go CheckRecookingStatus(time.Second*time.Duration(common.LockDuration), "rfc", fields)
+	go CheckRecookingStatus(tenantId, time.Second*time.Duration(common.LockDuration), "rfc", fields)
 	err = GetXcrpConnector().PostRecook(models, partners, nil, fields)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -112,10 +112,10 @@ func PostRecookingLockdownSettingsHandler(w http.ResponseWriter, r *http.Request
 }
 
 // integrate with the lockdown settings api function, since it is not exported,copied the function here
-func isLockdownMode() bool {
-	if common.GetBooleanAppSetting(common.PROP_LOCKDOWN_ENABLED, false) {
-		startTime := common.GetStringAppSetting(common.PROP_LOCKDOWN_STARTTIME)
-		endTime := common.GetStringAppSetting(common.PROP_LOCKDOWN_ENDTIME)
+func isLockdownMode(tenantId string) bool {
+	if common.GetBooleanAppSetting(tenantId, common.PROP_LOCKDOWN_ENABLED, false) {
+		startTime := common.GetStringAppSetting(tenantId, common.PROP_LOCKDOWN_STARTTIME)
+		endTime := common.GetStringAppSetting(tenantId, common.PROP_LOCKDOWN_ENDTIME)
 
 		timezone, err := time.LoadLocation(common.DefaultLockdownTimezone)
 		if err != nil {
@@ -156,7 +156,7 @@ func isLockdownMode() bool {
 	return false
 }
 
-func CheckRecookingStatus(lockDuration time.Duration, module string, fields log.Fields) {
+func CheckRecookingStatus(tenantId string, lockDuration time.Duration, module string, fields log.Fields) {
 	//utilize the lockDuration to determine when to check the recooking status in background task
 	endTime := time.Now().Add(lockDuration).UTC()
 	time.Sleep(lockDuration)
@@ -172,23 +172,23 @@ func CheckRecookingStatus(lockDuration time.Duration, module string, fields log.
 
 	if !state {
 		log.Infof("Recooking is not able to be completed at %v, disable the delivery of precook data for now", endTime)
-		_, err = common.SetAppSetting(common.PROP_PRECOOK_LOCKDOWN_ENABLED, true)
+		_, err = common.SetAppSetting(tenantId, common.PROP_PRECOOK_LOCKDOWN_ENABLED, true)
 		if err != nil {
 			log.Errorf("Error setting appSetting for precookLockDownEnabled: %v", err)
 		}
 	} else {
 		log.Infof("Recooking is completed at %v, RecookingStatus is checked at %v, deliver precook data", updatedTime, endTime)
-		_, err = common.SetAppSetting(common.PROP_PRECOOK_LOCKDOWN_ENABLED, false)
+		_, err = common.SetAppSetting(tenantId, common.PROP_PRECOOK_LOCKDOWN_ENABLED, false)
 		if err != nil {
 			log.Errorf("Error setting appSetting for precookLockDownEnabled: %v", err)
 		}
 	}
 
-	lockdownSettingFromDB, _ := lockdown.GetLockdownSettings()
+	lockdownSettingFromDB, _ := lockdown.GetLockdownSettings(tenantId)
 	lockdownMoules := *(lockdownSettingFromDB.LockdownModules)
 	if lockdownMoules == "rfc" {
 		log.Debug("Reached lockdown duration, disable the lockdown for rfc")
-		_, err = common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, false)
+		_, err = common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_ENABLED, false)
 		if err != nil {
 			log.Errorf("Error setting appSetting for lockdownEnabled: %v", err)
 		}
@@ -201,7 +201,7 @@ func CheckRecookingStatus(lockDuration time.Duration, module string, fields log.
 				newModules = append(newModules, module)
 			}
 		}
-		_, err = common.SetAppSetting(common.PROP_LOCKDOWN_MODULES, strings.Join(newModules, ","))
+		_, err = common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_MODULES, strings.Join(newModules, ","))
 		log.Debugf("removed rfc from lockdown modules, updated lockdownModules: %v", strings.Join(newModules, ","))
 		if err != nil {
 			log.Errorf("Error setting appSetting for lockdownModules: %v", err)
