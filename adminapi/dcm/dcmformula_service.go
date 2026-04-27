@@ -39,6 +39,7 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -79,6 +80,7 @@ func DeleteDcmFormulabyId(id string, appType string) *xcommon.ResponseEntity {
 
 	err = DeleteOneDcmFormula(id, appType)
 	if err != nil {
+		log.WithFields(log.Fields{"entity_id": id, "error": err}).Error("failed to delete dcm formula")
 		return xcommon.NewResponseEntityWithStatus(http.StatusInternalServerError, err, nil)
 	}
 
@@ -231,6 +233,7 @@ func CreateDcmRule(dfrule *logupload.DCMGenericRule, appType string) *xwhttp.Res
 	for _, entry := range changedDcmRules {
 		entry.(*logupload.DCMGenericRule).Updated = util.GetTimestamp()
 		if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, entry.GetID(), entry); err != nil {
+			log.WithFields(log.Fields{"entity_id": entry.GetID(), "error": err}).Error("failed to create dcm formula")
 			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 		}
 	}
@@ -271,6 +274,7 @@ func UpdateDcmRule(incomingFormula *logupload.DCMGenericRule, appType string) *x
 	if incomingFormula.Priority == existingFormula.Priority {
 		incomingFormula.Updated = util.GetTimestamp()
 		if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, incomingFormula.ID, incomingFormula); err != nil {
+			log.WithFields(log.Fields{"entity_id": incomingFormula.ID, "error": err}).Error("failed to update dcm formula")
 			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 		}
 	} else {
@@ -279,6 +283,7 @@ func UpdateDcmRule(incomingFormula *logupload.DCMGenericRule, appType string) *x
 		for _, entry := range changedFormulae {
 			entry.(*logupload.DCMGenericRule).Updated = util.GetTimestamp()
 			if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, entry.GetID(), entry); err != nil {
+				log.WithFields(log.Fields{"entity_id": entry.GetID(), "error": err}).Error("failed to update dcm formula priority")
 				return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 			}
 		}

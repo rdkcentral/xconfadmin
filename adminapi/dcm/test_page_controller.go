@@ -46,6 +46,7 @@ func DcmTestPageHandler(w http.ResponseWriter, r *http.Request) {
 
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
+		log.Error("unable to cast response writer to XResponseWriter in DcmTestPageHandler")
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}

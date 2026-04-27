@@ -285,6 +285,7 @@ func UpdateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
+		log.Error("failed to cast response writer to XResponseWriter in UpdateDcmFormulaHandler")
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "unable to cast XResponseWriter object")
 		return
 	}
@@ -353,6 +354,7 @@ func DcmFormulaSettingsAvailabilitygHandler(w http.ResponseWriter, r *http.Reque
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
+		log.Error("failed to cast response writer to XResponseWriter in DcmFormulaSettingsAvailabilitygHandler")
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "responsewriter cast error")
 		return
 	}
@@ -394,6 +396,7 @@ func DcmFormulasAvailabilitygHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
+		log.Error("failed to cast response writer to XResponseWriter in DcmFormulasAvailabilitygHandler")
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "responsewriter cast error")
 		return
 	}
@@ -425,6 +428,7 @@ func PostDcmFormulaFilteredWithParamsHandler(w http.ResponseWriter, r *http.Requ
 
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
+		log.Error("failed to cast response writer to XResponseWriter in PostDcmFormulaFilteredWithParamsHandler")
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "responsewriter cast error")
 		return
 	}
@@ -518,6 +522,7 @@ func DcmFormulaChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 
 	for _, entry := range reorganizedFormulas {
 		if err = db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, entry.GetID(), entry); err != nil {
+			log.WithFields(log.Fields{"entity_id": entry.GetID(), "error": err}).Error("failed to update dcm formula priority")
 			xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("unable to update dcm rule: %s", err))
 			return
 		}
