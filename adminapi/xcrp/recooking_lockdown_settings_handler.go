@@ -57,6 +57,7 @@ func PostRecookingLockdownSettingsHandler(w http.ResponseWriter, r *http.Request
 	var lockdownSettingFromDB *common.LockdownSettings
 	lockdownSettingFromDB, err = lockdown.GetLockdownSettings()
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("failed to get lockdown settings")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

@@ -81,6 +81,7 @@ func GetCalculatedHashAndPercentHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	jsonResponse, err := json.Marshal(response)
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("failed to marshal JSON response")
 		http.Error(w, "Failed to marshal JSON response", http.StatusInternalServerError)
 		return
 	}
@@ -99,6 +100,7 @@ func UpdatePercentFilterGlobalHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
+		log.Error("failed to cast responsewriter in UpdatePercentFilterGlobalHandler")
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
@@ -149,6 +151,7 @@ func GetPercentFilterGlobalHandler(w http.ResponseWriter, r *http.Request) {
 
 	globalpercent, err := GetPercentFilterGlobal(applicationType)
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("failed to get global percent filter")
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("unable to get globalpercent reponse. error: %v", err))
 		return
 	}
@@ -209,6 +212,7 @@ func GetGlobalPercentFilterHandler(w http.ResponseWriter, r *http.Request) {
 
 	globalpercent, err := GetGlobalPercentFilter(applicationType)
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("failed to get global percent filter")
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("unable to get globalpercent reponse. error: %v", err))
 		return
 	}
@@ -265,6 +269,7 @@ func GetCalculatedHashAndPercent(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonResponse, err := json.Marshal(response)
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("failed to marshal JSON response")
 		http.Error(w, "Failed to marshal JSON response", http.StatusInternalServerError)
 		return
 	}
