@@ -193,12 +193,6 @@ func validateRule(fr *re.Rule, action *corefw.TemplateApplicableAction) error {
 		if c == nil {
 			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Condition is null")
 		}
-		if err := checkConditionNullsOrBlanks(*c); err != nil {
-			return err
-		}
-		if err := checkDuplicateFixedArgListItems(*c); err != nil {
-			return err
-		}
 		if err := checkOperationName(c, GetFirmwareRuleAllowedOperations); err != nil {
 			return err
 		}
