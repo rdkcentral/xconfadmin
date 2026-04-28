@@ -198,7 +198,8 @@ func validateRule(fr *re.Rule, action *corefw.TemplateApplicableAction) error {
 		}
 		if (equalOperations(c.GetOperation(), re.StandardOperationIs) && c.GetFreeArg().GetName() == xwcommon.MODEL) ||
 			(equalOperations(c.GetOperation(), re.StandardOperationInList) && c.GetFreeArg().GetName() == xwcommon.IP_ADDRESS) {
-			if _, ok := c.GetFixedArg().GetValue().(string); !ok {
+			fixedArg, ok := c.GetFixedArg().GetValue().(string)
+			if !ok {
 				return xwcommon.NewRemoteErrorAS(
 					http.StatusBadRequest,
 					fmt.Sprintf(
@@ -209,8 +210,10 @@ func validateRule(fr *re.Rule, action *corefw.TemplateApplicableAction) error {
 					),
 				)
 			}
-			if err := checkFixedArgValue(*c, isNotBlank); err != nil {
-				return err
+			if !xutil.IsBlank(fixedArg) {
+				if err := checkFixedArgValue(*c, isNotBlank); err != nil {
+					return err
+				}
 			}
 		}
 	}
