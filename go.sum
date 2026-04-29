@@ -104,6 +104,8 @@ github.com/rdkcentral/xconfwebconfig v0.0.0-20260409220911-b365f4af9d13 h1:FiMm2
 github.com/rdkcentral/xconfwebconfig v0.0.0-20260409220911-b365f4af9d13/go.mod h1:nkN79V2DRaxzT0+Sxy32QzRBvm9RcmEIUmcmymdloE8=
 github.com/rdkcentral/xconfwebconfig v0.0.0-20260415175304-6ebdb4f6a009 h1:eWEj40jirFCQhn2xpiJ7VIjvQj1cSJF0plCEtzCVlHE=
 github.com/rdkcentral/xconfwebconfig v0.0.0-20260415175304-6ebdb4f6a009/go.mod h1:nkN79V2DRaxzT0+Sxy32QzRBvm9RcmEIUmcmymdloE8=
+github.com/rdkcentral/xconfwebconfig v0.0.0-20260428212418-7411b2f0efad h1:hACH2QUN4s8SdkxvX0virEbSm+JyDjSwRnc+NMGLDtA=
+github.com/rdkcentral/xconfwebconfig v0.0.0-20260428212418-7411b2f0efad/go.mod h1:nkN79V2DRaxzT0+Sxy32QzRBvm9RcmEIUmcmymdloE8=
 github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=
 github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7so1lCWt35ZSgc=
 github.com/rs/cors v1.11.1 h1:eU3gRzXLRK57F5rKMGMZURNdIG4EoAmX8k94r9wXWHA=

@@ -84,11 +84,24 @@ func DeleteAllEntities() {
 		return
 	}
 
-	// Real DB cleanup (only used if mock is disabled)
+	// Original implementation for real database
+	dbClient := db.GetDatabaseClient()
+	cassandraClient, ok := dbClient.(*db.CassandraClient)
+	if !ok {
+		fmt.Println("Database client is not Cassandra client, cannot delete all entities")
+		return
+	}
+
+	var err error
 	tenantId := db.GetDefaultTenantId()
 	for _, tableInfo := range db.GetAllTableInfo() {
-		if err := truncateTable(tableInfo.TableName); err != nil {
-			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
+		if tableInfo.TenantAgnostic {
+			err = cassandraClient.DeleteAllXconfData("", tableInfo.TableName)
+		} else {
+			err = cassandraClient.DeleteAllXconfData(tenantId, tableInfo.TableName)
+		}
+		if err != nil {
+			fmt.Printf("failed to delete all xconf data for table %s\n", tableInfo.TableName)
 		}
 		if tableInfo.Cached {
 			db.GetCachedSimpleDao().RefreshAll(tenantId, tableInfo.TableName)
