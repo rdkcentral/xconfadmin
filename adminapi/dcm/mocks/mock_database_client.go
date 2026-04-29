@@ -26,9 +26,10 @@ import (
 
 // MockDatabaseClient is a minimal implementation of db.DatabaseClient interface
 // This is only used to prevent panics when distributed locks are created in test mode
-// It implements only the lock-related methods; all other methods return nil/empty values
+// It implements lock-related methods and basic data storage for testing
 type MockDatabaseClient struct {
-	locks map[string]string // lockName -> lockedBy
+	locks map[string]string                    // lockName -> lockedBy
+	data  map[string]map[string][]byte         // tableName -> rowKey -> data
 	mu    sync.Mutex
 }
 
@@ -36,6 +37,7 @@ type MockDatabaseClient struct {
 func NewMockDatabaseClient() *MockDatabaseClient {
 	return &MockDatabaseClient{
 		locks: make(map[string]string),
+		data:  make(map[string]map[string][]byte),
 	}
 }
 
@@ -62,27 +64,94 @@ func (m *MockDatabaseClient) TearDown() error { return nil }
 func (m *MockDatabaseClient) Close() error    { return nil }
 func (m *MockDatabaseClient) Sleep()          {}
 func (m *MockDatabaseClient) SetXconfData(tenantId string, tableName string, rowKey string, value []byte, ttl int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.data[tableName] == nil {
+		m.data[tableName] = make(map[string][]byte)
+	}
+	m.data[tableName][rowKey] = value
 	return nil
 }
 func (m *MockDatabaseClient) GetXconfData(tenantId string, tableName string, rowKey string) ([]byte, error) {
-	return nil, nil
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.data[tableName] == nil {
+		return nil, nil
+	}
+	return m.data[tableName][rowKey], nil
 }
 func (m *MockDatabaseClient) GetAllXconfDataByKeys(tenantId string, tableName string, rowKeys []string) [][]byte {
-	return nil
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.data[tableName] == nil {
+		return nil
+	}
+	var result [][]byte
+	for _, key := range rowKeys {
+		if data, ok := m.data[tableName][key]; ok {
+			result = append(result, data)
+		}
+	}
+	return result
 }
 func (m *MockDatabaseClient) GetAllXconfKeys(tenantId string, tableName string) []string {
-	return nil
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.data[tableName] == nil {
+		return nil
+	}
+	var keys []string
+	for key := range m.data[tableName] {
+		keys = append(keys, key)
+	}
+	return keys
 }
 func (m *MockDatabaseClient) GetAllXconfDataAsList(tenantId string, tableName string, maxResults int) [][]byte {
-	return nil
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.data[tableName] == nil {
+		return nil
+	}
+	var result [][]byte
+	count := 0
+	for _, data := range m.data[tableName] {
+		result = append(result, data)
+		count++
+		if maxResults > 0 && count >= maxResults {
+			break
+		}
+	}
+	return result
 }
 func (m *MockDatabaseClient) GetAllXconfDataAsMap(tenantId string, tableName string, maxResults int) map[string][]byte {
-	return nil
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.data[tableName] == nil {
+		return nil
+	}
+	result := make(map[string][]byte)
+	count := 0
+	for key, data := range m.data[tableName] {
+		result[key] = data
+		count++
+		if maxResults > 0 && count >= maxResults {
+			break
+		}
+	}
+	return result
 }
 func (m *MockDatabaseClient) DeleteXconfData(tenantId string, tableName string, rowKey string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.data[tableName] != nil {
+		delete(m.data[tableName], rowKey)
+	}
 	return nil
 }
 func (m *MockDatabaseClient) DeleteAllXconfData(tenantId string, tableName string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.data, tableName)
 	return nil
 }
 func (m *MockDatabaseClient) GetAllXconfData(tenantId string, tableName string, rowKey string) [][]byte {
@@ -194,4 +263,12 @@ func (m *MockDatabaseClient) NewBatch(size int) db.BatchOperation {
 // QueryXconfDataRows queries data rows (stub for tests)
 func (m *MockDatabaseClient) QueryXconfDataRows(tableName string, rowKeys ...string) ([]map[string]interface{}, error) {
 	return nil, nil
+}
+
+// Clear removes all stored data (useful for test cleanup)
+func (m *MockDatabaseClient) Clear() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.data = make(map[string]map[string][]byte)
+	m.locks = make(map[string]string)
 }

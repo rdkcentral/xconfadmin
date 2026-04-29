@@ -130,6 +130,7 @@ func TestTelemetryTwoProfileUpdateHandler(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileUpdateChangeHandler(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test - requires real database for profile updates
 	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
