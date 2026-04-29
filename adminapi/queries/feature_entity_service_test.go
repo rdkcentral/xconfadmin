@@ -30,6 +30,7 @@ import (
 )
 
 func TestFeatureGetPostPutDeleteImport(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test - feature service uses db.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 
 	// test GET ALL
@@ -140,6 +141,7 @@ func TestDoesFeatureExist(t *testing.T) {
 }
 
 func TestDoesFeatureInstanceExist(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test - feature service uses db.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 	applicationType := "stb"
 	id1 := uuid.New().String()

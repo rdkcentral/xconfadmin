@@ -23,7 +23,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
@@ -723,8 +725,11 @@ func TestDeleteDeviceSettingsByIdHandler_Success(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
+	// Use unique ID to avoid test collisions
+	uniqueID := "test-delete-" + uuid.New().String()[:8]
+
 	deviceSettings := &logupload.DeviceSettings{
-		ID:                "test-delete-success",
+		ID:                uniqueID,
 		Name:              "Test Delete Success",
 		CheckOnReboot:     false,
 		SettingsAreActive: false,
@@ -738,7 +743,7 @@ func TestDeleteDeviceSettingsByIdHandler_Success(t *testing.T) {
 	}
 	CreateDeviceSettings(deviceSettings, "stb")
 
-	url := "/xconfAdminService/dcm/deviceSettings/test-delete-success"
+	url := "/xconfAdminService/dcm/deviceSettings/" + uniqueID
 	req, err := http.NewRequest("DELETE", url, nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
@@ -747,6 +752,9 @@ func TestDeleteDeviceSettingsByIdHandler_Success(t *testing.T) {
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusNoContent)
+
+	// Allow cache to refresh
+	time.Sleep(100 * time.Millisecond)
 
 	// Verify it's actually deleted
 	req2, _ := http.NewRequest("GET", url, nil)

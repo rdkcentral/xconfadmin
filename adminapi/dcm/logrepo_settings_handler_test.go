@@ -23,7 +23,9 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
@@ -690,9 +692,12 @@ func TestDeleteLogRepoSettingsByIdHandler_Success(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
+	// Use unique ID to avoid test collisions
+	uniqueID := "delete-me-" + uuid.New().String()[:8]
+
 	// Create repository
 	repo := logupload.UploadRepository{
-		ID:              "delete-me",
+		ID:              uniqueID,
 		Name:            "Delete Me",
 		URL:             "http://test.com",
 		Protocol:        "HTTP",
@@ -700,13 +705,16 @@ func TestDeleteLogRepoSettingsByIdHandler_Success(t *testing.T) {
 	}
 	CreateLogRepoSettings(&repo, "stb")
 
-	req, err := http.NewRequest("DELETE", "/xconfAdminService/dcm/uploadRepository/delete-me", nil)
+	req, err := http.NewRequest("DELETE", "/xconfAdminService/dcm/uploadRepository/"+uniqueID, nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
 	res := ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
+
+	// Allow cache to refresh
+	time.Sleep(100 * time.Millisecond)
 
 	// Verify it's actually deleted
 	deleted := GetLogRepoSettings("delete-me")
