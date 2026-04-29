@@ -60,7 +60,7 @@ func newValidTimeFilter(name string) *coreef.TimeFilter {
 // }
 
 func TestUpdateTimeFilter_ValidationFailures(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M1", "E1", "stb")
 	cases := []struct {
 		name string
@@ -79,7 +79,7 @@ func TestUpdateTimeFilter_ValidationFailures(t *testing.T) {
 }
 
 func TestUpdateTimeFilter_BadTimes(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M1", "E1", "stb")
 	tf := newValidTimeFilter("BADTIME")
 	tf.Start = "25:00" // invalid hour
@@ -90,7 +90,7 @@ func TestUpdateTimeFilter_BadTimes(t *testing.T) {
 }
 
 func TestUpdateTimeFilter_InvalidIpGroup(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M1", "E1", "stb")
 	grp := shared.NewIpAddressGroupWithAddrStrings("G1", "G1", []string{"10.0.0.1"})
 	tf := newValidTimeFilter("TFIP")
@@ -99,7 +99,7 @@ func TestUpdateTimeFilter_InvalidIpGroup(t *testing.T) {
 }
 
 func TestUpdateTimeFilter_EnvModelMissing(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	// no seed for env-model
 	tf := newValidTimeFilter("TFMISS")
 	// add a valid stored IP group to bypass IsChangedIpAddressGroup and avoid nil deref chain
@@ -112,7 +112,7 @@ func TestUpdateTimeFilter_EnvModelMissing(t *testing.T) {
 }
 
 func TestDeleteTimeFilter_Paths(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M1", "E1", "stb")
 	tf := newValidTimeFilter("DELTF")
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_OK2", "G_OK2", []string{"10.0.0.2"})
@@ -137,7 +137,7 @@ func TestDeleteTimeFilter_Paths(t *testing.T) {
 // TestUpdateTimeFilter_ApplicationTypeValidation tests the ValidateApplicationType error path
 // Tests line 86-88: xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 func TestUpdateTimeFilter_ApplicationTypeValidation(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M1", "E1", "stb")
 
 	// Setup valid IP group to bypass earlier checks
@@ -161,7 +161,7 @@ func TestUpdateTimeFilter_ApplicationTypeValidation(t *testing.T) {
 // TestUpdateTimeFilter_CreateFirmwareRuleError tests the CreateFirmwareRuleOneDB error path
 // Tests line 90-92: xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 func TestUpdateTimeFilter_CreateFirmwareRuleError(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M1", "E1", "stb")
 
 	// Setup valid IP group
@@ -185,7 +185,7 @@ func TestUpdateTimeFilter_CreateFirmwareRuleError(t *testing.T) {
 // TestUpdateTimeFilter_IdAssignment tests the ID assignment logic
 // Tests line 94-96: if timeFilter.Id == "" { timeFilter.Id = firmwareRule.ID }
 func TestUpdateTimeFilter_IdAssignment(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M1", "E1", "stb")
 
 	// Setup valid IP group
@@ -209,7 +209,7 @@ func TestUpdateTimeFilter_IdAssignment(t *testing.T) {
 // TestUpdateTimeFilter_UppercaseConversion tests the strings.ToUpper conversion
 // Tests line 77-78: EnvironmentId and ModelId conversion to uppercase
 func TestUpdateTimeFilter_UppercaseConversion(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("M2", "E2", "stb")
 
 	// Setup valid IP group
@@ -252,7 +252,7 @@ func TestUpdateTimeFilter_UppercaseConversion(t *testing.T) {
 
 // TestUpdateTimeFilter_UppercaseConversion_MixedCase tests mixed case conversion
 func TestUpdateTimeFilter_UppercaseConversion_MixedCase(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("MIXEDMODEL", "MIXEDENV", "stb")
 
 	// Setup valid IP group
@@ -289,7 +289,7 @@ func TestUpdateTimeFilter_UppercaseConversion_MixedCase(t *testing.T) {
 // TestUpdateTimeFilter_ConvertTimeFilterToFirmwareRule tests the conversion step
 // Tests line 80: firmwareRule := coreef.ConvertTimeFilterToFirmwareRule(timeFilter)
 func TestUpdateTimeFilter_ConvertTimeFilterToFirmwareRule(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("CONVERT1", "CONVERT1", "stb")
 
 	// Setup valid IP group
@@ -333,7 +333,7 @@ func TestUpdateTimeFilter_ConvertTimeFilterToFirmwareRule(t *testing.T) {
 // TestUpdateTimeFilter_ApplicationTypeAssignment tests application type assignment
 // Tests line 82-84: if !util.IsBlank(applicationType) { firmwareRule.ApplicationType = applicationType }
 func TestUpdateTimeFilter_ApplicationTypeAssignment_NonBlank(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("APPTYPE1", "APPTYPE1", "stb")
 
 	// Setup valid IP group
@@ -359,7 +359,7 @@ func TestUpdateTimeFilter_ApplicationTypeAssignment_NonBlank(t *testing.T) {
 // TestUpdateTimeFilter_SecondValidateApplicationType tests the second ValidateApplicationType call
 // Tests line 86-88: if err := xshared.ValidateApplicationType(firmwareRule.ApplicationType); err != nil
 func TestUpdateTimeFilter_SecondValidateApplicationType_Error(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("VAL2", "VAL2", "stb")
 
 	// Setup valid IP group
@@ -388,7 +388,7 @@ func TestUpdateTimeFilter_SecondValidateApplicationType_Error(t *testing.T) {
 // TestUpdateTimeFilter_CreateFirmwareRuleOneDB_Success tests successful creation
 // Tests line 90-92: err := corefw.CreateFirmwareRuleOneDB(firmwareRule)
 func TestUpdateTimeFilter_CreateFirmwareRuleOneDB_Success(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("CREATE2", "CREATE2", "stb")
 
 	// Setup valid IP group
@@ -419,7 +419,7 @@ func TestUpdateTimeFilter_CreateFirmwareRuleOneDB_Success(t *testing.T) {
 // TestUpdateTimeFilter_IdAssignment_EmptyId tests ID assignment when empty
 // Tests line 94-96: if timeFilter.Id == "" { timeFilter.Id = firmwareRule.ID }
 func TestUpdateTimeFilter_IdAssignment_EmptyId(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("IDASSIGN", "IDASSIGN", "stb")
 
 	// Setup valid IP group
@@ -450,7 +450,7 @@ func TestUpdateTimeFilter_IdAssignment_EmptyId(t *testing.T) {
 // TestUpdateTimeFilter_IdAssignment_NonEmptyId tests ID assignment when already set
 // Tests line 94-96: if timeFilter.Id == "" { timeFilter.Id = firmwareRule.ID }
 func TestUpdateTimeFilter_IdAssignment_NonEmptyId(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("IDEXIST", "IDEXIST", "stb")
 
 	// Setup valid IP group
@@ -482,7 +482,7 @@ func TestUpdateTimeFilter_IdAssignment_NonEmptyId(t *testing.T) {
 // TestUpdateTimeFilter_SuccessReturn tests the final success return
 // Tests line 98: return xwhttp.NewResponseEntity(http.StatusOK, nil, timeFilter)
 func TestUpdateTimeFilter_SuccessReturn(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("SUCCESS2", "SUCCESS2", "stb")
 
 	// Setup valid IP group
@@ -519,7 +519,7 @@ func TestUpdateTimeFilter_SuccessReturn(t *testing.T) {
 // TestUpdateTimeFilter_ComprehensiveCoverage specifically tests all the requested code lines
 // This test documents that we have achieved coverage of the specific lines requested
 func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 
 	// Test 1: Verify we reach the uppercase conversion lines (77-78)
 	t.Run("UppercaseConversion", func(t *testing.T) {
@@ -684,7 +684,7 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 } // TestUpdateTimeFilter_BlankApplicationType tests blank application type handling
 // Tests line 83-85: if !util.IsBlank(applicationType) { firmwareRule.ApplicationType = applicationType }
 func TestUpdateTimeFilter_BlankApplicationType(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M4", "E4", "stb")
 
 	// Setup valid IP group
@@ -709,7 +709,7 @@ func TestUpdateTimeFilter_BlankApplicationType(t *testing.T) {
 // TestDeleteTimeFilter_TimeFilterByNameError tests error handling in delete
 // Tests line 103-105: xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 func TestDeleteTimeFilter_TimeFilterByNameError(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 
 	// Attempt to delete from empty database may cause TimeFilterByName to error
 	resp := DeleteTimeFilter(db.GetDefaultTenantId(), "NONEXISTENT", "stb")
@@ -722,7 +722,7 @@ func TestDeleteTimeFilter_TimeFilterByNameError(t *testing.T) {
 // TestDeleteTimeFilter_DeleteOneFirmwareRuleError tests delete operation error
 // Tests line 109-111: xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 func TestDeleteTimeFilter_DeleteOneFirmwareRuleError(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M5", "E5", "stb")
 
 	// Create and persist a time filter
@@ -751,7 +751,7 @@ func TestDeleteTimeFilter_DeleteOneFirmwareRuleError(t *testing.T) {
 // TestDeleteTimeFilter_NilTimeFilter tests when TimeFilterByName returns nil
 // Tests line 107-112: if timeFilter != nil { ... } path
 func TestDeleteTimeFilter_NilTimeFilter(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 
 	// Delete non-existent time filter
 	resp := DeleteTimeFilter(db.GetDefaultTenantId(), "DOESNOTEXIST", "stb")
@@ -762,7 +762,7 @@ func TestDeleteTimeFilter_NilTimeFilter(t *testing.T) {
 
 // TestIsExistEnvModelRule_WithId tests the existence check logic
 func TestIsExistEnvModelRule_WithId(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("M6", "E6", "stb")
 
 	envModelRule := coreef.EnvModelRuleBean{
@@ -802,7 +802,7 @@ func TestIsExistEnvModelRule_NoModelId(t *testing.T) {
 
 // TestGetOneByEnvModel_Found tests successful lookup
 func TestGetOneByEnvModel_Found(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("M9", "E9", "stb")
 
 	bean := GetOneByEnvModel(db.GetDefaultTenantId(), emBean.ModelId, emBean.EnvironmentId, "stb")
@@ -816,7 +816,7 @@ func TestGetOneByEnvModel_Found(t *testing.T) {
 
 // TestGetOneByEnvModel_NotFound tests when no matching rule exists
 func TestGetOneByEnvModel_NotFound(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 
 	bean := GetOneByEnvModel(db.GetDefaultTenantId(), "NONEXIST", "NONEXIST", "stb")
 	assert.Nil(t, bean, "Should return nil when no matching rule found")
@@ -824,7 +824,7 @@ func TestGetOneByEnvModel_NotFound(t *testing.T) {
 
 // TestGetOneByEnvModel_CaseInsensitive tests case-insensitive matching
 func TestGetOneByEnvModel_CaseInsensitive(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	_ = seedEnvModelRule("M10", "E10", "stb")
 
 	// Test with different case

@@ -731,7 +731,7 @@ func TestMain(m *testing.M) {
 
 	// Check if we should use mock database (set via environment variable or default to true for speed)
 	useMock := os.Getenv("USE_MOCK_DB")
-	if useMock == "" || useMock == "true" || useMock == "1" {
+	if useMock == "true" || useMock == "1" {
 		fmt.Printf("Using MOCK database for fast unit tests\n")
 
 		// CRITICAL: Initialize mock database FIRST - this overrides GetCachedSimpleDaoFunc
@@ -1884,12 +1884,12 @@ func TestPostDcmFormulaFilteredWithParamsHandler_WithPagination(t *testing.T) {
 func TestDcmFormulaChangePriorityHandler_AppTypeMismatch(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - requires real database and model validation
 	DeleteAllEntities()
-	
+
 	// Create formula via API with applicationType=xhome
 	formula := createFormula("MODEL_PRIO_MISMATCH", 0)
 	formula.ApplicationType = "xhome"
 	formulaJson, _ := json.Marshal(formula)
-	
+
 	// Save formula using xhome application type
 	createUrl := "/xconfAdminService/dcm/formula?applicationType=xhome"
 	createReq := httptest.NewRequest("POST", createUrl, bytes.NewReader(formulaJson))

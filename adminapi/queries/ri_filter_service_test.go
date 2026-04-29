@@ -13,7 +13,7 @@ import (
 func resetFirmwareRules() {
 	// reuse truncate helper from this package tests if present; otherwise delete directly
 	// Firmware rules table name constant resides in ds
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 }
 
 func seedModel(id string) {
