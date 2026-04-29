@@ -92,6 +92,7 @@ func TestFindByContext_NameFilter(t *testing.T) {
 	t.Run("FilterByName_Found", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.NAME_UPPER: "TestRule",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 2, len(results))
@@ -107,6 +108,7 @@ func TestFindByContext_NameFilter(t *testing.T) {
 	t.Run("FilterByName_NotFound", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.NAME_UPPER: "NonExistent",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 0, len(results))
@@ -115,6 +117,7 @@ func TestFindByContext_NameFilter(t *testing.T) {
 	t.Run("FilterByName_EmptyString", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.NAME_UPPER: "",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		// Empty string should return all rules
@@ -124,6 +127,7 @@ func TestFindByContext_NameFilter(t *testing.T) {
 	t.Run("FilterByName_CaseInsensitive", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.NAME_UPPER: "testrule",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 2, len(results))
@@ -152,7 +156,8 @@ func TestFindByContext_ProfileFilter(t *testing.T) {
 
 	t.Run("FilterByProfile_Found", func(t *testing.T) {
 		searchContext := map[string]string{
-			xcommon.PROFILE: "Profile1",
+			xcommon.PROFILE:    "Profile1",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
@@ -161,7 +166,8 @@ func TestFindByContext_ProfileFilter(t *testing.T) {
 
 	t.Run("FilterByProfile_NotFound", func(t *testing.T) {
 		searchContext := map[string]string{
-			xcommon.PROFILE: "NonExistentProfile",
+			xcommon.PROFILE:    "NonExistentProfile",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 0, len(results))
@@ -169,7 +175,8 @@ func TestFindByContext_ProfileFilter(t *testing.T) {
 
 	t.Run("FilterByProfile_RuleWithNoProfiles", func(t *testing.T) {
 		searchContext := map[string]string{
-			xcommon.PROFILE: "Profile1",
+			xcommon.PROFILE:    "Profile1",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		// Rule3 with no profiles should not be included
@@ -179,7 +186,8 @@ func TestFindByContext_ProfileFilter(t *testing.T) {
 
 	t.Run("FilterByProfile_CaseInsensitive", func(t *testing.T) {
 		searchContext := map[string]string{
-			xcommon.PROFILE: "testprofile",
+			xcommon.PROFILE:    "testprofile",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
@@ -205,7 +213,8 @@ func TestFindByContext_FreeArgFilter(t *testing.T) {
 
 	t.Run("FilterByFreeArg_Found", func(t *testing.T) {
 		searchContext := map[string]string{
-			xcommon.FREE_ARG: "model",
+			xcommon.FREE_ARG:   "model",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
@@ -214,7 +223,8 @@ func TestFindByContext_FreeArgFilter(t *testing.T) {
 
 	t.Run("FilterByFreeArg_NotFound", func(t *testing.T) {
 		searchContext := map[string]string{
-			xcommon.FREE_ARG: "nonexistent",
+			xcommon.FREE_ARG:   "nonexistent",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 0, len(results))
@@ -222,7 +232,8 @@ func TestFindByContext_FreeArgFilter(t *testing.T) {
 
 	t.Run("FilterByFreeArg_CaseInsensitive", func(t *testing.T) {
 		searchContext := map[string]string{
-			xcommon.FREE_ARG: "MAC",
+			xcommon.FREE_ARG:   "MAC",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
@@ -240,7 +251,8 @@ func TestFindByContext_FixedArgFilter_CollectionValue(t *testing.T) {
 
 	t.Run("FilterByFixedArg_CollectionValue_Found", func(t *testing.T) {
 		searchContext := map[string]string{
-			xcommon.FIXED_ARG: "testvalue",
+			xcommon.FIXED_ARG:  "testvalue",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
@@ -249,7 +261,8 @@ func TestFindByContext_FixedArgFilter_CollectionValue(t *testing.T) {
 
 	t.Run("FilterByFixedArg_CollectionValue_NotFound", func(t *testing.T) {
 		searchContext := map[string]string{
-			xcommon.FIXED_ARG: "notinlist",
+			xcommon.FIXED_ARG:  "notinlist",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 0, len(results))
@@ -257,7 +270,8 @@ func TestFindByContext_FixedArgFilter_CollectionValue(t *testing.T) {
 
 	t.Run("FilterByFixedArg_CollectionValue_CaseInsensitive", func(t *testing.T) {
 		searchContext := map[string]string{
-			xcommon.FIXED_ARG: "VALUE1",
+			xcommon.FIXED_ARG:  "VALUE1",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
@@ -277,7 +291,8 @@ func TestFindByContext_FixedArgFilter_StringValue(t *testing.T) {
 
 	t.Run("FilterByFixedArg_StringValue_Found", func(t *testing.T) {
 		searchContext := map[string]string{
-			xcommon.FIXED_ARG: "TEST_MODEL",
+			xcommon.FIXED_ARG:  "TEST_MODEL",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
@@ -286,7 +301,8 @@ func TestFindByContext_FixedArgFilter_StringValue(t *testing.T) {
 
 	t.Run("FilterByFixedArg_StringValue_PartialMatch", func(t *testing.T) {
 		searchContext := map[string]string{
-			xcommon.FIXED_ARG: "MODEL",
+			xcommon.FIXED_ARG:  "MODEL",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
@@ -294,7 +310,8 @@ func TestFindByContext_FixedArgFilter_StringValue(t *testing.T) {
 
 	t.Run("FilterByFixedArg_StringValue_NotFound", func(t *testing.T) {
 		searchContext := map[string]string{
-			xcommon.FIXED_ARG: "NONEXISTENT",
+			xcommon.FIXED_ARG:  "NONEXISTENT",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 0, len(results))
@@ -302,7 +319,8 @@ func TestFindByContext_FixedArgFilter_StringValue(t *testing.T) {
 
 	t.Run("FilterByFixedArg_StringValue_CaseInsensitive", func(t *testing.T) {
 		searchContext := map[string]string{
-			xcommon.FIXED_ARG: "test_model",
+			xcommon.FIXED_ARG:  "test_model",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
@@ -321,7 +339,8 @@ func TestFindByContext_FixedArgFilter_ExistsOperation(t *testing.T) {
 
 	t.Run("FilterByFixedArg_ExistsOperation_Skipped", func(t *testing.T) {
 		searchContext := map[string]string{
-			xcommon.FIXED_ARG: "anything",
+			xcommon.FIXED_ARG:  "anything",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		// Should not match because EXISTS operation doesn't have a string value to compare
@@ -342,6 +361,7 @@ func TestFindByContext_ApplicationTypeFilter(t *testing.T) {
 	t.Run("FilterByApplicationType_STB", func(t *testing.T) {
 		searchContext := map[string]string{
 			xwcommon.APPLICATION_TYPE: "stb",
+			xwcommon.TENANT_ID:        db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
@@ -351,6 +371,7 @@ func TestFindByContext_ApplicationTypeFilter(t *testing.T) {
 	t.Run("FilterByApplicationType_ALL", func(t *testing.T) {
 		searchContext := map[string]string{
 			xwcommon.APPLICATION_TYPE: shared.ALL,
+			xwcommon.TENANT_ID:        db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 2, len(results))
@@ -359,6 +380,7 @@ func TestFindByContext_ApplicationTypeFilter(t *testing.T) {
 	t.Run("FilterByApplicationType_Empty", func(t *testing.T) {
 		searchContext := map[string]string{
 			xwcommon.APPLICATION_TYPE: "",
+			xwcommon.TENANT_ID:        db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 2, len(results))
@@ -384,6 +406,7 @@ func TestFindByContext_CombinedFilters(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.NAME_UPPER:        "TestRule",
 			xwcommon.APPLICATION_TYPE: "stb",
+			xwcommon.TENANT_ID:        db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 2, len(results))
@@ -393,6 +416,7 @@ func TestFindByContext_CombinedFilters(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.NAME_UPPER: "TestRule",
 			xcommon.PROFILE:    "TestProfile",
+			xwcommon.TENANT_ID: db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
@@ -406,6 +430,7 @@ func TestFindByContext_CombinedFilters(t *testing.T) {
 			xcommon.PROFILE:           "TestProfile",
 			xcommon.FREE_ARG:          "model",
 			xcommon.FIXED_ARG:         "TEST_MODEL",
+			xwcommon.TENANT_ID:        db.GetDefaultTenantId(),
 		}
 		results := findByContext(searchContext)
 		assert.Equal(t, 1, len(results))
