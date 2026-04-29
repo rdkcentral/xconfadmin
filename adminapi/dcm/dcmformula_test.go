@@ -956,23 +956,28 @@ func DeleteAllEntities() {
 	}
 
 	// Original implementation for real database
-	for _, tableInfo := range db.GetAllTableInfo() {
-		if err := truncateTable(tableInfo.TableName); err != nil {
-			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
-		}
-		if tableInfo.Cached {
-			db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), tableInfo.TableName)
-		}
-	}
-}
-
-func truncateTable(tableName string) error {
 	dbClient := db.GetDatabaseClient()
 	cassandraClient, ok := dbClient.(*db.CassandraClient)
-	if ok {
-		return cassandraClient.DeleteAllXconfData(db.GetDefaultTenantId(), tableName)
+	if !ok {
+		fmt.Println("Database client is not Cassandra client, cannot delete all entities")
+		return
 	}
-	return nil
+
+	var err error
+	tenantId := db.GetDefaultTenantId()
+	for _, tableInfo := range db.GetAllTableInfo() {
+		if tableInfo.TenantAgnostic {
+			err = cassandraClient.DeleteAllXconfData("", tableInfo.TableName)
+		} else {
+			err = cassandraClient.DeleteAllXconfData(tenantId, tableInfo.TableName)
+		}
+		if err != nil {
+			fmt.Printf("failed to delete all xconf data for table %s\n", tableInfo.TableName)
+		}
+		if tableInfo.Cached {
+			db.GetCachedSimpleDao().RefreshAll(tenantId, tableInfo.TableName)
+		}
+	}
 }
 
 func CreateAndSaveModel(id string) *core.Model {
