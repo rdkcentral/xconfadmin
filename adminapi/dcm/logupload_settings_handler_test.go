@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
@@ -361,6 +362,9 @@ func TestDeleteLogUploadSettingsByIdHandler_Success(t *testing.T) {
 	res := ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
+
+	// Allow cache to refresh before verification
+	time.Sleep(100 * time.Millisecond)
 
 	// Verify it's actually deleted
 	deleted := logupload.GetOneLogUploadSettings(db.GetDefaultTenantId(), formula.ID)

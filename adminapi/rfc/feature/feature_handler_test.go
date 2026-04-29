@@ -260,6 +260,7 @@ func TestPutFeatureSuccessAndNotFound(t *testing.T) {
 }
 
 func TestDeleteFeatureByIdSuccessAndNotFound(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test - FeaturePost uses db.GetCachedSimpleDao() directly
 	cleanDB()
 	fe := buildFeatureEntity("stb")
 	_, _ = FeaturePost(db.GetDefaultTenantId(), fe.CreateFeature())
@@ -621,5 +622,13 @@ func cleanDB() {
 		if ti.Cached {
 			db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), ti.TableName)
 		}
+	}
+}
+
+// SkipIfMockDatabase skips the test if mock database is enabled
+// Use for tests that require the real database (integration tests)
+func SkipIfMockDatabase(t *testing.T) {
+	if queries.IsMockDatabaseEnabled() {
+		t.Skip("Skipping test - requires real database (integration test)")
 	}
 }

@@ -57,6 +57,7 @@ func TestGetTelemetryRulesHandler_Empty(t *testing.T) {
 }
 
 func TestCreateTelemetryRuleHandler_SuccessAndConflict(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test - telemetry service uses db.GetCachedSimpleDao() directly
 	DeleteTelemetryEntities()
 	perm := buildPermanentTelemetryProfile()
 	// success create

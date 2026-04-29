@@ -20,7 +20,9 @@ package dcm
 import (
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
@@ -602,9 +604,12 @@ func TestDeleteLogRepoSettingsbyId_Success(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
+	// Use unique ID to avoid test collisions
+	uniqueID := "delete-me-" + uuid.New().String()[:8]
+
 	// Create repository
 	repo := &logupload.UploadRepository{
-		ID:              "delete-me",
+		ID:              uniqueID,
 		Name:            "Delete Me",
 		URL:             "http://test.com",
 		Protocol:        "HTTP",
@@ -613,13 +618,16 @@ func TestDeleteLogRepoSettingsbyId_Success(t *testing.T) {
 	CreateLogRepoSettings(repo, "stb")
 
 	// Delete it
-	respEntity := DeleteLogRepoSettingsbyId(db.GetDefaultTenantId(), "delete-me", "stb")
+	respEntity := DeleteLogRepoSettingsbyId(db.GetDefaultTenantId(), uniqueID, "stb")
 
 	assert.Equal(t, http.StatusNoContent, respEntity.Status)
 	assert.Assert(t, respEntity.Error == nil)
 
+	// Allow cache to refresh
+	time.Sleep(100 * time.Millisecond)
+
 	// Verify deletion
-	deleted := GetLogRepoSettings(db.GetDefaultTenantId(), "delete-me")
+	deleted := GetLogRepoSettings(db.GetDefaultTenantId(), uniqueID)
 	assert.Assert(t, deleted == nil)
 }
 
