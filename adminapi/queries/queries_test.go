@@ -129,11 +129,11 @@ func DeleteAllEntities() {
 	}
 }
 
-func truncateTable(tableName string) error {
+func truncateTable(tenantId string, tableName string) error {
 	dbClient := db.GetDatabaseClient()
 	cassandraClient, ok := dbClient.(*db.CassandraClient)
 	if ok {
-		return cassandraClient.DeleteAllXconfData(db.GetDefaultTenantId(), tableName)
+		return cassandraClient.DeleteAllXconfData(tenantId, tableName)
 	}
 	return nil
 }

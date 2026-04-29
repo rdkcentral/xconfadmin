@@ -46,7 +46,7 @@ func TestUpdateIpFilter_Success(t *testing.T) {
 	if IsMockDatabaseEnabled() {
 		ClearMockDatabase()
 	} else {
-		truncateTable(db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	ipFilter := newValidIpFilter("TestIPFilter")
@@ -68,7 +68,7 @@ func TestUpdateIpFilter_WithExistingId(t *testing.T) {
 	if IsMockDatabaseEnabled() {
 		ClearMockDatabase()
 	} else {
-		truncateTable(db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	existingId := uuid.New().String()
@@ -86,7 +86,7 @@ func TestUpdateIpFilter_BlankName(t *testing.T) {
 	if IsMockDatabaseEnabled() {
 		ClearMockDatabase()
 	} else {
-		truncateTable(db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create IP filter with blank name but valid IP group
@@ -117,7 +117,7 @@ func TestUpdateIpFilter_InvalidApplicationType(t *testing.T) {
 	if IsMockDatabaseEnabled() {
 		ClearMockDatabase()
 	} else {
-		truncateTable(db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	ipFilter := newValidIpFilter("TestIPFilter")
@@ -134,7 +134,7 @@ func TestUpdateIpFilter_DuplicateName(t *testing.T) {
 	if IsMockDatabaseEnabled() {
 		ClearMockDatabase()
 	} else {
-		truncateTable(db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create first filter
@@ -155,7 +155,7 @@ func TestUpdateIpFilter_WithValidIpAddressGroup(t *testing.T) {
 	if IsMockDatabaseEnabled() {
 		ClearMockDatabase()
 	} else {
-		truncateTable(db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create and save IP address group
@@ -178,7 +178,7 @@ func TestUpdateIpFilter_WithChangedIpAddressGroup(t *testing.T) {
 	if IsMockDatabaseEnabled() {
 		ClearMockDatabase()
 	} else {
-		truncateTable(db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create IP address group but don't save it (or save with different content)
@@ -199,7 +199,7 @@ func TestUpdateIpFilter_WithModifiedIpAddressGroup(t *testing.T) {
 	if IsMockDatabaseEnabled() {
 		ClearMockDatabase()
 	} else {
-		truncateTable(db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Save IP address group with certain IPs
@@ -226,7 +226,7 @@ func TestDeleteIpsFilter_Success(t *testing.T) {
 	if IsMockDatabaseEnabled() {
 		ClearMockDatabase()
 	} else {
-		truncateTable(db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create an IP filter first
@@ -246,7 +246,7 @@ func TestDeleteIpsFilter_NotFound(t *testing.T) {
 	if IsMockDatabaseEnabled() {
 		ClearMockDatabase()
 	} else {
-		truncateTable(db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Try to delete non-existent filter
@@ -262,7 +262,7 @@ func TestDeleteIpsFilter_EmptyName(t *testing.T) {
 	if IsMockDatabaseEnabled() {
 		ClearMockDatabase()
 	} else {
-		truncateTable(db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Try to delete with empty name
@@ -277,7 +277,7 @@ func TestDeleteIpsFilter_WithApplicationType(t *testing.T) {
 	if IsMockDatabaseEnabled() {
 		ClearMockDatabase()
 	} else {
-		truncateTable(db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create IP filter with xhome app type
@@ -295,7 +295,7 @@ func TestUpdateIpFilter_UpdateExisting(t *testing.T) {
 	if IsMockDatabaseEnabled() {
 		ClearMockDatabase()
 	} else {
-		truncateTable(db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create initial filter
@@ -330,7 +330,7 @@ func TestUpdateIpFilter_MultipleApplicationTypes(t *testing.T) {
 			if IsMockDatabaseEnabled() {
 				ClearMockDatabase()
 			} else {
-				truncateTable(db.TABLE_FIRMWARE_RULES)
+				truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 			}
 
 			ipFilter := newValidIpFilter("Test_" + tc.appType)
@@ -345,7 +345,7 @@ func TestDeleteIpsFilter_AfterUpdate(t *testing.T) {
 	if IsMockDatabaseEnabled() {
 		ClearMockDatabase()
 	} else {
-		truncateTable(db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create filter
@@ -371,7 +371,7 @@ func TestUpdateIpFilter_RuleNameValidation(t *testing.T) {
 	if IsMockDatabaseEnabled() {
 		ClearMockDatabase()
 	} else {
-		truncateTable(db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create first filter

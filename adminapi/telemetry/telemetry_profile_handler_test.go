@@ -135,8 +135,8 @@ func TestMain(m *testing.M) {
 
 	// PERFORMANCE OPTIMIZATION: Initialize in-memory mock for <15s test execution
 	// Replaces slow Cassandra operations with instant in-memory operations
-	InitMockDatabase()
-	log.Info("✓ Mock DAO initialized - ultra-fast unit tests enabled (<15s target)")
+	// InitMockDatabase()
+	// log.Info("✓ Mock DAO initialized - ultra-fast unit tests enabled (<15s target)")
 
 	// setup router
 	router = server.XW_XconfServer.GetRouter(false)
@@ -407,17 +407,18 @@ func DeleteTelemetryEntities() {
 		db.TABLE_TELEMETRY_APPROVED_TWO_CHANGES,
 	}
 
+	tenantId := db.GetDefaultTenantId()
 	for _, tableName := range telemetryTables {
-		truncateTable(tableName)
-		db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), tableName)
+		truncateTable(tenantId, tableName)
+		db.GetCachedSimpleDao().RefreshAll(tenantId, tableName)
 	}
 }
 
-func truncateTable(tableName string) error {
+func truncateTable(tenantId string, tableName string) error {
 	dbClient := db.GetDatabaseClient()
 	cassandraClient, ok := dbClient.(*db.CassandraClient)
 	if ok {
-		return cassandraClient.DeleteAllXconfData(db.GetDefaultTenantId(), tableName)
+		return cassandraClient.DeleteAllXconfData(tenantId, tableName)
 	}
 	return nil
 }

@@ -31,6 +31,7 @@ import (
 
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 // helper: build telemetry profile body
@@ -39,8 +40,7 @@ func buildTelemetryProfile(expiresOffsetMillis int64) *xwlogupload.TelemetryProf
 	p.ID = uuid.New().String()
 	p.Name = "test_profile"
 	p.ApplicationType = "stb"
-	nowMillis := time.Now().UnixNano() / 1_000_000
-	p.Expires = nowMillis + expiresOffsetMillis
+	p.Expires = util.GetTimestamp() + expiresOffsetMillis
 	p.TelemetryProfile = []xwlogupload.TelemetryElement{{
 		ID:               uuid.New().String(),
 		Header:           "hdr",
@@ -86,7 +86,7 @@ func exec(method, url string, body []byte) *httptest.ResponseRecorder {
 
 func TestCreateTelemetryEntryForSuccess(t *testing.T) {
 	DeleteTelemetryEntities()
-	profile := buildTelemetryProfile(60_000)
+	profile := buildTelemetryProfile(60000)
 	body, _ := json.Marshal(profile)
 	url := fmt.Sprintf("/xconfAdminService/telemetry/create/estbMacAddress/%s?applicationType=stb", "AA:BB:CC:DD:EE:FF")
 	rr := exec("POST", url, body)

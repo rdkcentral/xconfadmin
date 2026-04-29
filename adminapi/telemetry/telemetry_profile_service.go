@@ -20,7 +20,6 @@ package telemetry
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -30,6 +29,7 @@ import (
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 func CreateTelemetryProfile(tenantId string, contextAttribute string, expectedValue string, telemetry *xwlogupload.TelemetryProfile) *xwlogupload.TimestampedRule {
@@ -50,10 +50,7 @@ func CreateRuleForAttribute(contextAttribute string, expectedValue string) *xwlo
 	rule.Condition = condition
 	timestampedRule := xwlogupload.NewTimestampedRule()
 	timestampedRule.Rule = *rule
-	now := time.Now()
-	nanos := now.UnixNano()
-	millis := nanos / 1000000
-	timestampedRule.Timestamp = millis
+	timestampedRule.Timestamp = util.GetTimestamp()
 	return timestampedRule
 }
 

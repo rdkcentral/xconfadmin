@@ -19,7 +19,7 @@ func newWrapper(pct float64) *coreef.PercentFilterWrapper {
 }
 
 func TestUpdatePercentFilter_AppTypeAndGlobalRangeValidation(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	w := newWrapper(50)
 	assert.Equal(t, 400, UpdatePercentFilter(db.GetDefaultTenantId(), "", w).Status)
 	w2 := newWrapper(-1)
@@ -29,7 +29,7 @@ func TestUpdatePercentFilter_AppTypeAndGlobalRangeValidation(t *testing.T) {
 }
 
 func TestUpdatePercentFilter_WhitelistMismatch(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	w := newWrapper(10)
 	// provide unsaved ip group -> mismatch
 	w.Whitelist = shared.NewIpAddressGroupWithAddrStrings("G_BAD", "G_BAD", []string{"10.0.0.1"})
@@ -37,7 +37,7 @@ func TestUpdatePercentFilter_WhitelistMismatch(t *testing.T) {
 }
 
 func TestUpdatePercentFilter_EnvModelPercentageValidation(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	w := newWrapper(10)
 	// FirmwareCheckRequired true but no FirmwareVersions
 	w.EnvModelPercentages = append(w.EnvModelPercentages, coreef.EnvModelPercentage{Name: "P1", FirmwareCheckRequired: true, Percentage: 10})
@@ -65,7 +65,7 @@ func TestUpdatePercentFilter_EnvModelPercentageValidation(t *testing.T) {
 }
 
 func TestUpdatePercentFilter_SuccessMinimal(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	w := newWrapper(25)
 	resp := UpdatePercentFilter(db.GetDefaultTenantId(), "stb", w)
 	if resp.Status != 200 {
@@ -74,7 +74,7 @@ func TestUpdatePercentFilter_SuccessMinimal(t *testing.T) {
 }
 
 func TestGetPercentFilter_NoRules(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	pf, err := GetPercentFilter(db.GetDefaultTenantId(), "stb")
 	assert.NoError(t, err)
 	assert.NotNil(t, pf)
@@ -84,14 +84,14 @@ func TestGetPercentFilter_NoRules(t *testing.T) {
 }
 
 func TestGetPercentFilterFieldValues_Empty(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	vals, err := GetPercentFilterFieldValues(db.GetDefaultTenantId(), "Percentage", "stb")
 	assert.NoError(t, err)
 	assert.NotNil(t, vals)
 }
 
 func TestUpdatePercentFilter_LastKnownGoodAndIntermediateVersionNotFound(t *testing.T) {
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	w := newWrapper(10)
 	// valid env model percentage to pass earlier checks
 	w.EnvModelPercentages = append(w.EnvModelPercentages, coreef.EnvModelPercentage{Name: "EM1", FirmwareCheckRequired: true, FirmwareVersions: []string{"1.0"}, Percentage: 50, Active: true, LastKnownGood: "NO_MATCH"})
@@ -104,7 +104,7 @@ func TestUpdatePercentFilter_LastKnownGoodAndIntermediateVersionNotFound(t *test
 
 func TestUpdatePercentFilter_WhitelistValidPath(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	truncateTable(db.TABLE_FIRMWARE_RULES)
+	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	// store whitelist
 	ipg := shared.NewIpAddressGroupWithAddrStrings("G_OK_PF", "G_OK_PF", []string{"10.10.0.1"})
 	nl := shared.ConvertFromIpAddressGroup(ipg)
