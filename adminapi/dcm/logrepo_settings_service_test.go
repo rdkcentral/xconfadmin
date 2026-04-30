@@ -104,9 +104,7 @@ func TestGetLogRepoSettingsAll_WithRepositories(t *testing.T) {
 
 // TestLogRepoSettingsValidate_NilInput tests validation with nil repository
 func TestLogRepoSettingsValidate_NilInput(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
+	// No DB cleanup needed - pure validation test
 	respEntity := LogRepoSettingsValidate(nil)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
@@ -116,9 +114,7 @@ func TestLogRepoSettingsValidate_NilInput(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyApplicationType tests validation with empty ApplicationType
 func TestLogRepoSettingsValidate_EmptyApplicationType(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
+	// No DB cleanup needed - pure validation test
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
 		Name:            "Test Repo",
@@ -136,9 +132,7 @@ func TestLogRepoSettingsValidate_EmptyApplicationType(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyName tests validation with empty name
 func TestLogRepoSettingsValidate_EmptyName(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
+	// No DB cleanup needed - pure validation test
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
 		Name:            "", // Empty
@@ -156,9 +150,7 @@ func TestLogRepoSettingsValidate_EmptyName(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyURL tests validation with empty URL
 func TestLogRepoSettingsValidate_EmptyURL(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
+	// No DB cleanup needed - pure validation test
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
 		Name:            "Test Repo",
@@ -176,9 +168,7 @@ func TestLogRepoSettingsValidate_EmptyURL(t *testing.T) {
 
 // TestLogRepoSettingsValidate_InvalidURL tests validation with invalid URL
 func TestLogRepoSettingsValidate_InvalidURL(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
+	// No DB cleanup needed - pure validation test
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
 		Name:            "Test Repo",
@@ -195,9 +185,7 @@ func TestLogRepoSettingsValidate_InvalidURL(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyProtocol tests validation with empty protocol
 func TestLogRepoSettingsValidate_EmptyProtocol(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
+	// No DB cleanup needed - pure validation test
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
 		Name:            "Test Repo",
@@ -215,9 +203,7 @@ func TestLogRepoSettingsValidate_EmptyProtocol(t *testing.T) {
 
 // TestLogRepoSettingsValidate_InvalidProtocol tests validation with invalid protocol
 func TestLogRepoSettingsValidate_InvalidProtocol(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
+	// No DB cleanup needed - pure validation test
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
 		Name:            "Test Repo",
@@ -616,8 +602,11 @@ func TestDeleteLogRepoSettingsbyId_Success(t *testing.T) {
 	}
 	CreateLogRepoSettings(repo, "stb")
 
-	// Delete it
-	respEntity := DeleteLogRepoSettingsbyId("delete-me", "stb")
+	// Allow cache to refresh after create
+	time.Sleep(100 * time.Millisecond)
+
+	// Delete it - use the same uniqueID
+	respEntity := DeleteLogRepoSettingsbyId(uniqueID, "stb")
 
 	assert.Equal(t, http.StatusNoContent, respEntity.Status)
 	assert.Assert(t, respEntity.Error == nil)
@@ -626,7 +615,7 @@ func TestDeleteLogRepoSettingsbyId_Success(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Verify deletion
-	deleted := GetLogRepoSettings("delete-me")
+	deleted := GetLogRepoSettings(uniqueID)
 	assert.Assert(t, deleted == nil)
 }
 
