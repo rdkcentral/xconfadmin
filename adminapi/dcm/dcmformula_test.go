@@ -741,14 +741,14 @@ func TestMain(m *testing.M) {
 		db.SetDatabaseClient(mockDbClient)
 
 		// Register table configurations to avoid "Table configuration not found" errors
-		db.RegisterTableConfigSimple(db.TABLE_DCM_RULES, logupload.NewDCMGenericRuleInf)
-		db.RegisterTableConfigSimple(db.TABLE_LOG_FILES, logupload.NewLogFileInf)
-		db.RegisterTableConfigSimple(db.TABLE_LOG_FILE_LISTS, logupload.NewLogFileListInf)
+		db.RegisterTableConfigSimple(db.TABLE_DCM_RULE, logupload.NewDCMGenericRuleInf)
+		db.RegisterTableConfigSimple(db.TABLE_LOG_FILE, logupload.NewLogFileInf)
+		db.RegisterTableConfigSimple(db.TABLE_LOG_FILE_LIST, logupload.NewLogFileListInf)
 		db.RegisterTableConfigSimple(db.TABLE_LOG_UPLOAD_SETTINGS, logupload.NewLogUploadSettingsInf)
 		db.RegisterTableConfigSimple(db.TABLE_DEVICE_SETTINGS, logupload.NewDeviceSettingsInf)
 		db.RegisterTableConfigSimple(db.TABLE_VOD_SETTINGS, logupload.NewVodSettingsInf)
-		db.RegisterTableConfigSimple(db.TABLE_UPLOAD_REPOSITORIES, logupload.NewUploadRepositoryInf)
-		db.RegisterTableConfigSimple(db.TABLE_CHANGE_EVENTS, db.NewChangedDataInf)
+		db.RegisterTableConfigSimple(db.TABLE_UPLOAD_REPOSITORY, logupload.NewUploadRepositoryInf)
+		db.RegisterTableConfigSimple(db.TABLE_XCONF_CHANGE, db.NewChangedDataInf)
 
 		// Initialize mock database
 		mockDaoInstance = InitMockDatabase()
@@ -1899,7 +1899,7 @@ func TestDcmFormulaChangePriorityHandler_AppTypeMismatch(t *testing.T) {
 	formula := createFormula("MODEL_PRIO_MISMATCH", 0)
 	formula.ApplicationType = "xhome"
 	formulaJson, _ := json.Marshal(formula)
-	setOneInDao(db.TABLE_DCM_RULES, formula.ID, formulaJson)
+	setOneInDao(db.TABLE_DCM_RULE, formula.ID, formulaJson)
 
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s/priority/2?applicationType=stb", formula.ID)
 	req := httptest.NewRequest("POST", url, nil)

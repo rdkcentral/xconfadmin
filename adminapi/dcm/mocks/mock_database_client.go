@@ -256,6 +256,11 @@ func (m *MockDatabaseClient) QueryXconfDataRows(tableName string, rowKeys ...str
 	return nil, nil
 }
 
+// GetSecurityTokenFields retrieves security token device info (stub for tests)
+func (m *MockDatabaseClient) GetSecurityTokenFields(estbMac string) (*db.SecurityTokenDeviceInfo, error) {
+	return nil, nil
+}
+
 // Clear removes all stored data (useful for test cleanup)
 func (m *MockDatabaseClient) Clear() {
 	m.mu.Lock()
