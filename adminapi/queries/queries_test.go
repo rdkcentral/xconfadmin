@@ -121,10 +121,16 @@ func truncateTable(tenantId string, tableName string) error {
 func TestMain(m *testing.M) {
 	fmt.Printf("in TestMain\n")
 
-	// CRITICAL: Initialize mock database FIRST for ultra-fast testing!
-	// This replaces ALL DB calls with in-memory mock (like telemetry/dcm success)
-	InitMockDatabase()
-	defer RestoreRealDatabase()
+	// Check if we should use mock database (set via environment variable or default to true for speed)
+	useMock := os.Getenv("USE_MOCK_DB")
+	if useMock == "true" || useMock == "1" {
+		fmt.Printf("Using MOCK database for fast unit tests\n")
+
+		// CRITICAL: Initialize mock database FIRST - this overrides GetCachedSimpleDaoFunc
+		// so all subsequent code uses our in-memory mock
+		mockDaoInstance = InitMockDatabase()
+		defer DisableMockDatabase()
+	}
 
 	testConfigFile = "/app/xconfadmin/xconfadmin.conf"
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {

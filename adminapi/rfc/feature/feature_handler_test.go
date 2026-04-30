@@ -36,9 +36,15 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	// Initialize mock database for fast testing (63s -> <5s)
-	queries.InitMockDatabase()
-	defer queries.RestoreRealDatabase()
+	// Check if we should use mock database (set via environment variable or default to true for speed)
+	useMock := os.Getenv("USE_MOCK_DB")
+	if useMock == "true" || useMock == "1" {
+		fmt.Printf("Using MOCK database for fast unit tests\n")
+
+		// Initialize mock database for fast testing (63s -> <5s)
+		queries.InitMockDatabase()
+		defer queries.DisableMockDatabase()
+	}
 
 	cfgFile := "../config/sample_xconfadmin.conf"
 	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
@@ -77,6 +83,7 @@ func TestMain(m *testing.M) {
 	server.XW_XconfServer.TearDown()
 	os.Exit(code)
 }
+
 func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 	if ws == nil {
 		common.CacheUpdateWindowSize = 60000
@@ -149,6 +156,7 @@ func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 		}
 	}
 }
+
 func featureSetup(server *oshttp.WebconfigServer, r *mux.Router) {
 
 	xc := dataapi.GetXconfConfigs(server.XW_XconfServer.ServerConfig.Config)
@@ -616,11 +624,16 @@ func cleanDB() {
 		return
 	}
 	// Real database cleanup (only for integration tests)
+	c := db.GetDatabaseClient().(*db.CassandraClient)
+	tenantId := db.GetDefaultTenantId()
 	for _, ti := range db.GetAllTableInfo() {
-		c := db.GetDatabaseClient().(*db.CassandraClient)
-		_ = c.DeleteAllXconfData(db.GetDefaultTenantId(), ti.TableName)
+		if ti.TenantAgnostic {
+			_ = c.DeleteAllXconfData("", ti.TableName)
+		} else {
+			_ = c.DeleteAllXconfData(tenantId, ti.TableName)
+		}
 		if ti.Cached {
-			db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), ti.TableName)
+			db.GetCachedSimpleDao().RefreshAll(tenantId, ti.TableName)
 		}
 	}
 }

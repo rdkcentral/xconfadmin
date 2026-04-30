@@ -53,7 +53,9 @@ func XconfSetup(server *xhttp.WebconfigServer, r *mux.Router) {
 	dataapi.RegisterTables()
 
 	db.GetCacheManager() // Initialize cache manager
-	initDB()
+	if err := initDB(db.GetDefaultTenantId()); err != nil {
+		panic("Failed to initialize DB: " + err.Error())
+	}
 
 	if server.XW_XconfServer.ServerConfig.GetBoolean("xconfwebconfig.xconf.dataservice_enabled") {
 		dataapi.XconfSetup(server.XW_XconfServer, r)
