@@ -13,6 +13,7 @@ import (
 
 	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
@@ -60,6 +61,9 @@ func TestCreateTelemetryRuleHandler_SuccessAndConflict(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - telemetry service uses db.GetCachedSimpleDao() directly
 	DeleteTelemetryEntities()
 	perm := buildPermanentTelemetryProfile()
+	newModel := shared.Model{ID: "TESTMODEL"}
+	err := SetOneInDao(db.TABLE_MODELS, newModel.ID, newModel)
+	assert.NilError(t, err, "Failed to set up model for rule condition")
 	// success create
 	rule := buildTelemetryRule("ruleA", "stb", perm.ID)
 	b, _ := json.Marshal(rule)
@@ -232,11 +236,11 @@ func TestGetTelemetryRuleByIdHandler_AllErrorCases(t *testing.T) {
 		rule := buildTelemetryRule("test-rule", "stb", perm.ID)
 		_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, rule.ID, rule)
 
-		// Query with different applicationType triggers 400 (invalid application type)
+		// Query with different applicationType triggers 404 (not found)
 		url := fmt.Sprintf("/xconfAdminService/telemetry/rule/%s?applicationType=xhome", rule.ID)
 		r := httptest.NewRequest(http.MethodGet, url, nil)
 		rr := ExecuteRequest(r, router)
-		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 }
 
