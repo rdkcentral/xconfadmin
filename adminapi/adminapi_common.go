@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
-	"github.com/rdkcentral/xconfwebconfig/db"
 
 	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
 	common "github.com/rdkcentral/xconfadmin/common"
@@ -113,16 +112,22 @@ func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 	Xc = xc
 }
 
-func initDB() {
-	defaultTenantId := db.GetDefaultTenantId()
-	queries.CreateFirmwareRuleTemplates(defaultTenantId) // Initialize FirmwareRule templates
-	initAppSettings(defaultTenantId)                     // Initialize Application settings
+func initDB(tenantId string) error {
+	// Initialize FirmwareRule templates
+	if err := queries.CreateFirmwareRuleTemplates(tenantId); err != nil {
+		return err
+	}
+	// Initialize Application settings
+	if err := initAppSettings(tenantId); err != nil {
+		return err
+	}
+	return nil
 }
 
-func initAppSettings(tenantId string) {
+func initAppSettings(tenantId string) error {
 	settings, err := common.GetAppSettings(tenantId)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	if _, ok := settings[common.PROP_LOCKDOWN_ENABLED]; !ok {
 		common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_ENABLED, false)
@@ -139,25 +144,21 @@ func initAppSettings(tenantId string) {
 	if _, ok := settings[common.PROP_CANARY_FW_UPGRADE_ENDTIME]; !ok {
 		common.SetAppSetting(tenantId, common.PROP_CANARY_FW_UPGRADE_ENDTIME, common.CanaryFwUpgradeEndTime)
 	}
-
 	if _, ok := settings[common.PROP_LOCKDOWN_STARTTIME]; !ok {
 		common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_STARTTIME, common.DefaultLockdownStartTime)
 	}
-
 	if _, ok := settings[common.PROP_LOCKDOWN_ENDTIME]; !ok {
 		common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_ENDTIME, common.DefaultLockdownEndTime)
 	}
-
 	if _, ok := settings[common.PROP_LOCKDOWN_MODULES]; !ok {
 		common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_MODULES, common.DefaultLockdownModules)
 	}
-
 	if _, ok := settings[common.PROP_PRECOOK_LOCKDOWN_ENABLED]; !ok {
 		common.SetAppSetting(tenantId, common.PROP_PRECOOK_LOCKDOWN_ENABLED, common.DefaultPrecookLockdownEnabled)
 	}
-
 	if _, ok := settings[common.PROP_CANARY_TIMEZONE_LIST]; !ok {
 		common.SetAppSetting(tenantId, common.PROP_CANARY_TIMEZONE_LIST, common.DefaultCanaryTimezone)
 	}
 
+	return nil
 }

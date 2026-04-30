@@ -19,6 +19,7 @@ package queries
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -445,7 +446,7 @@ func getFirmwareRuleTemplateExportName(all bool) string {
 	return "firmwareRuleTemplate_"
 }
 
-func CreateFirmwareRuleTemplates(tenantId string) {
+func CreateFirmwareRuleTemplates(tenantId string) (e error) {
 	if count, _ := xcorefw.GetFirmwareRuleTemplateCount(tenantId); count > 0 {
 		return
 	}
@@ -525,15 +526,16 @@ func CreateFirmwareRuleTemplates(tenantId string) {
 
 	for _, template := range templateList {
 		if err := template.Validate(); err != nil {
-			panic(err)
+			e = errors.Join(e, err)
 		}
 		template.Updated = util.GetTimestamp()
 		if jsonData, err := json.Marshal(template); err != nil {
-			panic(err)
+			e = errors.Join(e, err)
 		} else {
 			if err := db.GetSimpleDao().SetOne(tenantId, db.TABLE_FIRMWARE_RULE_TEMPLATES, template.ID, jsonData); err != nil {
-				panic(err)
+				e = errors.Join(e, err)
 			}
 		}
 	}
+	return e
 }

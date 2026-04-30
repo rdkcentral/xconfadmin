@@ -133,10 +133,18 @@ func TestMain(m *testing.M) {
 	db.SetDatabaseClient(server.XW_XconfServer.DatabaseClient)
 	defer server.XW_XconfServer.DatabaseClient.Close()
 
-	// PERFORMANCE OPTIMIZATION: Initialize in-memory mock for <15s test execution
-	// Replaces slow Cassandra operations with instant in-memory operations
-	// InitMockDatabase()
-	// log.Info("✓ Mock DAO initialized - ultra-fast unit tests enabled (<15s target)")
+	// Check if we should use mock database (set via environment variable or default to true for speed)
+	useMock := os.Getenv("USE_MOCK_DB")
+	if useMock == "true" || useMock == "1" {
+		fmt.Printf("Using MOCK database for fast unit tests\n")
+
+		// PERFORMANCE OPTIMIZATION: Initialize in-memory mock for <15s test execution
+		// Replaces slow Cassandra operations with instant in-memory operations
+		// CRITICAL: Initialize mock database FIRST for ultra-fast testing!
+		// This replaces ALL DB calls with in-memory mock (like telemetry/dcm success)
+		InitMockDatabase()
+		defer DisableMockDatabase()
+	}
 
 	// setup router
 	router = server.XW_XconfServer.GetRouter(false)
