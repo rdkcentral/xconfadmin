@@ -23,11 +23,11 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"gotest.tools/assert"
@@ -445,19 +445,19 @@ func TestGetLogRepoSettingsByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
-	// Create repository with "xhome" application type
+	// Create repository with "rdkcloud" application type
 	repo := logupload.UploadRepository{
-		ID:              "xhome-repo",
-		Name:            "XHome Repo",
+		ID:              "rdkcloud-repo",
+		Name:            "RdkCloud Repo",
 		Description:     "Test",
 		URL:             "http://test.com",
 		Protocol:        "HTTP",
-		ApplicationType: "xhome",
+		ApplicationType: "rdkcloud",
 	}
-	CreateLogRepoSettings(&repo, "xhome")
+	CreateLogRepoSettings(&repo, "rdkcloud")
 
 	// Try to access with "stb" application type
-	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/xhome-repo", nil)
+	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/rdkcloud-repo", nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
@@ -713,8 +713,8 @@ func TestDeleteLogRepoSettingsByIdHandler_Success(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 
-	// Allow cache to refresh
-	time.Sleep(100 * time.Millisecond)
+	// Refresh cache after delete
+	_ = ds.GetCachedSimpleDao().RefreshAll(ds.TABLE_UPLOAD_REPOSITORY)
 
 	// Verify it's actually deleted
 	deleted := GetLogRepoSettings("delete-me")

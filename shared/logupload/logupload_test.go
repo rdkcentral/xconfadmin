@@ -700,8 +700,8 @@ func TestSettingRuleClone(t *testing.T) {
 // TestSettingRuleGetApplicationType tests the GetApplicationType method
 func TestSettingRuleGetApplicationType(t *testing.T) {
 	// Test with ApplicationType set
-	rule := &SettingRule{ApplicationType: "xhome"}
-	assert.Equal(t, "xhome", rule.GetApplicationType())
+	rule := &SettingRule{ApplicationType: "rdkcloud"}
+	assert.Equal(t, "rdkcloud", rule.GetApplicationType())
 
 	// Test with empty ApplicationType (should return default STB)
 	rule2 := &SettingRule{ApplicationType: ""}

@@ -20,10 +20,10 @@ package dcm
 import (
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/rdkcentral/xconfwebconfig/common"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"gotest.tools/assert"
@@ -323,7 +323,7 @@ func TestCreateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
 		Name:            "Test Repo",
 		URL:             "http://test.com",
 		Protocol:        "HTTP",
-		ApplicationType: "xhome",
+		ApplicationType: "rdkcloud",
 	}
 
 	// Pass different app type
@@ -437,9 +437,9 @@ func TestUpdateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
 		Name:            "Test Repo",
 		URL:             "http://test.com",
 		Protocol:        "HTTP",
-		ApplicationType: "xhome",
+		ApplicationType: "rdkcloud",
 	}
-	respEntity := UpdateLogRepoSettings(updateRepo, "xhome")
+	respEntity := UpdateLogRepoSettings(updateRepo, "rdkcloud")
 
 	assert.Equal(t, http.StatusConflict, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -461,7 +461,7 @@ func TestUpdateLogRepoSettings_ChangeApplicationType(t *testing.T) {
 	CreateLogRepoSettings(repo, "stb")
 
 	// Try to change ApplicationType
-	repo.ApplicationType = "xhome"
+	repo.ApplicationType = "rdkcloud"
 	respEntity := UpdateLogRepoSettings(repo, "stb")
 
 	assert.Equal(t, http.StatusConflict, respEntity.Status)
@@ -550,7 +550,7 @@ func TestDeleteLogRepoSettingsbyId_ApplicationTypeMismatch(t *testing.T) {
 	CreateLogRepoSettings(repo, "stb")
 
 	// Try to delete with different app type
-	respEntity := DeleteLogRepoSettingsbyId("test-id", "xhome")
+	respEntity := DeleteLogRepoSettingsbyId("test-id", "rdkcloud")
 
 	assert.Equal(t, http.StatusNotFound, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -602,8 +602,8 @@ func TestDeleteLogRepoSettingsbyId_Success(t *testing.T) {
 	}
 	CreateLogRepoSettings(repo, "stb")
 
-	// Allow cache to refresh after create
-	time.Sleep(100 * time.Millisecond)
+	// Refresh cache after create
+	_ = ds.GetCachedSimpleDao().RefreshAll(ds.TABLE_UPLOAD_REPOSITORY)
 
 	// Delete it - use the same uniqueID
 	respEntity := DeleteLogRepoSettingsbyId(uniqueID, "stb")
@@ -611,8 +611,8 @@ func TestDeleteLogRepoSettingsbyId_Success(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, respEntity.Status)
 	assert.Assert(t, respEntity.Error == nil)
 
-	// Allow cache to refresh
-	time.Sleep(100 * time.Millisecond)
+	// Refresh cache after delete
+	_ = ds.GetCachedSimpleDao().RefreshAll(ds.TABLE_UPLOAD_REPOSITORY)
 
 	// Verify deletion
 	deleted := GetLogRepoSettings(uniqueID)
@@ -773,7 +773,7 @@ func TestLogRepoSettingsFilterByContext_EmptyContext(t *testing.T) {
 			Name:            "Repo Two",
 			URL:             "http://test2.com",
 			Protocol:        "HTTP",
-			ApplicationType: "xhome",
+			ApplicationType: "rdkcloud",
 		},
 	}
 
@@ -810,11 +810,11 @@ func TestLogRepoSettingsFilterByContext_FilterByApplicationType(t *testing.T) {
 			ApplicationType: "stb",
 		},
 		{
-			ID:              "repo-xhome-1",
-			Name:            "XHome Repo",
+			ID:              "repo-rdkcloud-1",
+			Name:            "RdkCloud Repo",
 			URL:             "http://test3.com",
 			Protocol:        "HTTP",
-			ApplicationType: "xhome",
+			ApplicationType: "rdkcloud",
 		},
 	}
 
@@ -896,7 +896,7 @@ func TestLogRepoSettingsFilterByContext_NoMatches(t *testing.T) {
 	CreateLogRepoSettings(repo, "stb")
 
 	contextMap := map[string]string{
-		common.APPLICATION_TYPE: "xhome", // Different type
+		common.APPLICATION_TYPE: "rdkcloud", // Different type
 	}
 	result := LogRepoSettingsFilterByContext(contextMap)
 

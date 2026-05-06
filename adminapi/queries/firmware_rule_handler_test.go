@@ -233,6 +233,9 @@ func TestDeleteFirmwareRuleByIdHandler_Success(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 
+	// Refresh cache to ensure deletion is visible
+	_ = RefreshAllInDao(db.TABLE_FIRMWARE_RULE)
+
 	// Verify deletion
 	deleted, _ := firmware.GetFirmwareRuleOneDB("rule-to-delete")
 	assert.Assert(t, deleted == nil)
@@ -259,8 +262,8 @@ func TestDeleteFirmwareRuleByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
-	// Create rule with xhome app type
-	rule := createTestFirmwareRule("rule-app-mismatch", "App Mismatch Rule", "xhome")
+	// Create rule with rdkcloud app type
+	rule := createTestFirmwareRule("rule-app-mismatch", "App Mismatch Rule", "rdkcloud")
 	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
 	db.GetCacheManager().ForceSyncChanges() // Ensure rule is available before deletion attempt
 
@@ -340,7 +343,7 @@ func TestGetFirmwareRuleByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
-	rule := createTestFirmwareRule("rule-get-mismatch", "Get Mismatch Test", "xhome")
+	rule := createTestFirmwareRule("rule-get-mismatch", "Get Mismatch Test", "rdkcloud")
 	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/rule-get-mismatch", nil)
@@ -746,7 +749,7 @@ func TestPostFirmwareRuleImportAllHandler_ApplicationTypeMixing(t *testing.T) {
 
 	rules := []*firmware.FirmwareRule{
 		createTestFirmwareRule("import-mix-1", "Import STB", "stb"),
-		createTestFirmwareRule("import-mix-2", "Import XHOME", "xhome"),
+		createTestFirmwareRule("import-mix-2", "Import RDKCLOUD", "rdkcloud"),
 	}
 	body, _ := json.Marshal(rules)
 

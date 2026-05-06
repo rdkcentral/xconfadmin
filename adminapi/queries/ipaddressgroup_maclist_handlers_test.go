@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/stretchr/testify/assert"
 )
@@ -68,7 +69,7 @@ func TestAddDataIpAddressGroupHandler_Success(t *testing.T) {
 	b, _ := json.Marshal(grp)
 	createRr := execReq(t, http.MethodPost, "/xconfAdminService/updates/ipAddressGroups", b)
 	assert.Contains(t, []int{http.StatusOK, http.StatusCreated}, createRr.Code, "Failed to create IP address group")
-	time.Sleep(150 * time.Millisecond) // Wait for cache
+	_ = RefreshAllInDao(ds.TABLE_GENERIC_NS_LIST)
 	wrapper := &shared.StringListWrapper{List: []string{"10.0.0.1"}}
 	wb, _ := json.Marshal(wrapper)
 	rr := execReq(t, http.MethodPost, "/xconfAdminService/updates/ipAddressGroups/"+uniqueName+"/addData", wb)
@@ -117,7 +118,7 @@ func TestUpdateIpAddressGroupHandlerV2_Success(t *testing.T) {
 	b, _ := json.Marshal(grp)
 	createRr := execReq(t, http.MethodPost, "/xconfAdminService/updates/v2/ipAddressGroups", b)
 	assert.Contains(t, []int{http.StatusOK, http.StatusCreated}, createRr.Code, "Failed to create IP address group")
-	time.Sleep(150 * time.Millisecond) // Cache needs time to update
+	_ = RefreshAllInDao(ds.TABLE_GENERIC_NS_LIST)
 	grp.Data = []string{"172.16.0.6"}
 	b2, _ := json.Marshal(grp)
 	rr := execReq(t, http.MethodPut, "/xconfAdminService/updates/v2/ipAddressGroups", b2)

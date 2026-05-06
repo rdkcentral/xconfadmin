@@ -98,6 +98,7 @@ func TestUpdateTimeFilter_InvalidIpGroup(t *testing.T) {
 
 func TestUpdateTimeFilter_EnvModelMissing(t *testing.T) {
 	truncateTable(ds.TABLE_FIRMWARE_RULE)
+	_ = RefreshAllInDao(ds.TABLE_FIRMWARE_RULE)
 	// no seed for env-model
 	tf := newValidTimeFilter("TFMISS")
 	// add a valid stored IP group to bypass IsChangedIpAddressGroup and avoid nil deref chain

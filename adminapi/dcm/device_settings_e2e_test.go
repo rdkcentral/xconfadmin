@@ -23,7 +23,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
@@ -358,10 +357,10 @@ func TestGetDeviceSettingsExportHandler_FilterByApplicationType(t *testing.T) {
 		Name:            "STB Formula Export",
 		ApplicationType: "stb",
 	}
-	formulaXHome := &logupload.DCMGenericRule{
-		ID:              "formula-xhome-export",
-		Name:            "XHome Formula Export",
-		ApplicationType: "xhome",
+	formulaRdkCloud := &logupload.DCMGenericRule{
+		ID:              "formula-rdkcloud-export",
+		Name:            "RdkCloud Formula Export",
+		ApplicationType: "rdkcloud",
 	}
 
 	deviceSettingsSTB := &logupload.DeviceSettings{
@@ -377,10 +376,10 @@ func TestGetDeviceSettingsExportHandler_FilterByApplicationType(t *testing.T) {
 			TimeWindowMinutes: json.Number("0"),
 		},
 	}
-	deviceSettingsXHome := &logupload.DeviceSettings{
-		ID:                "formula-xhome-export",
-		Name:              "XHome Settings Export",
-		ApplicationType:   "xhome",
+	deviceSettingsRdkCloud := &logupload.DeviceSettings{
+		ID:                "formula-rdkcloud-export",
+		Name:              "RdkCloud Settings Export",
+		ApplicationType:   "rdkcloud",
 		CheckOnReboot:     true,
 		SettingsAreActive: true,
 		Schedule: logupload.Schedule{
@@ -394,10 +393,10 @@ func TestGetDeviceSettingsExportHandler_FilterByApplicationType(t *testing.T) {
 	// Save test data
 	err := setOneInDao(ds.TABLE_DCM_RULE, formulaSTB.ID, formulaSTB)
 	assert.NilError(t, err)
-	err = setOneInDao(ds.TABLE_DCM_RULE, formulaXHome.ID, formulaXHome)
+	err = setOneInDao(ds.TABLE_DCM_RULE, formulaRdkCloud.ID, formulaRdkCloud)
 	assert.NilError(t, err)
 	CreateDeviceSettings(deviceSettingsSTB, "stb")
-	CreateDeviceSettings(deviceSettingsXHome, "xhome")
+	CreateDeviceSettings(deviceSettingsRdkCloud, "rdkcloud")
 
 	// Request with stb application type
 	url := "/xconfAdminService/dcm/deviceSettings/export"
@@ -474,7 +473,7 @@ func TestGetDeviceSettingsExportHandler_VerifyContentDisposition(t *testing.T) {
 		expectedInHeader string
 	}{
 		{"stb", "allDeviceSettings_stb"},
-		{"xhome", "allDeviceSettings_xhome"},
+		{"rdkcloud", "allDeviceSettings_rdkcloud"},
 	}
 
 	for _, tc := range testCases {
@@ -753,8 +752,8 @@ func TestDeleteDeviceSettingsByIdHandler_Success(t *testing.T) {
 
 	assert.Equal(t, res.StatusCode, http.StatusNoContent)
 
-	// Allow cache to refresh
-	time.Sleep(100 * time.Millisecond)
+	// Refresh cache after delete
+	_ = ds.GetCachedSimpleDao().RefreshAll(ds.TABLE_DEVICE_SETTINGS)
 
 	// Verify it's actually deleted
 	req2, _ := http.NewRequest("GET", url, nil)
@@ -967,9 +966,9 @@ func TestGetDeviceSettingsExportHandler_MultipleApplicationTypes(t *testing.T) {
 		ApplicationType: "stb",
 	}
 	formula2 := &logupload.DCMGenericRule{
-		ID:              "export-formula-xhome",
-		Name:            "XHome Formula",
-		ApplicationType: "xhome",
+		ID:              "export-formula-rdkcloud",
+		Name:            "RdkCloud Formula",
+		ApplicationType: "rdkcloud",
 	}
 	ds1 := &logupload.DeviceSettings{
 		ID:                "export-formula-stb",
@@ -985,11 +984,11 @@ func TestGetDeviceSettingsExportHandler_MultipleApplicationTypes(t *testing.T) {
 		},
 	}
 	ds2 := &logupload.DeviceSettings{
-		ID:                "export-formula-xhome",
-		Name:              "XHome Settings",
+		ID:                "export-formula-rdkcloud",
+		Name:              "RdkCloud Settings",
 		CheckOnReboot:     false,
 		SettingsAreActive: false,
-		ApplicationType:   "xhome",
+		ApplicationType:   "rdkcloud",
 		Schedule: logupload.Schedule{
 			Type:              "ActNow",
 			Expression:        "0 0 * * *",
@@ -1001,7 +1000,7 @@ func TestGetDeviceSettingsExportHandler_MultipleApplicationTypes(t *testing.T) {
 	setOneInDao(ds.TABLE_DCM_RULE, formula1.ID, formula1)
 	setOneInDao(ds.TABLE_DCM_RULE, formula2.ID, formula2)
 	CreateDeviceSettings(ds1, "stb")
-	CreateDeviceSettings(ds2, "xhome")
+	CreateDeviceSettings(ds2, "rdkcloud")
 
 	// Test STB export
 	url := "/xconfAdminService/dcm/deviceSettings/export"

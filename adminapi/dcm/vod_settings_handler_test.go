@@ -148,12 +148,12 @@ func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 	}
 	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formulaSTB.ID, formulaSTB)
 
-	formulaXHome := &logupload.DCMGenericRule{
-		ID:              "formula-xhome",
-		Name:            "Formula XHome",
-		ApplicationType: "xhome",
+	formulaRdkCloud := &logupload.DCMGenericRule{
+		ID:              "formula-rdkcloud",
+		Name:            "Formula RdkCloud",
+		ApplicationType: "rdkcloud",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formulaXHome.ID, formulaXHome)
+	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formulaRdkCloud.ID, formulaRdkCloud)
 
 	// Create corresponding VOD settings
 	vodSTB := &logupload.VodSettings{
@@ -164,13 +164,13 @@ func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 	}
 	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vodSTB.ID, vodSTB)
 
-	vodXHome := &logupload.VodSettings{
-		ID:              formulaXHome.ID,
-		Name:            "VOD XHome",
-		LocationsURL:    "http://vodxhome.com",
-		ApplicationType: "xhome",
+	vodRdkCloud := &logupload.VodSettings{
+		ID:              formulaRdkCloud.ID,
+		Name:            "VOD RdkCloud",
+		LocationsURL:    "http://vodrdkcloud.com",
+		ApplicationType: "rdkcloud",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vodXHome.ID, vodXHome)
+	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vodRdkCloud.ID, vodRdkCloud)
 
 	// Request export for stb only
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
@@ -272,7 +272,7 @@ func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
 	defer DeleteAllEntities()
 
 	// Create formulas for different application types
-	apps := []string{"stb", "xhome", "rdkcloud"}
+	apps := []string{"stb", "rdkcloud", "rdkcloud"}
 	for i, app := range apps {
 		formula := &logupload.DCMGenericRule{
 			ID:              "formula-" + app,
@@ -307,20 +307,20 @@ func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, 1, len(vodListSTB), "Should return 1 VOD setting for stb")
 
-	// Test for xhome
+	// Test for rdkcloud
 	req2, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
 	req2.Header.Set("Accept", "application/json")
-	req2.AddCookie(&http.Cookie{Name: "applicationType", Value: "xhome"})
+	req2.AddCookie(&http.Cookie{Name: "applicationType", Value: "rdkcloud"})
 
 	res2 := ExecuteRequest(req2, router).Result()
 	defer res2.Body.Close()
 	assert.Equal(t, http.StatusOK, res2.StatusCode)
 
-	var vodListXHome []*logupload.VodSettings
-	err = json.NewDecoder(res2.Body).Decode(&vodListXHome)
+	var vodListRdkCloud []*logupload.VodSettings
+	err = json.NewDecoder(res2.Body).Decode(&vodListRdkCloud)
 	assert.NilError(t, err)
-	assert.Equal(t, 1, len(vodListXHome), "Should return 1 VOD setting for xhome")
+	assert.Equal(t, 1, len(vodListRdkCloud), "Should return 1 VOD setting for rdkcloud")
 }
 
 // TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings tests mixed scenario

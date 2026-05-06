@@ -19,10 +19,10 @@ package queries
 
 import (
 	"testing"
-	"time"
 
 	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
 
+	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
 
 	"github.com/google/uuid"
@@ -115,12 +115,12 @@ func TestFeatureGetPostPutDeleteImport(t *testing.T) {
 
 	// test DELETE
 	DeleteFeatureById(featureEntity1.ID)
-	time.Sleep(1 * time.Second)
+	_ = RefreshAllInDao(ds.TABLE_XCONF_FEATURE)
 	fe = GetFeatureEntityById(featureEntity1.ID)
 	assert.Equal(t, fe == nil, true)
 
 	DeleteFeatureById(featureEntity2.ID)
-	time.Sleep(1 * time.Second)
+	_ = RefreshAllInDao(ds.TABLE_XCONF_FEATURE)
 	fe = GetFeatureEntityById(featureEntity2.ID)
 	assert.Equal(t, fe == nil, true)
 }

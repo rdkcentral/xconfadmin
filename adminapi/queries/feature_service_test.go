@@ -178,7 +178,7 @@ func TestImportOrUpdateAllFeatureEntity_DifferentApplicationTypes(t *testing.T) 
 			ID:              "test-id-2",
 			Name:            "Feature2",
 			FeatureName:     "Feature2Instance",
-			ApplicationType: "xhome",
+			ApplicationType: "rdkcloud",
 		},
 	}
 
@@ -230,7 +230,7 @@ func TestPostFeatureEntity_ApplicationTypeMismatch(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	result, err := PostFeatureEntity(featureEntity, "xhome")
+	result, err := PostFeatureEntity(featureEntity, "rdkcloud")
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "AplicationType cannot be different")
@@ -244,9 +244,9 @@ func TestPostFeatureEntity_DifferentAppTypes(t *testing.T) {
 		expectError bool
 	}{
 		{"Matching STB", "stb", "stb", false},
-		{"Matching XHOME", "xhome", "xhome", false},
-		{"Mismatch STB to XHOME", "stb", "xhome", true},
-		{"Mismatch XHOME to STB", "xhome", "stb", true},
+		{"Matching RDKCLOUD", "rdkcloud", "rdkcloud", false},
+		{"Mismatch STB to RDKCLOUD", "stb", "rdkcloud", true},
+		{"Mismatch RDKCLOUD to STB", "rdkcloud", "stb", true},
 	}
 
 	for _, tc := range testCases {

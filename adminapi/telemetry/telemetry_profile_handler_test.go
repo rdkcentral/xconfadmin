@@ -138,8 +138,11 @@ func TestMain(m *testing.M) {
 
 	// PERFORMANCE OPTIMIZATION: Initialize in-memory mock for <15s test execution
 	// Replaces slow Cassandra operations with instant in-memory operations
-	InitMockDatabase()
-	log.Info("✓ Mock DAO initialized - ultra-fast unit tests enabled (<15s target)")
+	useMock := os.Getenv("USE_MOCK_DB")
+	if useMock == "true" || useMock == "1" {
+		InitMockDatabase()
+		log.Info("✓ Mock DAO initialized - ultra-fast unit tests enabled (<15s target)")
+	}
 
 	// setup router
 	router = server.XW_XconfServer.GetRouter(false)

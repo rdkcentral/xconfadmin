@@ -733,7 +733,7 @@ func TestMain(m *testing.M) {
 
 	// Check if we should use mock database (set via environment variable or default to true for speed)
 	useMock := os.Getenv("USE_MOCK_DB")
-	if useMock == "" || useMock == "true" || useMock == "1" {
+	if useMock == "true" || useMock == "1" {
 		fmt.Printf("Using MOCK database for fast unit tests\n")
 
 		// Initialize mock database client to prevent distributed lock panics
@@ -798,7 +798,7 @@ func TestMain(m *testing.M) {
 
 	// Initialize common package settings
 	common.AuthProvider = "local"
-	common.ApplicationTypes = []string{"stb", "xhome"}
+	common.ApplicationTypes = []string{"stb", "rdkcloud"}
 
 	// tear down to start clean
 	err = server.XW_XconfServer.SetUp()
@@ -1713,7 +1713,7 @@ func TestGetDcmFormulaByIdHandler_AppTypeMismatch(t *testing.T) {
 	formula := createFormula("MODEL_APP_MISMATCH", 0)
 	saveFormula(formula, t)
 
-	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s?applicationType=xhome", formula.ID)
+	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s?applicationType=rdkcloud", formula.ID)
 	req := httptest.NewRequest("GET", url, nil)
 	rr := ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
@@ -1895,9 +1895,9 @@ func TestDcmFormulaChangePriorityHandler_AppTypeMismatch(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - requires real database and model validation
 	DeleteAllEntities()
 
-	// Create formula via API with applicationType=xhome
+	// Create formula via API with applicationType=rdkcloud
 	formula := createFormula("MODEL_PRIO_MISMATCH", 0)
-	formula.ApplicationType = "xhome"
+	formula.ApplicationType = "rdkcloud"
 	formulaJson, _ := json.Marshal(formula)
 	setOneInDao(db.TABLE_DCM_RULE, formula.ID, formulaJson)
 
@@ -2594,7 +2594,7 @@ func TestImportFormula_DeviceSettingsApplicationTypeMismatch(t *testing.T) {
 
 	fws := createTestFormulaWithSettings("IMPORT_MISMATCH_1", core.STB, true, false, false)
 	// Set mismatched ApplicationType
-	fws.DeviceSettings.ApplicationType = "xhome"
+	fws.DeviceSettings.ApplicationType = "rdkcloud"
 
 	respEntity := testImportFormula(fws, false, core.STB)
 
@@ -2609,7 +2609,7 @@ func TestImportFormula_LogUploadSettingsApplicationTypeMismatch(t *testing.T) {
 
 	fws := createTestFormulaWithSettings("IMPORT_MISMATCH_2", core.STB, false, true, false)
 	// Set mismatched ApplicationType
-	fws.LogUpLoadSettings.ApplicationType = "xhome"
+	fws.LogUpLoadSettings.ApplicationType = "rdkcloud"
 
 	respEntity := testImportFormula(fws, false, core.STB)
 
@@ -2624,7 +2624,7 @@ func TestImportFormula_VodSettingsApplicationTypeMismatch(t *testing.T) {
 
 	fws := createTestFormulaWithSettings("IMPORT_MISMATCH_3", core.STB, false, false, true)
 	// Set mismatched ApplicationType
-	fws.VodSettings.ApplicationType = "xhome"
+	fws.VodSettings.ApplicationType = "rdkcloud"
 
 	respEntity := testImportFormula(fws, false, core.STB)
 
@@ -2853,7 +2853,7 @@ func TestImportFormulas_MixedSuccessAndFailure(t *testing.T) {
 	fws1 := createTestFormulaWithSettings("IMPORT_MIXED_1", core.STB, true, false, false)
 
 	fws2 := createTestFormulaWithSettings("IMPORT_MIXED_2", core.STB, true, false, false)
-	fws2.DeviceSettings.ApplicationType = "xhome" // Mismatch
+	fws2.DeviceSettings.ApplicationType = "rdkcloud" // Mismatch
 
 	fwsList := []*logupload.FormulaWithSettings{fws1, fws2}
 

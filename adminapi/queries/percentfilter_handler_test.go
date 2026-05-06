@@ -234,7 +234,7 @@ func TestGetPercentFilterGlobal(t *testing.T) {
 	})
 
 	t.Run("Get non-existing global percentage", func(t *testing.T) {
-		result, err := GetPercentFilterGlobal("xhome")
+		result, err := GetPercentFilterGlobal("rdkcloud")
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -284,7 +284,7 @@ func TestGetGlobalPercentFilter(t *testing.T) {
 	})
 
 	t.Run("Get global percent filter VO without existing rule", func(t *testing.T) {
-		result, err := GetGlobalPercentFilter("xhome")
+		result, err := GetGlobalPercentFilter("rdkcloud")
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -336,7 +336,7 @@ func TestGetGlobalPercentFilterAsRule(t *testing.T) {
 	t.Run("Get non-existing rule", func(t *testing.T) {
 		ClearMockDatabase()
 
-		result, err := GetGlobalPercentFilterAsRule("xhome")
+		result, err := GetGlobalPercentFilterAsRule("rdkcloud")
 
 		assert.Error(t, err)
 		assert.Nil(t, result)
@@ -368,7 +368,7 @@ func TestGetGlobalPercentFilterAsRuleHandler(t *testing.T) {
 	t.Run("Get rule with export - non-existing rule", func(t *testing.T) {
 		ClearMockDatabase()
 
-		req := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/globalPercentAsRule?applicationType=xhome&export=true", nil)
+		req := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/globalPercentAsRule?applicationType=rdkcloud&export=true", nil)
 		rr := httptest.NewRecorder()
 		xw := xwhttp.NewXResponseWriter(rr)
 

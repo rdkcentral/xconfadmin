@@ -37,8 +37,11 @@ var (
 
 func TestMain(m *testing.M) {
 	// Initialize mock database for fast testing (63s -> <5s)
-	queries.InitMockDatabase()
-	defer queries.RestoreRealDatabase()
+	useMock := os.Getenv("USE_MOCK_DB")
+	if useMock == "true" || useMock == "1" {
+		queries.InitMockDatabase()
+		defer queries.RestoreRealDatabase()
+	}
 
 	cfgFile := "../config/sample_xconfadmin.conf"
 	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
