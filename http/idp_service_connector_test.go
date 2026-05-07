@@ -332,11 +332,11 @@ func TestDefaultIdpService_Methods(t *testing.T) {
 
 	// Test GetFullLoginUrl
 	loginUrl := defaultService.GetFullLoginUrl("https://continue.com")
-	expectedLoginUrl := fmt.Sprintf(fullLoginUrl, "https://new-host.com", "https://continue.com", "test-client-id")
+	expectedLoginUrl := fmt.Sprintf(defaultService.fullLoginUrl, "https://new-host.com", "https://continue.com", "test-client-id")
 	assert.Equal(t, expectedLoginUrl, loginUrl)
 
 	// Test GetFullLogoutUrl
 	logoutUrl := defaultService.GetFullLogoutUrl("https://continue.com")
-	expectedLogoutUrl := fmt.Sprintf(fullLogoutUrl, "https://new-host.com", "https://continue.com", "test-client-id")
+	expectedLogoutUrl := fmt.Sprintf(defaultService.fullLogoutUrl, "https://new-host.com", "https://continue.com", "test-client-id")
 	assert.Equal(t, expectedLogoutUrl, logoutUrl)
 }

@@ -92,7 +92,7 @@ func DeleteAllEntities() {
 			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
 		}
 		if tableInfo.CacheData {
-			db.GetCachedSimpleDao().RefreshAll(tableInfo.TableName)
+			_ = RefreshAllInDao(tableInfo.TableName)
 		}
 	}
 }
@@ -110,8 +110,11 @@ func TestMain(m *testing.M) {
 
 	// CRITICAL: Initialize mock database FIRST for ultra-fast testing!
 	// This replaces ALL DB calls with in-memory mock (like telemetry/dcm success)
-	InitMockDatabase()
-	defer RestoreRealDatabase()
+	useMock := os.Getenv("USE_MOCK_DB")
+	if useMock == "true" || useMock == "1" {
+		InitMockDatabase()
+		defer RestoreRealDatabase()
+	}
 
 	testConfigFile = "/app/xconfadmin/xconfadmin.conf"
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
@@ -329,6 +332,42 @@ func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 			}
 		}
 	}
+}
+
+func TestWebServerInjection_LoadsConfiguredApplicationTypes(t *testing.T) {
+	originalTypes := append([]string(nil), common.ApplicationTypes...)
+	defer func() {
+		common.ApplicationTypes = originalTypes
+	}()
+
+	configBytes, err := os.ReadFile(testConfigFile)
+	assert.NilError(t, err)
+
+	updatedConfig := strings.Replace(string(configBytes),
+		`application_types = "stb,rdkcloud"`,
+		`application_types = "stb,rdkcloud,customapp"`, 1)
+	assert.Assert(t, updatedConfig != string(configBytes), "failed to update application_types in test config")
+
+	tempConfig, err := os.CreateTemp("", "xconfadmin-app-types-*.conf")
+	assert.NilError(t, err)
+	defer os.Remove(tempConfig.Name())
+
+	_, err = tempConfig.WriteString(updatedConfig)
+	assert.NilError(t, err)
+	assert.NilError(t, tempConfig.Close())
+
+	serverConfig, err := xwcommon.NewServerConfig(tempConfig.Name())
+	assert.NilError(t, err)
+
+	testServer := oshttp.NewWebconfigServer(serverConfig, true, nil, nil)
+	defer testServer.XW_XconfServer.Server.Close()
+
+	WebServerInjection(testServer, &dataapi.XconfConfigs{})
+
+	assert.Equal(t, 3, len(common.ApplicationTypes))
+	assert.Equal(t, "stb", common.ApplicationTypes[0])
+	assert.Equal(t, "rdkcloud", common.ApplicationTypes[1])
+	assert.Equal(t, "customapp", common.ApplicationTypes[2])
 }
 
 // initDB - local implementation to avoid circular dependency

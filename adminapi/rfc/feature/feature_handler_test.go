@@ -37,8 +37,11 @@ var (
 
 func TestMain(m *testing.M) {
 	// Initialize mock database for fast testing (63s -> <5s)
-	queries.InitMockDatabase()
-	defer queries.RestoreRealDatabase()
+	useMock := os.Getenv("USE_MOCK_DB")
+	if useMock == "true" || useMock == "1" {
+		queries.InitMockDatabase()
+		defer queries.RestoreRealDatabase()
+	}
 
 	cfgFile := "../config/sample_xconfadmin.conf"
 	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
@@ -260,6 +263,7 @@ func TestPutFeatureSuccessAndNotFound(t *testing.T) {
 }
 
 func TestDeleteFeatureByIdSuccessAndNotFound(t *testing.T) {
+	SkipIfMockDatabase(t) // Integration test - FeaturePost uses db.GetCachedSimpleDao() directly
 	cleanDB()
 	fe := buildFeatureEntity("stb")
 	_, _ = FeaturePost(fe.CreateFeature())
@@ -621,5 +625,13 @@ func cleanDB() {
 		if ti.CacheData {
 			db.GetCachedSimpleDao().RefreshAll(ti.TableName)
 		}
+	}
+}
+
+// SkipIfMockDatabase skips the test if mock database is enabled
+// Use for tests that require the real database (integration tests)
+func SkipIfMockDatabase(t *testing.T) {
+	if queries.IsMockDatabaseEnabled() {
+		t.Skip("Skipping test - requires real database (integration test)")
 	}
 }

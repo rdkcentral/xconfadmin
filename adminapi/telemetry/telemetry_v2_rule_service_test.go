@@ -334,7 +334,7 @@ func TestFindByContext_ApplicationTypeFilter(t *testing.T) {
 	defer DeleteTelemetryEntities()
 
 	rule1 := createTestTelemetryTwoRule("Rule1", "stb", []string{})
-	rule2 := createTestTelemetryTwoRule("Rule2", "xhome", []string{})
+	rule2 := createTestTelemetryTwoRule("Rule2", "rdkcloud", []string{})
 
 	logupload.SetOneTelemetryTwoRule(rule1.ID, rule1)
 	logupload.SetOneTelemetryTwoRule(rule2.ID, rule2)
@@ -374,7 +374,7 @@ func TestFindByContext_CombinedFilters(t *testing.T) {
 
 	rule1 := createTestTelemetryTwoRule("TestRule1", "stb", []string{profile1.ID})
 	rule2 := createTestTelemetryTwoRule("TestRule2", "stb", []string{})
-	rule3 := createTestTelemetryTwoRule("OtherRule", "xhome", []string{})
+	rule3 := createTestTelemetryTwoRule("OtherRule", "rdkcloud", []string{})
 
 	logupload.SetOneTelemetryTwoRule(rule1.ID, rule1)
 	logupload.SetOneTelemetryTwoRule(rule2.ID, rule2)

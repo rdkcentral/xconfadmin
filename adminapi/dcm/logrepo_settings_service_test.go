@@ -21,7 +21,9 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/rdkcentral/xconfwebconfig/common"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"gotest.tools/assert"
@@ -102,9 +104,7 @@ func TestGetLogRepoSettingsAll_WithRepositories(t *testing.T) {
 
 // TestLogRepoSettingsValidate_NilInput tests validation with nil repository
 func TestLogRepoSettingsValidate_NilInput(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
+	// No DB cleanup needed - pure validation test
 	respEntity := LogRepoSettingsValidate(nil)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
@@ -114,9 +114,7 @@ func TestLogRepoSettingsValidate_NilInput(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyApplicationType tests validation with empty ApplicationType
 func TestLogRepoSettingsValidate_EmptyApplicationType(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
+	// No DB cleanup needed - pure validation test
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
 		Name:            "Test Repo",
@@ -134,9 +132,7 @@ func TestLogRepoSettingsValidate_EmptyApplicationType(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyName tests validation with empty name
 func TestLogRepoSettingsValidate_EmptyName(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
+	// No DB cleanup needed - pure validation test
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
 		Name:            "", // Empty
@@ -154,9 +150,7 @@ func TestLogRepoSettingsValidate_EmptyName(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyURL tests validation with empty URL
 func TestLogRepoSettingsValidate_EmptyURL(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
+	// No DB cleanup needed - pure validation test
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
 		Name:            "Test Repo",
@@ -174,9 +168,7 @@ func TestLogRepoSettingsValidate_EmptyURL(t *testing.T) {
 
 // TestLogRepoSettingsValidate_InvalidURL tests validation with invalid URL
 func TestLogRepoSettingsValidate_InvalidURL(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
+	// No DB cleanup needed - pure validation test
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
 		Name:            "Test Repo",
@@ -193,9 +185,7 @@ func TestLogRepoSettingsValidate_InvalidURL(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyProtocol tests validation with empty protocol
 func TestLogRepoSettingsValidate_EmptyProtocol(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
+	// No DB cleanup needed - pure validation test
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
 		Name:            "Test Repo",
@@ -213,9 +203,7 @@ func TestLogRepoSettingsValidate_EmptyProtocol(t *testing.T) {
 
 // TestLogRepoSettingsValidate_InvalidProtocol tests validation with invalid protocol
 func TestLogRepoSettingsValidate_InvalidProtocol(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
+	// No DB cleanup needed - pure validation test
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
 		Name:            "Test Repo",
@@ -335,7 +323,7 @@ func TestCreateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
 		Name:            "Test Repo",
 		URL:             "http://test.com",
 		Protocol:        "HTTP",
-		ApplicationType: "xhome",
+		ApplicationType: "rdkcloud",
 	}
 
 	// Pass different app type
@@ -449,9 +437,9 @@ func TestUpdateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
 		Name:            "Test Repo",
 		URL:             "http://test.com",
 		Protocol:        "HTTP",
-		ApplicationType: "xhome",
+		ApplicationType: "rdkcloud",
 	}
-	respEntity := UpdateLogRepoSettings(updateRepo, "xhome")
+	respEntity := UpdateLogRepoSettings(updateRepo, "rdkcloud")
 
 	assert.Equal(t, http.StatusConflict, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -473,7 +461,7 @@ func TestUpdateLogRepoSettings_ChangeApplicationType(t *testing.T) {
 	CreateLogRepoSettings(repo, "stb")
 
 	// Try to change ApplicationType
-	repo.ApplicationType = "xhome"
+	repo.ApplicationType = "rdkcloud"
 	respEntity := UpdateLogRepoSettings(repo, "stb")
 
 	assert.Equal(t, http.StatusConflict, respEntity.Status)
@@ -562,7 +550,7 @@ func TestDeleteLogRepoSettingsbyId_ApplicationTypeMismatch(t *testing.T) {
 	CreateLogRepoSettings(repo, "stb")
 
 	// Try to delete with different app type
-	respEntity := DeleteLogRepoSettingsbyId("test-id", "xhome")
+	respEntity := DeleteLogRepoSettingsbyId("test-id", "rdkcloud")
 
 	assert.Equal(t, http.StatusNotFound, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -601,9 +589,12 @@ func TestDeleteLogRepoSettingsbyId_Success(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
+	// Use unique ID to avoid test collisions
+	uniqueID := "delete-me-" + uuid.New().String()[:8]
+
 	// Create repository
 	repo := &logupload.UploadRepository{
-		ID:              "delete-me",
+		ID:              uniqueID,
 		Name:            "Delete Me",
 		URL:             "http://test.com",
 		Protocol:        "HTTP",
@@ -611,14 +602,20 @@ func TestDeleteLogRepoSettingsbyId_Success(t *testing.T) {
 	}
 	CreateLogRepoSettings(repo, "stb")
 
-	// Delete it
-	respEntity := DeleteLogRepoSettingsbyId("delete-me", "stb")
+	// Refresh cache after create
+	_ = ds.GetCachedSimpleDao().RefreshAll(ds.TABLE_UPLOAD_REPOSITORY)
+
+	// Delete it - use the same uniqueID
+	respEntity := DeleteLogRepoSettingsbyId(uniqueID, "stb")
 
 	assert.Equal(t, http.StatusNoContent, respEntity.Status)
 	assert.Assert(t, respEntity.Error == nil)
 
+	// Refresh cache after delete
+	_ = ds.GetCachedSimpleDao().RefreshAll(ds.TABLE_UPLOAD_REPOSITORY)
+
 	// Verify deletion
-	deleted := GetLogRepoSettings("delete-me")
+	deleted := GetLogRepoSettings(uniqueID)
 	assert.Assert(t, deleted == nil)
 }
 
@@ -776,7 +773,7 @@ func TestLogRepoSettingsFilterByContext_EmptyContext(t *testing.T) {
 			Name:            "Repo Two",
 			URL:             "http://test2.com",
 			Protocol:        "HTTP",
-			ApplicationType: "xhome",
+			ApplicationType: "rdkcloud",
 		},
 	}
 
@@ -813,11 +810,11 @@ func TestLogRepoSettingsFilterByContext_FilterByApplicationType(t *testing.T) {
 			ApplicationType: "stb",
 		},
 		{
-			ID:              "repo-xhome-1",
-			Name:            "XHome Repo",
+			ID:              "repo-rdkcloud-1",
+			Name:            "RdkCloud Repo",
 			URL:             "http://test3.com",
 			Protocol:        "HTTP",
-			ApplicationType: "xhome",
+			ApplicationType: "rdkcloud",
 		},
 	}
 
@@ -899,7 +896,7 @@ func TestLogRepoSettingsFilterByContext_NoMatches(t *testing.T) {
 	CreateLogRepoSettings(repo, "stb")
 
 	contextMap := map[string]string{
-		common.APPLICATION_TYPE: "xhome", // Different type
+		common.APPLICATION_TYPE: "rdkcloud", // Different type
 	}
 	result := LogRepoSettingsFilterByContext(contextMap)
 

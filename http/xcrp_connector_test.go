@@ -75,7 +75,7 @@ func TestXcrpConnector_PostRecook_WithModelsAndPartners(t *testing.T) {
 		}
 
 		// Check that the URL contains both models and partners
-		if !hasSubstringXcrp(r.URL.Path, "/api/v1/precook/rfc") {
+		if !hasSubstringXcrp(r.URL.Path, "/path") {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 
@@ -104,8 +104,9 @@ func TestXcrpConnector_PostRecook_WithModelsAndPartners(t *testing.T) {
 	httpClient := newTestHttpClientXcrp(server)
 
 	connector := &XcrpConnector{
-		HttpClient: httpClient,
-		hosts:      []string{server.URL},
+		HttpClient:         httpClient,
+		hosts:              []string{server.URL},
+		recookPathTemplate: "%s/path?partners=%s&models=%s",
 	}
 
 	models := []string{"RNG150", "XB6"}
@@ -141,8 +142,9 @@ func TestXcrpConnector_PostRecook_WithModelsOnly(t *testing.T) {
 	httpClient := newTestHttpClientXcrp(server)
 
 	connector := &XcrpConnector{
-		HttpClient: httpClient,
-		hosts:      []string{server.URL},
+		HttpClient:               httpClient,
+		hosts:                    []string{server.URL},
+		precookModelPathTemplate: "%s/dummy?models=%s",
 	}
 
 	models := []string{"RNG150"}
@@ -178,8 +180,9 @@ func TestXcrpConnector_PostRecook_WithPartnersOnly(t *testing.T) {
 	httpClient := newTestHttpClientXcrp(server)
 
 	connector := &XcrpConnector{
-		HttpClient: httpClient,
-		hosts:      []string{server.URL},
+		HttpClient:                 httpClient,
+		hosts:                      []string{server.URL},
+		precookPartnerPathTemplate: "%s/dummy?partners=%s",
 	}
 
 	models := []string{}
@@ -208,8 +211,9 @@ func TestXcrpConnector_PostRecook_NoParams(t *testing.T) {
 	httpClient := newTestHttpClientXcrp(server)
 
 	connector := &XcrpConnector{
-		HttpClient: httpClient,
-		hosts:      []string{server.URL},
+		HttpClient:          httpClient,
+		hosts:               []string{server.URL},
+		precookPathTemplate: "%s/dummy",
 	}
 
 	models := []string{}
@@ -269,8 +273,9 @@ func TestXcrpConnector_PostRecook_MultipleHosts(t *testing.T) {
 	httpClient := newTestHttpClientXcrp(server1) // Use server1's client
 
 	connector := &XcrpConnector{
-		HttpClient: httpClient,
-		hosts:      []string{server1.URL, server2.URL},
+		HttpClient:         httpClient,
+		hosts:              []string{server1.URL, server2.URL},
+		recookPathTemplate: "%s/dummy?partners=%s&models=%s",
 	}
 
 	models := []string{"RNG150"}
@@ -297,7 +302,7 @@ func TestXcrpConnector_GetRecookingStatusFromCanaryMgr_Completed(t *testing.T) {
 		}
 
 		// Check path contains module name
-		if !hasSubstringXcrp(r.URL.Path, "/api/v1/precook/rfc/status") {
+		if !hasSubstringXcrp(r.URL.Path, "/path") {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 
@@ -320,8 +325,9 @@ func TestXcrpConnector_GetRecookingStatusFromCanaryMgr_Completed(t *testing.T) {
 	httpClient := newTestHttpClientXcrp(server)
 
 	connector := &XcrpConnector{
-		HttpClient: httpClient,
-		hosts:      []string{server.URL},
+		HttpClient:                httpClient,
+		hosts:                     []string{server.URL},
+		precookStatusPathTemplate: "%s/path/%s",
 	}
 
 	completed, err := connector.GetRecookingStatusFromCanaryMgr("rfc", log.Fields{})
@@ -357,8 +363,9 @@ func TestXcrpConnector_GetRecookingStatusFromCanaryMgr_Pending(t *testing.T) {
 	httpClient := newTestHttpClientXcrp(server)
 
 	connector := &XcrpConnector{
-		HttpClient: httpClient,
-		hosts:      []string{server.URL},
+		HttpClient:                httpClient,
+		hosts:                     []string{server.URL},
+		precookStatusPathTemplate: "%s/dummy/%s",
 	}
 
 	completed, err := connector.GetRecookingStatusFromCanaryMgr("rfc", log.Fields{})

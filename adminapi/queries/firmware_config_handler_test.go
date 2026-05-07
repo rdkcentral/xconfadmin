@@ -179,7 +179,7 @@ func TestPostFirmwareConfigEntitiesHandler_ApplicationTypeMismatch(t *testing.T)
 			ID:                "fc-app-mismatch",
 			Description:       "App Type Mismatch",
 			FirmwareVersion:   "1.0.0",
-			ApplicationType:   "xhome", // Different from cookie
+			ApplicationType:   "rdkcloud", // Different from cookie
 			SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 		},
 	}
@@ -709,7 +709,7 @@ func TestGetFirmwareConfigByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 		ID:                "fc-app-conflict",
 		Description:       "App Conflict",
 		FirmwareVersion:   "1.0.0",
-		ApplicationType:   "xhome",
+		ApplicationType:   "rdkcloud",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
 	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
@@ -1066,7 +1066,7 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ApplicationTypeMis
 		ID:                "fc-rule-mismatch",
 		Description:       "Rule Mismatch Test",
 		FirmwareVersion:   "1.0.0",
-		ApplicationType:   "xhome",
+		ApplicationType:   "rdkcloud",
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
@@ -1292,7 +1292,7 @@ func TestPutFirmwareConfigHandler_ApplicationTypeMismatch(t *testing.T) {
 	req, err := http.NewRequest("PUT", "/xconfAdminService/ux/api/firmwareconfig", bytes.NewBuffer(body))
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "xhome"})
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "rdkcloud"})
 
 	res := ExecuteRequest(req, router).Result()
 	defer res.Body.Close()

@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"testing"
 
+	common "github.com/rdkcentral/xconfadmin/common"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
@@ -30,6 +31,14 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 )
+
+func setDefaultPartnerForTest(t *testing.T, partner string) {
+	original := common.CanaryDefaultPartner
+	common.CanaryDefaultPartner = partner
+	t.Cleanup(func() {
+		common.CanaryDefaultPartner = original
+	})
+}
 
 // Test GetPercentageBeanFilterFieldValues - Success case
 func TestGetPercentageBeanFilterFieldValues_Success(t *testing.T) {
@@ -99,6 +108,7 @@ func TestGetPercentageBeanFieldValues_Error(t *testing.T) {
 // Test getPartnerOptionalCondition - Success case
 func TestGetPartnerOptionalCondition_Success(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	setDefaultPartnerForTest(t, "comcast")
 	// Create a basic percentage bean without optional conditions
 	bean := &coreef.PercentageBean{
 		Name:   "testBean",
@@ -116,6 +126,7 @@ func TestGetPartnerOptionalCondition_Success(t *testing.T) {
 // Test getPartnerOptionalCondition - Error case
 func TestGetPartnerOptionalCondition_InvalidPartner(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	setDefaultPartnerForTest(t, "comcast")
 	// This test verifies the function handles beans without partner conditions
 	bean := &coreef.PercentageBean{
 		Name:   "testBean",
@@ -359,6 +370,7 @@ func TestGetStructFieldValues_NonExistentField(t *testing.T) {
 // Test getPartnerOptionalCondition - With valid partner in optional conditions
 func TestGetPartnerOptionalCondition_WithValidPartner(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	setDefaultPartnerForTest(t, "comcast")
 	// Create bean with optional conditions containing valid partnerId
 	// This is a complex scenario requiring proper Rule structure setup
 	bean := &coreef.PercentageBean{
@@ -375,6 +387,7 @@ func TestGetPartnerOptionalCondition_WithValidPartner(t *testing.T) {
 // Test getPartnerOptionalCondition - Nil optional conditions
 func TestGetPartnerOptionalCondition_NilOptionalConditions(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	setDefaultPartnerForTest(t, "comcast")
 	bean := &coreef.PercentageBean{
 		Name:               "testBean",
 		Active:             true,
@@ -455,7 +468,7 @@ func TestCreatePercentageBean_ResponseEntity_AppTypeMismatch(t *testing.T) {
 	fields := log.Fields{"test": "appTypeMismatch"}
 
 	// Try to create with mismatched application type
-	response := CreatePercentageBean(pb, "xhome", fields)
+	response := CreatePercentageBean(pb, "rdkcloud", fields)
 	assert.NotNil(t, response)
 	assert.Equal(t, http.StatusConflict, response.Status)
 	assert.NotNil(t, response.Error)
@@ -538,7 +551,7 @@ func TestDeletePercentageBean_ResponseEntity_AppTypeMismatch(t *testing.T) {
 	assert.NotNil(t, pb)
 
 	// Try to delete with wrong application type
-	response := DeletePercentageBean(pb.ID, "xhome")
+	response := DeletePercentageBean(pb.ID, "rdkcloud")
 	assert.NotNil(t, response)
 	assert.Equal(t, http.StatusNotFound, response.Status)
 	assert.NotNil(t, response.Error)

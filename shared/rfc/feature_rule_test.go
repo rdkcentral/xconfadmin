@@ -119,7 +119,7 @@ func TestFeatureRule_SetApplicationType(t *testing.T) {
 		appType string
 	}{
 		{"Set STB", "stb"},
-		{"Set xHome", "xhome"},
+		{"Set rdkcloud", "rdkcloud"},
 		{"Set empty", ""},
 	}
 
@@ -137,7 +137,7 @@ func TestFeatureRule_GetApplicationType(t *testing.T) {
 		appType string
 	}{
 		{"Get STB", "stb"},
-		{"Get xHome", "xhome"},
+		{"Get rdkcloud", "rdkcloud"},
 		{"Get empty", ""},
 	}
 
@@ -177,7 +177,7 @@ func TestFeatureRule_Clone(t *testing.T) {
 			Id:              "test-id",
 			Name:            "test-name",
 			Priority:        5,
-			ApplicationType: "xhome",
+			ApplicationType: "rdkcloud",
 		}
 
 		cloned, err := original.Clone()

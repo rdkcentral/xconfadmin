@@ -7,32 +7,69 @@ import (
 	"strings"
 
 	"github.com/rdkcentral/xconfadmin/common"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	"github.com/go-akka/configuration"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	xcrpServiceName           = "xcrp"
-	postRecookingPathTemplate = "%s/api/v1/precook/rfc?partners=%s&models=%s"
-	PostPrecookPathTemplate   = "%s/api/v1/precook/rfc"
+	xcrpServiceName = "xcrp"
 )
 
 type XcrpConnector struct {
 	*HttpClient
-	hosts []string
+	hosts                      []string
+	recookPathTemplate         string
+	precookPathTemplate        string
+	precookModelPathTemplate   string
+	precookPartnerPathTemplate string
+	precookStatusPathTemplate  string
 }
 
 func NewXcrpConnector(conf *configuration.Config, tlsConfig *tls.Config) *XcrpConnector {
 	confKey := fmt.Sprintf("xconfwebconfig.%v.canarymgr_host", xcrpServiceName)
 	var hosts []string
 	hosts = conf.GetStringList(confKey)
-	if hosts == nil || len(hosts) == 0 {
+	if len(hosts) == 0 {
 		panic(fmt.Errorf("%s is required", confKey))
 	}
+
+	// Read path configurations with defaults
+	precookPathTemplate := conf.GetString(
+		fmt.Sprintf("xconfwebconfig.%v.precookPathTemplate", xcrpServiceName))
+	recookPathTemplate := conf.GetString(
+		fmt.Sprintf("xconfwebconfig.%v.recookPathTemplate", xcrpServiceName))
+
+	precookModelPathTemplate := conf.GetString(
+		fmt.Sprintf("xconfwebconfig.%v.precookModelPathTemplate", xcrpServiceName))
+
+	if util.IsBlank(precookModelPathTemplate) {
+		log.Errorf("precookModelPathTemplate is required")
+	}
+
+	precookPartnerPathTemplate := conf.GetString(
+		fmt.Sprintf("xconfwebconfig.%v.precookPartnerPathTemplate", xcrpServiceName))
+
+	if util.IsBlank(precookPartnerPathTemplate) {
+		log.Errorf("precookPartnerPathTemplate is required")
+	}
+
+	precookStatusPathTemplate := conf.GetString(
+		fmt.Sprintf("xconfwebconfig.%v.recookStatusPathTemplate", xcrpServiceName))
+
+	if util.IsBlank(precookStatusPathTemplate) {
+		log.Errorf("precookStatusPathTemplate is required")
+	}
+
 	return &XcrpConnector{
-		HttpClient: NewHttpClient(conf, xcrpServiceName, tlsConfig),
-		hosts:      hosts,
+		HttpClient:                 NewHttpClient(conf, xcrpServiceName, tlsConfig),
+		hosts:                      hosts,
+		precookPathTemplate:        precookPathTemplate,
+		recookPathTemplate:         recookPathTemplate,
+		precookModelPathTemplate:   precookModelPathTemplate,
+		precookPartnerPathTemplate: precookPartnerPathTemplate,
+		precookStatusPathTemplate:  precookStatusPathTemplate,
 	}
 }
 
@@ -50,13 +87,13 @@ func (c *XcrpConnector) PostRecook(m, p []string, bbytes []byte, fields log.Fiel
 	var url string
 	for _, host := range c.XcrpHosts() {
 		if len(models) == 0 && len(partners) == 0 {
-			url = fmt.Sprintf(PostPrecookPathTemplate, host)
+			url = fmt.Sprintf(c.precookPathTemplate, host)
 		} else if len(models) != 0 && len(partners) != 0 {
-			url = fmt.Sprintf(postRecookingPathTemplate, host, partners, models)
+			url = fmt.Sprintf(c.recookPathTemplate, host, partners, models)
 		} else if len(models) != 0 { // input empty string to xcrp will have issues. corner cases handled here for now
-			url = fmt.Sprintf("%s/api/v1/precook/rfc?models=%s", host, models)
+			url = fmt.Sprintf(c.precookModelPathTemplate, host, models)
 		} else if len(partners) != 0 {
-			url = fmt.Sprintf("%s/api/v1/precook/rfc?partners=%s", host, partners)
+			url = fmt.Sprintf(c.precookPartnerPathTemplate, host, partners)
 		}
 		headers := map[string]string{
 			common.HeaderUserAgent: common.HeaderXconfAdminService,
@@ -76,7 +113,7 @@ func (c *XcrpConnector) PostRecook(m, p []string, bbytes []byte, fields log.Fiel
 func (c *XcrpConnector) GetRecookingStatusFromCanaryMgr(module string, fields log.Fields) (bool, error) {
 	var url string
 	for _, host := range c.XcrpHosts() {
-		url = fmt.Sprintf("%s/api/v1/precook/%s/status", host, module)
+		url = fmt.Sprintf(c.precookStatusPathTemplate, host, module)
 		headers := map[string]string{
 			common.HeaderUserAgent: common.HeaderXconfAdminService,
 		}

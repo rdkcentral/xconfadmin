@@ -76,7 +76,7 @@ func TestSingletonFilterValue_IsDownloadLocationRoundRobinFilterValue(t *testing
 		expected bool
 	}{
 		{ROUND_ROBIN_FILTER_SINGLETON_ID, true},
-		{"XHOME_" + ROUND_ROBIN_FILTER_SINGLETON_ID, true},
+		{"RDKCLOUD_" + ROUND_ROBIN_FILTER_SINGLETON_ID, true},
 		{PERCENT_FILTER_SINGLETON_ID, false},
 		{"SOME_OTHER_ID", false},
 		{"", false},
@@ -237,7 +237,7 @@ func TestGetRoundRobinIdByApplication_NonSTB(t *testing.T) {
 		appType  string
 		expected string
 	}{
-		{"xhome", "XHOME_DOWNLOAD_LOCATION_ROUND_ROBIN_FILTER_VALUE"},
+		{"sky", "SKY_DOWNLOAD_LOCATION_ROUND_ROBIN_FILTER_VALUE"},
 		{"rdkcloud", "RDKCLOUD_DOWNLOAD_LOCATION_ROUND_ROBIN_FILTER_VALUE"},
 		{"sky", "SKY_DOWNLOAD_LOCATION_ROUND_ROBIN_FILTER_VALUE"},
 	}

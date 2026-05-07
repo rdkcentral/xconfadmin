@@ -25,6 +25,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"gotest.tools/assert"
@@ -68,19 +69,19 @@ func TestGetLogUploadSettingsByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 	formula := createFormula("TEST_MODEL_MISMATCH", 1)
 	saveFormula(formula, t)
 
-	// Create settings with "xhome" application type
+	// Create settings with "rdkcloud" application type
 	settings := &logupload.LogUploadSettings{
 		ID:                 formula.ID,
-		Name:               "XHome Settings",
+		Name:               "RdkCloud Settings",
 		UploadRepositoryID: "test-repo",
-		ApplicationType:    "xhome",
+		ApplicationType:    "rdkcloud",
 		Schedule: logupload.Schedule{
 			Type:       "CronExpression",
 			Expression: "0 0 * * *",
 			TimeZone:   "UTC",
 		},
 	}
-	CreateLogUploadSettings(settings, "xhome")
+	CreateLogUploadSettings(settings, "rdkcloud")
 
 	// Try to access with "stb" application type
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/"+formula.ID, nil)
@@ -360,6 +361,9 @@ func TestDeleteLogUploadSettingsByIdHandler_Success(t *testing.T) {
 	res := ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
+
+	// Refresh cache before verification
+	_ = ds.GetCachedSimpleDao().RefreshAll(ds.TABLE_LOG_UPLOAD_SETTINGS)
 
 	// Verify it's actually deleted
 	deleted := logupload.GetOneLogUploadSettings(formula.ID)
