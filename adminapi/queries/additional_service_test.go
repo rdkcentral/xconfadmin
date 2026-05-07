@@ -153,7 +153,7 @@ func TestFeatureRuleServiceAdditional(t *testing.T) {
 	rules = GetAllFeatureRulesByType("stb")
 	assert.NotNil(t, rules)
 
-	rules = GetAllFeatureRulesByType("xhome")
+	rules = GetAllFeatureRulesByType("rdkcloud")
 	assert.NotNil(t, rules)
 
 	// Test GetOne
@@ -202,7 +202,7 @@ func TestPercentFilterServiceAdditional(t *testing.T) {
 		assert.NotNil(t, filter)
 	}
 
-	filter, err = GetPercentFilter("xhome")
+	filter, err = GetPercentFilter("rdkcloud")
 	if err == nil {
 		_ = filter
 	}
@@ -261,7 +261,7 @@ func TestFirmwareConfigGettersAdditional(t *testing.T) {
 	id = GetFirmwareConfigId("1.0.0", "stb")
 	_ = id
 
-	id = GetFirmwareConfigId("TEST_VERSION", "xhome")
+	id = GetFirmwareConfigId("TEST_VERSION", "rdkcloud")
 	_ = id
 }
 
@@ -318,7 +318,7 @@ func TestFirmwareConfigFlows(t *testing.T) {
 
 func TestGetFirmwareConfigsWithDifferentTypes(t *testing.T) {
 	// Test with all application types
-	appTypes := []string{"", "stb", "xhome"}
+	appTypes := []string{"", "stb", "rdkcloud"}
 
 	for _, appType := range appTypes {
 		configs := GetFirmwareConfigs(appType)

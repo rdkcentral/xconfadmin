@@ -91,7 +91,7 @@ func TestNullifyUnwantedFieldsPermanentTelemetryProfile_WithElements(t *testing.
 // TestNullifyUnwantedFieldsPermanentTelemetryProfile_SingleElement tests with single element
 func TestNullifyUnwantedFieldsPermanentTelemetryProfile_SingleElement(t *testing.T) {
 	profile := &logupload.PermanentTelemetryProfile{
-		ApplicationType: "xhome",
+		ApplicationType: "rdkcloud",
 		TelemetryProfile: []logupload.TelemetryElement{
 			{
 				ID:        "single-id",

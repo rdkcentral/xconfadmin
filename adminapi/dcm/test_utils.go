@@ -23,6 +23,7 @@ import (
 
 	"github.com/rdkcentral/xconfadmin/adminapi/dcm/mocks"
 	"github.com/rdkcentral/xconfwebconfig/db"
+	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
 // testMutex ensures tests run sequentially to prevent mock data races
@@ -37,12 +38,23 @@ var mockLockInstance *mocks.MockDistributedLock
 // useMockDatabase determines if we're using mock or real database
 var useMockDatabase = false
 
+// originalGetCachedSimpleDaoFunc stores the original xwlogupload function to restore later
+var originalGetCachedSimpleDaoFunc func() db.CachedSimpleDao
+
 // InitMockDatabase initializes the mock database for testing
 // Call this in TestMain to enable mock mode
 func InitMockDatabase() *mocks.MockCachedSimpleDao {
 	mockDaoInstance = mocks.NewMockCachedSimpleDao()
 	mockLockInstance = mocks.NewMockDistributedLock(db.TABLE_DCM_RULE, 10)
 	useMockDatabase = true
+
+	// CRITICAL: Override the global GetCachedSimpleDaoFunc so ALL code uses our mock
+	// This includes handlers, services, and validation functions
+	originalGetCachedSimpleDaoFunc = xwlogupload.GetCachedSimpleDaoFunc
+	xwlogupload.GetCachedSimpleDaoFunc = func() db.CachedSimpleDao {
+		return mockDaoInstance
+	}
+
 	return mockDaoInstance
 }
 
@@ -60,6 +72,10 @@ func ClearMockDatabase() {
 
 // DisableMockDatabase disables mock mode (for real integration tests)
 func DisableMockDatabase() {
+	// Restore the original GetCachedSimpleDaoFunc
+	if originalGetCachedSimpleDaoFunc != nil {
+		xwlogupload.GetCachedSimpleDaoFunc = originalGetCachedSimpleDaoFunc
+	}
 	useMockDatabase = false
 	mockDaoInstance = nil
 	mockLockInstance = nil

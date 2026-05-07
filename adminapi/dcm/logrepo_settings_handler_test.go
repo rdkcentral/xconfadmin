@@ -24,8 +24,10 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/google/uuid"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"gotest.tools/assert"
@@ -443,19 +445,19 @@ func TestGetLogRepoSettingsByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
-	// Create repository with "xhome" application type
+	// Create repository with "rdkcloud" application type
 	repo := logupload.UploadRepository{
-		ID:              "xhome-repo",
-		Name:            "XHome Repo",
+		ID:              "rdkcloud-repo",
+		Name:            "RdkCloud Repo",
 		Description:     "Test",
 		URL:             "http://test.com",
 		Protocol:        "HTTP",
-		ApplicationType: "xhome",
+		ApplicationType: "rdkcloud",
 	}
-	CreateLogRepoSettings(&repo, "xhome")
+	CreateLogRepoSettings(&repo, "rdkcloud")
 
 	// Try to access with "stb" application type
-	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/xhome-repo", nil)
+	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/rdkcloud-repo", nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
@@ -690,9 +692,12 @@ func TestDeleteLogRepoSettingsByIdHandler_Success(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
+	// Use unique ID to avoid test collisions
+	uniqueID := "delete-me-" + uuid.New().String()[:8]
+
 	// Create repository
 	repo := logupload.UploadRepository{
-		ID:              "delete-me",
+		ID:              uniqueID,
 		Name:            "Delete Me",
 		URL:             "http://test.com",
 		Protocol:        "HTTP",
@@ -700,13 +705,16 @@ func TestDeleteLogRepoSettingsByIdHandler_Success(t *testing.T) {
 	}
 	CreateLogRepoSettings(&repo, "stb")
 
-	req, err := http.NewRequest("DELETE", "/xconfAdminService/dcm/uploadRepository/delete-me", nil)
+	req, err := http.NewRequest("DELETE", "/xconfAdminService/dcm/uploadRepository/"+uniqueID, nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
 	res := ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
+
+	// Refresh cache after delete
+	_ = ds.GetCachedSimpleDao().RefreshAll(ds.TABLE_UPLOAD_REPOSITORY)
 
 	// Verify it's actually deleted
 	deleted := GetLogRepoSettings("delete-me")

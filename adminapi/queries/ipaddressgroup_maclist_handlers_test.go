@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/stretchr/testify/assert"
 )
@@ -62,12 +63,16 @@ func TestAddDataIpAddressGroupHandler_Failure_BadJSON(t *testing.T) {
 }
 
 func TestAddDataIpAddressGroupHandler_Success(t *testing.T) {
-	grp := shared.NewIpAddressGroupWithAddrStrings("listAdd", "listAdd", []string{"10.0.0.2"}) // seed with one IP so list exists
+	// Use unique name to avoid test collisions
+	uniqueName := fmt.Sprintf("listAdd-%d-%d", time.Now().UnixNano(), time.Now().UnixMicro()%1000)
+	grp := shared.NewIpAddressGroupWithAddrStrings(uniqueName, uniqueName, []string{"10.0.0.2"}) // seed with one IP so list exists
 	b, _ := json.Marshal(grp)
-	_ = execReq(t, http.MethodPost, "/xconfAdminService/updates/ipAddressGroups", b)
+	createRr := execReq(t, http.MethodPost, "/xconfAdminService/updates/ipAddressGroups", b)
+	assert.Contains(t, []int{http.StatusOK, http.StatusCreated}, createRr.Code, "Failed to create IP address group")
+	_ = RefreshAllInDao(ds.TABLE_GENERIC_NS_LIST)
 	wrapper := &shared.StringListWrapper{List: []string{"10.0.0.1"}}
 	wb, _ := json.Marshal(wrapper)
-	rr := execReq(t, http.MethodPost, "/xconfAdminService/updates/ipAddressGroups/listAdd/addData", wb)
+	rr := execReq(t, http.MethodPost, "/xconfAdminService/updates/ipAddressGroups/"+uniqueName+"/addData", wb)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -107,10 +112,13 @@ func TestUpdateIpAddressGroupHandlerV2_Failure_BadJSON(t *testing.T) {
 }
 
 func TestUpdateIpAddressGroupHandlerV2_Success(t *testing.T) {
-	grp := shared.NewGenericNamespacedList("grpV2Upd", shared.IP_LIST, []string{"172.16.0.5"})
+	// Use unique name to avoid test collisions
+	uniqueName := "grpV2Upd-" + fmt.Sprintf("%d-%d", time.Now().UnixNano(), time.Now().UnixMicro()%1000)
+	grp := shared.NewGenericNamespacedList(uniqueName, shared.IP_LIST, []string{"172.16.0.5"})
 	b, _ := json.Marshal(grp)
-	_ = execReq(t, http.MethodPost, "/xconfAdminService/updates/v2/ipAddressGroups", b)
-	time.Sleep(10 * time.Millisecond)
+	createRr := execReq(t, http.MethodPost, "/xconfAdminService/updates/v2/ipAddressGroups", b)
+	assert.Contains(t, []int{http.StatusOK, http.StatusCreated}, createRr.Code, "Failed to create IP address group")
+	_ = RefreshAllInDao(ds.TABLE_GENERIC_NS_LIST)
 	grp.Data = []string{"172.16.0.6"}
 	b2, _ := json.Marshal(grp)
 	rr := execReq(t, http.MethodPut, "/xconfAdminService/updates/v2/ipAddressGroups", b2)
