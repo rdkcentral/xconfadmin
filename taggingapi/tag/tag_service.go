@@ -39,6 +39,17 @@ func GetTagsByMember(member string) ([]string, error) {
 	return filterTagEntriesByPrefix(tagsMap.Keys()), err
 }
 
+func GetTagsWithValuesByMember(member string) (map[string]string, error) {
+	member = ToNormalizedEcm(member)
+	tagsAsHashes, err := GetGroupServiceConnector().GetGroupsMemberBelongsTo(member)
+	if err != nil {
+		log.Errorf("xdas error getting members by %s group: %s", member, err.Error())
+		return map[string]string{}, err
+	}
+	tagsMap := util.StringMap(tagsAsHashes.GetFields())
+	return filterTagEntriesWithValuesByPrefix(tagsMap), err
+}
+
 func filterTagEntriesByPrefix(ftEntries []string) []string {
 	tags := []string{}
 	for _, ftEntry := range ftEntries {
@@ -49,10 +60,20 @@ func filterTagEntriesByPrefix(ftEntries []string) []string {
 	return tags
 }
 
-func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<- string, wg *sync.WaitGroup) {
+func filterTagEntriesWithValuesByPrefix(entries util.StringMap) map[string]string {
+	result := map[string]string{}
+	for key, value := range entries {
+		if strings.HasPrefix(key, Prefix) {
+			result[RemovePrefixFromTag(key)] = value
+		}
+	}
+	return result
+}
+
+func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<- string, wg *sync.WaitGroup, tagValue string) {
 	defer wg.Done()
 	xdasMembers := proto.XdasHashes{
-		Fields: map[string]string{id: ""},
+		Fields: map[string]string{id: tagValue},
 	}
 
 	successCount := 0
