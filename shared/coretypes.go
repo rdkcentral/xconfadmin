@@ -129,11 +129,8 @@ const (
 )
 
 const (
-	TABLE_CONFIG_CHANGE_LOGS_KEY2_FIELD_NAME = "column1"
-	LAST_CONFIG_LOG_ID         = "0"
-)
+	LAST_CONFIG_LOG_ID = "0"
 
-const (
 	StbContextTime      = "time"
 	StbContextModel     = "model"
 	MacList             = "MAC_LIST"

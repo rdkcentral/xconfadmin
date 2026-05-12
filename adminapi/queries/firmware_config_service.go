@@ -152,6 +152,9 @@ func GetFirmwareConfigsByModelIdAndApplicationTypeAS(tenantId string, modelId st
 }
 
 func IsValidFirmwareConfigByModelIds(tenantId string, modelId string, applicationType string, firmwareConfig *coreef.FirmwareConfig) bool {
+	if firmwareConfig == nil {
+		return false
+	}
 	list, err := coreef.GetFirmwareConfigAsListDB(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareConfigsByModelIdAndApplicationType: %v", err))
@@ -173,6 +176,9 @@ func IsValidFirmwareConfigByModelIds(tenantId string, modelId string, applicatio
 }
 
 func IsValidFirmwareConfigByModelIdList(tenantId string, modelIds *[]string, applicationType string, firmwareConfig *coreef.FirmwareConfig) bool {
+	if firmwareConfig == nil {
+		return false
+	}
 	list, err := coreef.GetFirmwareConfigAsListDB(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareConfigsByModelIdAndApplicationType: %v", err))

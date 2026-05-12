@@ -364,6 +364,7 @@ func TestAmvFilterByContext_NoFilters(t *testing.T) {
 func TestAmvFilterByContext_WithApplicationType(t *testing.T) {
 	searchContext := map[string]string{
 		"applicationType": "stb",
+		"tenantId":        db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -373,7 +374,8 @@ func TestAmvFilterByContext_WithApplicationType(t *testing.T) {
 
 func TestAmvFilterByContext_WithModel(t *testing.T) {
 	searchContext := map[string]string{
-		"MODEL": "TEST_MODEL",
+		"MODEL":    "TEST_MODEL",
+		"tenantId": db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -384,6 +386,7 @@ func TestAmvFilterByContext_WithModel(t *testing.T) {
 func TestAmvFilterByContext_WithPartnerId(t *testing.T) {
 	searchContext := map[string]string{
 		"PARTNER_ID": "PARTNER1",
+		"tenantId":   db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -394,6 +397,7 @@ func TestAmvFilterByContext_WithPartnerId(t *testing.T) {
 func TestAmvFilterByContext_WithPartnerIdAlias(t *testing.T) {
 	searchContext := map[string]string{
 		"partnerId": "PARTNER1",
+		"tenantId":  db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -404,6 +408,7 @@ func TestAmvFilterByContext_WithPartnerIdAlias(t *testing.T) {
 func TestAmvFilterByContext_WithDescription(t *testing.T) {
 	searchContext := map[string]string{
 		"DESCRIPTION": "Test Description",
+		"tenantId":    db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -414,6 +419,7 @@ func TestAmvFilterByContext_WithDescription(t *testing.T) {
 func TestAmvFilterByContext_WithFirmwareVersion(t *testing.T) {
 	searchContext := map[string]string{
 		"FIRMWARE_VERSION": "1.0",
+		"tenantId":         db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -424,6 +430,7 @@ func TestAmvFilterByContext_WithFirmwareVersion(t *testing.T) {
 func TestAmvFilterByContext_WithFirmwareVersionAlias(t *testing.T) {
 	searchContext := map[string]string{
 		"firmwareVersion": "1.0",
+		"tenantId":        db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -434,6 +441,7 @@ func TestAmvFilterByContext_WithFirmwareVersionAlias(t *testing.T) {
 func TestAmvFilterByContext_WithRegex(t *testing.T) {
 	searchContext := map[string]string{
 		"REGULAR_EXPRESSION": ".*test.*",
+		"tenantId":           db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -444,6 +452,7 @@ func TestAmvFilterByContext_WithRegex(t *testing.T) {
 func TestAmvFilterByContext_WithRegexAlias(t *testing.T) {
 	searchContext := map[string]string{
 		"regularExpression": ".*test.*",
+		"tenantId":          db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -456,6 +465,7 @@ func TestAmvFilterByContext_MultipleFilters(t *testing.T) {
 		"MODEL":       "TEST_MODEL",
 		"PARTNER_ID":  "PARTNER1",
 		"DESCRIPTION": "Test",
+		"tenantId":    db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -465,7 +475,8 @@ func TestAmvFilterByContext_MultipleFilters(t *testing.T) {
 
 func TestAmvFilterByContext_EmptyResult(t *testing.T) {
 	searchContext := map[string]string{
-		"MODEL": "NON_EXISTENT_MODEL_XYZ123",
+		"MODEL":    "NON_EXISTENT_MODEL_XYZ123",
+		"tenantId": db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -917,7 +928,8 @@ func TestAmvGeneratePageWithContext_Sorting(t *testing.T) {
 
 func TestAmvFilterByContext_CaseInsensitive(t *testing.T) {
 	searchContext := map[string]string{
-		"MODEL": "test",
+		"MODEL":    "test",
+		"tenantId": db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -941,6 +953,7 @@ func TestAmvFilterByContext_AllFilters(t *testing.T) {
 		"FIRMWARE_VERSION":   "1.0",
 		"REGULAR_EXPRESSION": ".*",
 		"applicationType":    "stb",
+		"tenantId":           db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -996,6 +1009,7 @@ func TestGetSupportedVersionforModel_DuplicateVersions(t *testing.T) {
 func TestAmvFilterByContext_ApplicationTypeRdkcloud(t *testing.T) {
 	searchContext := map[string]string{
 		"applicationType": "rdkcloud",
+		"tenantId":        db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -1074,6 +1088,7 @@ func TestGetSupportedVersionforModel_MatchingVersions(t *testing.T) {
 func TestAmvFilterByContext_WithALLApplicationType(t *testing.T) {
 	searchContext := map[string]string{
 		"applicationType": "ALL",
+		"tenantId":        db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -1084,6 +1099,7 @@ func TestAmvFilterByContext_FirmwareVersionMatch(t *testing.T) {
 	// Test the firmware version filtering logic
 	searchContext := map[string]string{
 		"FIRMWARE_VERSION": "test",
+		"tenantId":         db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -1094,6 +1110,7 @@ func TestAmvFilterByContext_RegexMatch(t *testing.T) {
 	// Test the regex filtering logic
 	searchContext := map[string]string{
 		"REGULAR_EXPRESSION": "test",
+		"tenantId":           db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -1102,7 +1119,8 @@ func TestAmvFilterByContext_RegexMatch(t *testing.T) {
 
 func TestAmvFilterByContext_NoMatchModel(t *testing.T) {
 	searchContext := map[string]string{
-		"MODEL": "NONEXISTENT_XYZ_123_ABC",
+		"MODEL":    "NONEXISTENT_XYZ_123_ABC",
+		"tenantId": db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -1113,6 +1131,7 @@ func TestAmvFilterByContext_NoMatchModel(t *testing.T) {
 func TestAmvFilterByContext_NoMatchPartnerId(t *testing.T) {
 	searchContext := map[string]string{
 		"PARTNER_ID": "NONEXISTENT_PARTNER_XYZ",
+		"tenantId":   db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -1122,6 +1141,7 @@ func TestAmvFilterByContext_NoMatchPartnerId(t *testing.T) {
 func TestAmvFilterByContext_NoMatchDescription(t *testing.T) {
 	searchContext := map[string]string{
 		"DESCRIPTION": "NONEXISTENT_DESCRIPTION_XYZ_123",
+		"tenantId":    db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -1131,6 +1151,7 @@ func TestAmvFilterByContext_NoMatchDescription(t *testing.T) {
 func TestAmvFilterByContext_NoMatchFirmwareVersion(t *testing.T) {
 	searchContext := map[string]string{
 		"FIRMWARE_VERSION": "99.99.99.NONEXISTENT",
+		"tenantId":         db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -1140,6 +1161,7 @@ func TestAmvFilterByContext_NoMatchFirmwareVersion(t *testing.T) {
 func TestAmvFilterByContext_NoMatchRegex(t *testing.T) {
 	searchContext := map[string]string{
 		"REGULAR_EXPRESSION": "NONEXISTENT_REGEX_XYZ_999",
+		"tenantId":           db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -1149,6 +1171,7 @@ func TestAmvFilterByContext_NoMatchRegex(t *testing.T) {
 func TestAmvFilterByContext_FirmwareVersionAliasDifferentCase(t *testing.T) {
 	searchContext := map[string]string{
 		"firmwareVersion": "TEST",
+		"tenantId":        db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
@@ -1258,7 +1281,8 @@ func TestGetSupportedVersionforModel_DuplicateKeys(t *testing.T) {
 func TestAmvFilterByContext_SortingFirmwareVersions(t *testing.T) {
 	// AmvFilterByContext sorts firmware versions internally
 	searchContext := map[string]string{
-		"MODEL": "TEST",
+		"MODEL":    "TEST",
+		"tenantId": db.GetDefaultTenantId(),
 	}
 
 	result := AmvFilterByContext(searchContext)
