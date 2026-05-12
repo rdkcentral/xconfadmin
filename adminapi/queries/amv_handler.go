@@ -145,6 +145,7 @@ func PostAmvFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
 	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
+
 	amvrules := AmvFilterByContext(contextMap)
 	sort.Slice(amvrules, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(amvrules[i].ID), strings.ToLower(amvrules[j].ID)) < 0
@@ -382,6 +383,7 @@ func GetAmvFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	contextMap := make(map[string]string)
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
+	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	amvrules := AmvFilterByContext(contextMap)
 	sort.Slice(amvrules, func(i, j int) bool {

@@ -13,6 +13,7 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
 	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,7 +24,10 @@ func frMakeFeature(name string, app string) *xwrfc.Feature {
 	SetOneInDao(db.TABLE_FEATURES, f.ID, f)
 	return f
 }
+
 func frMakeRule() *re.Rule {
+	model := shared.NewModel("X1", "ModelDescription")
+	SetOneInDao(db.TABLE_MODELS, model.ID, model)
 	return &re.Rule{Condition: CreateCondition(*re.NewFreeArg(re.StandardFreeArgTypeString, "model"), re.StandardOperationIs, "X1")}
 }
 
@@ -36,16 +40,7 @@ func frMakeFeatureRule(featureIds []string, app string, priority int) *xwrfc.Fea
 func frCleanup() {
 	tables := []string{db.TABLE_FEATURE_CONTROL_RULES, db.TABLE_FEATURES}
 	for _, tbl := range tables {
-		list, _ := GetAllAsListFromDao(tbl, 0)
-		for _, inst := range list {
-			switch v := inst.(type) {
-			case *xwrfc.FeatureRule:
-				DeleteOneFromDao(tbl, v.Id)
-			case *xwrfc.Feature:
-				DeleteOneFromDao(tbl, v.ID)
-			}
-		}
-		db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), tbl)
+		truncateTable(db.GetDefaultTenantId(), tbl)
 	}
 }
 
