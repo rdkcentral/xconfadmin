@@ -13,15 +13,15 @@ import (
 )
 
 const (
-	canarymgrServiceName      = "canarymgr"
-	createCanaryPath          = "%s/api/v1/canarygroup"
-	createWakeupPoolPath      = "%s/api/v1/wakeuppool?force=%v"
-	createWakeupPoolGroupPath = "%s/api/v1/canarygroup/deepsleep"
+	canarymgrServiceName = "canarymgr"
 )
 
 type CanaryMgrConnector struct {
 	*HttpClient
-	host string
+	host                      string
+	createCanaryPath          string
+	createWakeupPoolPath      string
+	createWakeupPoolGroupPath string
 }
 
 type CanaryRequestBody struct {
@@ -65,9 +65,20 @@ func NewCanaryMgrConnector(conf *configuration.Config, tlsConfig *tls.Config) *C
 		panic(fmt.Errorf("%s is required", confKey))
 	}
 
+	// Read path configurations with defaults
+	createCanaryPath := conf.GetString(
+		fmt.Sprintf("xconfwebconfig.%v.createCanaryPath", canarymgrServiceName))
+	createWakeupPoolPath := conf.GetString(
+		fmt.Sprintf("xconfwebconfig.%v.createWakeupPoolPath", canarymgrServiceName))
+	createWakeupPoolGroupPath := conf.GetString(
+		fmt.Sprintf("xconfwebconfig.%v.createWakeupPoolGroupPath", canarymgrServiceName))
+
 	return &CanaryMgrConnector{
-		HttpClient: NewHttpClient(conf, canarymgrServiceName, tlsConfig),
-		host:       host,
+		HttpClient:                NewHttpClient(conf, canarymgrServiceName, tlsConfig),
+		host:                      host,
+		createCanaryPath:          createCanaryPath,
+		createWakeupPoolPath:      createWakeupPoolPath,
+		createWakeupPoolGroupPath: createWakeupPoolGroupPath,
 	}
 }
 
@@ -79,10 +90,34 @@ func (c *CanaryMgrConnector) SetCanaryMgrHost(host string) {
 	c.host = host
 }
 
+func (c *CanaryMgrConnector) GetCanaryPath() string {
+	return c.createCanaryPath
+}
+
+func (c *CanaryMgrConnector) SetCanaryPath(path string) {
+	c.createCanaryPath = path
+}
+
+func (c *CanaryMgrConnector) GetWakeupPoolPath() string {
+	return c.createWakeupPoolPath
+}
+
+func (c *CanaryMgrConnector) SetWakeupPoolPath(path string) {
+	c.createWakeupPoolPath = path
+}
+
+func (c *CanaryMgrConnector) GetWakeupPoolGroupPath() string {
+	return c.createWakeupPoolGroupPath
+}
+
+func (c *CanaryMgrConnector) SetWakeupPoolGroupPath(path string) {
+	c.createWakeupPoolGroupPath = path
+}
+
 func (c *CanaryMgrConnector) CreateCanary(canaryRequestBody *CanaryRequestBody, isDeepSleepVideoDevice bool, fields log.Fields) error {
-	pathTemplate := createCanaryPath
+	pathTemplate := c.createCanaryPath
 	if isDeepSleepVideoDevice {
-		pathTemplate = createWakeupPoolGroupPath
+		pathTemplate = c.createWakeupPoolGroupPath
 	}
 	url := fmt.Sprintf(pathTemplate, c.GetCanaryMgrHost())
 	headers := map[string]string{
@@ -103,7 +138,7 @@ func (c *CanaryMgrConnector) CreateCanary(canaryRequestBody *CanaryRequestBody, 
 }
 
 func (c *CanaryMgrConnector) CreateWakeupPool(wakeupPoolRequestBody *WakeupPoolRequestBody, force bool, fields log.Fields) error {
-	url := fmt.Sprintf(createWakeupPoolPath, c.GetCanaryMgrHost(), force)
+	url := fmt.Sprintf(c.createWakeupPoolPath, c.GetCanaryMgrHost(), force)
 	headers := map[string]string{
 		common.HeaderUserAgent: common.HeaderXconfAdminService,
 	}

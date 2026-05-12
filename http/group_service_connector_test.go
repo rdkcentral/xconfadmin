@@ -64,7 +64,7 @@ func TestGroupServiceConnector_GetGroupsMemberBelongsTo(t *testing.T) {
 		}
 
 		// Check that the URL contains the member ID
-		if r.URL.Path != "/v2/ft/test-member-123" {
+		if r.URL.Path != "/path/test-member-123" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 
@@ -86,8 +86,10 @@ func TestGroupServiceConnector_GetGroupsMemberBelongsTo(t *testing.T) {
 	httpClient := newTestHttpClient(server)
 
 	connector := &GroupServiceConnector{
-		BaseURL: server.URL,
-		Client:  httpClient,
+		BaseURL:                  server.URL,
+		Client:                   httpClient,
+		getGroupsMembersTemplate: "%s/path/%s",
+		getAllGroupsTemplate:     "%s",
 	}
 
 	result, err := connector.GetGroupsMemberBelongsTo("test-member-123")
@@ -116,7 +118,7 @@ func TestGroupServiceConnector_GetAllGroups(t *testing.T) {
 			t.Errorf("expected GET request, got %s", r.Method)
 		}
 
-		if r.URL.Path != "/v2/ft" {
+		if r.URL.Path != "/path" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 
@@ -137,8 +139,10 @@ func TestGroupServiceConnector_GetAllGroups(t *testing.T) {
 	httpClient := newTestHttpClient(server)
 
 	connector := &GroupServiceConnector{
-		BaseURL: server.URL,
-		Client:  httpClient,
+		BaseURL:                  server.URL,
+		Client:                   httpClient,
+		getGroupsMembersTemplate: "%s/path/%s",
+		getAllGroupsTemplate:     "%s/path",
 	}
 
 	result, err := connector.GetAllGroups()

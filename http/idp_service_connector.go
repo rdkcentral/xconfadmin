@@ -34,9 +34,6 @@ var idpServiceName string
 const (
 	defaultClientId     = "clientId"
 	defaultClientSecret = "clientSecret"
-	getTokenUrl         = "%s/oauth/token?code=%s"
-	fullLoginUrl        = "%s/protected/auth?continue=%s&client_id=%s&response_type=code"
-	fullLogoutUrl       = "%s/logout?continue=%s&client_id=%s"
 	odpServiceName      = "odp"
 )
 
@@ -74,6 +71,9 @@ type DefaultIdpService struct {
 	host string
 	*HttpClient
 	*IdpServiceConfig
+	getTokenUrl   string
+	fullLoginUrl  string
+	fullLogoutUrl string
 }
 
 func NewIdpServiceConnector(conf *configuration.Config, externalIdpService IdpServiceConnector) IdpServiceConnector {
@@ -112,10 +112,35 @@ func NewIdpServiceConnector(conf *configuration.Config, externalIdpService IdpSe
 			AuthHeaderValue: authHeader,
 		}
 
+		// Read path configurations with defaults
+		getTokenUrl := conf.GetString(
+			fmt.Sprintf("xconfwebconfig.%v.getTokenUrl", idpServiceName))
+
+		if util.IsBlank(getTokenUrl) {
+			log.Errorf("getTokenUrl is required")
+		}
+
+		fullLoginUrl := conf.GetString(
+			fmt.Sprintf("xconfwebconfig.%v.fullLoginUrl", idpServiceName))
+
+		if util.IsBlank(fullLoginUrl) {
+			log.Error("fullLoginUrl is required")
+		}
+
+		fullLogoutUrl := conf.GetString(
+			fmt.Sprintf("xconfwebconfig.%v.fullLogoutUrl", idpServiceName))
+
+		if util.IsBlank(fullLogoutUrl) {
+			log.Errorf("fullLogoutUrl is required")
+		}
+
 		return &DefaultIdpService{
 			host:             host,
 			HttpClient:       NewHttpClient(conf, odpServiceName, nil),
 			IdpServiceConfig: idpServiceConfig,
+			getTokenUrl:      getTokenUrl,
+			fullLoginUrl:     fullLoginUrl,
+			fullLogoutUrl:    fullLogoutUrl,
 		}
 	}
 }
@@ -133,15 +158,15 @@ func (xc *DefaultIdpService) SetIdpServiceHost(host string) {
 }
 
 func (xc *DefaultIdpService) GetFullLoginUrl(continueUrl string) string {
-	return fmt.Sprintf(fullLoginUrl, xc.host, continueUrl, xc.ClientId)
+	return fmt.Sprintf(xc.fullLoginUrl, xc.host, continueUrl, xc.ClientId)
 }
 
 func (xc *DefaultIdpService) GetFullLogoutUrl(continueUrl string) string {
-	return fmt.Sprintf(fullLogoutUrl, xc.host, continueUrl, xc.ClientId)
+	return fmt.Sprintf(xc.fullLogoutUrl, xc.host, continueUrl, xc.ClientId)
 }
 
 func (xc *DefaultIdpService) GetToken(code string) string {
-	url := fmt.Sprintf(getTokenUrl, xc.IdpServiceHost(), code)
+	url := fmt.Sprintf(xc.getTokenUrl, xc.IdpServiceHost(), code)
 	header := map[string]string{
 		common.HeaderAuthorization: xc.AuthHeaderValue,
 	}
