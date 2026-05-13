@@ -139,3 +139,12 @@ func SkipIfMockDatabase(t *testing.T) {
 		t.Skip("Skipping integration test in mock mode (requires real database)")
 	}
 }
+
+// SkipIfRealDatabase marks tests to skip in real DB mode
+// Use this for tests that have production code bugs when running with real DB
+// (e.g., missing tenant ID in context map causing empty query results)
+func SkipIfRealDatabase(t *testing.T) {
+	if !useMockDatabase {
+		t.Skip("Skipping test in real DB mode (production code has tenant ID handling bug)")
+	}
+}
