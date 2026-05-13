@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime/pprof"
 	"strings"
 	"testing"
 	"time"
@@ -35,7 +36,29 @@ var (
 	router *mux.Router
 )
 
+func startTestWatchdog(pkgName string) func() {
+	done := make(chan struct{})
+	go func() {
+		start := time.Now()
+		ticker := time.NewTicker(2 * time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				fmt.Fprintf(os.Stderr, "\n[TEST-WATCHDOG] package=%s elapsed=%s still running; dumping goroutines\n", pkgName, time.Since(start).Round(time.Second))
+				_ = pprof.Lookup("goroutine").WriteTo(os.Stderr, 1)
+			case <-done:
+				return
+			}
+		}
+	}()
+	return func() { close(done) }
+}
+
 func TestMain(m *testing.M) {
+	stopWatchdog := startTestWatchdog("adminapi/rfc/feature")
+	defer stopWatchdog()
+
 	// Initialize mock database for fast testing (63s -> <5s)
 	useMock := os.Getenv("USE_MOCK_DB")
 	if useMock == "true" || useMock == "1" {
@@ -196,7 +219,6 @@ func buildFeatureEntity(appType string) *xwrfc.FeatureEntity {
 }
 
 func TestGetFeaturesEmptyAndExport(t *testing.T) {
-	cleanDB()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/rfc/feature?applicationType=stb", nil)
 	rr := executeRequest(r)
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -207,8 +229,8 @@ func TestGetFeaturesEmptyAndExport(t *testing.T) {
 }
 
 func TestPostFeatureSuccessAndConflicts(t *testing.T) {
-	cleanDB()
 	fe := buildFeatureEntity("stb")
+	t.Cleanup(func() { deleteFeature(fe.ID) })
 	b, _ := json.Marshal(fe)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
 	rr := executeRequest(r)
@@ -226,9 +248,9 @@ func TestPostFeatureSuccessAndConflicts(t *testing.T) {
 }
 
 func TestGetFeatureByIdSuccessExportAndNotFound(t *testing.T) {
-	cleanDB()
 	fe := buildFeatureEntity("stb")
 	_, _ = FeaturePost(fe.CreateFeature())
+	t.Cleanup(func() { deleteFeature(fe.ID) })
 	url := fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb", fe.ID)
 	r := httptest.NewRequest(http.MethodGet, url, nil)
 	rr := executeRequest(r)
@@ -246,9 +268,9 @@ func TestGetFeatureByIdSuccessExportAndNotFound(t *testing.T) {
 }
 
 func TestPutFeatureSuccessAndNotFound(t *testing.T) {
-	cleanDB()
 	fe := buildFeatureEntity("stb")
 	_, _ = FeaturePost(fe.CreateFeature())
+	t.Cleanup(func() { deleteFeature(fe.ID) })
 	fe.ConfigData["extra"] = "123"
 	b, _ := json.Marshal(fe)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
@@ -264,7 +286,6 @@ func TestPutFeatureSuccessAndNotFound(t *testing.T) {
 
 func TestDeleteFeatureByIdSuccessAndNotFound(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - FeaturePost uses db.GetCachedSimpleDao() directly
-	cleanDB()
 	fe := buildFeatureEntity("stb")
 	_, _ = FeaturePost(fe.CreateFeature())
 	url := fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb", fe.ID)
@@ -278,11 +299,17 @@ func TestDeleteFeatureByIdSuccessAndNotFound(t *testing.T) {
 }
 
 func TestGetFeaturesFilteredPagingAndInvalid(t *testing.T) {
-	cleanDB()
+	var createdIDs []string
+	t.Cleanup(func() {
+		for _, id := range createdIDs {
+			deleteFeature(id)
+		}
+	})
 	// Create a few features for testing pagination
 	for i := 0; i < 5; i++ {
 		fe := buildFeatureEntity("stb")
 		_, _ = FeaturePost(fe.CreateFeature())
+		createdIDs = append(createdIDs, fe.ID)
 	}
 
 	t.Run("ValidPaginationRequest", func(t *testing.T) {
@@ -322,12 +349,15 @@ func TestGetFeaturesFilteredPagingAndInvalid(t *testing.T) {
 }
 
 func TestPostAndPutFeatureEntities(t *testing.T) {
-	cleanDB()
 	// prepare list ensuring unique FeatureName/FeatureInstance across entities
 	fe1 := buildFeatureEntity("stb")
 	fe2 := buildFeatureEntity("stb")
 	fe2.FeatureName = fe2.FeatureName + "_X"
 	fe2.FeatureInstance = fe2.FeatureInstance + "_Y"
+	t.Cleanup(func() {
+		deleteFeature(fe1.ID)
+		deleteFeature(fe2.ID)
+	})
 	list := []*xwrfc.FeatureEntity{fe1, fe2}
 	b, _ := json.Marshal(list)
 	// direct handler invocation with XResponseWriter to ensure body extraction
@@ -351,11 +381,14 @@ func TestPostAndPutFeatureEntities(t *testing.T) {
 }
 
 func TestGetFeaturesByIdList(t *testing.T) {
-	cleanDB()
 	fe1 := buildFeatureEntity("stb")
 	fe2 := buildFeatureEntity("stb")
 	_, _ = FeaturePost(fe1.CreateFeature())
 	_, _ = FeaturePost(fe2.CreateFeature())
+	t.Cleanup(func() {
+		deleteFeature(fe1.ID)
+		deleteFeature(fe2.ID)
+	})
 	ids := []string{fe1.ID, fe2.ID}
 	b, _ := json.Marshal(ids)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature/byIdList?applicationType=stb", bytes.NewReader(b))
@@ -366,7 +399,6 @@ func TestGetFeaturesByIdList(t *testing.T) {
 // Error path tests
 
 func TestGetFeatureByIdHandler_ExportNotFound(t *testing.T) {
-	cleanDB()
 	url := fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb&export=true", uuid.NewString())
 	r := httptest.NewRequest(http.MethodGet, url, nil)
 	rr := executeRequest(r)
@@ -374,7 +406,6 @@ func TestGetFeatureByIdHandler_ExportNotFound(t *testing.T) {
 }
 
 func TestDeleteFeatureByIdHandler_FeatureUsedInRule(t *testing.T) {
-	cleanDB()
 	fe := buildFeatureEntity("stb")
 	feat, _ := FeaturePost(fe.CreateFeature())
 	// Create a feature rule that uses this feature
@@ -386,6 +417,10 @@ func TestDeleteFeatureByIdHandler_FeatureUsedInRule(t *testing.T) {
 		Priority:        1,
 	}
 	db.GetCachedSimpleDao().SetOne(db.TABLE_FEATURE_CONTROL_RULE, fr.Id, fr)
+	t.Cleanup(func() {
+		deleteFeature(feat.ID)
+		deleteFeatureRule(fr.Id)
+	})
 	// Try to delete the feature - should fail with conflict
 	url := fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb", feat.ID)
 	r := httptest.NewRequest(http.MethodDelete, url, nil)
@@ -395,7 +430,6 @@ func TestDeleteFeatureByIdHandler_FeatureUsedInRule(t *testing.T) {
 }
 
 func TestPostFeatureHandler_InvalidJson(t *testing.T) {
-	cleanDB()
 	invalidJson := []byte(`{invalid json}`)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(invalidJson))
 	rr := executeRequest(r)
@@ -403,7 +437,6 @@ func TestPostFeatureHandler_InvalidJson(t *testing.T) {
 }
 
 func TestPostFeatureHandler_InvalidFeature_BlankName(t *testing.T) {
-	cleanDB()
 	fe := buildFeatureEntity("stb")
 	// Make feature invalid by setting blank Name
 	fe.Name = ""
@@ -415,9 +448,9 @@ func TestPostFeatureHandler_InvalidFeature_BlankName(t *testing.T) {
 }
 
 func TestPostFeatureHandler_DuplicateFeatureInstance(t *testing.T) {
-	cleanDB()
 	fe1 := buildFeatureEntity("stb")
 	_, _ = FeaturePost(fe1.CreateFeature())
+	t.Cleanup(func() { deleteFeature(fe1.ID) })
 	// Create new feature with different ID but same FeatureName
 	fe2 := buildFeatureEntity("stb")
 	fe2.FeatureName = fe1.FeatureName
@@ -430,7 +463,6 @@ func TestPostFeatureHandler_DuplicateFeatureInstance(t *testing.T) {
 }
 
 func TestPutFeatureHandler_InvalidJson(t *testing.T) {
-	cleanDB()
 	invalidJson := []byte(`{invalid json}`)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(invalidJson))
 	rr := executeRequest(r)
@@ -438,7 +470,6 @@ func TestPutFeatureHandler_InvalidJson(t *testing.T) {
 }
 
 func TestPutFeatureHandler_EmptyId(t *testing.T) {
-	cleanDB()
 	fe := buildFeatureEntity("stb")
 	fe.ID = ""
 	b, _ := json.Marshal(fe)
@@ -449,9 +480,9 @@ func TestPutFeatureHandler_EmptyId(t *testing.T) {
 }
 
 func TestPutFeatureHandler_InvalidFeature_BlankName(t *testing.T) {
-	cleanDB()
 	fe := buildFeatureEntity("stb")
 	_, _ = FeaturePost(fe.CreateFeature())
+	t.Cleanup(func() { deleteFeature(fe.ID) })
 	// Make feature invalid - blank Name should fail validation
 	fe.Name = ""
 	b, _ := json.Marshal(fe)
@@ -462,11 +493,14 @@ func TestPutFeatureHandler_InvalidFeature_BlankName(t *testing.T) {
 }
 
 func TestPutFeatureHandler_DuplicateFeatureInstance(t *testing.T) {
-	cleanDB()
 	fe1 := buildFeatureEntity("stb")
 	_, _ = FeaturePost(fe1.CreateFeature())
 	fe2 := buildFeatureEntity("stb")
 	_, _ = FeaturePost(fe2.CreateFeature())
+	t.Cleanup(func() {
+		deleteFeature(fe1.ID)
+		deleteFeature(fe2.ID)
+	})
 	// Try to update fe2 with fe1's FeatureName
 	fe2.FeatureName = fe1.FeatureName
 	fe2.FeatureInstance = fe1.FeatureInstance
@@ -478,7 +512,6 @@ func TestPutFeatureHandler_DuplicateFeatureInstance(t *testing.T) {
 }
 
 func TestPutFeatureEntitiesHandler_InvalidJson(t *testing.T) {
-	cleanDB()
 	invalidJson := []byte(`{invalid json}`)
 	req := httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature/entities?applicationType=stb", bytes.NewReader(invalidJson))
 	rr := httptest.NewRecorder()
@@ -489,7 +522,6 @@ func TestPutFeatureEntitiesHandler_InvalidJson(t *testing.T) {
 }
 
 func TestPostFeatureEntitiesHandler_InvalidJson(t *testing.T) {
-	cleanDB()
 	invalidJson := []byte(`{invalid json}`)
 	req := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature/entities?applicationType=stb", bytes.NewReader(invalidJson))
 	rr := httptest.NewRecorder()
@@ -500,7 +532,6 @@ func TestPostFeatureEntitiesHandler_InvalidJson(t *testing.T) {
 }
 
 func TestGetFeaturesFilteredHandler_MissingPageParams(t *testing.T) {
-	cleanDB()
 	body := map[string]string{}
 	b, _ := json.Marshal(body)
 	// Missing pageNumber and pageSize
@@ -514,7 +545,6 @@ func TestGetFeaturesFilteredHandler_MissingPageParams(t *testing.T) {
 }
 
 func TestGetFeaturesFilteredHandler_InvalidPageSize(t *testing.T) {
-	cleanDB()
 	body := map[string]string{}
 	b, _ := json.Marshal(body)
 	// Invalid pageSize (negative)
@@ -528,7 +558,6 @@ func TestGetFeaturesFilteredHandler_InvalidPageSize(t *testing.T) {
 }
 
 func TestGetFeaturesFilteredHandler_InvalidPageNumber(t *testing.T) {
-	cleanDB()
 	body := map[string]string{}
 	b, _ := json.Marshal(body)
 	// Invalid pageNumber (non-numeric)
@@ -542,7 +571,6 @@ func TestGetFeaturesFilteredHandler_InvalidPageNumber(t *testing.T) {
 }
 
 func TestGetFeaturesFilteredHandler_InvalidBodyJson(t *testing.T) {
-	cleanDB()
 	invalidJson := []byte(`{invalid}`)
 	url := "/xconfAdminService/rfc/feature/filtered?pageNumber=1&pageSize=10&applicationType=stb"
 	req := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(invalidJson))
@@ -554,7 +582,6 @@ func TestGetFeaturesFilteredHandler_InvalidBodyJson(t *testing.T) {
 }
 
 func TestGetFeaturesByIdListHandler_InvalidJson(t *testing.T) {
-	cleanDB()
 	invalidJson := []byte(`{invalid json}`)
 	req := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature/byIdList?applicationType=stb", bytes.NewReader(invalidJson))
 	rr := httptest.NewRecorder()
@@ -566,7 +593,6 @@ func TestGetFeaturesByIdListHandler_InvalidJson(t *testing.T) {
 }
 
 func TestGetFeaturesByIdListHandler_EmptyList(t *testing.T) {
-	cleanDB()
 	emptyList := []string{}
 	b, _ := json.Marshal(emptyList)
 	req := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature/byIdList?applicationType=stb", bytes.NewReader(b))
@@ -578,11 +604,17 @@ func TestGetFeaturesByIdListHandler_EmptyList(t *testing.T) {
 }
 
 func TestGetFeaturesFilteredHandler_WithContextFilters(t *testing.T) {
-	cleanDB()
+	var createdIDs []string
+	t.Cleanup(func() {
+		for _, id := range createdIDs {
+			deleteFeature(id)
+		}
+	})
 	// Create a few features
 	for i := 0; i < 3; i++ {
 		fe := buildFeatureEntity("stb")
 		_, _ = FeaturePost(fe.CreateFeature())
+		createdIDs = append(createdIDs, fe.ID)
 	}
 	// Filter with context
 	contextMap := map[string]string{"key": "value"}
@@ -612,20 +644,14 @@ func executeRequest(r *http.Request) *httptest.ResponseRecorder {
 	return baseRR
 }
 
-func cleanDB() {
-	// Use fast in-memory mock clear if in mock mode
-	if queries.IsMockDatabaseEnabled() {
-		queries.ClearMockDatabase()
-		return
-	}
-	// Real database cleanup (only for integration tests)
-	for _, ti := range db.GetAllTableInfo() {
-		c := db.GetDatabaseClient().(*db.CassandraClient)
-		_ = c.DeleteAllXconfData(ti.TableName)
-		if ti.CacheData {
-			db.GetCachedSimpleDao().RefreshAll(ti.TableName)
-		}
-	}
+// deleteFeature deletes a single feature by ID. Works in both mock and real DB mode.
+func deleteFeature(id string) {
+	db.GetCachedSimpleDao().DeleteOne(db.TABLE_XCONF_FEATURE, id)
+}
+
+// deleteFeatureRule deletes a single feature rule by ID. Works in both mock and real DB mode.
+func deleteFeatureRule(id string) {
+	db.GetCachedSimpleDao().DeleteOne(db.TABLE_FEATURE_CONTROL_RULE, id)
 }
 
 // SkipIfMockDatabase skips the test if mock database is enabled

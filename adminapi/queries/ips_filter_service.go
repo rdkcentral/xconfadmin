@@ -20,6 +20,7 @@ package queries
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	core "github.com/rdkcentral/xconfadmin/shared"
 
@@ -65,6 +66,10 @@ func UpdateIpFilter(applicationType string, ipFilter *coreef.IpFilter) *xwhttp.R
 func DeleteIpsFilter(name string, applicationType string) *xwhttp.ResponseEntity {
 	ipFilter, err := coreef.IpFilterByName(name, applicationType)
 	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			// Deleting a missing filter is treated as an idempotent no-op.
+			return xwhttp.NewResponseEntity(http.StatusNoContent, nil, nil)
+		}
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 

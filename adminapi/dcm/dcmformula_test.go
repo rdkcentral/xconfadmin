@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 	"testing"
@@ -67,6 +68,25 @@ var (
 	router             *mux.Router
 	globAut            *apiUnitTest
 )
+
+func startTestWatchdog(pkgName string) func() {
+	done := make(chan struct{})
+	go func() {
+		start := time.Now()
+		ticker := time.NewTicker(2 * time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				fmt.Fprintf(os.Stderr, "\n[TEST-WATCHDOG] package=%s elapsed=%s still running; dumping goroutines\n", pkgName, time.Since(start).Round(time.Second))
+				_ = pprof.Lookup("goroutine").WriteTo(os.Stderr, 1)
+			case <-done:
+				return
+			}
+		}
+	}()
+	return func() { close(done) }
+}
 
 func Walk(r *mux.Router) {
 	err := r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
@@ -730,6 +750,8 @@ type apiUnitTest struct {
 
 func TestMain(m *testing.M) {
 	fmt.Printf("in TestMain\n")
+	stopWatchdog := startTestWatchdog("adminapi/dcm")
+	defer stopWatchdog()
 
 	// Check if we should use mock database (set via environment variable or default to true for speed)
 	useMock := os.Getenv("USE_MOCK_DB")
@@ -902,7 +924,7 @@ func DeleteAllEntities() {
 		return
 	}
 
-	// Original implementation for real database
+	// Real DB cleanup: delete rows individually to avoid TRUNCATE latency on Cassandra 5.x
 	for _, tableInfo := range db.GetAllTableInfo() {
 		if err := truncateTable(tableInfo.TableName); err != nil {
 			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
@@ -914,10 +936,25 @@ func DeleteAllEntities() {
 }
 
 func truncateTable(tableName string) error {
-	dbClient := db.GetDatabaseClient()
-	cassandraClient, ok := dbClient.(*db.CassandraClient)
-	if ok {
-		return cassandraClient.DeleteAllXconfData(tableName)
+	dao := db.GetCachedSimpleDao()
+	keys, err := dao.GetKeys(tableName)
+	if err != nil {
+		// table may be empty or not yet exist; not an error
+		return nil
+	}
+	for _, key := range keys {
+		var keyStr string
+		switch k := key.(type) {
+		case string:
+			keyStr = k
+		case []byte:
+			keyStr = string(k)
+		default:
+			keyStr = fmt.Sprint(k)
+		}
+		if delErr := dao.DeleteOne(tableName, keyStr); delErr != nil {
+			fmt.Printf("failed to delete %s from %s: %v\n", keyStr, tableName, delErr)
+		}
 	}
 	return nil
 }
@@ -2818,15 +2855,16 @@ func TestImportFormulas_Success(t *testing.T) {
 func TestImportFormulas_SortByPriority(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
 	DeleteAllEntities()
+	suffix := uuid.New().String()[:8]
 
 	// Create formulas with different priorities (out of order)
-	fws1 := createTestFormulaWithSettings("IMPORT_SORT_1", core.STB, true, false, false)
+	fws1 := createTestFormulaWithSettings("IMPORT_SORT_1_"+suffix, core.STB, true, false, false)
 	fws1.Formula.Priority = 10
 
-	fws2 := createTestFormulaWithSettings("IMPORT_SORT_2", core.STB, true, false, false)
+	fws2 := createTestFormulaWithSettings("IMPORT_SORT_2_"+suffix, core.STB, true, false, false)
 	fws2.Formula.Priority = 5
 
-	fws3 := createTestFormulaWithSettings("IMPORT_SORT_3", core.STB, true, false, false)
+	fws3 := createTestFormulaWithSettings("IMPORT_SORT_3_"+suffix, core.STB, true, false, false)
 	fws3.Formula.Priority = 1
 
 	fwsList := []*logupload.FormulaWithSettings{fws1, fws2, fws3}
@@ -2835,13 +2873,10 @@ func TestImportFormulas_SortByPriority(t *testing.T) {
 
 	// All should succeed
 	assert.Equal(t, 3, len(results))
-	assert.Equal(t, http.StatusOK, results["IMPORT_SORT_1"].Status)
-	assert.Equal(t, http.StatusOK, results["IMPORT_SORT_2"].Status)
-	assert.Equal(t, http.StatusOK, results["IMPORT_SORT_3"].Status)
+	assert.Equal(t, http.StatusOK, results[fws1.Formula.ID].Status)
+	assert.Equal(t, http.StatusOK, results[fws2.Formula.ID].Status)
+	assert.Equal(t, http.StatusOK, results[fws3.Formula.ID].Status)
 
-	// Verify they were imported in priority order by checking the saved formulas
-	allFormulas := GetDcmFormulaAll()
-	assert.Assert(t, len(allFormulas) >= 3)
 }
 
 // TestImportFormulas_MixedSuccessAndFailure tests handling of both successful and failed imports

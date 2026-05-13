@@ -78,9 +78,7 @@ func createTestTelemetryTwoProfile(name, appType string) *xwlogupload.TelemetryT
 
 func TestFindByContext_NameFilter(t *testing.T) {
 	DeleteTelemetryEntities()
-	defer DeleteTelemetryEntities()
-
-	// Create test rules
+	t.Cleanup(DeleteTelemetryEntities)
 	rule1 := createTestTelemetryTwoRule("TestRule1", "stb", []string{})
 	rule2 := createTestTelemetryTwoRule("AnotherRule", "stb", []string{})
 	rule3 := createTestTelemetryTwoRule("TestRule3", "stb", []string{})
@@ -89,6 +87,11 @@ func TestFindByContext_NameFilter(t *testing.T) {
 	logupload.SetOneTelemetryTwoRule(rule2.ID, rule2)
 	logupload.SetOneTelemetryTwoRule(rule3.ID, rule3)
 
+	t.Cleanup(func() {
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule1.ID)
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule2.ID)
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule3.ID)
+	})
 	t.Run("FilterByName_Found", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.NAME_UPPER: "TestRule",
@@ -131,10 +134,6 @@ func TestFindByContext_NameFilter(t *testing.T) {
 }
 
 func TestFindByContext_ProfileFilter(t *testing.T) {
-	DeleteTelemetryEntities()
-	defer DeleteTelemetryEntities()
-
-	// Create test profiles
 	profile1 := createTestTelemetryTwoProfile("Profile1", "stb")
 	profile2 := createTestTelemetryTwoProfile("TestProfile", "stb")
 
@@ -150,6 +149,13 @@ func TestFindByContext_ProfileFilter(t *testing.T) {
 	logupload.SetOneTelemetryTwoRule(rule2.ID, rule2)
 	logupload.SetOneTelemetryTwoRule(rule3.ID, rule3)
 
+	t.Cleanup(func() {
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profile1.ID)
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profile2.ID)
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule1.ID)
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule2.ID)
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule3.ID)
+	})
 	t.Run("FilterByProfile_Found", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.PROFILE: "Profile1",
@@ -188,10 +194,6 @@ func TestFindByContext_ProfileFilter(t *testing.T) {
 }
 
 func TestFindByContext_FreeArgFilter(t *testing.T) {
-	DeleteTelemetryEntities()
-	defer DeleteTelemetryEntities()
-
-	// Create rules with different free args
 	rule1 := createTestTelemetryTwoRule("Rule1", "stb", []string{})
 	// rule1 already has MODEL as free arg from createTestTelemetryTwoRule
 
@@ -203,6 +205,10 @@ func TestFindByContext_FreeArgFilter(t *testing.T) {
 	logupload.SetOneTelemetryTwoRule(rule1.ID, rule1)
 	logupload.SetOneTelemetryTwoRule(rule2.ID, rule2)
 
+	t.Cleanup(func() {
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule1.ID)
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule2.ID)
+	})
 	t.Run("FilterByFreeArg_Found", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.FREE_ARG: "model",
@@ -231,12 +237,9 @@ func TestFindByContext_FreeArgFilter(t *testing.T) {
 }
 
 func TestFindByContext_FixedArgFilter_CollectionValue(t *testing.T) {
-	DeleteTelemetryEntities()
-	defer DeleteTelemetryEntities()
-
-	// Create rule with collection fixed arg
 	rule1 := createTestTelemetryTwoRuleWithCollectionFixedArg("Rule1", "stb")
 	logupload.SetOneTelemetryTwoRule(rule1.ID, rule1)
+	t.Cleanup(func() { DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule1.ID) })
 
 	t.Run("FilterByFixedArg_CollectionValue_Found", func(t *testing.T) {
 		searchContext := map[string]string{
@@ -266,14 +269,11 @@ func TestFindByContext_FixedArgFilter_CollectionValue(t *testing.T) {
 }
 
 func TestFindByContext_FixedArgFilter_StringValue(t *testing.T) {
-	DeleteTelemetryEntities()
-	defer DeleteTelemetryEntities()
-
 	// Create rule with string fixed arg
 	rule1 := createTestTelemetryTwoRule("Rule1", "stb", []string{})
 	// rule1 already has string fixed arg "TEST_MODEL"
-
 	logupload.SetOneTelemetryTwoRule(rule1.ID, rule1)
+	t.Cleanup(func() { DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule1.ID) })
 
 	t.Run("FilterByFixedArg_StringValue_Found", func(t *testing.T) {
 		searchContext := map[string]string{
@@ -310,15 +310,13 @@ func TestFindByContext_FixedArgFilter_StringValue(t *testing.T) {
 }
 
 func TestFindByContext_FixedArgFilter_ExistsOperation(t *testing.T) {
-	DeleteTelemetryEntities()
-	defer DeleteTelemetryEntities()
-
 	// Create rule with EXISTS operation (should be skipped for string value check)
 	rule1 := createTestTelemetryTwoRule("Rule1", "stb", []string{})
 	cond := re.NewCondition(coreef.RuleFactoryMODEL, re.StandardOperationExists, nil)
 	rule1.Rule = re.Rule{Condition: cond}
 	logupload.SetOneTelemetryTwoRule(rule1.ID, rule1)
 
+	t.Cleanup(func() { DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule1.ID) })
 	t.Run("FilterByFixedArg_ExistsOperation_Skipped", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.FIXED_ARG: "anything",
@@ -331,14 +329,17 @@ func TestFindByContext_FixedArgFilter_ExistsOperation(t *testing.T) {
 
 func TestFindByContext_ApplicationTypeFilter(t *testing.T) {
 	DeleteTelemetryEntities()
-	defer DeleteTelemetryEntities()
-
+	t.Cleanup(DeleteTelemetryEntities)
 	rule1 := createTestTelemetryTwoRule("Rule1", "stb", []string{})
 	rule2 := createTestTelemetryTwoRule("Rule2", "rdkcloud", []string{})
 
 	logupload.SetOneTelemetryTwoRule(rule1.ID, rule1)
 	logupload.SetOneTelemetryTwoRule(rule2.ID, rule2)
 
+	t.Cleanup(func() {
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule1.ID)
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule2.ID)
+	})
 	t.Run("FilterByApplicationType_STB", func(t *testing.T) {
 		searchContext := map[string]string{
 			xwcommon.APPLICATION_TYPE: "stb",
@@ -366,9 +367,6 @@ func TestFindByContext_ApplicationTypeFilter(t *testing.T) {
 }
 
 func TestFindByContext_CombinedFilters(t *testing.T) {
-	DeleteTelemetryEntities()
-	defer DeleteTelemetryEntities()
-
 	profile1 := createTestTelemetryTwoProfile("TestProfile", "stb")
 	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profile1.ID, profile1)
 
@@ -380,6 +378,12 @@ func TestFindByContext_CombinedFilters(t *testing.T) {
 	logupload.SetOneTelemetryTwoRule(rule2.ID, rule2)
 	logupload.SetOneTelemetryTwoRule(rule3.ID, rule3)
 
+	t.Cleanup(func() {
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_PROFILES, profile1.ID)
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule1.ID)
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule2.ID)
+		DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule3.ID)
+	})
 	t.Run("CombinedFilters_NameAndApplicationType", func(t *testing.T) {
 		searchContext := map[string]string{
 			xcommon.NAME_UPPER:        "TestRule",
@@ -414,9 +418,6 @@ func TestFindByContext_CombinedFilters(t *testing.T) {
 }
 
 func TestGetOne_ErrorCondition(t *testing.T) {
-	DeleteTelemetryEntities()
-	defer DeleteTelemetryEntities()
-
 	t.Run("GetOne_NotFound_ReturnsRemoteError", func(t *testing.T) {
 		nonExistentID := uuid.New().String()
 		result, err := GetOne(nonExistentID)
@@ -429,6 +430,7 @@ func TestGetOne_ErrorCondition(t *testing.T) {
 	t.Run("GetOne_Success", func(t *testing.T) {
 		rule := createTestTelemetryTwoRule("TestRule", "stb", []string{})
 		logupload.SetOneTelemetryTwoRule(rule.ID, rule)
+		t.Cleanup(func() { DeleteOneFromDao(ds.TABLE_TELEMETRY_TWO_RULES, rule.ID) })
 
 		result, err := GetOne(rule.ID)
 		assert.Assert(t, err == nil)
@@ -439,9 +441,6 @@ func TestGetOne_ErrorCondition(t *testing.T) {
 }
 
 func TestDelete_ErrorCondition(t *testing.T) {
-	DeleteTelemetryEntities()
-	defer DeleteTelemetryEntities()
-
 	t.Run("Delete_NotFound_ReturnsRemoteError", func(t *testing.T) {
 		nonExistentID := uuid.New().String()
 		result, err := Delete(nonExistentID)

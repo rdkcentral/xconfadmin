@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime/pprof"
 	"strings"
 	"testing"
 	"time"
@@ -45,6 +46,25 @@ var (
 	globAut            *apiUnitTest
 )
 
+func startTestWatchdog(pkgName string) func() {
+	done := make(chan struct{})
+	go func() {
+		start := time.Now()
+		ticker := time.NewTicker(2 * time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				fmt.Fprintf(os.Stderr, "\n[TEST-WATCHDOG] package=%s elapsed=%s still running; dumping goroutines\n", pkgName, time.Since(start).Round(time.Second))
+				_ = pprof.Lookup("goroutine").WriteTo(os.Stderr, 1)
+			case <-done:
+				return
+			}
+		}
+	}()
+	return func() { close(done) }
+}
+
 type apiUnitTest struct {
 	t        *testing.T
 	router   *mux.Router
@@ -76,6 +96,8 @@ func GetTestConfig() string {
 }
 func TestMain(m *testing.M) {
 	fmt.Printf("in TestMain\n")
+	stopWatchdog := startTestWatchdog("adminapi/telemetry")
+	defer stopWatchdog()
 
 	testConfigFile = "/app/xconfadmin/xconfadmin.conf"
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
@@ -420,10 +442,25 @@ func DeleteTelemetryEntities() {
 }
 
 func truncateTable(tableName string) error {
-	dbClient := db.GetDatabaseClient()
-	cassandraClient, ok := dbClient.(*db.CassandraClient)
-	if ok {
-		return cassandraClient.DeleteAllXconfData(tableName)
+	dao := db.GetCachedSimpleDao()
+	keys, err := dao.GetKeys(tableName)
+	if err != nil {
+		// table may be empty or not yet exist; not an error
+		return nil
+	}
+	for _, key := range keys {
+		var keyStr string
+		switch k := key.(type) {
+		case string:
+			keyStr = k
+		case []byte:
+			keyStr = string(k)
+		default:
+			keyStr = fmt.Sprint(k)
+		}
+		if delErr := dao.DeleteOne(tableName, keyStr); delErr != nil {
+			fmt.Printf("failed to delete %s from %s: %v\n", keyStr, tableName, delErr)
+		}
 	}
 	return nil
 }
