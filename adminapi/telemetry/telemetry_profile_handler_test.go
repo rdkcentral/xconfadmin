@@ -400,8 +400,8 @@ func DeleteTelemetryEntities() {
 		return
 	}
 
-	// SLOW PATH: Only used for real database integration tests
-	telemetryTables := []string{
+	// Full cleanup for mixed test suites.
+	cleanupTelemetryTables([]string{
 		ds.TABLE_TELEMETRY,
 		ds.TABLE_TELEMETRY_RULES,
 		ds.TABLE_TELEMETRY_TWO_PROFILES,
@@ -411,10 +411,43 @@ func DeleteTelemetryEntities() {
 		db.TABLE_XCONF_APPROVED_CHANGE,
 		db.TABLE_XCONF_TELEMETRY_TWO_CHANGE,
 		db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE,
+	})
+}
+
+// DeleteTelemetryV1Entities scopes cleanup to telemetry v1 tables.
+func DeleteTelemetryV1Entities() {
+	if IsMockDatabaseEnabled() {
+		ClearMockDatabase()
+		return
 	}
 
+	cleanupTelemetryTables([]string{
+		ds.TABLE_TELEMETRY,
+		ds.TABLE_TELEMETRY_RULES,
+		ds.TABLE_PERMANENT_TELEMETRY,
+		db.TABLE_XCONF_CHANGE,
+		db.TABLE_XCONF_APPROVED_CHANGE,
+	})
+}
+
+// DeleteTelemetryV2Entities scopes cleanup to telemetry v2 tables.
+func DeleteTelemetryV2Entities() {
+	if IsMockDatabaseEnabled() {
+		ClearMockDatabase()
+		return
+	}
+
+	cleanupTelemetryTables([]string{
+		ds.TABLE_TELEMETRY_TWO_PROFILES,
+		ds.TABLE_TELEMETRY_TWO_RULES,
+		db.TABLE_XCONF_TELEMETRY_TWO_CHANGE,
+		db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE,
+	})
+}
+
+func cleanupTelemetryTables(telemetryTables []string) {
 	for _, tableName := range telemetryTables {
-		truncateTable(tableName)
+		_ = truncateTable(tableName)
 		db.GetCachedSimpleDao().RefreshAll(tableName)
 	}
 }

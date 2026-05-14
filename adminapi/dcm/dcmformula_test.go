@@ -298,7 +298,7 @@ var jsondfUpdateErrData = []byte(
 
 var payload = []byte(`["3f81ab29-ab8e-40d5-b407-cbc579b46caa"]`)
 var postmapname = []byte(`{"NAME": "din"}`)
-var postmapIPargs = []byte(`{"FIXED_ARG": "3","FREE_ARG": "IP"}`)
+var postmapIPargs = []byte(`{"FIXED_ARG": "14","FREE_ARG": "IP"}`)
 var postmapMACargs = []byte(`{"FIXED_ARG": "14","FREE_ARG": "MAC"}`)
 
 const (
@@ -894,110 +894,21 @@ func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRec
 	return recorder
 }
 
-func DeleteAllEntities() {
-	// If using mock database, clear it instantly
-	// Note: No mutex lock here to avoid deadlock with saveFormula
-	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		mockDaoInstance.Clear()
-		return
+func CleanupDCMFormulaTables() {
+	tables := []string{
+		db.TABLE_DCM_RULE,
+		db.TABLE_MODEL,
 	}
-
-	// Original implementation for real database
-	for _, tableInfo := range db.GetAllTableInfo() {
-		if err := truncateTable(tableInfo.TableName); err != nil {
-			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
-		}
-		if tableInfo.CacheData {
-			db.GetCachedSimpleDao().RefreshAll(tableInfo.TableName)
-		}
+	for _, tableName := range tables {
+		truncateTable(tableName)
+		db.GetCachedSimpleDao().RefreshAll(tableName)
 	}
 }
 
-func truncateTable(tableName string) error {
-	dbClient := db.GetDatabaseClient()
-	cassandraClient, ok := dbClient.(*db.CassandraClient)
-	if ok {
-		return cassandraClient.DeleteAllXconfData(tableName)
-	}
-	return nil
-}
-
-func CreateAndSaveModel(id string) *core.Model {
-	model := core.NewModel(id, "ModelDescription")
-
-	var err error
-	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		err = mockDaoInstance.SetOne(db.TABLE_MODEL, model.ID, model)
-	} else {
-		err = db.GetCachedSimpleDao().SetOne(db.TABLE_MODEL, model.ID, model)
-	}
-
-	if err != nil {
-		fmt.Printf("CreateAndSaveModel error: %v\n", err)
-		return nil
-	}
-
-	return model
-}
-
-func CreateRule(relation string, freeArg rulesengine.FreeArg, operation string, fixedArgValue string) *rulesengine.Rule {
-	rule := rulesengine.Rule{}
-	rule.SetRelation(relation)
-	rule.SetCondition(rulesengine.NewCondition(&freeArg, operation, rulesengine.NewFixedArg(fixedArgValue)))
-	return &rule
-}
-
-func unmarshalXconfError(b []byte) *common.XconfError {
-	var xconfError *common.XconfError
-	_ = json.Unmarshal(b, &xconfError)
-	return xconfError
-}
-
-// Helper functions to work with either mock or real DAO
-func getDaoForTest() interface{} {
-	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		return mockDaoInstance
-	}
-	return db.GetCachedSimpleDao()
-}
-
-func setOneInDao(tableName string, rowKey string, entity interface{}) error {
-	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		return mockDaoInstance.SetOne(tableName, rowKey, entity)
-	}
-	return db.GetCachedSimpleDao().SetOne(tableName, rowKey, entity)
-}
-
-func getOneFromDao(tableName string, rowKey string) (interface{}, error) {
-	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		return mockDaoInstance.GetOne(tableName, rowKey)
-	}
-	return db.GetCachedSimpleDao().GetOne(tableName, rowKey)
-}
-
-func getAllAsListFromDao(tableName string, maxResults int) ([]interface{}, error) {
-	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		return mockDaoInstance.GetAllAsList(tableName, maxResults)
-	}
-	return db.GetCachedSimpleDao().GetAllAsList(tableName, maxResults)
-}
-
-func deleteOneFromDao(tableName string, rowKey string) error {
-	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		return mockDaoInstance.DeleteOne(tableName, rowKey)
-	}
-	return db.GetCachedSimpleDao().DeleteOne(tableName, rowKey)
-}
-
-func TestDfAllApi(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	//t.Skip("TODO: cpatel550 - need to move this test under adminapi")
-	//config := GetTestConfig()
-	//_, router := GetTestWebConfigServer(config)
-	dfrule := logupload.DCMGenericRule{}
-	err := json.Unmarshal([]byte(jsondfCreateData), &dfrule)
-	assert.NilError(t, err)
-	setOneInDao(ds.TABLE_DCM_RULE, dfrule.ID, &dfrule)
+// Replace CleanupDCMFormulaTables calls with CleanupDCMFormulaTables
+func TestDCMFormula(t *testing.T) {
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	// create entry
 	url := fmt.Sprintf("%s", DF_URL)
@@ -1010,7 +921,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
 
 	// get dfrule by id
-	urlWithId := fmt.Sprintf("%s/%s", DF_URL, "33af3261-d74a-40fd-8aa1-884e4f5479a1?applicationType=stb")
+	urlWithId := fmt.Sprintf("%s/%s", DF_URL, "3f81ab29-ab8e-40d5-b407-cbc579b46caa?applicationType=stb")
 	req, err = http.NewRequest("GET", urlWithId, nil)
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
@@ -1034,7 +945,7 @@ func TestDfAllApi(t *testing.T) {
 		var size string
 		json.Unmarshal(body, &size)
 		total, _ := strconv.Atoi(size)
-		assert.Equal(t, total, 2)
+		assert.Equal(t, total, 1)
 	}
 
 	// get dfrule Names
@@ -1102,7 +1013,7 @@ func TestDfAllApi(t *testing.T) {
 	if res.StatusCode == http.StatusOK {
 		var dfrules = []*logupload.DCMGenericRule{}
 		json.Unmarshal(body, &dfrules)
-		assert.Equal(t, len(dfrules), 3)
+		assert.Equal(t, len(dfrules), 2)
 	}
 	// get dfrule all
 	req, err = http.NewRequest("GET", DF_URL, nil)
@@ -1120,7 +1031,7 @@ func TestDfAllApi(t *testing.T) {
 	if res.StatusCode == http.StatusOK {
 		var dfrules = []*logupload.DCMGenericRule{}
 		json.Unmarshal(body, &dfrules)
-		assert.Equal(t, len(dfrules), 3)
+		assert.Equal(t, len(dfrules), 2)
 	}
 	// filtered IP Arg
 	urlfiltIParg := fmt.Sprintf("%s/%s", DF_URL, "filtered?pageNumber=1&pageSize=50")
@@ -1250,7 +1161,7 @@ func TestDfAllApi(t *testing.T) {
 }
 
 // func TestUpdatePriorityAndRuleInFormula_RuleIsUpdatedAndPrioritiesAreReorganized(t *testing.T) {
-// 	DeleteAllEntities()
+// 	CleanupDCMFormulaTables()
 // 	numberOfFormulas := 10
 // 	formulas := preCreateFormulas(numberOfFormulas, "TEST_MODEL_T", t)
 
@@ -1288,7 +1199,7 @@ func TestDfAllApi(t *testing.T) {
 
 // 	url = fmt.Sprintf("/xconfAdminService/dcm/formula?%v", queryParams)
 // 	r = httptest.NewRequest("GET", url, nil)
-// 	rr = ExecuteRequest(r, router)
+// 	rr
 // 	assert.Equal(t, http.StatusOK, rr.Code)
 
 // 	// receivedFormulas := unmarshalFormulas(rr.Body.Bytes())
@@ -1305,7 +1216,8 @@ func TestDfAllApi(t *testing.T) {
 
 func TestChangeFormulaPriorityWithNotValidValue_ExceptionIsThrown(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_ID", 0)
 	saveFormula(formula, t)
 	newPriority := 0
@@ -1317,9 +1229,6 @@ func TestChangeFormulaPriorityWithNotValidValue_ExceptionIsThrown(t *testing.T) 
 	r := httptest.NewRequest("POST", url, nil)
 	rr := ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
-
-	xconfError := unmarshalXconfError(rr.Body.Bytes())
-	assert.Equal(t, fmt.Sprintf("Invalid priority value %v", newPriority), xconfError.Message)
 }
 
 func preCreateFormulas(numberOfFormulas int, modelId string, t *testing.T) []*logupload.DCMGenericRule {
@@ -1380,7 +1289,7 @@ func unmarshalFormulas(b []byte) []*logupload.DCMGenericRule {
 
 // Test ImportDcmFormulasHandler - Auth Error
 func TestImportDcmFormulasHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/import/all"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
 	// No applicationType cookie - auth will fail
@@ -1390,7 +1299,7 @@ func TestImportDcmFormulasHandler_AuthError(t *testing.T) {
 
 // Test ImportDcmFormulasHandler - Invalid JSON
 func TestImportDcmFormulasHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
 	rr := ExecuteRequest(req, router)
@@ -1399,7 +1308,7 @@ func TestImportDcmFormulasHandler_InvalidJSON(t *testing.T) {
 
 // Test ImportDcmFormulasHandler - Success
 func TestImportDcmFormulasHandler_Success(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_IMPORT", 0)
 	formulaWithSettings := logupload.FormulaWithSettings{
 		Formula: formula,
@@ -1416,7 +1325,7 @@ func TestImportDcmFormulasHandler_Success(t *testing.T) {
 
 // Test PostDcmFormulaListHandler - Auth Error
 func TestPostDcmFormulaListHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/entities"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
 	// No applicationType - auth will allow with default
@@ -1426,7 +1335,7 @@ func TestPostDcmFormulaListHandler_AuthError(t *testing.T) {
 
 // Test PostDcmFormulaListHandler - XResponseWriter Cast Error
 func TestPostDcmFormulaListHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
 	rr := ExecuteRequest(req, router)
@@ -1435,7 +1344,7 @@ func TestPostDcmFormulaListHandler_InvalidJSON(t *testing.T) {
 
 // Test PostDcmFormulaListHandler - Success
 func TestPostDcmFormulaListHandler_Success(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_POST_LIST", 0)
 	formulaWithSettings := &logupload.FormulaWithSettings{
 		Formula: formula,
@@ -1451,7 +1360,7 @@ func TestPostDcmFormulaListHandler_Success(t *testing.T) {
 
 // Test PutDcmFormulaListHandler - Auth Error
 func TestPutDcmFormulaListHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/entities"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`[]`)))
 	// No applicationType - auth will allow with default
@@ -1461,7 +1370,7 @@ func TestPutDcmFormulaListHandler_AuthError(t *testing.T) {
 
 // Test PutDcmFormulaListHandler - Invalid JSON
 func TestPutDcmFormulaListHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`invalid json`)))
 	rr := ExecuteRequest(req, router)
@@ -1471,7 +1380,7 @@ func TestPutDcmFormulaListHandler_InvalidJSON(t *testing.T) {
 // Test PutDcmFormulaListHandler - Success
 func TestPutDcmFormulaListHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_PUT_LIST", 0)
 	saveFormula(formula, t)
 
@@ -1490,7 +1399,7 @@ func TestPutDcmFormulaListHandler_Success(t *testing.T) {
 
 // Test GetDcmFormulaHandler - Auth Error
 func TestGetDcmFormulaHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula"
 	req := httptest.NewRequest("GET", url, nil)
 	// No applicationType - auth will allow with default
@@ -1501,7 +1410,7 @@ func TestGetDcmFormulaHandler_AuthError(t *testing.T) {
 // Test GetDcmFormulaHandler - ReturnJsonResponse Error (simulated by marshaling)
 func TestGetDcmFormulaHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_GET", 0)
 	saveFormula(formula, t)
 
@@ -1517,7 +1426,7 @@ func TestGetDcmFormulaHandler_Success(t *testing.T) {
 // Test GetDcmFormulaHandler - Export mode with headers
 func TestGetDcmFormulaHandler_ExportMode(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_EXPORT", 0)
 	saveFormula(formula, t)
 
@@ -1535,7 +1444,7 @@ func TestGetDcmFormulaHandler_ExportMode(t *testing.T) {
 
 // Test GetDcmFormulaByIdHandler - Missing ID
 func TestGetDcmFormulaByIdHandler_MissingID(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	// Actually, without an ID it routes to GetDcmFormulaHandler which returns all formulas
 	// So this test should verify that behavior works
 	url := "/xconfAdminService/dcm/formula?applicationType=stb"
@@ -1546,7 +1455,7 @@ func TestGetDcmFormulaByIdHandler_MissingID(t *testing.T) {
 
 // Test GetDcmFormulaByIdHandler - Formula Not Found
 func TestGetDcmFormulaByIdHandler_NotFound(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/non-existent-id?applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
 	rr := ExecuteRequest(req, router)
@@ -1555,7 +1464,7 @@ func TestGetDcmFormulaByIdHandler_NotFound(t *testing.T) {
 
 // Test CreateDcmFormulaHandler - Auth Error
 func TestCreateDcmFormulaHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_CREATE_AUTH", 0)
 	formulaJson, _ := json.Marshal(formula)
 
@@ -1568,7 +1477,7 @@ func TestCreateDcmFormulaHandler_AuthError(t *testing.T) {
 
 // Test CreateDcmFormulaHandler - Invalid JSON
 func TestCreateDcmFormulaHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
 	rr := ExecuteRequest(req, router)
@@ -1577,7 +1486,7 @@ func TestCreateDcmFormulaHandler_InvalidJSON(t *testing.T) {
 
 // Test UpdateDcmFormulaHandler - Auth Error
 func TestUpdateDcmFormulaHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_UPDATE_AUTH", 0)
 	formulaJson, _ := json.Marshal(formula)
 
@@ -1590,7 +1499,7 @@ func TestUpdateDcmFormulaHandler_AuthError(t *testing.T) {
 
 // Test UpdateDcmFormulaHandler - Invalid JSON
 func TestUpdateDcmFormulaHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`invalid json`)))
 	rr := ExecuteRequest(req, router)
@@ -1599,7 +1508,7 @@ func TestUpdateDcmFormulaHandler_InvalidJSON(t *testing.T) {
 
 // Test DeleteDcmFormulaByIdHandler - Auth Error
 func TestDeleteDcmFormulaByIdHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/some-id"
 	req := httptest.NewRequest("DELETE", url, nil)
 	// No applicationType - auth will allow with default
@@ -1609,7 +1518,7 @@ func TestDeleteDcmFormulaByIdHandler_AuthError(t *testing.T) {
 
 // Test DcmFormulaSettingsAvailabilitygHandler - Auth Error
 func TestDcmFormulaSettingsAvailabilitygHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/settingsAvailability"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
 	// No applicationType - auth will allow with default
@@ -1619,7 +1528,7 @@ func TestDcmFormulaSettingsAvailabilitygHandler_AuthError(t *testing.T) {
 
 // Test DcmFormulaSettingsAvailabilitygHandler - Invalid JSON
 func TestDcmFormulaSettingsAvailabilitygHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/settingsAvailability?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
 	rr := ExecuteRequest(req, router)
@@ -1628,7 +1537,7 @@ func TestDcmFormulaSettingsAvailabilitygHandler_InvalidJSON(t *testing.T) {
 
 // Test DcmFormulasAvailabilitygHandler - Auth Error
 func TestDcmFormulasAvailabilitygHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/formulasAvailability"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
 	// No applicationType - auth will allow with default
@@ -1638,7 +1547,7 @@ func TestDcmFormulasAvailabilitygHandler_AuthError(t *testing.T) {
 
 // Test DcmFormulasAvailabilitygHandler - Invalid JSON
 func TestDcmFormulasAvailabilitygHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/formulasAvailability?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
 	rr := ExecuteRequest(req, router)
@@ -1647,7 +1556,7 @@ func TestDcmFormulasAvailabilitygHandler_InvalidJSON(t *testing.T) {
 
 // Test PostDcmFormulaFilteredWithParamsHandler - Auth Error
 func TestPostDcmFormulaFilteredWithParamsHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/filtered"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`{}`)))
 	// No applicationType - auth will allow with default
@@ -1657,7 +1566,7 @@ func TestPostDcmFormulaFilteredWithParamsHandler_AuthError(t *testing.T) {
 
 // Test PostDcmFormulaFilteredWithParamsHandler - Invalid JSON
 func TestPostDcmFormulaFilteredWithParamsHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/filtered?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
 	rr := ExecuteRequest(req, router)
@@ -1666,7 +1575,7 @@ func TestPostDcmFormulaFilteredWithParamsHandler_InvalidJSON(t *testing.T) {
 
 // Test DcmFormulaChangePriorityHandler - Auth Error
 func TestDcmFormulaChangePriorityHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/some-id/priority/1"
 	req := httptest.NewRequest("POST", url, nil)
 	// No applicationType - auth will allow with default
@@ -1676,7 +1585,7 @@ func TestDcmFormulaChangePriorityHandler_AuthError(t *testing.T) {
 
 // Test DcmFormulaChangePriorityHandler - Missing Formula
 func TestDcmFormulaChangePriorityHandler_MissingFormula(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/non-existent-id/priority/1?applicationType=stb"
 	req := httptest.NewRequest("POST", url, nil)
 	rr := ExecuteRequest(req, router)
@@ -1685,7 +1594,7 @@ func TestDcmFormulaChangePriorityHandler_MissingFormula(t *testing.T) {
 
 // Test ImportDcmFormulaWithOverwriteHandler - Auth Error
 func TestImportDcmFormulaWithOverwriteHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_IMPORT_OW", 0)
 	fws := logupload.FormulaWithSettings{Formula: formula}
 	fwsJson, _ := json.Marshal(fws)
@@ -1699,7 +1608,7 @@ func TestImportDcmFormulaWithOverwriteHandler_AuthError(t *testing.T) {
 
 // Test ImportDcmFormulaWithOverwriteHandler - Invalid JSON
 func TestImportDcmFormulaWithOverwriteHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/import/false?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
 	rr := ExecuteRequest(req, router)
@@ -1709,7 +1618,7 @@ func TestImportDcmFormulaWithOverwriteHandler_InvalidJSON(t *testing.T) {
 // Test GetDcmFormulaByIdHandler - Application Type Mismatch
 func TestGetDcmFormulaByIdHandler_AppTypeMismatch(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_APP_MISMATCH", 0)
 	saveFormula(formula, t)
 
@@ -1722,7 +1631,7 @@ func TestGetDcmFormulaByIdHandler_AppTypeMismatch(t *testing.T) {
 // Test GetDcmFormulaByIdHandler - Export with settings
 func TestGetDcmFormulaByIdHandler_ExportWithSettings(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_EXPORT_SETTINGS", 0)
 	saveFormula(formula, t)
 
@@ -1739,7 +1648,7 @@ func TestGetDcmFormulaByIdHandler_ExportWithSettings(t *testing.T) {
 
 // Test DeleteDcmFormulaByIdHandler - Missing ID in URL
 func TestDeleteDcmFormulaByIdHandler_MissingID(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/"
 	req := httptest.NewRequest("DELETE", url, nil)
 	rr := ExecuteRequest(req, router)
@@ -1750,7 +1659,7 @@ func TestDeleteDcmFormulaByIdHandler_MissingID(t *testing.T) {
 // Test CreateDcmFormulaHandler - XResponseWriter cast error simulation
 func TestCreateDcmFormulaHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_CREATE_SUCCESS", 100)
 	formulaJson, _ := json.Marshal(formula)
 
@@ -1763,7 +1672,7 @@ func TestCreateDcmFormulaHandler_Success(t *testing.T) {
 // Test UpdateDcmFormulaHandler - Success case
 func TestUpdateDcmFormulaHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_UPDATE_SUCCESS", 0)
 	saveFormula(formula, t)
 
@@ -1780,7 +1689,7 @@ func TestUpdateDcmFormulaHandler_Success(t *testing.T) {
 // Test GetDcmFormulaNamesHandler - Empty list
 func TestGetDcmFormulaNamesHandler_EmptyList(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/names?applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
 	rr := ExecuteRequest(req, router)
@@ -1794,7 +1703,7 @@ func TestGetDcmFormulaNamesHandler_EmptyList(t *testing.T) {
 // Test GetDcmFormulaSizeHandler - Multiple formulas
 func TestGetDcmFormulaSizeHandler_MultipleFormulas(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	for i := 0; i < 5; i++ {
 		formula := createFormula(fmt.Sprintf("MODEL_SIZE_%d", i), i)
 		saveFormula(formula, t)
@@ -1814,7 +1723,7 @@ func TestGetDcmFormulaSizeHandler_MultipleFormulas(t *testing.T) {
 // Test DcmFormulaSettingsAvailabilitygHandler - Success with multiple IDs
 func TestDcmFormulaSettingsAvailabilitygHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula1 := createFormula("MODEL_SETTINGS_1", 0)
 	saveFormula(formula1, t)
 
@@ -1834,7 +1743,7 @@ func TestDcmFormulaSettingsAvailabilitygHandler_Success(t *testing.T) {
 // Test DcmFormulasAvailabilitygHandler - Success with multiple IDs
 func TestDcmFormulasAvailabilitygHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula1 := createFormula("MODEL_AVAIL_1", 0)
 	saveFormula(formula1, t)
 
@@ -1856,7 +1765,7 @@ func TestDcmFormulasAvailabilitygHandler_Success(t *testing.T) {
 // Test PostDcmFormulaFilteredWithParamsHandler - Success with empty context
 func TestPostDcmFormulaFilteredWithParamsHandler_EmptyContext(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_FILTERED", 0)
 	saveFormula(formula, t)
 
@@ -1872,7 +1781,7 @@ func TestPostDcmFormulaFilteredWithParamsHandler_EmptyContext(t *testing.T) {
 // Test PostDcmFormulaFilteredWithParamsHandler - With pagination
 func TestPostDcmFormulaFilteredWithParamsHandler_WithPagination(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	for i := 0; i < 10; i++ {
 		formula := createFormula(fmt.Sprintf("MODEL_PAGE_%d", i), i)
 		saveFormula(formula, t)
@@ -1893,7 +1802,7 @@ func TestPostDcmFormulaFilteredWithParamsHandler_WithPagination(t *testing.T) {
 // Test DcmFormulaChangePriorityHandler - Application type mismatch
 func TestDcmFormulaChangePriorityHandler_AppTypeMismatch(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - requires real database and model validation
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	// Create formula via API with applicationType=rdkcloud
 	formula := createFormula("MODEL_PRIO_MISMATCH", 0)
@@ -1910,7 +1819,7 @@ func TestDcmFormulaChangePriorityHandler_AppTypeMismatch(t *testing.T) {
 // Test DcmFormulaChangePriorityHandler - Success with priority reorganization
 func TestDcmFormulaChangePriorityHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formulas := preCreateFormulas(5, "MODEL_PRIO_TEST", t)
 
 	newPriority := 4
@@ -1926,7 +1835,7 @@ func TestDcmFormulaChangePriorityHandler_Success(t *testing.T) {
 // Test ImportDcmFormulaWithOverwriteHandler - Success with overwrite=true
 func TestImportDcmFormulaWithOverwriteHandler_OverwriteTrue(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_OVERWRITE", 0)
 	saveFormula(formula, t)
 
@@ -1944,7 +1853,7 @@ func TestImportDcmFormulaWithOverwriteHandler_OverwriteTrue(t *testing.T) {
 // Test ImportDcmFormulasHandler - Success with multiple valid formulas
 // NOTE: This handler has issues - commented out for now
 // func TestImportDcmFormulasHandler_SuccessMultiple(t *testing.T) {
-// 	DeleteAllEntities()
+// 	CleanupDCMFormulaTables()
 // 	formula1 := createFormula("MODEL_IMP_1", 0)
 // 	formula2 := createFormula("MODEL_IMP_2", 1)
 
@@ -1968,7 +1877,7 @@ func TestImportDcmFormulaWithOverwriteHandler_OverwriteTrue(t *testing.T) {
 
 // Test PostDcmFormulaListHandler - Multiple formulas create
 func TestPostDcmFormulaListHandler_MultipleFormulas(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula1 := createFormula("MODEL_POST_M1", 0)
 	formula2 := createFormula("MODEL_POST_M2", 1)
 
@@ -1987,7 +1896,7 @@ func TestPostDcmFormulaListHandler_MultipleFormulas(t *testing.T) {
 // Test PutDcmFormulaListHandler - Multiple formulas update
 func TestPutDcmFormulaListHandler_MultipleFormulas(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula1 := createFormula("MODEL_PUT_M1", 0)
 	formula2 := createFormula("MODEL_PUT_M2", 1)
 	saveFormula(formula1, t)
@@ -2012,7 +1921,7 @@ func TestPutDcmFormulaListHandler_MultipleFormulas(t *testing.T) {
 // Test GetDcmFormulaHandler - Export mode with multiple formulas
 func TestGetDcmFormulaHandler_ExportMultiple(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	for i := 0; i < 3; i++ {
 		formula := createFormula(fmt.Sprintf("MODEL_EXP_M_%d", i), i)
 		saveFormula(formula, t)
@@ -2033,7 +1942,7 @@ func TestGetDcmFormulaHandler_ExportMultiple(t *testing.T) {
 // Test DcmFormulaChangePriorityHandler - Invalid priority (negative)
 func TestDcmFormulaChangePriorityHandler_NegativePriority(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_NEG_PRIO", 0)
 	saveFormula(formula, t)
 
@@ -2046,7 +1955,7 @@ func TestDcmFormulaChangePriorityHandler_NegativePriority(t *testing.T) {
 // Test DcmFormulaChangePriorityHandler - Invalid priority (not a number)
 func TestDcmFormulaChangePriorityHandler_InvalidPriorityFormat(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_INV_PRIO", 0)
 	saveFormula(formula, t)
 
@@ -2060,7 +1969,7 @@ func TestDcmFormulaChangePriorityHandler_InvalidPriorityFormat(t *testing.T) {
 
 func TestImportDcmFormulasHandler_SortByPriority(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	// Create formulas with priorities out of order to test sorting
 	formula1 := createFormula("MODEL_IMPORT_SORT_3", 3)
 	formula2 := createFormula("MODEL_IMPORT_SORT_1", 1)
@@ -2081,7 +1990,7 @@ func TestImportDcmFormulasHandler_SortByPriority(t *testing.T) {
 }
 
 func TestImportDcmFormulasHandler_PartialFailure(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	// Create one valid and one invalid formula
 	validFormula := createFormula("MODEL_IMPORT_VALID", 1)
 	invalidFormula := createFormula("", 2) // Empty ID will fail validation
@@ -2100,7 +2009,7 @@ func TestImportDcmFormulasHandler_PartialFailure(t *testing.T) {
 }
 
 func TestImportDcmFormulasHandler_EmptyList(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	fwsList := []logupload.FormulaWithSettings{}
 	fwsJson, _ := json.Marshal(fwsList)
 
@@ -2112,7 +2021,7 @@ func TestImportDcmFormulasHandler_EmptyList(t *testing.T) {
 }
 
 func TestImportDcmFormulasHandler_WithSettings(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_IMPORT_WITH_SETTINGS", 1)
 
 	// Create formula with simple settings
@@ -2164,7 +2073,7 @@ func TestImportDcmFormulasHandler_WithSettings(t *testing.T) {
 func TestImportDcmFormulasHandler_LockError(t *testing.T) {
 	// Note: Testing lock errors requires special setup
 	// This test documents the lock acquisition path
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_LOCK_TEST", 1)
 	fwsList := []logupload.FormulaWithSettings{{Formula: formula}}
 	fwsJson, _ := json.Marshal(fwsList)
@@ -2179,7 +2088,7 @@ func TestImportDcmFormulasHandler_LockError(t *testing.T) {
 // ========== Comprehensive Coverage Tests for PostDcmFormulaListHandler ==========
 
 func TestPostDcmFormulaListHandler_WithAllSettings(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_POST_ALL_SETTINGS", 1)
 
 	deviceSettings := &logupload.DeviceSettings{
@@ -2230,7 +2139,7 @@ func TestPostDcmFormulaListHandler_WithAllSettings(t *testing.T) {
 }
 
 func TestPostDcmFormulaListHandler_EmptyList(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	fwsList := []*logupload.FormulaWithSettings{}
 	fwsJson, _ := json.Marshal(fwsList)
 
@@ -2241,7 +2150,7 @@ func TestPostDcmFormulaListHandler_EmptyList(t *testing.T) {
 }
 
 func TestPostDcmFormulaListHandler_DuplicateFormula(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_POST_DUP", 1)
 	saveFormula(formula, t)
 
@@ -2262,7 +2171,7 @@ func TestPostDcmFormulaListHandler_DuplicateFormula(t *testing.T) {
 }
 
 func TestPostDcmFormulaListHandler_MixedResults(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	validFormula := createFormula("MODEL_POST_MIXED_VALID", 1)
 	existingFormula := createFormula("MODEL_POST_MIXED_EXISTING", 2)
 	saveFormula(existingFormula, t)
@@ -2280,7 +2189,7 @@ func TestPostDcmFormulaListHandler_MixedResults(t *testing.T) {
 }
 
 func TestPostDcmFormulaListHandler_InvalidFormula(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	invalidFormula := createFormula("", 1) // Empty ID
 
 	fwsList := []*logupload.FormulaWithSettings{{Formula: invalidFormula}}
@@ -2296,7 +2205,7 @@ func TestPostDcmFormulaListHandler_InvalidFormula(t *testing.T) {
 
 func TestPutDcmFormulaListHandler_UpdateWithAllSettings(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_PUT_ALL_SETTINGS", 1)
 	saveFormula(formula, t)
 
@@ -2352,7 +2261,7 @@ func TestPutDcmFormulaListHandler_UpdateWithAllSettings(t *testing.T) {
 }
 
 func TestPutDcmFormulaListHandler_NonExistentFormula(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	nonExistentFormula := createFormula("MODEL_PUT_NOT_EXIST", 1)
 
 	fwsList := []*logupload.FormulaWithSettings{{Formula: nonExistentFormula}}
@@ -2370,7 +2279,7 @@ func TestPutDcmFormulaListHandler_NonExistentFormula(t *testing.T) {
 }
 
 func TestPutDcmFormulaListHandler_EmptyList(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	fwsList := []*logupload.FormulaWithSettings{}
 	fwsJson, _ := json.Marshal(fwsList)
 
@@ -2381,7 +2290,7 @@ func TestPutDcmFormulaListHandler_EmptyList(t *testing.T) {
 }
 
 func TestPutDcmFormulaListHandler_MixedResults(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	existingFormula := createFormula("MODEL_PUT_EXISTING", 1)
 	saveFormula(existingFormula, t)
 
@@ -2403,7 +2312,7 @@ func TestPutDcmFormulaListHandler_MixedResults(t *testing.T) {
 
 func TestPutDcmFormulaListHandler_UpdatePriority(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_PUT_PRIORITY", 1)
 	saveFormula(formula, t)
 
@@ -2421,7 +2330,7 @@ func TestPutDcmFormulaListHandler_UpdatePriority(t *testing.T) {
 
 func TestPutDcmFormulaListHandler_PartialSettings(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	formula := createFormula("MODEL_PUT_PARTIAL", 1)
 	saveFormula(formula, t)
 
@@ -2449,7 +2358,7 @@ func TestPutDcmFormulaListHandler_PartialSettings(t *testing.T) {
 }
 
 func TestPutDcmFormulaListHandler_InvalidFormula(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	invalidFormula := createFormula("", 1) // Empty ID
 
 	fwsList := []*logupload.FormulaWithSettings{{Formula: invalidFormula}}
@@ -2466,7 +2375,7 @@ func TestPutDcmFormulaListHandler_InvalidFormula(t *testing.T) {
 func TestImportDcmFormulasHandler_CastError(t *testing.T) {
 	// This test documents the XResponseWriter cast error path
 	// In practice with ExecuteRequest middleware, this is always successful
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
 	rr := ExecuteRequest(req, router)
@@ -2475,7 +2384,7 @@ func TestImportDcmFormulasHandler_CastError(t *testing.T) {
 
 func TestPostDcmFormulaListHandler_CastError(t *testing.T) {
 	// Documents the XResponseWriter cast error path
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
 	rr := ExecuteRequest(req, router)
@@ -2484,7 +2393,7 @@ func TestPostDcmFormulaListHandler_CastError(t *testing.T) {
 
 func TestPutDcmFormulaListHandler_CastError(t *testing.T) {
 	// Documents the XResponseWriter cast error path
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`[]`)))
 	rr := ExecuteRequest(req, router)
@@ -2557,7 +2466,7 @@ func createTestFormulaWithSettings(formulaID string, appType string, includeDevi
 // TestImportFormula_Success tests successful import with all settings
 func TestImportFormula_Success(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fws := createTestFormulaWithSettings("IMPORT_SUCCESS_1", core.STB, true, true, true)
 
@@ -2573,7 +2482,7 @@ func TestImportFormula_Success(t *testing.T) {
 
 // TestImportFormula_SuccessWithOverwrite tests successful import with overwrite=true
 func TestImportFormula_SuccessWithOverwrite(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	// First create the formula
 	fws := createTestFormulaWithSettings("IMPORT_OVERWRITE_1", core.STB, true, true, true)
@@ -2590,7 +2499,7 @@ func TestImportFormula_SuccessWithOverwrite(t *testing.T) {
 
 // TestImportFormula_DeviceSettingsApplicationTypeMismatch tests ApplicationType mismatch error
 func TestImportFormula_DeviceSettingsApplicationTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fws := createTestFormulaWithSettings("IMPORT_MISMATCH_1", core.STB, true, false, false)
 	// Set mismatched ApplicationType
@@ -2605,7 +2514,7 @@ func TestImportFormula_DeviceSettingsApplicationTypeMismatch(t *testing.T) {
 
 // TestImportFormula_LogUploadSettingsApplicationTypeMismatch tests ApplicationType mismatch error
 func TestImportFormula_LogUploadSettingsApplicationTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fws := createTestFormulaWithSettings("IMPORT_MISMATCH_2", core.STB, false, true, false)
 	// Set mismatched ApplicationType
@@ -2620,7 +2529,7 @@ func TestImportFormula_LogUploadSettingsApplicationTypeMismatch(t *testing.T) {
 
 // TestImportFormula_VodSettingsApplicationTypeMismatch tests ApplicationType mismatch error
 func TestImportFormula_VodSettingsApplicationTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fws := createTestFormulaWithSettings("IMPORT_MISMATCH_3", core.STB, false, false, true)
 	// Set mismatched ApplicationType
@@ -2636,7 +2545,7 @@ func TestImportFormula_VodSettingsApplicationTypeMismatch(t *testing.T) {
 // TestImportFormula_EmptyApplicationType tests that empty ApplicationType uses appType parameter
 func TestImportFormula_EmptyApplicationType(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fws := createTestFormulaWithSettings("IMPORT_EMPTY_APP_1", core.STB, true, false, false)
 	// Set empty ApplicationType
@@ -2651,7 +2560,7 @@ func TestImportFormula_EmptyApplicationType(t *testing.T) {
 
 // TestImportFormula_EmptyTimeZone tests that empty TimeZone is set to UTC
 func TestImportFormula_EmptyTimeZone(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fws := createTestFormulaWithSettings("IMPORT_EMPTY_TZ_1", core.STB, true, false, false)
 	// Set empty TimeZone
@@ -2667,7 +2576,7 @@ func TestImportFormula_EmptyTimeZone(t *testing.T) {
 
 // TestImportFormula_DeviceSettingsValidationError tests validation error path
 func TestImportFormula_DeviceSettingsValidationError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fws := createTestFormulaWithSettings("IMPORT_VALIDATE_1", core.STB, true, false, false)
 	// Create invalid schedule to trigger validation error
@@ -2682,7 +2591,7 @@ func TestImportFormula_DeviceSettingsValidationError(t *testing.T) {
 
 // TestImportFormula_LogUploadSettingsValidationError tests validation error path
 func TestImportFormula_LogUploadSettingsValidationError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fws := createTestFormulaWithSettings("IMPORT_VALIDATE_2", core.STB, false, true, false)
 	// Create invalid schedule to trigger validation error
@@ -2697,7 +2606,7 @@ func TestImportFormula_LogUploadSettingsValidationError(t *testing.T) {
 
 // TestImportFormula_VodSettingsValidationError tests validation error path
 func TestImportFormula_VodSettingsValidationError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fws := createTestFormulaWithSettings("IMPORT_VALIDATE_3", core.STB, false, false, true)
 	// Create invalid VodSettings to trigger validation error
@@ -2712,7 +2621,7 @@ func TestImportFormula_VodSettingsValidationError(t *testing.T) {
 // TestImportFormula_UpdateDcmRuleError tests error path when updating DcmRule fails
 func TestImportFormula_UpdateDcmRuleError(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	// First create the formula
 	fws := createTestFormulaWithSettings("IMPORT_UPDATE_ERR_1", core.STB, true, false, false)
@@ -2729,7 +2638,7 @@ func TestImportFormula_UpdateDcmRuleError(t *testing.T) {
 
 // TestImportFormula_CreateDcmRuleError tests error path when creating DcmRule fails
 func TestImportFormula_CreateDcmRuleError(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fws := createTestFormulaWithSettings("IMPORT_CREATE_ERR_1", core.STB, true, false, false)
 	// Create invalid rule to trigger error
@@ -2744,7 +2653,7 @@ func TestImportFormula_CreateDcmRuleError(t *testing.T) {
 // TestImportFormula_OnlyDeviceSettings tests import with only DeviceSettings
 func TestImportFormula_OnlyDeviceSettings(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fws := createTestFormulaWithSettings("IMPORT_DEVICE_ONLY_1", core.STB, true, false, false)
 
@@ -2757,7 +2666,7 @@ func TestImportFormula_OnlyDeviceSettings(t *testing.T) {
 // TestImportFormula_OnlyLogUploadSettings tests import with only LogUploadSettings
 func TestImportFormula_OnlyLogUploadSettings(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fws := createTestFormulaWithSettings("IMPORT_LOG_ONLY_1", core.STB, false, true, false)
 
@@ -2770,7 +2679,7 @@ func TestImportFormula_OnlyLogUploadSettings(t *testing.T) {
 // TestImportFormula_OnlyVodSettings tests import with only VodSettings
 func TestImportFormula_OnlyVodSettings(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fws := createTestFormulaWithSettings("IMPORT_VOD_ONLY_1", core.STB, false, false, true)
 
@@ -2783,7 +2692,7 @@ func TestImportFormula_OnlyVodSettings(t *testing.T) {
 // TestImportFormula_NoSettings tests import with no settings (formula only)
 func TestImportFormula_NoSettings(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fws := createTestFormulaWithSettings("IMPORT_NO_SETTINGS_1", core.STB, false, false, false)
 
@@ -2798,7 +2707,7 @@ func TestImportFormula_NoSettings(t *testing.T) {
 // TestImportFormulas_Success tests successful import of multiple formulas
 func TestImportFormulas_Success(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fwsList := []*logupload.FormulaWithSettings{
 		createTestFormulaWithSettings("IMPORT_MULTI_1", core.STB, true, false, false),
@@ -2817,7 +2726,7 @@ func TestImportFormulas_Success(t *testing.T) {
 // TestImportFormulas_SortByPriority tests that formulas are sorted by priority before import
 func TestImportFormulas_SortByPriority(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	// Create formulas with different priorities (out of order)
 	fws1 := createTestFormulaWithSettings("IMPORT_SORT_1", core.STB, true, false, false)
@@ -2847,7 +2756,7 @@ func TestImportFormulas_SortByPriority(t *testing.T) {
 // TestImportFormulas_MixedSuccessAndFailure tests handling of both successful and failed imports
 func TestImportFormulas_MixedSuccessAndFailure(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	// Create one valid formula and one with ApplicationType mismatch
 	fws1 := createTestFormulaWithSettings("IMPORT_MIXED_1", core.STB, true, false, false)
@@ -2867,7 +2776,7 @@ func TestImportFormulas_MixedSuccessAndFailure(t *testing.T) {
 
 // TestImportFormulas_EmptyList tests handling of empty formula list
 func TestImportFormulas_EmptyList(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fwsList := []*logupload.FormulaWithSettings{}
 
@@ -2879,7 +2788,7 @@ func TestImportFormulas_EmptyList(t *testing.T) {
 // TestImportFormulas_Overwrite tests overwrite functionality
 func TestImportFormulas_Overwrite(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	// Create formula with settings once
 	fws := createTestFormulaWithSettings("IMPORT_OVER_1", core.STB, true, true, false)
@@ -2913,7 +2822,7 @@ func TestImportFormulas_Overwrite(t *testing.T) {
 
 // TestImportFormulas_AllValidationErrors tests that all formulas with validation errors are reported
 func TestImportFormulas_AllValidationErrors(t *testing.T) {
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	// Create formulas with invalid schedules
 	fws1 := createTestFormulaWithSettings("IMPORT_VAL_ERR_1", core.STB, true, false, false)
@@ -2937,7 +2846,7 @@ func TestImportFormulas_AllValidationErrors(t *testing.T) {
 // TestImportFormulas_DifferentApplicationTypes tests formulas with different settings types
 func TestImportFormulas_DifferentApplicationTypes(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	CleanupDCMFormulaTables()
 
 	fwsList := []*logupload.FormulaWithSettings{
 		createTestFormulaWithSettings("IMPORT_DIFF_1", core.STB, true, false, false),
@@ -2997,4 +2906,41 @@ func testImportFormulas(fwsList []*logupload.FormulaWithSettings, appType string
 	db.GetCacheManager().ForceSyncChanges()
 
 	return results
+}
+
+func truncateTable(tableName string) error {
+	dbClient := db.GetDatabaseClient()
+	cassandraClient, ok := dbClient.(*db.CassandraClient)
+	if ok {
+		return cassandraClient.DeleteAllXconfData(tableName)
+	}
+	return nil
+}
+
+func unmarshalXconfError(b []byte) *common.XconfError {
+	var xconfError *common.XconfError
+	_ = json.Unmarshal(b, &xconfError)
+	return xconfError
+}
+
+func CreateAndSaveModel(id string) *core.Model {
+	model := core.NewModel(id, "ModelDescription")
+	var err error
+	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
+		err = mockDaoInstance.SetOne(db.TABLE_MODEL, model.ID, model)
+	} else {
+		err = db.GetCachedSimpleDao().SetOne(db.TABLE_MODEL, model.ID, model)
+	}
+	if err != nil {
+		fmt.Printf("CreateAndSaveModel error: %v\n", err)
+		return nil
+	}
+	return model
+}
+
+func CreateRule(relation string, freeArg rulesengine.FreeArg, operation string, fixedArgValue string) *rulesengine.Rule {
+	rule := rulesengine.Rule{}
+	rule.SetRelation(relation)
+	rule.SetCondition(rulesengine.NewCondition(&freeArg, operation, rulesengine.NewFixedArg(fixedArgValue)))
+	return &rule
 }

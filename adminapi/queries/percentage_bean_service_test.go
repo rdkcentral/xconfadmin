@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	common "github.com/rdkcentral/xconfadmin/common"
+	ds "github.com/rdkcentral/xconfwebconfig/db"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
@@ -31,6 +32,21 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 )
+
+func cleanupPercentageBeanEntities() {
+	_ = truncateTable(ds.TABLE_FIRMWARE_RULE)
+	_ = RefreshAllInDao(ds.TABLE_FIRMWARE_RULE)
+	_ = truncateTable(ds.TABLE_FIRMWARE_RULE_TEMPLATE)
+	_ = RefreshAllInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE)
+	_ = truncateTable(ds.TABLE_FIRMWARE_CONFIG)
+	_ = RefreshAllInDao(ds.TABLE_FIRMWARE_CONFIG)
+	_ = truncateTable(ds.TABLE_ENVIRONMENT)
+	_ = RefreshAllInDao(ds.TABLE_ENVIRONMENT)
+	_ = truncateTable(ds.TABLE_MODEL)
+	_ = RefreshAllInDao(ds.TABLE_MODEL)
+	_ = truncateTable(ds.TABLE_GENERIC_NS_LIST)
+	_ = RefreshAllInDao(ds.TABLE_GENERIC_NS_LIST)
+}
 
 func setDefaultPartnerForTest(t *testing.T, partner string) {
 	original := common.CanaryDefaultPartner
@@ -42,7 +58,7 @@ func setDefaultPartnerForTest(t *testing.T, partner string) {
 
 // Test GetPercentageBeanFilterFieldValues - Success case
 func TestGetPercentageBeanFilterFieldValues_Success(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Create test percentage bean
 	_, _ = PreCreatePercentageBean()
@@ -57,7 +73,7 @@ func TestGetPercentageBeanFilterFieldValues_Success(t *testing.T) {
 
 // Test GetPercentageBeanFilterFieldValues - Error case
 func TestGetPercentageBeanFilterFieldValues_Error(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Test with empty database - should still work but return empty result
 	result, err := GetPercentageBeanFilterFieldValues("name", "stb")
@@ -69,7 +85,7 @@ func TestGetPercentageBeanFilterFieldValues_Error(t *testing.T) {
 // Test getGlobalPercentageFields
 func TestGetGlobalPercentageFields(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Test with a valid field name
 	result := getGlobalPercentageFields("percentage", "stb")
@@ -82,7 +98,7 @@ func TestGetGlobalPercentageFields(t *testing.T) {
 
 // Test getPercentageBeanFieldValues
 func TestGetPercentageBeanFieldValues(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Create test percentage bean
 	_, _ = PreCreatePercentageBean()
@@ -96,7 +112,7 @@ func TestGetPercentageBeanFieldValues(t *testing.T) {
 
 // Test getPercentageBeanFieldValues - Error case
 func TestGetPercentageBeanFieldValues_Error(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Test with empty database
 	result, err := getPercentageBeanFieldValues("name", "stb")
@@ -142,7 +158,7 @@ func TestGetPartnerOptionalCondition_InvalidPartner(t *testing.T) {
 
 // Test createCanaries
 func TestCreateCanaries(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Create test percentage bean
 	pb, _ := PreCreatePercentageBean()
@@ -160,7 +176,7 @@ func TestCreateCanaries(t *testing.T) {
 
 // Test CreateWakeupPoolList - Success case
 func TestCreateWakeupPoolList_Success(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	fields := log.Fields{
 		"test": "wakeupPool",
@@ -175,7 +191,7 @@ func TestCreateWakeupPoolList_Success(t *testing.T) {
 
 // Test CreateWakeupPoolList - Error case
 func TestCreateWakeupPoolList_Error(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	fields := log.Fields{
 		"test": "wakeupPoolError",
@@ -194,7 +210,7 @@ func TestCreateWakeupPoolList_Error(t *testing.T) {
 func TestGetGlobalPercentageFields_DifferentFields(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Test with percentage field (should have default 100)
 	result := getGlobalPercentageFields(PERCENTAGE_FIELD_NAME, "stb")
@@ -213,7 +229,7 @@ func TestGetGlobalPercentageFields_DifferentFields(t *testing.T) {
 
 // Test getPercentageBeanFieldValues - Distributions field
 func TestGetPercentageBeanFieldValues_Distributions(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Create test percentage bean with distributions
 	pb, _ := PreCreatePercentageBean()
@@ -227,7 +243,7 @@ func TestGetPercentageBeanFieldValues_Distributions(t *testing.T) {
 
 // Test getPercentageBeanFieldValues - Different field types
 func TestGetPercentageBeanFieldValues_VariousFields(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Create test percentage bean
 	pb, _ := PreCreatePercentageBean()
@@ -401,7 +417,7 @@ func TestGetPartnerOptionalCondition_NilOptionalConditions(t *testing.T) {
 
 // Test createCanaries - With old rule (update scenario)
 func TestCreateCanaries_WithOldRule(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	pb, _ := PreCreatePercentageBean()
 	assert.NotNil(t, pb)
@@ -421,7 +437,7 @@ func TestCreateCanaries_WithOldRule(t *testing.T) {
 
 // Test createCanaries - With disabled canary creation
 func TestCreateCanaries_CanaryCreationDisabled(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	pb, _ := PreCreatePercentageBean()
 	fields := log.Fields{
@@ -437,7 +453,7 @@ func TestCreateCanaries_CanaryCreationDisabled(t *testing.T) {
 // Test ResponseEntity error paths - Conflict
 func TestCreatePercentageBean_ResponseEntity_Conflict(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Create first bean
 	pb, _ := PreCreatePercentageBean()
@@ -454,7 +470,7 @@ func TestCreatePercentageBean_ResponseEntity_Conflict(t *testing.T) {
 
 // Test ResponseEntity error paths - Application type mismatch
 func TestCreatePercentageBean_ResponseEntity_AppTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	pb := &coreef.PercentageBean{
 		ID:              "test-bean-123",
@@ -477,7 +493,7 @@ func TestCreatePercentageBean_ResponseEntity_AppTypeMismatch(t *testing.T) {
 
 // Test ResponseEntity error paths - Validation error
 func TestCreatePercentageBean_ResponseEntity_ValidationError(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Create bean with invalid data (empty name)
 	pb := &coreef.PercentageBean{
@@ -497,7 +513,7 @@ func TestCreatePercentageBean_ResponseEntity_ValidationError(t *testing.T) {
 
 // Test UpdatePercentageBean - Empty ID error
 func TestUpdatePercentageBean_ResponseEntity_EmptyID(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	pb := &coreef.PercentageBean{
 		ID:              "",
@@ -516,7 +532,7 @@ func TestUpdatePercentageBean_ResponseEntity_EmptyID(t *testing.T) {
 
 // Test UpdatePercentageBean - Entity not found
 func TestUpdatePercentageBean_ResponseEntity_NotFound(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	pb := &coreef.PercentageBean{
 		ID:              "non-existent-id",
@@ -535,7 +551,7 @@ func TestUpdatePercentageBean_ResponseEntity_NotFound(t *testing.T) {
 
 // Test DeletePercentageBean - Not found error
 func TestDeletePercentageBean_ResponseEntity_NotFound(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	response := DeletePercentageBean("non-existent-id", "stb")
 	assert.NotNil(t, response)
@@ -545,7 +561,7 @@ func TestDeletePercentageBean_ResponseEntity_NotFound(t *testing.T) {
 
 // Test DeletePercentageBean - Application type mismatch
 func TestDeletePercentageBean_ResponseEntity_AppTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	pb, _ := PreCreatePercentageBean()
 	assert.NotNil(t, pb)
@@ -560,7 +576,7 @@ func TestDeletePercentageBean_ResponseEntity_AppTypeMismatch(t *testing.T) {
 // Tests for validatePercentageBeanReferences
 
 func TestValidatePercentageBeanReferences_InvalidModel(t *testing.T) {
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	bean := &coreef.PercentageBean{
 		ID:              "test-bean-id",
@@ -577,7 +593,7 @@ func TestValidatePercentageBeanReferences_InvalidModel(t *testing.T) {
 
 func TestValidatePercentageBeanReferences_ValidModel(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Create a valid model first
 	model := &shared.Model{
@@ -596,12 +612,12 @@ func TestValidatePercentageBeanReferences_ValidModel(t *testing.T) {
 	err := validatePercentageBeanReferences(bean)
 	assert.NoError(t, err)
 
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 }
 
 func TestValidatePercentageBeanReferences_InvalidIPList(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Create a valid model first
 	model := &shared.Model{
@@ -623,12 +639,12 @@ func TestValidatePercentageBeanReferences_InvalidIPList(t *testing.T) {
 	assert.Contains(t, err.Error(), "IP address list")
 	assert.Contains(t, err.Error(), "does not exist")
 
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 }
 
 func TestValidatePercentageBeanReferences_ValidIPList(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Create a valid model
 	model := &shared.Model{
@@ -652,12 +668,12 @@ func TestValidatePercentageBeanReferences_ValidIPList(t *testing.T) {
 	err := validatePercentageBeanReferences(bean)
 	assert.NoError(t, err)
 
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 }
 
 func TestValidatePercentageBeanReferences_BlankWhitelist(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Create a valid model
 	model := &shared.Model{
@@ -677,12 +693,12 @@ func TestValidatePercentageBeanReferences_BlankWhitelist(t *testing.T) {
 	err := validatePercentageBeanReferences(bean)
 	assert.NoError(t, err)
 
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 }
 
 func TestValidatePercentageBeanReferences_InvalidOptionalConditions(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 
 	// Create a valid model
 	model := &shared.Model{
@@ -712,5 +728,5 @@ func TestValidatePercentageBeanReferences_InvalidOptionalConditions(t *testing.T
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Model does not exist")
 
-	DeleteAllEntities()
+	cleanupPercentageBeanEntities()
 }

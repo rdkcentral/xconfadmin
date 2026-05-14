@@ -35,6 +35,15 @@ import (
 	"gotest.tools/assert"
 )
 
+func cleanupFirmwareRuleEntities() {
+	_ = truncateTable(db.TABLE_FIRMWARE_RULE)
+	_ = RefreshAllInDao(db.TABLE_FIRMWARE_RULE)
+	_ = truncateTable(db.TABLE_FIRMWARE_CONFIG)
+	_ = RefreshAllInDao(db.TABLE_FIRMWARE_CONFIG)
+	_ = truncateTable(db.TABLE_FIRMWARE_RULE_TEMPLATE)
+	_ = RefreshAllInDao(db.TABLE_FIRMWARE_RULE_TEMPLATE)
+}
+
 // Helper function to setup firmware rule templates
 func setupFirmwareRuleTemplates() {
 	CreateFirmwareRuleTemplates()
@@ -98,9 +107,9 @@ func createTestFirmwareRuleWithMAC(id, name, appType, macAddress string) *firmwa
 // TestPostFirmwareRuleHandler_Success tests successful firmware rule creation
 func TestPostFirmwareRuleHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
 	setupFirmwareRuleTemplates()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	rule := createTestFirmwareRule("", "Test Rule Create", "stb")
 	body, _ := json.Marshal(rule)
@@ -126,8 +135,8 @@ func TestPostFirmwareRuleHandler_Success(t *testing.T) {
 // TestPostFirmwareRuleHandler_DuplicateID tests duplicate rule ID validation
 func TestPostFirmwareRuleHandler_DuplicateID(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Create first rule
 	rule1 := createTestFirmwareRule("duplicate-id", "First Rule", "stb")
@@ -150,8 +159,8 @@ func TestPostFirmwareRuleHandler_DuplicateID(t *testing.T) {
 // TestPostFirmwareRuleHandler_InvalidJSON tests invalid JSON handling
 func TestPostFirmwareRuleHandler_InvalidJSON(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	invalidJSON := []byte(`{invalid json}`)
 
@@ -168,9 +177,9 @@ func TestPostFirmwareRuleHandler_InvalidJSON(t *testing.T) {
 // TestPutFirmwareRuleHandler_Success tests successful firmware rule update
 func TestPutFirmwareRuleHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
 	setupFirmwareRuleTemplates()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Create initial rule
 	rule := createTestFirmwareRule("rule-to-update", "Original Name", "stb")
@@ -198,8 +207,8 @@ func TestPutFirmwareRuleHandler_Success(t *testing.T) {
 // TestPutFirmwareRuleHandler_NotFound tests updating non-existent rule
 func TestPutFirmwareRuleHandler_NotFound(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	rule := createTestFirmwareRule("non-existent-rule", "Does Not Exist", "stb")
 	body, _ := json.Marshal(rule)
@@ -217,8 +226,8 @@ func TestPutFirmwareRuleHandler_NotFound(t *testing.T) {
 // TestDeleteFirmwareRuleByIdHandler_Success tests successful deletion
 func TestDeleteFirmwareRuleByIdHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Create rule to delete
 	rule := createTestFirmwareRule("rule-to-delete", "To Be Deleted", "stb")
@@ -244,8 +253,8 @@ func TestDeleteFirmwareRuleByIdHandler_Success(t *testing.T) {
 // TestDeleteFirmwareRuleByIdHandler_NotFound tests deleting non-existent rule
 func TestDeleteFirmwareRuleByIdHandler_NotFound(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	req, err := http.NewRequest("DELETE", "/xconfAdminService/firmwarerule/nonexistent", nil)
 	assert.NilError(t, err)
@@ -259,8 +268,8 @@ func TestDeleteFirmwareRuleByIdHandler_NotFound(t *testing.T) {
 // TestDeleteFirmwareRuleByIdHandler_ApplicationTypeMismatch tests app type validation
 func TestDeleteFirmwareRuleByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Create rule with rdkcloud app type
 	rule := createTestFirmwareRule("rule-app-mismatch", "App Mismatch Rule", "rdkcloud")
@@ -280,8 +289,8 @@ func TestDeleteFirmwareRuleByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 // TestGetFirmwareRuleByIdHandler_Success tests getting rule by ID
 func TestGetFirmwareRuleByIdHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	rule := createTestFirmwareRule("rule-get-by-id", "Get By ID Test", "stb")
 	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
@@ -303,8 +312,8 @@ func TestGetFirmwareRuleByIdHandler_Success(t *testing.T) {
 // TestGetFirmwareRuleByIdHandler_WithExport tests export functionality
 func TestGetFirmwareRuleByIdHandler_WithExport(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	rule := createTestFirmwareRule("rule-export-test", "Export Test", "stb")
 	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
@@ -325,8 +334,8 @@ func TestGetFirmwareRuleByIdHandler_WithExport(t *testing.T) {
 // TestGetFirmwareRuleByIdHandler_NotFound tests non-existent rule
 func TestGetFirmwareRuleByIdHandler_NotFound(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/nonexistent", nil)
 	assert.NilError(t, err)
@@ -340,8 +349,8 @@ func TestGetFirmwareRuleByIdHandler_NotFound(t *testing.T) {
 // TestGetFirmwareRuleByIdHandler_ApplicationTypeMismatch tests app type validation
 func TestGetFirmwareRuleByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	rule := createTestFirmwareRule("rule-get-mismatch", "Get Mismatch Test", "rdkcloud")
 	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
@@ -358,8 +367,8 @@ func TestGetFirmwareRuleByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 // TestGetFirmwareRuleHandler_Success tests getting all rules
 func TestGetFirmwareRuleHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Create test rules
 	rule1 := createTestFirmwareRule("rule-all-1", "All Rules Test 1", "stb")
@@ -383,8 +392,8 @@ func TestGetFirmwareRuleHandler_Success(t *testing.T) {
 // TestGetFirmwareRuleHandler_WithExport tests export all functionality
 func TestGetFirmwareRuleHandler_WithExport(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	rule := createTestFirmwareRule("rule-export-all", "Export All Test", "stb")
 	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
@@ -405,8 +414,8 @@ func TestGetFirmwareRuleHandler_WithExport(t *testing.T) {
 // TestGetFirmwareRuleFilteredHandler tests filtering functionality
 func TestGetFirmwareRuleFilteredHandler(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Create test rules
 	rule1 := createTestFirmwareRule("rule-filter-1", "Filter Test 1", "stb")
@@ -432,8 +441,8 @@ func TestGetFirmwareRuleFilteredHandler(t *testing.T) {
 // TestPostFirmwareRuleFilteredHandler_Success tests POST filtered endpoint
 func TestPostFirmwareRuleFilteredHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Create test rules
 	rule1 := createTestFirmwareRule("rule-post-filter-1", "POST Filter 1", "stb")
@@ -457,8 +466,8 @@ func TestPostFirmwareRuleFilteredHandler_Success(t *testing.T) {
 // TestPostFirmwareRuleFilteredHandler_InvalidPageNumber tests invalid pagination
 func TestPostFirmwareRuleFilteredHandler_InvalidPageNumber(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	filterContext := map[string]string{}
 	body, _ := json.Marshal(filterContext)
@@ -476,8 +485,8 @@ func TestPostFirmwareRuleFilteredHandler_InvalidPageNumber(t *testing.T) {
 // TestGetFirmwareRuleByTypeNamesHandler_Success tests getting rule names by type
 func TestGetFirmwareRuleByTypeNamesHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Create rules with different types
 	rule1 := createTestFirmwareRule("rule-type-1", "Type Test 1", "stb")
@@ -503,8 +512,8 @@ func TestGetFirmwareRuleByTypeNamesHandler_Success(t *testing.T) {
 // TestGetFirmwareRuleByTemplateNamesHandler tests byTemplate/names endpoint
 func TestGetFirmwareRuleByTemplateNamesHandler(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/byTemplate/names", nil)
 	assert.NilError(t, err)
@@ -519,9 +528,9 @@ func TestGetFirmwareRuleByTemplateNamesHandler(t *testing.T) {
 // TestPostFirmwareRuleEntitiesHandler_Success tests batch creation
 func TestPostFirmwareRuleEntitiesHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
 	setupFirmwareRuleTemplates()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	entities := []*firmware.FirmwareRule{
 		createTestFirmwareRuleWithMAC("batch-create-1", "Batch Create 1", "stb", "AA:BB:CC:DD:EE:11"),
@@ -548,8 +557,8 @@ func TestPostFirmwareRuleEntitiesHandler_Success(t *testing.T) {
 // TestPostFirmwareRuleEntitiesHandler_DuplicateEntity tests duplicate detection
 func TestPostFirmwareRuleEntitiesHandler_DuplicateEntity(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Create existing rule
 	existing := createTestFirmwareRule("duplicate-batch", "Existing Rule", "stb")
@@ -578,9 +587,9 @@ func TestPostFirmwareRuleEntitiesHandler_DuplicateEntity(t *testing.T) {
 // TestPutFirmwareRuleEntitiesHandler_Success tests batch update
 func TestPutFirmwareRuleEntitiesHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
 	setupFirmwareRuleTemplates()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Create initial rules with different MAC addresses to avoid duplicate detection
 	rule1 := createTestFirmwareRuleWithMAC("batch-update-1", "Original 1", "stb", "AA:BB:CC:DD:EE:01")
@@ -615,8 +624,8 @@ func TestPutFirmwareRuleEntitiesHandler_Success(t *testing.T) {
 // TestPutFirmwareRuleEntitiesHandler_NonExistent tests updating non-existent rules
 func TestPutFirmwareRuleEntitiesHandler_NonExistent(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	entities := []*firmware.FirmwareRule{
 		createTestFirmwareRule("non-existent-batch", "Does Not Exist", "stb"),
@@ -640,8 +649,8 @@ func TestPutFirmwareRuleEntitiesHandler_NonExistent(t *testing.T) {
 // TestObsoleteGetFirmwareRulePageHandler tests pagination endpoint
 func TestObsoleteGetFirmwareRulePageHandler(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Note: /page endpoint is mapped to NotImplementedHandler in router (line 309 of router.go)
 	// This test verifies that the endpoint returns NotImplemented status
@@ -662,8 +671,8 @@ func TestObsoleteGetFirmwareRulePageHandler(t *testing.T) {
 // TestGetFirmwareRuleExportAllTypesHandler tests export all types
 func TestGetFirmwareRuleExportAllTypesHandler(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	rule := createTestFirmwareRule("export-all-types", "Export All Types Test", "stb")
 	SetOneInDao(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
@@ -684,8 +693,8 @@ func TestGetFirmwareRuleExportAllTypesHandler(t *testing.T) {
 // TestGetFirmwareRuleExportByTypeHandler_Success tests export by type
 func TestGetFirmwareRuleExportByTypeHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	rule := createTestFirmwareRule("export-by-type", "Export By Type Test", "stb")
 	rule.ApplicableAction.ActionType = "RULE"
@@ -707,8 +716,8 @@ func TestGetFirmwareRuleExportByTypeHandler_Success(t *testing.T) {
 // TestGetFirmwareRuleExportByTypeHandler_MissingType tests missing type param
 func TestGetFirmwareRuleExportByTypeHandler_MissingType(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/export/byType?exportAll", nil)
 	assert.NilError(t, err)
@@ -722,8 +731,8 @@ func TestGetFirmwareRuleExportByTypeHandler_MissingType(t *testing.T) {
 // TestPostFirmwareRuleImportAllHandler_Success tests import functionality
 func TestPostFirmwareRuleImportAllHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	rules := []*firmware.FirmwareRule{
 		createTestFirmwareRule("import-1", "Import Rule 1", "stb"),
@@ -744,8 +753,8 @@ func TestPostFirmwareRuleImportAllHandler_Success(t *testing.T) {
 // TestPostFirmwareRuleImportAllHandler_ApplicationTypeMixing tests app type mixing
 func TestPostFirmwareRuleImportAllHandler_ApplicationTypeMixing(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	rules := []*firmware.FirmwareRule{
 		createTestFirmwareRule("import-mix-1", "Import STB", "stb"),
@@ -814,8 +823,8 @@ func TestFindAndDeleteFR(t *testing.T) {
 // TestPopulateContext tests the populateContext function
 func TestPopulateContext(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule?pageNumber=1&pageSize=10", nil)
 	assert.NilError(t, err)
@@ -831,8 +840,8 @@ func TestPopulateContext(t *testing.T) {
 // ObsoleteGetFirmwareRulePageHandler - Error paths
 func TestObsoleteGetFirmwareRulePageHandler_ErrorGettingRules(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Note: /page endpoint is mapped to NotImplementedHandler in router
 	// This test verifies the handler code itself works if called directly
@@ -842,8 +851,8 @@ func TestObsoleteGetFirmwareRulePageHandler_ErrorGettingRules(t *testing.T) {
 
 func TestObsoleteGetFirmwareRulePageHandler_InvalidPageNumber(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Note: /page endpoint is mapped to NotImplementedHandler in router
 	t.Skip("ObsoleteGetFirmwareRulePageHandler is not implemented in router")
@@ -851,8 +860,8 @@ func TestObsoleteGetFirmwareRulePageHandler_InvalidPageNumber(t *testing.T) {
 
 func TestObsoleteGetFirmwareRulePageHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Note: /page endpoint is mapped to NotImplementedHandler in router
 	t.Skip("ObsoleteGetFirmwareRulePageHandler is not implemented in router")
@@ -861,8 +870,8 @@ func TestObsoleteGetFirmwareRulePageHandler_Success(t *testing.T) {
 // GetFirmwareRuleExportAllTypesHandler - Error paths
 func TestGetFirmwareRuleExportAllTypesHandler_MissingExportAllParam(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/export/allTypes", nil)
 	assert.NilError(t, err)
@@ -875,8 +884,8 @@ func TestGetFirmwareRuleExportAllTypesHandler_MissingExportAllParam(t *testing.T
 
 func TestGetFirmwareRuleExportAllTypesHandler_ErrorGettingRules(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/export/allTypes?exportAll", nil)
 	assert.NilError(t, err)
@@ -890,8 +899,8 @@ func TestGetFirmwareRuleExportAllTypesHandler_ErrorGettingRules(t *testing.T) {
 
 func TestGetFirmwareRuleExportAllTypesHandler_SuccessWithRules(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Create rules of different types
 	rule1 := createTestFirmwareRule("export-all-1", "Export All 1", "stb")
@@ -921,8 +930,8 @@ func TestGetFirmwareRuleExportAllTypesHandler_SuccessWithRules(t *testing.T) {
 // GetFirmwareRuleByTemplateByTemplateIdNamesHandler - Error paths
 func TestGetFirmwareRuleByTemplateByTemplateIdNamesHandler_MissingTemplateId(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Empty templateId - router will match but handler should handle empty templateId
 	// Testing with just empty string in path - the router may still route this
@@ -938,8 +947,8 @@ func TestGetFirmwareRuleByTemplateByTemplateIdNamesHandler_MissingTemplateId(t *
 
 func TestGetFirmwareRuleByTemplateByTemplateIdNamesHandler_ErrorGettingRules(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwarerule/byTemplate/template-123/names", nil)
 	assert.NilError(t, err)
@@ -953,8 +962,8 @@ func TestGetFirmwareRuleByTemplateByTemplateIdNamesHandler_ErrorGettingRules(t *
 
 func TestGetFirmwareRuleByTemplateByTemplateIdNamesHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	// Create rules with template IDs
 	rule1 := createTestFirmwareRule("template-rule-1", "Template Rule 1", "stb")
@@ -981,8 +990,8 @@ func TestGetFirmwareRuleByTemplateByTemplateIdNamesHandler_Success(t *testing.T)
 // requiring at least one EXISTS condition when the template declares one.
 func TestPostFirmwareRuleHandler_TagRuleTemplateValidation(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupFirmwareRuleEntities()
+	defer cleanupFirmwareRuleEntities()
 
 	CreateModel(&shared.Model{ID: "TEST_MODEL", Description: "Tag rule template test model"})
 	CreateModel(&shared.Model{ID: "TEST_MODEL_2", Description: "Tag rule template test model 2"})

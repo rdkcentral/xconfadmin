@@ -90,13 +90,16 @@ func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRec
 
 // DeleteAllEntities clears all database tables
 func DeleteAllEntities() {
-	for _, tableInfo := range db.GetAllTableInfo() {
-		if err := truncateTable(tableInfo.TableName); err != nil {
-			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
+	featureTables := []string{
+		db.TABLE_XCONF_FEATURE,
+		db.TABLE_FEATURE_CONTROL_RULE,
+	}
+
+	for _, tableName := range featureTables {
+		if err := truncateTable(tableName); err != nil {
+			fmt.Printf("failed to truncate table %s\n", tableName)
 		}
-		if tableInfo.CacheData {
-			db.GetCachedSimpleDao().RefreshAll(tableInfo.TableName)
-		}
+		db.GetCachedSimpleDao().RefreshAll(tableName)
 	}
 }
 

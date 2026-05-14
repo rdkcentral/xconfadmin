@@ -116,3 +116,24 @@ func getMockOrRealDao() interface{} {
 	}
 	return db.GetCachedSimpleDao()
 }
+
+func getOneFromDao(tableName string, rowKey string) (interface{}, error) {
+	if useMockDatabase && mockDaoInstance != nil {
+		return mockDaoInstance.GetOne(tableName, rowKey)
+	}
+	return db.GetCachedSimpleDao().GetOne(tableName, rowKey)
+}
+
+func setOneInDao(tableName string, rowKey string, entity interface{}) error {
+	if useMockDatabase && mockDaoInstance != nil {
+		return mockDaoInstance.SetOne(tableName, rowKey, entity)
+	}
+	return db.GetCachedSimpleDao().SetOne(tableName, rowKey, entity)
+}
+
+func CleanupDeviceSettings() {
+	if dbClient, ok := db.GetDatabaseClient().(*db.CassandraClient); ok {
+		_ = dbClient.DeleteAllXconfData(db.TABLE_DEVICE_SETTINGS)
+	}
+	_ = db.GetCachedSimpleDao().RefreshAll(db.TABLE_DEVICE_SETTINGS)
+}
