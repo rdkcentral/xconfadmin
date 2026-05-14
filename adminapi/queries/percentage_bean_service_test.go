@@ -209,7 +209,6 @@ func TestCreateWakeupPoolList_Error(t *testing.T) {
 // Test getGlobalPercentageFields - Multiple field types
 func TestGetGlobalPercentageFields_DifferentFields(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	cleanupPercentageBeanEntities()
 
 	// Test with percentage field (should have default 100)

@@ -446,19 +446,8 @@ func DeleteTelemetryV2Entities() {
 }
 
 func cleanupTelemetryTables(telemetryTables []string) {
-	for _, tableName := range telemetryTables {
-		_ = truncateTable(tableName)
-		db.GetCachedSimpleDao().RefreshAll(tableName)
-	}
-}
-
-func truncateTable(tableName string) error {
-	dbClient := db.GetDatabaseClient()
-	cassandraClient, ok := dbClient.(*db.CassandraClient)
-	if ok {
-		return cassandraClient.DeleteAllXconfData(tableName)
-	}
-	return nil
+	// Use shared test cleanup utility for consistency across all packages
+	_ = common.TruncateAndRefresh(telemetryTables)
 }
 
 func TestAddTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
