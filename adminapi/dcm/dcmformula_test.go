@@ -895,14 +895,11 @@ func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRec
 }
 
 func CleanupDCMFormulaTables() {
-	tables := []string{
+	// Use shared test cleanup utility to truncate DCM-specific tables
+	_ = common.TruncateAndRefresh([]string{
 		db.TABLE_DCM_RULE,
 		db.TABLE_MODEL,
-	}
-	for _, tableName := range tables {
-		truncateTable(tableName)
-		db.GetCachedSimpleDao().RefreshAll(tableName)
-	}
+	})
 }
 
 // Replace CleanupDCMFormulaTables calls with CleanupDCMFormulaTables

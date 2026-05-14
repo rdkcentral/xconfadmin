@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/rdkcentral/xconfadmin/adminapi/dcm/mocks"
+	"github.com/rdkcentral/xconfadmin/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
@@ -132,8 +133,5 @@ func setOneInDao(tableName string, rowKey string, entity interface{}) error {
 }
 
 func CleanupDeviceSettings() {
-	if dbClient, ok := db.GetDatabaseClient().(*db.CassandraClient); ok {
-		_ = dbClient.DeleteAllXconfData(db.TABLE_DEVICE_SETTINGS)
-	}
-	_ = db.GetCachedSimpleDao().RefreshAll(db.TABLE_DEVICE_SETTINGS)
+	_ = common.TruncateAndRefresh([]string{db.TABLE_DEVICE_SETTINGS})
 }
