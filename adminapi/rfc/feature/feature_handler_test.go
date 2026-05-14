@@ -619,12 +619,15 @@ func cleanDB() {
 		return
 	}
 	// Real database cleanup (only for integration tests)
-	for _, ti := range db.GetAllTableInfo() {
+	featureTables := []string{
+		db.TABLE_XCONF_FEATURE,
+		db.TABLE_FEATURE_CONTROL_RULE,
+	}
+
+	for _, tableName := range featureTables {
 		c := db.GetDatabaseClient().(*db.CassandraClient)
-		_ = c.DeleteAllXconfData(ti.TableName)
-		if ti.CacheData {
-			db.GetCachedSimpleDao().RefreshAll(ti.TableName)
-		}
+		_ = c.DeleteAllXconfData(tableName)
+		db.GetCachedSimpleDao().RefreshAll(tableName)
 	}
 }
 

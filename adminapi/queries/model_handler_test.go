@@ -25,16 +25,22 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"gotest.tools/assert"
 )
+
+func cleanupModelEntities() {
+	_ = truncateTable(db.TABLE_MODEL)
+	_ = RefreshAllInDao(db.TABLE_MODEL)
+}
 
 // ========== Tests for PostModelEntitiesHandler ==========
 
 func TestPostModelEntitiesHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	models := []shared.Model{
 		{
@@ -86,8 +92,8 @@ func TestPostModelEntitiesHandler_Success(t *testing.T) {
 
 func TestPostModelEntitiesHandler_InvalidJSON(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	invalidBody := []byte(`{"invalid json}`)
 
@@ -104,8 +110,8 @@ func TestPostModelEntitiesHandler_InvalidJSON(t *testing.T) {
 
 func TestPostModelEntitiesHandler_DuplicateModel(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create first model
 	model1 := &shared.Model{
@@ -147,8 +153,8 @@ func TestPostModelEntitiesHandler_DuplicateModel(t *testing.T) {
 
 func TestPostModelEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create one model first
 	existingModel := &shared.Model{
@@ -199,8 +205,8 @@ func TestPostModelEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 // ========== Tests for PutModelEntitiesHandler ==========
 
 // func TestPutModelEntitiesHandler_Success(t *testing.T) {
-// 	DeleteAllEntities()
-// 	defer DeleteAllEntities()
+// 	cleanupModelEntities()
+// 	defer cleanupModelEntities()
 
 // 	// Create models first
 // 	model1 := &shared.Model{
@@ -251,8 +257,8 @@ func TestPostModelEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 
 func TestPutModelEntitiesHandler_InvalidJSON(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	invalidBody := []byte(`{"bad": json}`)
 
@@ -269,8 +275,8 @@ func TestPutModelEntitiesHandler_InvalidJSON(t *testing.T) {
 
 func TestPutModelEntitiesHandler_NonExistentModel(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	models := []shared.Model{
 		{
@@ -306,8 +312,8 @@ func TestPutModelEntitiesHandler_NonExistentModel(t *testing.T) {
 
 func TestObsoleteGetModelPageHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create test models
 	for i := 1; i <= 5; i++ {
@@ -341,8 +347,8 @@ func TestObsoleteGetModelPageHandler_Success(t *testing.T) {
 
 func TestObsoleteGetModelPageHandler_InvalidPageNumber(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	url := "/xconfAdminService/model/page?pageNumber=invalid&pageSize=3"
 	req, err := http.NewRequest("GET", url, nil)
@@ -360,8 +366,8 @@ func TestObsoleteGetModelPageHandler_InvalidPageNumber(t *testing.T) {
 
 func TestObsoleteGetModelPageHandler_InvalidPageSize(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	url := "/xconfAdminService/model/page?pageNumber=1&pageSize=invalid"
 	req, err := http.NewRequest("GET", url, nil)
@@ -379,8 +385,8 @@ func TestObsoleteGetModelPageHandler_InvalidPageSize(t *testing.T) {
 
 func TestObsoleteGetModelPageHandler_Pagination(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create 10 models
 	for i := 1; i <= 10; i++ {
@@ -409,8 +415,8 @@ func TestObsoleteGetModelPageHandler_Pagination(t *testing.T) {
 
 func TestObsoleteGetModelPageHandler_EmptyResult(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	url := "/xconfAdminService/model/page?pageNumber=1&pageSize=10"
 	req, err := http.NewRequest("GET", url, nil)
@@ -432,8 +438,8 @@ func TestObsoleteGetModelPageHandler_EmptyResult(t *testing.T) {
 
 func TestPostModelFilteredHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create test models
 	model1 := &shared.Model{
@@ -470,8 +476,8 @@ func TestPostModelFilteredHandler_Success(t *testing.T) {
 
 func TestPostModelFilteredHandler_WithEmptyBody(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create test model
 	model := &shared.Model{
@@ -493,8 +499,8 @@ func TestPostModelFilteredHandler_WithEmptyBody(t *testing.T) {
 
 func TestPostModelFilteredHandler_InvalidJSON(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	invalidBody := []byte(`{invalid}`)
 
@@ -511,8 +517,8 @@ func TestPostModelFilteredHandler_InvalidJSON(t *testing.T) {
 
 func TestPostModelFilteredHandler_InvalidPageNumber(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	filterContext := map[string]string{}
 	body, err := json.Marshal(filterContext)
@@ -531,8 +537,8 @@ func TestPostModelFilteredHandler_InvalidPageNumber(t *testing.T) {
 
 func TestPostModelFilteredHandler_Pagination(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create 5 models
 	for i := 1; i <= 5; i++ {
@@ -568,8 +574,8 @@ func TestPostModelFilteredHandler_Pagination(t *testing.T) {
 
 func TestGetModelByIdHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create test model
 	model := &shared.Model{
@@ -597,8 +603,8 @@ func TestGetModelByIdHandler_Success(t *testing.T) {
 
 func TestGetModelByIdHandler_NotFound(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	url := "/xconfAdminService/model/NONEXISTENT"
 	req, err := http.NewRequest("GET", url, nil)
@@ -612,8 +618,8 @@ func TestGetModelByIdHandler_NotFound(t *testing.T) {
 
 func TestGetModelByIdHandler_WithExport(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create test model
 	model := &shared.Model{
@@ -646,8 +652,8 @@ func TestGetModelByIdHandler_WithExport(t *testing.T) {
 
 func TestGetModelByIdHandler_CaseInsensitive(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create test model with lowercase ID
 	model := &shared.Model{
@@ -671,8 +677,8 @@ func TestGetModelByIdHandler_CaseInsensitive(t *testing.T) {
 
 func TestGetModelHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create test models
 	model1 := &shared.Model{
@@ -703,8 +709,8 @@ func TestGetModelHandler_Success(t *testing.T) {
 
 func TestGetModelHandler_EmptyResult(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	url := "/xconfAdminService/model"
 	req, err := http.NewRequest("GET", url, nil)
@@ -726,8 +732,8 @@ func TestGetModelHandler_EmptyResult(t *testing.T) {
 
 func TestGetModelHandler_WithExport(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create test models
 	model := &shared.Model{
@@ -752,8 +758,8 @@ func TestGetModelHandler_WithExport(t *testing.T) {
 
 func TestGetModelHandler_SortedAlphabetically(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create models in non-alphabetical order
 	modelZ := &shared.Model{
@@ -801,8 +807,8 @@ func TestPostModelEntitiesHandler_UnableToExtractBody(t *testing.T) {
 	// This test verifies the error path when response writer is not XResponseWriter
 	// In practice, this is hard to trigger in the test harness as ExecuteRequest
 	// always wraps with XResponseWriter, but we can document the behavior
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	models := []shared.Model{
 		{
@@ -828,8 +834,8 @@ func TestPostModelEntitiesHandler_UnableToExtractBody(t *testing.T) {
 
 func TestPutModelEntitiesHandler_EmptyID(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Try to update model with empty ID
 	models := []shared.Model{
@@ -866,8 +872,8 @@ func TestPutModelEntitiesHandler_EmptyID(t *testing.T) {
 
 func TestPostModelFilteredHandler_FilterContextError(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create test model
 	model := &shared.Model{
@@ -895,8 +901,8 @@ func TestPostModelFilteredHandler_FilterContextError(t *testing.T) {
 
 func TestPostModelFilteredHandler_NegativePageNumber(t *testing.T) {
 	SkipIfMockDatabase(t)
-	//	DeleteAllEntities()
-	//defer DeleteAllEntities()
+	//	cleanupModelEntities()
+	//defer cleanupModelEntities()
 
 	filterContext := map[string]string{}
 	body, err := json.Marshal(filterContext)
@@ -916,8 +922,8 @@ func TestPostModelFilteredHandler_NegativePageNumber(t *testing.T) {
 
 func TestPostModelFilteredHandler_ZeroPageSize(t *testing.T) {
 	SkipIfMockDatabase(t)
-	//DeleteAllEntities()
-	//defer DeleteAllEntities()
+	//cleanupModelEntities()
+	//defer cleanupModelEntities()
 
 	filterContext := map[string]string{}
 	body, err := json.Marshal(filterContext)
@@ -937,8 +943,8 @@ func TestPostModelFilteredHandler_ZeroPageSize(t *testing.T) {
 
 func TestGetModelByIdHandler_EmptyID(t *testing.T) {
 	SkipIfMockDatabase(t)
-	//DeleteAllEntities()
-	defer DeleteAllEntities()
+	//cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Try to get model with empty ID - this will fail at routing level
 	// but test the handler behavior
@@ -955,8 +961,8 @@ func TestGetModelByIdHandler_EmptyID(t *testing.T) {
 
 func TestPostModelEntitiesHandler_ValidationError(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create model with invalid data
 	models := []shared.Model{
@@ -992,8 +998,8 @@ func TestPostModelEntitiesHandler_ValidationError(t *testing.T) {
 
 func TestObsoleteGetModelPageHandler_PageOutOfBounds(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create 3 models
 	for i := 1; i <= 3; i++ {
@@ -1023,8 +1029,8 @@ func TestObsoleteGetModelPageHandler_PageOutOfBounds(t *testing.T) {
 
 func TestPostModelFilteredHandler_LargePageSize(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupModelEntities()
+	defer cleanupModelEntities()
 
 	// Create a few models
 	for i := 1; i <= 5; i++ {

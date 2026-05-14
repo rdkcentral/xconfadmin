@@ -39,7 +39,7 @@ func storeTelemetryProfile(rule *xwlogupload.TimestampedRule, profile *xwloguplo
 
 // TestDropTelemetryFor_Success tests successful telemetry profile drop
 func TestDropTelemetryFor_Success(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	// Create a telemetry profile
 	profile := buildTelemetryProfile(60000)
@@ -61,7 +61,7 @@ func TestDropTelemetryFor_Success(t *testing.T) {
 
 // TestDropTelemetryFor_NoMatch tests when no profiles match the context
 func TestDropTelemetryFor_NoMatch(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	// Drop with no matching profiles
 	result := DropTelemetryFor("estbMacAddress", "BB:BB:BB:BB:BB:BB")
@@ -72,7 +72,7 @@ func TestDropTelemetryFor_NoMatch(t *testing.T) {
 
 // TestDropTelemetryFor_MultipleProfiles tests dropping multiple profiles
 func TestDropTelemetryFor_MultipleProfiles(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	// Create multiple profiles with the same context attribute
 	mac := "CC:CC:CC:CC:CC:CC"
@@ -94,7 +94,7 @@ func TestDropTelemetryFor_MultipleProfiles(t *testing.T) {
 
 // TestGetMatchedRules_Success tests successful rule matching
 func TestGetMatchedRules_Success(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	// Create and store a telemetry profile
 	profile := buildTelemetryProfile(60000)
@@ -113,7 +113,7 @@ func TestGetMatchedRules_Success(t *testing.T) {
 
 // TestGetMatchedRules_NoMatch tests when no rules match
 func TestGetMatchedRules_NoMatch(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	// Create a rule with different value
 	profile := buildTelemetryProfile(60000)
@@ -132,7 +132,7 @@ func TestGetMatchedRules_NoMatch(t *testing.T) {
 
 // TestGetMatchedRules_EmptyContext tests with empty context
 func TestGetMatchedRules_EmptyContext(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	context := map[string]string{}
 	matched := getMatchedRules(context)
@@ -146,8 +146,8 @@ func TestGetMatchedRules_MultipleMatches(t *testing.T) {
 	// Skip - requires complex TABLE_TELEMETRY mocking with JSON-marshaled keys
 	SkipIfMockDatabase(t)
 
-	DeleteTelemetryEntities()
-	defer DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
+	defer DeleteTelemetryV1Entities()
 
 	// Refresh cache after deletion to ensure clean state
 	_ = RefreshAllInDao(ds.TABLE_TELEMETRY)
@@ -182,7 +182,7 @@ func TestGetMatchedRules_MultipleMatches(t *testing.T) {
 
 // TestGetAvailableDescriptors_Success tests successful descriptor retrieval
 func TestGetAvailableDescriptors_Success(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	// Create telemetry rules
 	rule1 := &xwlogupload.TelemetryRule{
@@ -224,7 +224,7 @@ func TestGetAvailableDescriptors_Success(t *testing.T) {
 
 // TestGetAvailableDescriptors_FilterByApplicationType tests filtering by application type
 func TestGetAvailableDescriptors_FilterByApplicationType(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	// Create rules with different application types
 	ruleStb := &xwlogupload.TelemetryRule{
@@ -266,7 +266,7 @@ func TestGetAvailableDescriptors_FilterByApplicationType(t *testing.T) {
 
 // TestGetAvailableDescriptors_EmptyApplicationType tests with empty application type
 func TestGetAvailableDescriptors_EmptyApplicationType(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	// Create rules with various application types
 	rule1 := &xwlogupload.TelemetryRule{
@@ -294,7 +294,7 @@ func TestGetAvailableDescriptors_EmptyApplicationType(t *testing.T) {
 
 // TestGetAvailableDescriptors_NoRules tests when no rules exist
 func TestGetAvailableDescriptors_NoRules(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	descriptors := GetAvailableDescriptors("stb")
 
@@ -304,7 +304,7 @@ func TestGetAvailableDescriptors_NoRules(t *testing.T) {
 
 // TestGetAvailableProfileDescriptors_Success tests successful profile descriptor retrieval
 func TestGetAvailableProfileDescriptors_Success(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	// Create permanent telemetry profiles
 	profile1 := &xwlogupload.PermanentTelemetryProfile{
@@ -344,7 +344,7 @@ func TestGetAvailableProfileDescriptors_Success(t *testing.T) {
 
 // TestGetAvailableProfileDescriptors_FilterByApplicationType tests filtering by application type
 func TestGetAvailableProfileDescriptors_FilterByApplicationType(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	// Create profiles with different application types
 	profileStb := &xwlogupload.PermanentTelemetryProfile{
@@ -384,7 +384,7 @@ func TestGetAvailableProfileDescriptors_FilterByApplicationType(t *testing.T) {
 
 // TestGetAvailableProfileDescriptors_EmptyApplicationType tests with empty application type
 func TestGetAvailableProfileDescriptors_EmptyApplicationType(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	// Create profiles with various application types
 	profile1 := &xwlogupload.PermanentTelemetryProfile{
@@ -410,7 +410,7 @@ func TestGetAvailableProfileDescriptors_EmptyApplicationType(t *testing.T) {
 
 // TestGetAvailableProfileDescriptors_NoProfiles tests when no profiles exist
 func TestGetAvailableProfileDescriptors_NoProfiles(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	descriptors := GetAvailableProfileDescriptors("stb")
 
@@ -467,7 +467,7 @@ func TestCreateRuleForAttribute(t *testing.T) {
 
 // TestCreateTelemetryProfile tests profile creation and storage
 func TestCreateTelemetryProfile(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	// Create a telemetry profile
 	profile := buildTelemetryProfile(60000)
@@ -488,7 +488,7 @@ func TestCreateTelemetryProfile(t *testing.T) {
 	// The functionality is tested in DropTelemetryFor which properly handles this
 } // TestDropTelemetryFor_ComplexConditions tests dropping profiles with complex rule conditions
 func TestDropTelemetryFor_ComplexConditions(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryV1Entities()
 
 	// Create multiple profiles with different attributes
 	profile1 := buildTelemetryProfile(60000)

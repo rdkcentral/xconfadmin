@@ -29,6 +29,15 @@ import (
 	"gotest.tools/assert"
 )
 
+func cleanupFirmwareRuleTemplateServiceEntities() {
+	_ = truncateTable(ds.TABLE_FIRMWARE_RULE_TEMPLATE)
+	_ = RefreshAllInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE)
+	_ = truncateTable(ds.TABLE_MODEL)
+	_ = RefreshAllInDao(ds.TABLE_MODEL)
+	_ = truncateTable(ds.TABLE_GENERIC_NS_LIST)
+	_ = RefreshAllInDao(ds.TABLE_GENERIC_NS_LIST)
+}
+
 // Helper function to create a test firmware rule template using JSON
 func createTestFirmwareRuleTemplateService(id string, name string, priority int, actionType string) *firmware.FirmwareRuleTemplate {
 	templateJSON := `{
@@ -343,9 +352,9 @@ func TestAddNewFirmwareRTAndReorganize(t *testing.T) {
 
 // Test createFirmwareRT
 func TestCreateFirmwareRT_Success(t *testing.T) {
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateServiceEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateServiceEntities()
 
 	template := createTestFirmwareRuleTemplateService(uuid.New().String(), "TestCreate", 1, "RULE_TEMPLATE")
 
@@ -356,9 +365,9 @@ func TestCreateFirmwareRT_Success(t *testing.T) {
 }
 
 func TestCreateFirmwareRT_ValidationError(t *testing.T) {
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateServiceEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateServiceEntities()
 
 	// Template with missing ApplicableAction
 	template := firmware.FirmwareRuleTemplate{
@@ -373,9 +382,9 @@ func TestCreateFirmwareRT_ValidationError(t *testing.T) {
 }
 
 func TestCreateFirmwareRT_ModelReferenceDoesNotExist(t *testing.T) {
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateServiceEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateServiceEntities()
 
 	templateJSON := `{
 		"id": "` + uuid.New().String() + `",
@@ -410,9 +419,9 @@ func TestCreateFirmwareRT_ModelReferenceDoesNotExist(t *testing.T) {
 }
 
 func TestCreateFirmwareRT_IPListReferenceDoesNotExist(t *testing.T) {
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateServiceEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateServiceEntities()
 
 	templateJSON := `{
 		"id": "` + uuid.New().String() + `",
@@ -447,9 +456,9 @@ func TestCreateFirmwareRT_IPListReferenceDoesNotExist(t *testing.T) {
 }
 
 func TestCreateFirmwareRT_DuplicateName(t *testing.T) {
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateServiceEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateServiceEntities()
 
 	// Create first template
 	template1 := createTestFirmwareRuleTemplateService(uuid.New().String(), "DuplicateTest", 1, "RULE_TEMPLATE")
@@ -507,9 +516,9 @@ func TestGetFirmwareRuleTemplateExportName(t *testing.T) {
 // Test importOrUpdateAllFirmwareRTs
 func TestImportOrUpdateAllFirmwareRTs_CreateNew(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateServiceEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateServiceEntities()
 
 	template := createTestFirmwareRuleTemplateService(uuid.New().String(), "ImportTest1", 1, "RULE_TEMPLATE")
 	entities := []firmware.FirmwareRuleTemplate{*template}
@@ -521,9 +530,9 @@ func TestImportOrUpdateAllFirmwareRTs_CreateNew(t *testing.T) {
 }
 
 func TestImportOrUpdateAllFirmwareRTs_EmptyName(t *testing.T) {
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateServiceEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateServiceEntities()
 
 	entities := []firmware.FirmwareRuleTemplate{
 		{
@@ -542,9 +551,9 @@ func TestImportOrUpdateAllFirmwareRTs_EmptyName(t *testing.T) {
 }
 
 func TestImportOrUpdateAllFirmwareRTs_GenerateID(t *testing.T) {
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateServiceEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateServiceEntities()
 
 	template := createTestFirmwareRuleTemplateService("", "AutoIDTest", 1, "RULE_TEMPLATE")
 	template.ID = "" // Clear the ID
