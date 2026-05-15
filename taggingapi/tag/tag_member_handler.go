@@ -111,7 +111,7 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tagValue := mux.Vars(r)[common.TagValue] // "" when called via /{tag}/members (old route)
+	tagValue := getTagValueFromRequest(r)
 
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
@@ -153,6 +153,21 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	xhttp.WriteXconfResponse(w, http.StatusAccepted, respBytes)
+}
+
+func getTagValueFromRequest(r *http.Request) string {
+	if values, found := r.URL.Query()[common.TagValue]; found {
+		if len(values) > 0 {
+			return values[0]
+		}
+		return ""
+	}
+
+	if value, found := mux.Vars(r)[common.TagValue]; found {
+		return value
+	}
+
+	return ""
 }
 
 // RemoveMembersFromTagHandler - Updated with bucketed implementation

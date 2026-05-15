@@ -115,6 +115,27 @@ func TestAddMembersToTagHandler_ExceedsBatchSize(t *testing.T) {
 	assert.Contains(t, recorder.Body.String(), "exceeds maximum")
 }
 
+func TestGetTagValueFromRequest_QueryParameterWins(t *testing.T) {
+	req := httptest.NewRequest("PUT", "/tags/test-tag/members?value=business", nil)
+	req = mux.SetURLVars(req, map[string]string{common.TagValue: "path-value"})
+
+	assert.Equal(t, "business", getTagValueFromRequest(req))
+}
+
+func TestGetTagValueFromRequest_PathVariableFallback(t *testing.T) {
+	req := httptest.NewRequest("PUT", "/tags/test-tag/values/business/members", nil)
+	req = mux.SetURLVars(req, map[string]string{common.TagValue: "business"})
+
+	assert.Equal(t, "business", getTagValueFromRequest(req))
+}
+
+func TestGetTagValueFromRequest_DefaultsToEmpty(t *testing.T) {
+	req := httptest.NewRequest("PUT", "/tags/test-tag/members", nil)
+	req = mux.SetURLVars(req, map[string]string{common.Tag: "test-tag"})
+
+	assert.Equal(t, "", getTagValueFromRequest(req))
+}
+
 func TestRemoveMembersFromTagHandler_MissingTag(t *testing.T) {
 	setupTestEnvironment()
 	req := httptest.NewRequest("DELETE", "/tags//members", nil)
