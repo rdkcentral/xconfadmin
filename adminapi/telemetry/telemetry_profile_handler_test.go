@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"runtime/pprof"
 	"strings"
 	"testing"
 	"time"
@@ -46,25 +45,6 @@ var (
 	globAut            *apiUnitTest
 )
 
-func startTestWatchdog(pkgName string) func() {
-	done := make(chan struct{})
-	go func() {
-		start := time.Now()
-		ticker := time.NewTicker(2 * time.Minute)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				fmt.Fprintf(os.Stderr, "\n[TEST-WATCHDOG] package=%s elapsed=%s still running; dumping goroutines\n", pkgName, time.Since(start).Round(time.Second))
-				_ = pprof.Lookup("goroutine").WriteTo(os.Stderr, 1)
-			case <-done:
-				return
-			}
-		}
-	}()
-	return func() { close(done) }
-}
-
 type apiUnitTest struct {
 	t        *testing.T
 	router   *mux.Router
@@ -96,8 +76,6 @@ func GetTestConfig() string {
 }
 func TestMain(m *testing.M) {
 	fmt.Printf("in TestMain\n")
-	stopWatchdog := startTestWatchdog("adminapi/telemetry")
-	defer stopWatchdog()
 
 	testConfigFile = "/app/xconfadmin/xconfadmin.conf"
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
@@ -422,8 +400,8 @@ func DeleteTelemetryEntities() {
 		return
 	}
 
-	// SLOW PATH: Only used for real database integration tests
-	telemetryTables := []string{
+	// Full cleanup for mixed test suites.
+	cleanupTelemetryTables([]string{
 		ds.TABLE_TELEMETRY,
 		ds.TABLE_TELEMETRY_RULES,
 		ds.TABLE_TELEMETRY_TWO_PROFILES,
@@ -433,36 +411,43 @@ func DeleteTelemetryEntities() {
 		db.TABLE_XCONF_APPROVED_CHANGE,
 		db.TABLE_XCONF_TELEMETRY_TWO_CHANGE,
 		db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE,
-	}
-
-	for _, tableName := range telemetryTables {
-		truncateTable(tableName)
-		db.GetCachedSimpleDao().RefreshAll(tableName)
-	}
+	})
 }
 
-func truncateTable(tableName string) error {
-	dao := db.GetCachedSimpleDao()
-	keys, err := dao.GetKeys(tableName)
-	if err != nil {
-		// table may be empty or not yet exist; not an error
-		return nil
+// DeleteTelemetryV1Entities scopes cleanup to telemetry v1 tables.
+func DeleteTelemetryV1Entities() {
+	if IsMockDatabaseEnabled() {
+		ClearMockDatabase()
+		return
 	}
-	for _, key := range keys {
-		var keyStr string
-		switch k := key.(type) {
-		case string:
-			keyStr = k
-		case []byte:
-			keyStr = string(k)
-		default:
-			keyStr = fmt.Sprint(k)
-		}
-		if delErr := dao.DeleteOne(tableName, keyStr); delErr != nil {
-			fmt.Printf("failed to delete %s from %s: %v\n", keyStr, tableName, delErr)
-		}
+
+	cleanupTelemetryTables([]string{
+		ds.TABLE_TELEMETRY,
+		ds.TABLE_TELEMETRY_RULES,
+		ds.TABLE_PERMANENT_TELEMETRY,
+		db.TABLE_XCONF_CHANGE,
+		db.TABLE_XCONF_APPROVED_CHANGE,
+	})
+}
+
+// DeleteTelemetryV2Entities scopes cleanup to telemetry v2 tables.
+func DeleteTelemetryV2Entities() {
+	if IsMockDatabaseEnabled() {
+		ClearMockDatabase()
+		return
 	}
-	return nil
+
+	cleanupTelemetryTables([]string{
+		ds.TABLE_TELEMETRY_TWO_PROFILES,
+		ds.TABLE_TELEMETRY_TWO_RULES,
+		db.TABLE_XCONF_TELEMETRY_TWO_CHANGE,
+		db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE,
+	})
+}
+
+func cleanupTelemetryTables(telemetryTables []string) {
+	// Use shared test cleanup utility for consistency across all packages
+	_ = common.TruncateAndRefresh(telemetryTables)
 }
 
 func TestAddTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {

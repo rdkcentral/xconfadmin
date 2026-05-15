@@ -553,7 +553,7 @@ func fetchMembersFromBucketsConcurrent(tagId string, bucketIds []int, totalLimit
 
 // AddMembersWithXdas adds members to both XDAS and Cassandra (XDAS-first approach)
 // Returns the count of members actually stored to Cassandra.
-func AddMembersWithXdas(tagId string, members []string) (int, error) {
+func AddMembersWithXdas(tagId string, members []string, tagValue string) (int, error) {
 	startTime := time.Now()
 
 	if len(members) == 0 {
@@ -564,7 +564,7 @@ func AddMembersWithXdas(tagId string, members []string) (int, error) {
 		return 0, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
 
-	savedToXdasMembers, err := addMembersToXdas(tagId, members)
+	savedToXdasMembers, err := addMembersToXdas(tagId, members, tagValue)
 	if err != nil {
 		return 0, fmt.Errorf("XDAS operation failed: %w", err)
 	}
@@ -630,7 +630,7 @@ func RemoveMemberWithXdas(tagId string, member string) error {
 }
 
 // addMembersToXdas adds members to Xdas using concurrent workers (similar to V1 pattern)
-func addMembersToXdas(tagId string, members []string) ([]string, error) {
+func addMembersToXdas(tagId string, members []string, tagValue string) ([]string, error) {
 	tagId = SetTagPrefix(tagId)
 
 	membersChannel := make(chan string, len(members))
@@ -653,7 +653,7 @@ func addMembersToXdas(tagId string, members []string) ([]string, error) {
 	}
 	for i := 0; i < numOfWorkers; i++ {
 		wg.Add(1)
-		go storeTagMembersInXdas(tagId, membersChannel, savedMembersChannel, wg)
+		go storeTagMembersInXdas(tagId, membersChannel, savedMembersChannel, wg, tagValue)
 	}
 
 	go func() {

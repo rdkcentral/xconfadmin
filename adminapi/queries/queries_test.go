@@ -739,7 +739,17 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 func TestAllQueriesApis(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	//server, _ := SetupTestEnvironment()
-	DeleteAllEntities()
+	// Only truncate the tables needed for this test
+	truncateTable(ds.TABLE_ENVIRONMENT)
+	RefreshAllInDao(ds.TABLE_ENVIRONMENT)
+	truncateTable(ds.TABLE_GENERIC_NS_LIST)
+	RefreshAllInDao(ds.TABLE_GENERIC_NS_LIST)
+	truncateTable(ds.TABLE_FIRMWARE_CONFIG)
+	RefreshAllInDao(ds.TABLE_FIRMWARE_CONFIG)
+	truncateTable(ds.TABLE_FIRMWARE_RULE)
+	RefreshAllInDao(ds.TABLE_FIRMWARE_RULE)
+	truncateTable(ds.TABLE_SINGLETON_FILTER_VALUE)
+	RefreshAllInDao(ds.TABLE_SINGLETON_FILTER_VALUE)
 
 	table_data := []interface{}{
 		TableData{Tablename: "TABLE_ENVIRONMENT", Tablerow: `{"id":"AX061AEI","updated":1591604177484,"description":"RT1319"}`},

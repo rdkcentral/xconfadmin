@@ -39,6 +39,15 @@ const (
 	jsonFirmwareRuleTemplateTestDataLocn = "jsondata/firmwareruletemplate/"
 )
 
+func cleanupFirmwareRuleTemplateEntities() {
+	_ = truncateTable(ds.TABLE_FIRMWARE_RULE_TEMPLATE)
+	_ = RefreshAllInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE)
+	_ = truncateTable(ds.TABLE_MODEL)
+	_ = RefreshAllInDao(ds.TABLE_MODEL)
+	_ = truncateTable(ds.TABLE_GENERIC_NS_LIST)
+	_ = RefreshAllInDao(ds.TABLE_GENERIC_NS_LIST)
+}
+
 func newFirmwareRuleTemplateApiUnitTest(t *testing.T) *apiUnitTest {
 	aut := newApiUnitTest(t)
 	aut.setupFirmwareRuleTemplateApi()
@@ -475,7 +484,7 @@ func TestGetFirmwareRuleTemplateWithParam(t *testing.T) {
 func TestFirmwareRuleTemplateEndPoints(t *testing.T) {
 	SkipIfMockDatabase(t)
 	// Clean up any existing "stb" firmware rule templates before test
-	//DeleteAllEntities()
+	//cleanupFirmwareRuleTemplateEntities()
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId := uuid.New().String()
 	sysGenId2 := uuid.New().String()
@@ -574,9 +583,9 @@ func TestPostFirmwareRuleTemplateImportAllFromBodyParams(t *testing.T) {
 
 func TestPostFirmwareRuleTemplateFilteredHandler_ErrorPaths(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateEntities()
 
 	// Test with invalid JSON body
 	req, err := http.NewRequest("POST", "/xconfAdminService/firmwareruletemplate/filtered", bytes.NewBufferString("{invalid json"))
@@ -627,9 +636,9 @@ func TestPostFirmwareRuleTemplateImportHandler_ErrorPaths(t *testing.T) {
 
 func TestPostChangePriorityHandler_ErrorPaths(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateEntities()
 
 	// Create a template first
 	templateJSON := `{
@@ -699,9 +708,9 @@ func TestPostChangePriorityHandler_ErrorPaths(t *testing.T) {
 
 func TestPostChangePriorityHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateEntities()
 
 	// Create multiple templates using JSON
 	for i := 1; i <= 3; i++ {
@@ -743,9 +752,9 @@ func TestPostChangePriorityHandler_Success(t *testing.T) {
 
 func TestPostFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateEntities()
 
 	// Test with invalid JSON
 	req, err := http.NewRequest("POST", "/xconfAdminService/firmwareruletemplate", bytes.NewBufferString("{invalid}"))
@@ -845,9 +854,9 @@ func TestPostFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
 
 func TestDeleteFirmwareRuleTemplateByIdHandler_ErrorPaths(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateEntities()
 
 	// Test delete non-existent template
 	req, err := http.NewRequest("DELETE", "/xconfAdminService/firmwareruletemplate/NONEXISTENT", nil)
@@ -865,9 +874,9 @@ func TestDeleteFirmwareRuleTemplateByIdHandler_ErrorPaths(t *testing.T) {
 
 func TestGetFirmwareRuleTemplateByIdHandler_ErrorPaths(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateEntities()
 
 	// Test get non-existent template
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareruletemplate/NONEXISTENT", nil)
@@ -892,9 +901,9 @@ func TestObsoleteGetFirmwareRuleTemplatePageHandler_Success(t *testing.T) {
 
 func TestPutFirmwareRuleTemplateEntitiesHandler_ErrorPaths(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateEntities()
 
 	// Test with invalid JSON
 	req, err := http.NewRequest("PUT", "/xconfAdminService/firmwareruletemplate/entities", bytes.NewBufferString("{invalid}"))
@@ -945,9 +954,9 @@ func TestPutFirmwareRuleTemplateEntitiesHandler_ErrorPaths(t *testing.T) {
 
 func TestPutFirmwareRuleTemplateEntitiesHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateEntities()
 
 	// Create entity first using JSON
 	templateJSON := `{
@@ -1012,9 +1021,9 @@ func TestPutFirmwareRuleTemplateEntitiesHandler_Success(t *testing.T) {
 
 func TestGetFirmwareRuleTemplateIdsHandler_ErrorPaths(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateEntities()
 
 	// Test without type parameter
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareruletemplate/ids", nil)
@@ -1029,9 +1038,9 @@ func TestGetFirmwareRuleTemplateIdsHandler_ErrorPaths(t *testing.T) {
 
 func TestGetFirmwareRuleTemplateExportHandler_ErrorPaths(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateEntities()
 
 	// Test without type parameter
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareruletemplate/export", nil)
@@ -1046,9 +1055,9 @@ func TestGetFirmwareRuleTemplateExportHandler_ErrorPaths(t *testing.T) {
 
 func TestPutFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateEntities()
 
 	// Test with invalid JSON
 	req, err := http.NewRequest("PUT", "/xconfAdminService/firmwareruletemplate", bytes.NewBufferString("{invalid}"))
@@ -1094,9 +1103,9 @@ func TestPutFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
 
 func TestPostFirmwareRuleTemplateEntitiesHandler_ErrorPaths(t *testing.T) {
 	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	cleanupFirmwareRuleTemplateEntities()
 	setupTestModels()
-	defer DeleteAllEntities()
+	defer cleanupFirmwareRuleTemplateEntities()
 
 	// Test with invalid JSON
 	req, err := http.NewRequest("POST", "/xconfAdminService/firmwareruletemplate/entities", bytes.NewBufferString("{invalid}"))
