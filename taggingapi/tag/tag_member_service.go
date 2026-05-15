@@ -240,7 +240,7 @@ func GetMembersPaginated(tagId string, limit int, cursor string) (*PaginatedMemb
 		limit = DefaultPageSizeV2
 	}
 
-	log.Infof("Getting paginated members for tag %s, limit %d, cursor %s", tagId, limit, cursor)
+	log.Debugf("Getting paginated members for tag %s, limit %d, cursor %s", tagId, limit, cursor)
 
 	populatedBuckets, err := getPopulatedBuckets(tagId)
 	if err != nil {
@@ -251,7 +251,7 @@ func GetMembersPaginated(tagId string, limit int, cursor string) (*PaginatedMemb
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf(NotFoundErrorMsg, tagId))
 	}
 
-	log.Infof("Found %d populated buckets for tag %s", len(populatedBuckets), tagId)
+	log.Debugf("Found %d populated buckets for tag %s", len(populatedBuckets), tagId)
 
 	state := parseBucketedCursor(cursor)
 	var allMembers []string
@@ -297,7 +297,7 @@ func GetMembersPaginated(tagId string, limit int, cursor string) (*PaginatedMemb
 		if len(result.members) > needed {
 			allMembers = append(allMembers, result.members[:needed]...)
 			nextCursor := generateBucketedCursor(currentBucketId, result.members[needed-1], len(allMembers))
-			log.Infof("Returning %d members for tag %s with more data in bucket %d",
+			log.Debugf("Returning %d members for tag %s with more data in bucket %d",
 				len(allMembers), tagId, currentBucketId)
 			return &PaginatedMembersResponse{
 				Data:       allMembers,
@@ -322,7 +322,7 @@ func GetMembersPaginated(tagId string, limit int, cursor string) (*PaginatedMemb
 		nextCursor = generateBucketedCursor(nextBucketId, "", 0)
 	}
 
-	log.Infof("Returning %d members for tag %s, hasMore: %v", len(allMembers), tagId, hasMore)
+	log.Debugf("Returning %d members for tag %s, hasMore: %v", len(allMembers), tagId, hasMore)
 	return &PaginatedMembersResponse{
 		Data:       allMembers,
 		NextCursor: nextCursor,
