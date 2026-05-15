@@ -300,15 +300,15 @@ func GetTagByIdHandler(w http.ResponseWriter, r *http.Request) {
 
 // DeleteTagHandler deletes a tag and all its members from V2 storage asynchronously
 func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
-	xw, ok := w.(*xwhttp.XResponseWriter)
-	if !ok {
-		xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(ResponseWriterCastErrorMsg))
-		return
-	}
-
 	id, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
+		return
+	}
+
+	xw, ok := w.(*xwhttp.XResponseWriter)
+	if !ok {
+		xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(ResponseWriterCastErrorMsg))
 		return
 	}
 
