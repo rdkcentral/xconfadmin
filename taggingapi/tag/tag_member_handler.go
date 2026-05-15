@@ -160,11 +160,6 @@ func getTagValueFromRequest(r *http.Request) string {
 		if len(values) > 0 {
 			return values[0]
 		}
-		return ""
-	}
-
-	if value, found := mux.Vars(r)[common.TagValue]; found {
-		return value
 	}
 
 	return ""
