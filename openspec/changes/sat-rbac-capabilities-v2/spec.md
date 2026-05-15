@@ -5,8 +5,9 @@
 This change updates `openspec/specs/auth/auth-contract.md` with the
 following normative clauses:
 
-- `Authorization Precedence`: Xerxes MUST be evaluated first, SAT RBAC v2
-  second, and legacy SAT third.
+- `Authorization Routing Selection`: if `Authorization` header is present,
+  SAT processing is selected; otherwise Xerxes is selected only when SAT
+  header is absent.
 - `SAT RBAC v2 Detection`: SAT v2 SHALL be detected by presence of at
   least one capability with prefix `xconf:`.
 - `SAT RBAC v2 Domain Classification`: domain SHALL be determined by
@@ -69,23 +70,11 @@ A SAT token without any xconf-prefixed capabilities is treated as a legacy SAT t
 - Authorization decision: ALLOW or DENY
 - HTTP status code: 401 Unauthorized (auth failure) or 403 Forbidden (authz failure)
 
-### Precedence
+### Routing-Based Selection Algorithm
 
-1. **Xerxes Authorization**
-   - If Xerxes token is present AND Xerxes validation succeeds:
-     - Authorize based on Xerxes permissions (Xerxes-specific logic)
-     - If Xerxes permissions allow the operation:
-       - ALLOW request
-       - Skip all SAT authorization
-     - If Xerxes permissions do not allow the operation:
-       - DENY request
-       - Return 403 Forbidden
-   - If Xerxes token is present but validation fails:
-     - DENY request
-     - Return 401 Unauthorized
-
-2. **SAT RBAC v2 Authorization**
-   - If SAT token is present AND valid AND is classified as SAT v2 (has xconf: prefix):
+1. **SAT Path (Authorization Header Present)**
+   - If `Authorization` header is present, the request is treated as SAT and SAT processing is selected.
+   - If SAT token is valid and classified as SAT v2 (has xconf: prefix):
      - Classify request into (domain, access) pair (see below)
      - If request cannot be classified:
        - DENY request
@@ -96,19 +85,31 @@ A SAT token without any xconf-prefixed capabilities is treated as a legacy SAT t
      - If no matching capability:
        - DENY request
        - Return 403 Forbidden
-     - Skip legacy SAT authorization
-
-3. **Legacy SAT Authorization**
-   - If SAT token is present AND valid AND is NOT classified as SAT v2:
+   - If SAT token is valid and is NOT classified as SAT v2:
      - Authorize using legacy SAT semantics (unchanged from prior xconfadmin behavior)
-   - If legacy SAT authorization allows:
-     - ALLOW request
-   - If legacy SAT authorization denies:
+     - If legacy SAT authorization allows:
+       - ALLOW request
+     - If legacy SAT authorization denies:
+       - DENY request
+       - Return 403 Forbidden
+   - If SAT token is missing/invalid on SAT path:
      - DENY request
-     - Return 403 Forbidden
+     - Return 401 Unauthorized
 
-4. **No Credentials**
-   - If no Xerxes token and no SAT token:
+2. **Xerxes Path (Authorization Header Absent)**
+   - If `Authorization` header is absent and Xerxes token is present (header `token` or cookie `token`):
+     - If Xerxes validation fails:
+       - DENY request
+       - Return 401 Unauthorized
+     - Authorize based on Xerxes permissions
+     - If Xerxes permissions allow the operation:
+       - ALLOW request
+     - If Xerxes permissions do not allow the operation:
+       - DENY request
+       - Return 403 Forbidden
+
+3. **No Applicable Credentials**
+   - If neither SAT path nor Xerxes path applies:
      - DENY request
      - Return 401 Unauthorized
 

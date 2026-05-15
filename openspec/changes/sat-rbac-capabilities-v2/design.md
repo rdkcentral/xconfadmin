@@ -6,65 +6,46 @@ This document describes the architectural approach to implementing SAT RBAC v2 c
 
 ## Design Principles
 
-1. **Xerxes-First**: If a valid Xerxes token is present, use Xerxes authorization exclusively; SAT is not consulted.
-2. **Graceful Fallback**: If SAT contains xconf-prefixed capabilities, authorize via SAT v2; otherwise, fall back to legacy SAT unchanged.
+1. **Routing-Based Selection**: If the `Authorization` header is present, select the SAT path; otherwise, if Xerxes token is present (header `token` or cookie `token`), select the Xerxes path.
+2. **SAT Mode Detection**: On the SAT path, if SAT contains xconf-prefixed capabilities, authorize via SAT v2; otherwise, use legacy SAT unchanged.
 3. **Deny-by-Default for SAT v2**: Any request that cannot be classified into (domain, access) requirements is denied.
 4. **Route-Based Classification**: Domain and access level are determined from HTTP method and API route/path, not from request entity type.
 5. **Backward Compatibility**: Existing SAT tokens without xconf-prefixed capabilities continue to work exactly as before.
 
-## Authorization Precedence
+## Authorization Routing Selection
 
-The authorization system follows this strict precedence:
+The authorization system follows routing-based selection (Option C):
 
 ```
 ┌─────────────────────────────────┐
 │ Request arrives with credentials │
 └─────────────────┬───────────────┘
                   │
-          ┌───────▼────────┐
-          │ Xerxes present?│
-          └───────┬────────┘
-                  │
-        ┌─────────┴─────────┐
-       NO                   YES
-        │                    │
-        │          ┌─────────▼─────────┐
-        │          │ Xerxes valid?     │
-        │          └─────────┬─────────┘
-        │                    │
-        │          ┌─────────┴─────────┐
-        │         NO                   YES
-        │          │                    │
-        │          │          ┌─────────▼─────────────┐
-        │          │          │ Authorize via Xerxes  │
-        │          │          │ (Skip SAT entirely)   │
-        │          │          └───────────────────────┘
-        │          │
-        ▼          ▼
-   ┌────────────────────────┐
-   │ SAT present and valid? │
-   └────────────┬───────────┘
-                │
-        ┌───────┴────────┐
-       NO                YES
-        │                 │
-        │      ┌──────────▼──────────┐
-        │      │ Has xconf: prefix?  │
-        │      └──────────┬──────────┘
-        │                 │
-        │         ┌───────┴──────┐
-        │        NO              YES
-        │         │               │
-        │         │   ┌───────────▼──────────────┐
-        │         │   │ Authorize via SAT RBAC v2│
-        │         │   │ (domain + access check)  │
-        │         │   └──────────────────────────┘
-        │         │
-        ▼         ▼
-   ┌────────────────────────┐
-   │ Authorize via legacy   │
-   │ SAT (unchanged)        │
-   └────────────────────────┘
+    ┌──────────────────────────────┐
+    │ Authorization header present?│
+    └──────────────┬───────────────┘
+       │
+         ┌─────────┴─────────┐
+        YES                  NO
+         │                    │
+   ┌───────────▼──────────────┐   ┌────────────────────────────┐
+   │ Route to SAT auth path   │   │ Xerxes token present       │
+   │ (deterministic selection)│   │ (header/cookie `token`)?   │
+   └───────────┬──────────────┘   └──────────────┬─────────────┘
+         │                                 │
+     ┌─────────▼──────────┐           ┌──────────┴──────────┐
+     │ Has xconf: prefix? │          NO                    YES
+     └─────────┬──────────┘           │                     │
+         │                      │            ┌─────────▼─────────┐
+      ┌────────┴───────┐              │            │ Authorize via     │
+      │                │              │            │ Xerxes permissions │
+     NO               YES             │            └───────────────────┘
+      │                │              │
+ ┌────▼──────────┐  ┌──▼────────────────────────┐  ┌──────────────────────┐
+ │ Authorize via │  │ Authorize via SAT RBAC v2 │  │ Return 401           │
+ │ legacy SAT    │  │ (domain + access check)   │  │ Unauthorized          │
+ │ (unchanged)   │  └───────────────────────────┘  └──────────────────────┘
+ └───────────────┘
 ```
 
 ## Request Classification
@@ -99,7 +80,7 @@ Post-based read endpoints (e.g., /filtered searches) are explicitly classified a
 
 ### Authorization Middleware Position
 
-The SAT RBAC v2 authorization logic is invoked after credential validation, within the existing auth middleware stack:
+The authorization logic is invoked after credential validation, with deterministic routing by credential type:
 
 ```
 Request
@@ -107,14 +88,14 @@ Request
   ├─> Credential Extraction & Validation
   │     (Xerxes token, SAT token, etc.)
   │
-  ├─> Xerxes Authorization (if present)
-  │
-  ├─> SAT RBAC v2 Authorization (if xconf: prefix detected)
-  │     ├─> Route Classification (domain + access)
-  │     ├─> Capability Matching
+  ├─> If Authorization header exists -> SAT path
+  │     ├─> SAT v2 detection (xconf: prefix)
+  │     ├─> SAT RBAC v2 OR legacy SAT authorization
   │     └─> Allow/Deny Decision
   │
-  ├─> Legacy SAT Authorization (fallback)
+  ├─> Else if Xerxes token exists -> Xerxes authorization
+  │
+  ├─> Else -> 401 Unauthorized
   │
   └─> Handler Execution (if authorized)
 ```

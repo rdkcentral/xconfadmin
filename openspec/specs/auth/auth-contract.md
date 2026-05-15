@@ -9,7 +9,7 @@ This specification describes:
 - credential validation
 - identity resolution
 - authentication success and failure outcomes
-- authorization precedence across Xerxes, SAT v2, and legacy SAT
+- routing-based authorization selection across SAT v2, legacy SAT, and Xerxes
 - SAT v2 request classification requirements
 - fail-fast termination after authentication or authorization failure
 
@@ -33,23 +33,26 @@ Authentication failures SHALL result in defined error categories.
 Failure handling is subject to the Fail-Fast Termination guarantee
 defined below.
 
-### Authorization Precedence
+### Authorization Routing Selection
 
-Authorization MUST be evaluated in this order:
-
-1. Xerxes permissions
-2. SAT RBAC v2
-3. legacy SAT
+Authorization selection SHALL be deterministic and route credentials by
+credential type, not by evaluating Xerxes and SAT in precedence order.
 
 Normative behavior:
 
-- If a Xerxes token is present and valid, the system SHALL authorize
-	using Xerxes permissions and SHALL NOT evaluate SAT v2 or legacy SAT.
-- If no valid Xerxes authorization path is available and SAT contains at
-	least one capability with prefix `xconf:`, the system SHALL authorize
-	using SAT RBAC v2 semantics.
-- If SAT does not contain any capability with prefix `xconf:`, the system
-	SHALL authorize using legacy SAT behavior unchanged.
+- If the `Authorization` header is present, the request SHALL be treated
+	as SAT-authenticated and SAT processing SHALL be selected.
+	- If SAT contains at least one capability with prefix `xconf:`, the
+		system SHALL authorize using SAT RBAC v2 semantics.
+	- If SAT does not contain any capability with prefix `xconf:`, the
+		system SHALL authorize using legacy SAT behavior unchanged.
+- Else, if a Xerxes token is present (header `token` or cookie `token`),
+	the system SHALL authorize using Xerxes permissions.
+- Else, the system SHALL return `401 Unauthorized`.
+
+When both SAT and Xerxes credentials are present, `Authorization`-header
+routing MUST win; SAT selection SHALL be used and Xerxes SHALL NOT be
+evaluated for that request.
 
 ### SAT RBAC v2 Detection
 
@@ -123,7 +126,7 @@ No downstream handler logic, middleware continuation, or
 post-failure side effects SHALL occur after such a failure.
 
 This contract defines authentication-boundary authorization semantics
-for precedence, classification, and failure handling; downstream
+for routing selection, classification, and failure handling; downstream
 business policy remains outside scope.
 
 
