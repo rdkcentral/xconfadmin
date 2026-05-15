@@ -35,8 +35,8 @@ import (
 
 // TestPostLogRepoSettingsEntitiesHandler_Success tests successful batch creation of upload repositories
 func TestPostLogRepoSettingsEntitiesHandler_Success(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	entities := []logupload.UploadRepository{
 		{
@@ -77,8 +77,8 @@ func TestPostLogRepoSettingsEntitiesHandler_Success(t *testing.T) {
 
 // TestPostLogRepoSettingsEntitiesHandler_InvalidJSON tests invalid JSON handling
 func TestPostLogRepoSettingsEntitiesHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	invalidJSON := []byte(`{bad json}`)
 
@@ -94,8 +94,8 @@ func TestPostLogRepoSettingsEntitiesHandler_InvalidJSON(t *testing.T) {
 
 // TestPostLogRepoSettingsEntitiesHandler_DuplicateEntity tests duplicate entity handling
 func TestPostLogRepoSettingsEntitiesHandler_DuplicateEntity(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	// Create first repository
 	repo := logupload.UploadRepository{
@@ -128,8 +128,8 @@ func TestPostLogRepoSettingsEntitiesHandler_DuplicateEntity(t *testing.T) {
 
 // TestPostLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure tests batch with both successful and failed operations
 func TestPostLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	// Create first repository
 	existingRepo := logupload.UploadRepository{
@@ -174,8 +174,8 @@ func TestPostLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure(t *testing.T)
 
 // TestPutLogRepoSettingsEntitiesHandler_Success tests successful batch update of upload repositories
 func TestPutLogRepoSettingsEntitiesHandler_Success(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	// Create initial repositories
 	repo1 := logupload.UploadRepository{
@@ -236,8 +236,8 @@ func TestPutLogRepoSettingsEntitiesHandler_Success(t *testing.T) {
 
 // TestPutLogRepoSettingsEntitiesHandler_InvalidJSON tests invalid JSON handling for update
 func TestPutLogRepoSettingsEntitiesHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	invalidJSON := []byte(`{bad json}`)
 
@@ -253,8 +253,8 @@ func TestPutLogRepoSettingsEntitiesHandler_InvalidJSON(t *testing.T) {
 
 // TestPutLogRepoSettingsEntitiesHandler_NonExistentEntity tests updating non-existent entity
 func TestPutLogRepoSettingsEntitiesHandler_NonExistentEntity(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	entities := []logupload.UploadRepository{
 		{
@@ -285,8 +285,8 @@ func TestPutLogRepoSettingsEntitiesHandler_NonExistentEntity(t *testing.T) {
 // TestPutLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure tests batch update with mixed results
 func TestPutLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	// Create one repository
 	existingRepo := logupload.UploadRepository{
@@ -338,8 +338,8 @@ func TestPutLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure(t *testing.T) 
 
 // TestGetLogRepoSettingsExportHandler_Success tests successful export of log upload settings
 func TestGetLogRepoSettingsExportHandler_Success(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/export", nil)
 	assert.NilError(t, err)
@@ -363,8 +363,8 @@ func TestGetLogRepoSettingsExportHandler_Success(t *testing.T) {
 
 // TestGetLogRepoSettingsExportHandler_EmptyResult tests export with no data
 func TestGetLogRepoSettingsExportHandler_EmptyResult(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/export", nil)
 	assert.NilError(t, err)
@@ -387,8 +387,8 @@ func TestGetLogRepoSettingsExportHandler_EmptyResult(t *testing.T) {
 
 // TestGetLogRepoSettingsExportHandler_VerifyHeaders tests that export includes correct headers
 func TestGetLogRepoSettingsExportHandler_VerifyHeaders(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/export", nil)
 	assert.NilError(t, err)
@@ -413,8 +413,8 @@ func TestGetLogRepoSettingsExportHandler_VerifyHeaders(t *testing.T) {
 
 // TestGetLogRepoSettingsByIdHandler_MissingID tests error when ID is missing
 func TestGetLogRepoSettingsByIdHandler_MissingID(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/", nil)
 	assert.NilError(t, err)
@@ -428,8 +428,8 @@ func TestGetLogRepoSettingsByIdHandler_MissingID(t *testing.T) {
 
 // TestGetLogRepoSettingsByIdHandler_NilResult tests handling when repository doesn't exist (nil condition)
 func TestGetLogRepoSettingsByIdHandler_NilResult(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/nonexistent-id", nil)
 	assert.NilError(t, err)
@@ -442,8 +442,8 @@ func TestGetLogRepoSettingsByIdHandler_NilResult(t *testing.T) {
 
 // TestGetLogRepoSettingsByIdHandler_ApplicationTypeMismatch tests when ApplicationType doesn't match (error path)
 func TestGetLogRepoSettingsByIdHandler_ApplicationTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	// Create repository with "rdkcloud" application type
 	repo := logupload.UploadRepository{
@@ -468,8 +468,8 @@ func TestGetLogRepoSettingsByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 
 // TestGetLogRepoSettingsByIdHandler_WithExport tests export functionality for single repository
 func TestGetLogRepoSettingsByIdHandler_WithExport(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	// Create repository
 	repo := logupload.UploadRepository{
@@ -504,8 +504,8 @@ func TestGetLogRepoSettingsByIdHandler_WithExport(t *testing.T) {
 // TestGetLogRepoSettingsHandler_EmptyList tests handling when no repositories exist (nil condition)
 func TestGetLogRepoSettingsHandler_EmptyList(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository", nil)
 	assert.NilError(t, err)
@@ -522,8 +522,8 @@ func TestGetLogRepoSettingsHandler_EmptyList(t *testing.T) {
 
 // TestGetLogRepoSettingsHandler_WithExport tests export functionality for all repositories
 func TestGetLogRepoSettingsHandler_WithExport(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	// Create multiple repositories
 	repo1 := logupload.UploadRepository{
@@ -559,8 +559,8 @@ func TestGetLogRepoSettingsHandler_WithExport(t *testing.T) {
 // TestGetLogRepoSettingsSizeHandler_ZeroCount tests size handler with no repositories (nil condition)
 func TestGetLogRepoSettingsSizeHandler_ZeroCount(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/size", nil)
 	assert.NilError(t, err)
@@ -578,8 +578,8 @@ func TestGetLogRepoSettingsSizeHandler_ZeroCount(t *testing.T) {
 // TestGetLogRepoSettingsSizeHandler_NonZeroCount tests size handler with repositories
 func TestGetLogRepoSettingsSizeHandler_NonZeroCount(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	// Create repositories
 	for i := 1; i <= 3; i++ {
@@ -609,8 +609,8 @@ func TestGetLogRepoSettingsSizeHandler_NonZeroCount(t *testing.T) {
 // TestGetLogRepoSettingsNamesHandler_EmptyList tests names handler with no repositories (nil condition)
 func TestGetLogRepoSettingsNamesHandler_EmptyList(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/names", nil)
 	assert.NilError(t, err)
@@ -628,8 +628,8 @@ func TestGetLogRepoSettingsNamesHandler_EmptyList(t *testing.T) {
 // TestGetLogRepoSettingsNamesHandler_WithNames tests names handler with repositories
 func TestGetLogRepoSettingsNamesHandler_WithNames(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	// Create repositories with specific names
 	names := []string{"Alpha Repo", "Beta Repo", "Gamma Repo"}
@@ -659,8 +659,8 @@ func TestGetLogRepoSettingsNamesHandler_WithNames(t *testing.T) {
 
 // TestDeleteLogRepoSettingsByIdHandler_MissingID tests delete with missing ID (error path)
 func TestDeleteLogRepoSettingsByIdHandler_MissingID(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	req, err := http.NewRequest("DELETE", "/xconfAdminService/dcm/uploadRepository/", nil)
 	assert.NilError(t, err)
@@ -674,8 +674,8 @@ func TestDeleteLogRepoSettingsByIdHandler_MissingID(t *testing.T) {
 
 // TestDeleteLogRepoSettingsByIdHandler_NonExistent tests delete of non-existent repository (error path)
 func TestDeleteLogRepoSettingsByIdHandler_NonExistent(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	req, err := http.NewRequest("DELETE", "/xconfAdminService/dcm/uploadRepository/nonexistent-id", nil)
 	assert.NilError(t, err)
@@ -689,8 +689,8 @@ func TestDeleteLogRepoSettingsByIdHandler_NonExistent(t *testing.T) {
 // TestDeleteLogRepoSettingsByIdHandler_Success tests successful delete
 func TestDeleteLogRepoSettingsByIdHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	// Use unique ID to avoid test collisions
 	uniqueID := "delete-me-" + uuid.New().String()[:8]
@@ -723,8 +723,8 @@ func TestDeleteLogRepoSettingsByIdHandler_Success(t *testing.T) {
 
 // TestCreateLogRepoSettingsHandler_InvalidJSON tests create with invalid JSON (error path)
 func TestCreateLogRepoSettingsHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	invalidJSON := []byte(`{invalid json`)
 
@@ -740,8 +740,8 @@ func TestCreateLogRepoSettingsHandler_InvalidJSON(t *testing.T) {
 
 // TestCreateLogRepoSettingsHandler_EmptyBody tests create with empty body (nil condition)
 func TestCreateLogRepoSettingsHandler_EmptyBody(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	req, err := http.NewRequest("POST", "/xconfAdminService/dcm/uploadRepository", bytes.NewBuffer([]byte("{}")))
 	assert.NilError(t, err)
@@ -756,8 +756,8 @@ func TestCreateLogRepoSettingsHandler_EmptyBody(t *testing.T) {
 
 // TestCreateLogRepoSettingsHandler_DuplicateID tests create with duplicate ID (error path)
 func TestCreateLogRepoSettingsHandler_DuplicateID(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	// Create first repository
 	repo := logupload.UploadRepository{
@@ -783,8 +783,8 @@ func TestCreateLogRepoSettingsHandler_DuplicateID(t *testing.T) {
 
 // TestUpdateLogRepoSettingsHandler_InvalidJSON tests update with invalid JSON (error path)
 func TestUpdateLogRepoSettingsHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	invalidJSON := []byte(`{invalid json`)
 
@@ -800,8 +800,8 @@ func TestUpdateLogRepoSettingsHandler_InvalidJSON(t *testing.T) {
 
 // TestUpdateLogRepoSettingsHandler_NonExistent tests update of non-existent repository (error path)
 func TestUpdateLogRepoSettingsHandler_NonExistent(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	repo := logupload.UploadRepository{
 		ID:              "nonexistent",
@@ -824,8 +824,8 @@ func TestUpdateLogRepoSettingsHandler_NonExistent(t *testing.T) {
 
 // TestUpdateLogRepoSettingsHandler_Success tests successful update
 func TestUpdateLogRepoSettingsHandler_Success(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	// Create repository
 	repo := logupload.UploadRepository{
@@ -862,8 +862,8 @@ func TestUpdateLogRepoSettingsHandler_Success(t *testing.T) {
 // TestPostLogRepoSettingsFilteredWithParamsHandler_EmptyBody tests filtered search with empty body (nil condition)
 func TestPostLogRepoSettingsFilteredWithParamsHandler_EmptyBody(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	req, err := http.NewRequest("POST", "/xconfAdminService/dcm/uploadRepository/filtered", bytes.NewBuffer([]byte("")))
 	assert.NilError(t, err)
@@ -881,8 +881,8 @@ func TestPostLogRepoSettingsFilteredWithParamsHandler_EmptyBody(t *testing.T) {
 
 // TestPostLogRepoSettingsFilteredWithParamsHandler_InvalidJSON tests filtered search with invalid JSON (error path)
 func TestPostLogRepoSettingsFilteredWithParamsHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	invalidJSON := []byte(`{invalid}`)
 
@@ -898,8 +898,8 @@ func TestPostLogRepoSettingsFilteredWithParamsHandler_InvalidJSON(t *testing.T) 
 
 // TestPostLogRepoSettingsFilteredWithParamsHandler_WithContext tests filtered search with context
 func TestPostLogRepoSettingsFilteredWithParamsHandler_WithContext(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	// Create some repositories
 	repo1 := logupload.UploadRepository{
@@ -926,8 +926,8 @@ func TestPostLogRepoSettingsFilteredWithParamsHandler_WithContext(t *testing.T) 
 
 // TestPostLogRepoSettingsEntitiesHandler_EmptyArray tests batch create with empty array (nil condition)
 func TestPostLogRepoSettingsEntitiesHandler_EmptyArray(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	entities := []logupload.UploadRepository{}
 	body, _ := json.Marshal(entities)
@@ -948,8 +948,8 @@ func TestPostLogRepoSettingsEntitiesHandler_EmptyArray(t *testing.T) {
 
 // TestPutLogRepoSettingsEntitiesHandler_EmptyArray tests batch update with empty array (nil condition)
 func TestPutLogRepoSettingsEntitiesHandler_EmptyArray(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	entities := []logupload.UploadRepository{}
 	body, _ := json.Marshal(entities)
@@ -970,8 +970,8 @@ func TestPutLogRepoSettingsEntitiesHandler_EmptyArray(t *testing.T) {
 
 // TestGetLogRepoSettingsExportHandler_ApplicationTypeFiltering tests export filters by application type
 func TestGetLogRepoSettingsExportHandler_ApplicationTypeFiltering(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupLogRepoEntities()
+	defer cleanupLogRepoEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/export", nil)
 	assert.NilError(t, err)

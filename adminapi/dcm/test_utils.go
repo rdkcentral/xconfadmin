@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/rdkcentral/xconfadmin/adminapi/dcm/mocks"
+	"github.com/rdkcentral/xconfadmin/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
@@ -115,4 +116,22 @@ func getMockOrRealDao() interface{} {
 		return mockDaoInstance
 	}
 	return db.GetCachedSimpleDao()
+}
+
+func getOneFromDao(tableName string, rowKey string) (interface{}, error) {
+	if useMockDatabase && mockDaoInstance != nil {
+		return mockDaoInstance.GetOne(tableName, rowKey)
+	}
+	return db.GetCachedSimpleDao().GetOne(tableName, rowKey)
+}
+
+func setOneInDao(tableName string, rowKey string, entity interface{}) error {
+	if useMockDatabase && mockDaoInstance != nil {
+		return mockDaoInstance.SetOne(tableName, rowKey, entity)
+	}
+	return db.GetCachedSimpleDao().SetOne(tableName, rowKey, entity)
+}
+
+func CleanupDeviceSettings() {
+	_ = common.TruncateAndRefresh([]string{db.TABLE_DEVICE_SETTINGS})
 }

@@ -119,6 +119,7 @@ func BasicAuthHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Error("Authentication Error : ", err)
 			http.Error(w, "Authentication Error", http.StatusUnauthorized)
+			return
 		}
 		// Add the cookie to the response
 		w.Header()[xhttp.AUTH_TOKEN] = []string{token}
@@ -129,6 +130,7 @@ func BasicAuthHandler(w http.ResponseWriter, r *http.Request) {
 		xwhttp.WriteXconfResponseWithHeaders(w, headers, http.StatusFound, []byte(""))
 	} else {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
 }
 

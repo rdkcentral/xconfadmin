@@ -28,10 +28,17 @@ import (
 	"gotest.tools/assert"
 )
 
+func cleanupVodEntities() {
+	_ = truncateTable(db.TABLE_VOD_SETTINGS)
+	_ = db.GetCachedSimpleDao().RefreshAll(db.TABLE_VOD_SETTINGS)
+	_ = truncateTable(db.TABLE_DCM_RULE)
+	_ = db.GetCachedSimpleDao().RefreshAll(db.TABLE_DCM_RULE)
+}
+
 // TestGetVodSettingExportHandler_Success tests successful export of VOD settings
 func TestGetVodSettingExportHandler_Success(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupVodEntities()
+	defer cleanupVodEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
@@ -56,8 +63,8 @@ func TestGetVodSettingExportHandler_Success(t *testing.T) {
 // TestGetVodSettingExportHandler_EmptyResult tests export with no data
 func TestGetVodSettingExportHandler_EmptyResult(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupVodEntities()
+	defer cleanupVodEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
@@ -82,8 +89,8 @@ func TestGetVodSettingExportHandler_EmptyResult(t *testing.T) {
 // TestGetVodSettingExportHandler_WithDcmFormulas tests export with DCM formulas
 func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupVodEntities()
+	defer cleanupVodEntities()
 
 	// Create DCM formulas
 	formula1 := &logupload.DCMGenericRule{
@@ -137,8 +144,8 @@ func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
 // TestGetVodSettingExportHandler_ApplicationTypeFilter tests that export respects application type
 func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupVodEntities()
+	defer cleanupVodEntities()
 
 	// Create DCM formulas with different application types
 	formulaSTB := &logupload.DCMGenericRule{
@@ -192,8 +199,8 @@ func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 // TestGetVodSettingExportHandler_MissingVodSettings tests formulas without corresponding VOD settings
 func TestGetVodSettingExportHandler_MissingVodSettings(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupVodEntities()
+	defer cleanupVodEntities()
 
 	// Create DCM formula without corresponding VOD settings
 	formula := &logupload.DCMGenericRule{
@@ -222,8 +229,8 @@ func TestGetVodSettingExportHandler_MissingVodSettings(t *testing.T) {
 
 // TestGetVodSettingExportHandler_VerifyHeaders tests that export includes correct headers
 func TestGetVodSettingExportHandler_VerifyHeaders(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupVodEntities()
+	defer cleanupVodEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
@@ -246,8 +253,8 @@ func TestGetVodSettingExportHandler_VerifyHeaders(t *testing.T) {
 
 // TestGetVodSettingExportHandler_MissingAuthCookie tests behavior when auth cookie is missing
 func TestGetVodSettingExportHandler_MissingAuthCookie(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupVodEntities()
+	defer cleanupVodEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
@@ -268,8 +275,8 @@ func TestGetVodSettingExportHandler_MissingAuthCookie(t *testing.T) {
 // TestGetVodSettingExportHandler_DifferentApplicationTypes tests export for different application types
 func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupVodEntities()
+	defer cleanupVodEntities()
 
 	// Create formulas for different application types
 	apps := []string{"stb", "rdkcloud", "rdkcloud"}
@@ -326,8 +333,8 @@ func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
 // TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings tests mixed scenario
 func TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupVodEntities()
+	defer cleanupVodEntities()
 
 	// Create 3 formulas but only 2 VOD settings
 	for i := 1; i <= 3; i++ {
@@ -377,8 +384,8 @@ func TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings(t *testin
 // TestGetVodSettingExportHandler_ValidateResponseStructure tests the structure of the response
 func TestGetVodSettingExportHandler_ValidateResponseStructure(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	cleanupVodEntities()
+	defer cleanupVodEntities()
 
 	// Create a complete VOD setting
 	formula := &logupload.DCMGenericRule{

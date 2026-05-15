@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/rdkcentral/xconfadmin/adminapi/queries"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
@@ -36,15 +37,15 @@ func ImportDeviceSettingsTableData(data []string, tabletype logupload.DeviceSett
 	var err error
 	for _, row := range data {
 		err = json.Unmarshal([]byte(row), &tabletype)
-		err = setOneInDao(ds.TABLE_DEVICE_SETTINGS, tabletype.ID, &tabletype)
+		err = queries.SetOneInDao(ds.TABLE_DEVICE_SETTINGS, tabletype.ID, &tabletype)
 
 	}
 	return err
 }
 func TestAllDeviceSettingsApis(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test: requires external package data retrieval
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDeviceSettings()
+	defer CleanupDeviceSettings()
 
 	// GET ALL DEVICE SETTINGS API
 
@@ -243,8 +244,8 @@ func performRequest(t *testing.T, router *mux.Router, url string, method string,
 // TestGetDeviceSettingsExportHandler_Success tests successful export with matching formulas and device settings
 func TestGetDeviceSettingsExportHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	// Create test DCM formulas
 	formula1 := &logupload.DCMGenericRule{
@@ -320,8 +321,8 @@ func TestGetDeviceSettingsExportHandler_Success(t *testing.T) {
 
 // TestGetDeviceSettingsExportHandler_EmptyResult tests when no formulas exist
 func TestGetDeviceSettingsExportHandler_EmptyResult(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	// Make request without any data
 	url := "/xconfAdminService/dcm/deviceSettings/export"
@@ -348,8 +349,8 @@ func TestGetDeviceSettingsExportHandler_EmptyResult(t *testing.T) {
 // TestGetDeviceSettingsExportHandler_FilterByApplicationType tests that only matching app type is exported
 func TestGetDeviceSettingsExportHandler_FilterByApplicationType(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	// Create test data with different application types
 	formulaSTB := &logupload.DCMGenericRule{
@@ -427,8 +428,8 @@ func TestGetDeviceSettingsExportHandler_FilterByApplicationType(t *testing.T) {
 // TestGetDeviceSettingsExportHandler_MissingDeviceSettings tests when formula exists but device settings don't
 func TestGetDeviceSettingsExportHandler_MissingDeviceSettings(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	// Create formula but not corresponding device settings
 	formula := &logupload.DCMGenericRule{
@@ -464,8 +465,8 @@ func TestGetDeviceSettingsExportHandler_MissingDeviceSettings(t *testing.T) {
 
 // TestGetDeviceSettingsExportHandler_VerifyContentDisposition tests Content-Disposition header format
 func TestGetDeviceSettingsExportHandler_VerifyContentDisposition(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	// Test with different application types to verify header varies
 	testCases := []struct {
@@ -493,8 +494,8 @@ func TestGetDeviceSettingsExportHandler_VerifyContentDisposition(t *testing.T) {
 
 // TestGetDeviceSettingsExportHandler_AuthError tests auth error handling
 func TestGetDeviceSettingsExportHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	// Make request without auth cookie
 	url := "/xconfAdminService/dcm/deviceSettings/export"
@@ -514,8 +515,8 @@ func TestGetDeviceSettingsExportHandler_AuthError(t *testing.T) {
 // TestGetDeviceSettingsExportHandler_MultipleFormulasWithSomeMatching tests partial matching
 func TestGetDeviceSettingsExportHandler_MultipleFormulasWithSomeMatching(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	// Create multiple formulas, only some with matching device settings
 	formula1 := &logupload.DCMGenericRule{
@@ -587,8 +588,8 @@ func TestGetDeviceSettingsExportHandler_MultipleFormulasWithSomeMatching(t *test
 // TestGetDeviceSettingsExportHandler_JSONResponseFormat tests JSON response structure
 func TestGetDeviceSettingsExportHandler_JSONResponseFormat(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	// Create complete test data
 	formula := &logupload.DCMGenericRule{
@@ -647,8 +648,8 @@ func TestGetDeviceSettingsExportHandler_JSONResponseFormat(t *testing.T) {
 
 // TestGetDeviceSettingsByIdHandler_Success tests successful retrieval by ID
 func TestGetDeviceSettingsByIdHandler_Success(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	deviceSettings := &logupload.DeviceSettings{
 		ID:                "test-get-by-id",
@@ -686,8 +687,8 @@ func TestGetDeviceSettingsByIdHandler_Success(t *testing.T) {
 
 // TestGetDeviceSettingsByIdHandler_NotFound tests non-existent ID
 func TestGetDeviceSettingsByIdHandler_NotFound(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	url := "/xconfAdminService/dcm/deviceSettings/non-existent-id"
 	req, err := http.NewRequest("GET", url, nil)
@@ -703,8 +704,8 @@ func TestGetDeviceSettingsByIdHandler_NotFound(t *testing.T) {
 // TestGetDeviceSettingsByIdHandler_EmptyID tests empty ID parameter
 // Note: Empty ID doesn't match GetAll endpoint - it returns 404
 func TestGetDeviceSettingsByIdHandler_EmptyID(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	url := "/xconfAdminService/dcm/deviceSettings/"
 	req, err := http.NewRequest("GET", url, nil)
@@ -721,8 +722,8 @@ func TestGetDeviceSettingsByIdHandler_EmptyID(t *testing.T) {
 // TestDeleteDeviceSettingsByIdHandler_Success tests successful deletion
 func TestDeleteDeviceSettingsByIdHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test: requires proper deletion behavior
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	// Use unique ID to avoid test collisions
 	uniqueID := "test-delete-" + uuid.New().String()[:8]
@@ -765,8 +766,8 @@ func TestDeleteDeviceSettingsByIdHandler_Success(t *testing.T) {
 
 // TestDeleteDeviceSettingsByIdHandler_NotFound tests deleting non-existent setting
 func TestDeleteDeviceSettingsByIdHandler_NotFound(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	url := "/xconfAdminService/dcm/deviceSettings/non-existent-delete-id"
 	req, err := http.NewRequest("DELETE", url, nil)
@@ -781,8 +782,8 @@ func TestDeleteDeviceSettingsByIdHandler_NotFound(t *testing.T) {
 
 // TestCreateDeviceSettingsHandler_InvalidJSON tests create with invalid JSON
 func TestCreateDeviceSettingsHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	url := "/xconfAdminService/dcm/deviceSettings"
 	invalidJSON := []byte(`{"id":"invalid"invalid json}`)
@@ -798,8 +799,8 @@ func TestCreateDeviceSettingsHandler_InvalidJSON(t *testing.T) {
 
 // TestUpdateDeviceSettingsHandler_Success tests successful update
 func TestUpdateDeviceSettingsHandler_Success(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	// Create initial setting
 	deviceSettings := &logupload.DeviceSettings{
@@ -858,8 +859,8 @@ func TestUpdateDeviceSettingsHandler_Success(t *testing.T) {
 
 // TestUpdateDeviceSettingsHandler_NotExisting tests updating non-existent setting
 func TestUpdateDeviceSettingsHandler_NotExisting(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	deviceSettings := &logupload.DeviceSettings{
 		ID:                "non-existent-update",
@@ -883,8 +884,8 @@ func TestUpdateDeviceSettingsHandler_NotExisting(t *testing.T) {
 
 // TestPostDeviceSettingsFilteredWithParamsHandler_WithFilters tests filtered endpoint with context
 func TestPostDeviceSettingsFilteredWithParamsHandler_WithFilters(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	// Create test data
 	ds1 := &logupload.DeviceSettings{
@@ -936,8 +937,8 @@ func TestPostDeviceSettingsFilteredWithParamsHandler_WithFilters(t *testing.T) {
 
 // TestPostDeviceSettingsFilteredWithParamsHandler_InvalidPagination tests invalid pagination
 func TestPostDeviceSettingsFilteredWithParamsHandler_InvalidPagination(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	url := "/xconfAdminService/dcm/deviceSettings/filtered?pageNumber=0&pageSize=0"
 	filterContext := map[string]interface{}{}
@@ -956,8 +957,8 @@ func TestPostDeviceSettingsFilteredWithParamsHandler_InvalidPagination(t *testin
 // TestGetDeviceSettingsExportHandler_MultipleApplicationTypes tests export for different app types
 func TestGetDeviceSettingsExportHandler_MultipleApplicationTypes(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	CleanupDCMFormulaTables()
+	defer CleanupDCMFormulaTables()
 
 	// Create formulas for different app types
 	formula1 := &logupload.DCMGenericRule{
