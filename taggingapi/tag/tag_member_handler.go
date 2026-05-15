@@ -111,6 +111,8 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tagValue := getTagValueFromRequest(r)
+
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
 		xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(ResponseWriterCastErrorMsg))
@@ -134,9 +136,7 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Debugf("AddMembers request: tag=%s, memberCount=%d", tagId, len(members))
-
-	stored, err := AddMembersWithXdas(tagId, members)
+	stored, err := AddMembersWithXdas(tagId, members, tagValue)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -153,6 +153,16 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	xhttp.WriteXconfResponse(w, http.StatusAccepted, respBytes)
+}
+
+func getTagValueFromRequest(r *http.Request) string {
+	if values, found := r.URL.Query()[common.TagValue]; found {
+		if len(values) > 0 {
+			return values[0]
+		}
+	}
+
+	return ""
 }
 
 // RemoveMembersFromTagHandler - Updated with bucketed implementation
@@ -185,8 +195,6 @@ func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 			[]byte(fmt.Sprintf("Batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)))
 		return
 	}
-
-	log.Debugf("RemoveMembers request: tag=%s, memberCount=%d", id, len(members))
 
 	removed, err := RemoveMembersWithXdas(id, members)
 	if err != nil {
@@ -292,6 +300,12 @@ func GetTagByIdHandler(w http.ResponseWriter, r *http.Request) {
 
 // DeleteTagHandler deletes a tag and all its members from V2 storage asynchronously
 func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
+	xw, ok := w.(*xwhttp.XResponseWriter)
+	if !ok {
+		xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(ResponseWriterCastErrorMsg))
+		return
+	}
+
 	id, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
@@ -309,9 +323,20 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auditId := xw.AuditId()
 	go func(tagId string) {
 		if err := DeleteTag(tagId); err != nil {
-			log.Errorf("Background deletion failed for tag '%s': %v", tagId, err)
+			log.WithFields(log.Fields{
+				"audit_id": auditId,
+				"endpoint": "DeleteTag",
+				"tag":      tagId,
+			}).Errorf("background deletion failed: %v", err)
+		} else {
+			log.WithFields(log.Fields{
+				"audit_id": auditId,
+				"endpoint": "DeleteTag",
+				"tag":      tagId,
+			}).Info("tagging background deletion completed")
 		}
 	}(id)
 
