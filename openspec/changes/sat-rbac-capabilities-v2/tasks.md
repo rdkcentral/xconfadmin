@@ -1,6 +1,6 @@
 ## 1. Spec And Contract Updates
 - [x] 1.1 Update `openspec/specs/auth/auth-contract.md` with normative SAT RBAC v2 requirements.
-- [x] 1.2 Add precedence requirements: Xerxes -> SAT v2 -> legacy SAT.
+- [x] 1.2 Add routing-based selection requirements: Authorization header -> SAT path; else Xerxes path.
 - [x] 1.3 Add SAT v2 detection requirement via `xconf:` capability prefix.
 - [x] 1.4 Add route-based domain classification requirements with ordered rules.
 - [x] 1.5 Add access classification requirements with `/filtered` override then HTTP method mapping.
@@ -15,7 +15,7 @@
 - [ ] 2.4 Add explicit readonly override patterns for POST-based read endpoints (including `/filtered`).
 
 ## 3. Authorization Flow Integration
-- [ ] 3.1 Integrate precedence logic in auth middleware: Xerxes first, then SAT v2, then legacy SAT.
+- [ ] 3.1 Integrate routing-based selection in auth middleware: Authorization header selects SAT path; otherwise Xerxes path.
 - [ ] 3.2 Add SAT v2 detection logic based on any capability prefixed with `xconf:`.
 - [ ] 3.3 Ensure SAT v2 deny-by-default on unclassifiable `(domain, access)` requests.
 - [ ] 3.4 Enforce metrics as readonly-only during SAT v2 capability checks.
@@ -28,7 +28,7 @@
 - [ ] 4.4 Verify fail-fast termination remains enforced after `401`/`403` responses.
 
 ## 5. Validation
-- [ ] 5.1 Add tests for precedence behavior (Xerxes over SAT; SAT v2 over legacy SAT).
+- [ ] 5.1 Add tests for routing behavior (Authorization header selects SAT path; SAT v2 vs legacy SAT selection on SAT path; Xerxes path only when Authorization is absent).
 - [ ] 5.2 Add tests for SAT v2 detection by `xconf:` prefix presence.
 - [ ] 5.3 Add tests for ordered route classification and first-match behavior.
 - [ ] 5.4 Add tests for access classification (`/filtered` override and method-based fallback).

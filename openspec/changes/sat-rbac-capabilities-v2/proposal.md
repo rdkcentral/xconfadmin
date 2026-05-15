@@ -3,7 +3,7 @@ Applied to: openspec/specs/auth/auth-contract.md
 
 ## Why
 
-xconfadmin must introduce SAT RBAC v2 capability names while preserving all legacy SAT behavior for backward compatibility. SAT token shape is unchanged (capabilities list), but capability values now include a new xconf-prefixed namespace. We need a clear and deterministic authorization precedence that keeps Xerxes-first behavior, supports SAT v2 when present, and falls back to legacy SAT semantics otherwise.
+xconfadmin must introduce SAT RBAC v2 capability names while preserving all legacy SAT behavior for backward compatibility. SAT token shape is unchanged (capabilities list), but capability values now include a new xconf-prefixed namespace. We need a clear and deterministic routing-based authorization selection contract that supports SAT v2 when present on the SAT path, falls back to legacy SAT semantics on the SAT path when no xconf capability is present, and uses Xerxes authorization on its own path.
 
 This change documents the transition contract so implementation can safely evolve without breaking existing SAT clients.
 
@@ -16,10 +16,16 @@ This change documents the transition contract so implementation can safely evolv
   - xconf:metrics:readonly
 - Define SAT RBAC v2 detection:
   - SAT v2 SHALL be detected by the presence of at least one capability with prefix "xconf:"
-- Define authorization precedence:
-  1. If Xerxes token is present and valid, authorize using Xerxes permissions.
-  2. Else, if SAT contains any capability starting with "xconf:", authorize using SAT RBAC v2.
-  3. Else, authorize using legacy SAT behavior unchanged.
+- Define routing-based authorization selection:
+  - If `Authorization` header is present:
+    - Run existing SAT validation logic.
+    - If SAT is valid:
+      - If SAT contains any capability starting with "xconf:", authorize using SAT RBAC v2.
+      - Else, authorize using legacy SAT behavior unchanged.
+    - Else, return 401 Unauthorized.
+  - Else, if token header/cookie `token` is present:
+    - Run existing Xerxes validation and authorization.
+  - Else, return 401 Unauthorized.
 - Define initial SAT v2 domain mapping seed set:
   - Core: firmware, firmware rules, firmware templates, features, feature rules, telemetry, dcm
   - Metrics: penetration metrics, future metrics APIs
@@ -54,7 +60,7 @@ This change documents the transition contract so implementation can safely evolv
 
 ### Modified Capabilities
 - `auth`: Authorization outcome semantics clarified to use 401 for authentication failures and 403 for authorization denials, including SAT v2 unmapped operations.
-- `auth`: SAT RBAC v2 capability-name model, detection by `xconf:` prefix, ordered route/path classification, access classification, and precedence contract for Xerxes, SAT v2, and legacy SAT fallback.
+- `auth`: SAT RBAC v2 capability-name model, detection by `xconf:` prefix, ordered route/path classification, access classification, and routing-based selection contract across SAT and Xerxes credential paths.
 
 ## Impact
 
