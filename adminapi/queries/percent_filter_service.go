@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"strings"
 
 	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xcoreef "github.com/rdkcentral/xconfadmin/shared/estbfirmware"
@@ -79,10 +78,6 @@ func GetPercentFilter(applicationType string) (*coreef.PercentFilterValue, error
 
 	firmwareRules, err := corefw.GetEnvModelFirmwareRules(applicationType)
 	if err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "not found") {
-			// Empty rules set is valid; return default percent filter.
-			return percentFilterValue, nil
-		}
 		log.Error(fmt.Sprintf("GetPercentFilter: %v", err))
 		return nil, err
 	}
