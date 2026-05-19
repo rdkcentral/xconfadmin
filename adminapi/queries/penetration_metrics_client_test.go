@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/rdkcentral/xconfwebconfig/db"
-
 	"gotest.tools/assert"
 )
 
@@ -74,7 +73,8 @@ func createPenetrationSampleData() error {
 	dbClient := db.GetDatabaseClient()
 	cassandraClient, ok := dbClient.(*db.CassandraClient)
 	if ok {
-		penetrationdata := &db.PenetrationMetrics{
+		penetrationdata := &db.FwPenetrationData{
+			TenantId:                db.GetDefaultTenantId(),
 			EstbMac:                 "AA:10:AA:31:AA:35",
 			Partner:                 "COMCAST",
 			Model:                   "TG1682G",
@@ -82,12 +82,9 @@ func createPenetrationSampleData() error {
 			FwReportedVersion:       "test.12p24s1_PROD_sey",
 			FwAdditionalVersionInfo: "test.12p",
 			FwAppliedRule:           "testrule",
-			FwTs:                    time.Now(),
-			RfcAppliedRules:         "Rule1",
-			RfcFeatures:             "Feature1",
-			RfcTs:                   time.Now(),
+			FwTs:                    time.Now().Unix(),
 		}
-		return cassandraClient.SetPenetrationMetrics(penetrationdata)
+		return cassandraClient.SetFwPenetrationData(penetrationdata)
 	}
 	return nil
 }

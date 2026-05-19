@@ -28,8 +28,8 @@ import (
 // This is only used to prevent panics when distributed locks are created in test mode
 // It implements lock-related methods and basic data storage for testing
 type MockDatabaseClient struct {
-	locks map[string]string                    // lockName -> lockedBy
-	data  map[string]map[string][]byte         // tableName -> rowKey -> data
+	locks map[string]string            // lockName -> lockedBy
+	data  map[string]map[string][]byte // tableName -> rowKey -> data
 	mu    sync.Mutex
 }
 
@@ -196,19 +196,16 @@ func (m *MockDatabaseClient) IsDbNotFound(error) bool {
 func (m *MockDatabaseClient) GetPenetrationMetrics(macAddress string) (map[string]interface{}, error) {
 	return nil, nil
 }
-func (m *MockDatabaseClient) SetPenetrationMetrics(penetrationmetrics *db.PenetrationMetrics) error {
+func (m *MockDatabaseClient) SetFwPenetrationMetrics(metrics *db.FwPenetrationData) error {
 	return nil
 }
-func (m *MockDatabaseClient) SetFwPenetrationMetrics(metrics *db.FwPenetrationMetrics) error {
-	return nil
-}
-func (m *MockDatabaseClient) GetFwPenetrationMetrics(s string) (*db.FwPenetrationMetrics, error) {
+func (m *MockDatabaseClient) GetFwPenetrationMetrics(s string) (*db.FwPenetrationData, error) {
 	return nil, nil
 }
-func (m *MockDatabaseClient) SetRfcPenetrationMetrics(pMetrics *db.RfcPenetrationMetrics, is304FromPrecook bool) error {
+func (m *MockDatabaseClient) SetRfcPenetrationMetrics(pMetrics *db.RfcPenetrationData, is304FromPrecook bool) error {
 	return nil
 }
-func (m *MockDatabaseClient) GetRfcPenetrationMetrics(s string) (*db.RfcPenetrationMetrics, error) {
+func (m *MockDatabaseClient) GetRfcPenetrationMetrics(s string) (*db.RfcPenetrationData, error) {
 	return nil, nil
 }
 func (m *MockDatabaseClient) UpdateFwPenetrationMetrics(m2 map[string]string) error {
