@@ -291,14 +291,11 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 		} else if authToken := getLoginTokenFromRequest(r); authToken != "" {
 			if LoginToken, err := ValidateAndGetLoginToken(authToken); err != nil {
 				log.Error(err.Error())
-				//http.Error(w, "invalid auth token", http.StatusUnauthorized)
-				//Cheking and Setting DEV PROFILES to allow and display ALL the TABS
-				//ctx = context.WithValue(ctx, CTX_KEY_TOKEN, LoginToken)
-				permissions := getPermissions()
-				ctx = context.WithValue(ctx, CTX_KEY_PERMISSIONS, permissions)
-				//return
+				http.Error(w, "invalid auth token", http.StatusUnauthorized)
+				ctx = context.WithValue(ctx, CTX_KEY_TOKEN, LoginToken)
+				return
 			} else {
-				//THIS IS LOGIN TOKEN SUCCESS CASE
+				// THIS IS LOGIN TOKEN SUCCESS CASE
 				r.Header.Set(AUTH_SUBJECT, LoginToken.Subject)
 
 				// Add UI token & permissions to request context
