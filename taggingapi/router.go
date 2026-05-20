@@ -35,6 +35,7 @@ func routeTaggingServiceApis(r *mux.Router, s *xhttp.WebconfigServer) {
 	taggingPath.HandleFunc("/{tag}/members", tag.GetTagMembersHandler).Methods("GET").Name("Get-tag-members")
 
 	taggingPath.HandleFunc("/members/{member}", tag.GetTagsByMemberHandler).Methods("GET").Name("Get-tags-by-member")
+	taggingPath.HandleFunc("/members/{member}/values", tag.GetTagsWithValuesByMemberHandler).Methods("GET").Name("Get-tags-with-values-by-member")
 
 	paths = append(paths, taggingPath)
 

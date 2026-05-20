@@ -27,7 +27,34 @@ func GetTagsByMemberHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Member)))
 		return
 	}
+
 	tags, err := GetTagsByMember(member)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+
+	respBytes, err := json.Marshal(tags)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+	xhttp.WriteXconfResponse(w, http.StatusOK, respBytes)
+}
+
+func GetTagsWithValuesByMemberHandler(w http.ResponseWriter, r *http.Request) {
+	member, found := mux.Vars(r)[common.Member]
+	if !found {
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Member)))
+		return
+	}
+
+	tags, err := GetTagsWithValuesByMember(member)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+
 	respBytes, err := json.Marshal(tags)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
