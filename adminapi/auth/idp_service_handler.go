@@ -48,6 +48,11 @@ func GetAdminUIUrlFromCookies(r *http.Request) string {
 }
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	if Ws == nil || Ws.IdpServiceConnector == nil {
+		xhttp.WriteXconfResponse(w, http.StatusServiceUnavailable, []byte("IDP/Xerxes connector is not configured"))
+		return
+	}
+
 	http.SetCookie(w, xhttp.NewErasedAuthTokenCookie())
 
 	idpAuthServer := Ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.idp_service_name")
@@ -72,7 +77,22 @@ func LogoutAfterHandler(w http.ResponseWriter, r *http.Request) {
 	xhttp.WriteXconfResponseWithHeaders(w, headers, http.StatusFound, []byte(""))
 }
 
+func AclLogoutHandler(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, xhttp.NewErasedAuthTokenCookie())
+
+	adminUrl := fmt.Sprintf("%s/#/authorization", GetAdminUIUrlFromCookies(r))
+	headers := map[string]string{
+		"Location": adminUrl,
+	}
+	xhttp.WriteXconfResponseWithHeaders(w, headers, http.StatusFound, []byte(""))
+}
+
 func CodeHandler(w http.ResponseWriter, r *http.Request) {
+	if Ws == nil || Ws.IdpServiceConnector == nil {
+		xhttp.WriteXconfResponse(w, http.StatusServiceUnavailable, []byte("IDP/Xerxes connector is not configured"))
+		return
+	}
+
 	codeList, ok := r.URL.Query()["code"]
 	if !ok {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(""))
@@ -101,6 +121,11 @@ func CodeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func LoginUrlHandler(w http.ResponseWriter, r *http.Request) {
+	if Ws == nil || Ws.IdpServiceConnector == nil {
+		xhttp.WriteXconfResponse(w, http.StatusServiceUnavailable, []byte("IDP/Xerxes connector is not configured"))
+		return
+	}
+
 	idpAuthServer := Ws.XW_XconfServer.ServerConfig.GetString("xconfwebconfig.xconf.idp_service_name")
 	continueUrl := GetAdminUIUrlFromCookies(r) + Ws.XW_XconfServer.ServerConfig.GetString(fmt.Sprintf("xconfwebconfig.%v.idp_code_path", idpAuthServer), "/"+getAuthProvider()+"/code")
 	loginUrl := Ws.IdpServiceConnector.GetFullLoginUrl(continueUrl)

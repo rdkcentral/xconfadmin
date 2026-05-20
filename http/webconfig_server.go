@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -415,6 +416,7 @@ func (s *WebconfigServer) logRequestStarts(w http.ResponseWriter, r *http.Reques
 				log.Error("request starts")
 				return xwriter
 			}
+			r.Body = ioutil.NopCloser(bytes.NewBuffer(b))
 			body = string(b)
 		}
 		xwriter.SetBody(body)
