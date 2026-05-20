@@ -23,6 +23,7 @@ import (
 	"github.com/google/uuid"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xshared "github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
@@ -301,7 +302,7 @@ func TestFindFeatureRuleByContext(t *testing.T) {
 	SetOneInDao(db.TABLE_FEATURE_CONTROL_RULES, fr4.Id, fr4)
 
 	t.Run("FilterByApplicationType_STB", func(t *testing.T) {
-		context := map[string]string{xshared.APPLICATION_TYPE: "stb"}
+		context := map[string]string{xshared.APPLICATION_TYPE: "stb", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 2)
 		for _, rule := range result {
@@ -310,7 +311,7 @@ func TestFindFeatureRuleByContext(t *testing.T) {
 	})
 
 	t.Run("FilterByApplicationType_RdkCloud", func(t *testing.T) {
-		context := map[string]string{xshared.APPLICATION_TYPE: "rdkcloud"}
+		context := map[string]string{xshared.APPLICATION_TYPE: "rdkcloud", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 		for _, rule := range result {
@@ -319,73 +320,73 @@ func TestFindFeatureRuleByContext(t *testing.T) {
 	})
 
 	t.Run("FilterByFeatureInstance", func(t *testing.T) {
-		context := map[string]string{xcommon.FEATURE_INSTANCE: "SearchFeature1"}
+		context := map[string]string{xcommon.FEATURE_INSTANCE: "SearchFeature1", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByFeatureInstance_CaseInsensitive", func(t *testing.T) {
-		context := map[string]string{xcommon.FEATURE_INSTANCE: "searchfeature1"}
+		context := map[string]string{xcommon.FEATURE_INSTANCE: "searchfeature1", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByFeatureInstance_NoMatch", func(t *testing.T) {
-		context := map[string]string{xcommon.FEATURE_INSTANCE: "NonExistentFeature"}
+		context := map[string]string{xcommon.FEATURE_INSTANCE: "NonExistentFeature", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.Equal(t, 0, len(result))
 	})
 
 	t.Run("FilterByName", func(t *testing.T) {
-		context := map[string]string{xcommon.NAME_UPPER: "SearchRule1"}
+		context := map[string]string{xcommon.NAME_UPPER: "SearchRule1", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByName_PartialMatch", func(t *testing.T) {
-		context := map[string]string{xcommon.NAME_UPPER: "search"}
+		context := map[string]string{xcommon.NAME_UPPER: "search", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByName_CaseInsensitive", func(t *testing.T) {
-		context := map[string]string{xcommon.NAME_UPPER: "searchrule"}
+		context := map[string]string{xcommon.NAME_UPPER: "searchrule", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByFreeArg", func(t *testing.T) {
-		context := map[string]string{xcommon.FREE_ARG: "model"}
+		context := map[string]string{xcommon.FREE_ARG: "model", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByFreeArg_CaseInsensitive", func(t *testing.T) {
-		context := map[string]string{xcommon.FREE_ARG: "MODEL"}
+		context := map[string]string{xcommon.FREE_ARG: "MODEL", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByFreeArg_NoMatch", func(t *testing.T) {
-		context := map[string]string{xcommon.FREE_ARG: "nonexistentkey"}
+		context := map[string]string{xcommon.FREE_ARG: "nonexistentkey", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.Equal(t, 0, len(result))
 	})
 
 	t.Run("FilterByFixedArg_StringValue", func(t *testing.T) {
-		context := map[string]string{xcommon.FIXED_ARG: "X1"}
+		context := map[string]string{xcommon.FIXED_ARG: "X1", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByFixedArg_CollectionValue", func(t *testing.T) {
-		context := map[string]string{xcommon.FIXED_ARG: "partner1"}
+		context := map[string]string{xcommon.FIXED_ARG: "partner1", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByFixedArg_CaseInsensitive", func(t *testing.T) {
-		context := map[string]string{xcommon.FIXED_ARG: "x1"}
+		context := map[string]string{xcommon.FIXED_ARG: "x1", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
@@ -394,13 +395,14 @@ func TestFindFeatureRuleByContext(t *testing.T) {
 		context := map[string]string{
 			xshared.APPLICATION_TYPE: "stb",
 			xcommon.NAME_UPPER:       "SearchRule1",
+			common.TENANT_ID:         db.GetDefaultTenantId(),
 		}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("EmptyContext", func(t *testing.T) {
-		context := map[string]string{}
+		context := map[string]string{common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		// Should return all rules sorted by priority
 		assert.True(t, len(result) >= 4)
@@ -408,7 +410,7 @@ func TestFindFeatureRuleByContext(t *testing.T) {
 
 	t.Run("NilFeatureRule_Skipped", func(t *testing.T) {
 		// This tests the nil check in the function
-		context := map[string]string{}
+		context := map[string]string{common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.NotNil(t, result)
 	})

@@ -65,6 +65,7 @@ func GetFeatureEntityFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	contextMap := map[string]string{}
 	requtil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[common.APPLICATION_TYPE] = applicationType
+	contextMap[common.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	featureList := GetFeatureEntityFiltered(contextMap)
 	response, _ := util.XConfJSONMarshal(featureList, true)

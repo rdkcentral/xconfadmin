@@ -331,16 +331,14 @@ func TelemetryTestPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
-
-	tenantId := xwhttp.GetTenantId(r, "")
-	contextMap[xwcommon.TENANT_ID] = tenantId
+	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	result := make(map[string]interface{})
 	result["context"] = contextMap
 
 	telemetryProfileService := telemetry.NewTelemetryProfileService()
 	matchedrule := telemetryProfileService.GetTelemetryRuleForContext(contextMap)
-	permanentTelemetryProfile := telemetryProfileService.GetPermanentProfileByTelemetryRule(tenantId, matchedrule)
+	permanentTelemetryProfile := telemetryProfileService.GetPermanentProfileByTelemetryRule(contextMap[xwcommon.TENANT_ID], matchedrule)
 	if permanentTelemetryProfile != nil {
 		result["result"] = map[string]interface{}{permanentTelemetryProfile.Name: []*xwlogupload.TelemetryRule{matchedrule}}
 	} else {
