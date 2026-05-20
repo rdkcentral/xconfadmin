@@ -274,6 +274,7 @@ func PostLogRepoSettingsFilteredWithParamsHandler(w http.ResponseWriter, r *http
 	}
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[common.APPLICATION_TYPE] = applicationType
+	contextMap[common.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	lrrules := LogRepoSettingsFilterByContext(contextMap)
 	sizeHeader := xhttp.CreateNumberOfItemsHttpHeaders(len(lrrules))

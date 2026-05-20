@@ -485,6 +485,7 @@ func TelemetryTwoTestPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
+	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	telemetryProfileService := telemetry.NewTelemetryProfileService()
 	telemetryTwoRules := telemetryProfileService.ProcessTelemetryTwoRulesForAS(contextMap)

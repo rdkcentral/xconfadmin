@@ -115,6 +115,7 @@ func GetFeatureRulesFilteredWithPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	contextMap[common.APPLICATION_TYPE] = applicationType
+	contextMap[common.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	featureRules := FindFeatureRuleByContext(contextMap)
 	featureRuleList := FeatureRulesGeneratePage(featureRules, pageNumber, pageSize)
@@ -442,7 +443,10 @@ func DeleteOneFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 
 	xrfc.DeleteFeatureRule(tenantId, id)
 
-	context := map[string]string{shared.APPLICATION_TYPE: featureRuleToDelete.ApplicationType}
+	context := map[string]string{
+		shared.APPLICATION_TYPE: featureRuleToDelete.ApplicationType,
+		common.TENANT_ID:        tenantId,
+	}
 	prioritizableRules := FeatureRulesToPrioritizables(FindFeatureRuleByContext(context))
 	err := SaveFeatureRules(tenantId, PackPriorities(prioritizableRules, featureRuleToDelete))
 	if err != nil {

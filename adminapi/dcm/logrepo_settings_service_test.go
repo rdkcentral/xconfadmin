@@ -793,7 +793,9 @@ func TestLogRepoSettingsFilterByContext_EmptyContext(t *testing.T) {
 		CreateLogRepoSettings(repo, repo.ApplicationType)
 	}
 
-	contextMap := map[string]string{}
+	contextMap := map[string]string{
+		common.TENANT_ID: db.GetDefaultTenantId(),
+	}
 	result := LogRepoSettingsFilterByContext(contextMap)
 
 	// Should return all repositories
@@ -836,6 +838,7 @@ func TestLogRepoSettingsFilterByContext_FilterByApplicationType(t *testing.T) {
 
 	contextMap := map[string]string{
 		common.APPLICATION_TYPE: "stb",
+		common.TENANT_ID:        db.GetDefaultTenantId(),
 	}
 	result := LogRepoSettingsFilterByContext(contextMap)
 
@@ -881,7 +884,8 @@ func TestLogRepoSettingsFilterByContext_FilterByName(t *testing.T) {
 	}
 
 	contextMap := map[string]string{
-		"NAME": "prod",
+		"NAME":           "prod",
+		common.TENANT_ID: db.GetDefaultTenantId(),
 	}
 	result := LogRepoSettingsFilterByContext(contextMap)
 
@@ -909,6 +913,7 @@ func TestLogRepoSettingsFilterByContext_NoMatches(t *testing.T) {
 
 	contextMap := map[string]string{
 		common.APPLICATION_TYPE: "xhome", // Different type
+		common.TENANT_ID:        db.GetDefaultTenantId(),
 	}
 	result := LogRepoSettingsFilterByContext(contextMap)
 
@@ -924,7 +929,9 @@ func TestLogRepoSettingsFilterByContext_NoMatches(t *testing.T) {
 func TestLogRepoSettingsFilterByContext_NilRepositoriesSkipped(t *testing.T) {
 	// This tests the internal nil check in the filter function
 	// The function should skip nil entries
-	contextMap := map[string]string{}
+	contextMap := map[string]string{
+		common.TENANT_ID: db.GetDefaultTenantId(),
+	}
 	result := LogRepoSettingsFilterByContext(contextMap)
 
 	// Should not panic and should return valid list

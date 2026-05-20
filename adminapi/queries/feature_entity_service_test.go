@@ -65,6 +65,7 @@ func TestFeatureGetPostPutDeleteImport(t *testing.T) {
 	// test GET FILTERED
 	searchContext := map[string]string{
 		"applicationType": "rdkcloud",
+		"tenantId":        db.GetDefaultTenantId(),
 	}
 	featureList = GetFeatureEntityFiltered(searchContext)
 	assert.Equal(t, len(featureList), 0)

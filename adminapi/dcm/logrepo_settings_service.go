@@ -264,7 +264,7 @@ func LogRepoSettingsGeneratePageWithContext(lrrules []*logupload.UploadRepositor
 }
 
 func LogRepoSettingsFilterByContext(searchContext map[string]string) []*logupload.UploadRepository {
-	logRepoSettingsRules := GetLogRepoSettingsList(db.GetDefaultTenantId())
+	logRepoSettingsRules := GetLogRepoSettingsList(searchContext[xwcommon.TENANT_ID])
 	logRepoSettingsRuleList := []*logupload.UploadRepository{}
 	for _, lrRule := range logRepoSettingsRules {
 		if lrRule == nil {

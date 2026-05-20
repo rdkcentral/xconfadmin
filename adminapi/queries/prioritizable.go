@@ -26,6 +26,7 @@ import (
 
 	core "github.com/rdkcentral/xconfadmin/shared"
 
+	"github.com/rdkcentral/xconfwebconfig/common"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	log "github.com/sirupsen/logrus"
@@ -46,7 +47,7 @@ func ChangePrioritizablePriorities(tenantId string, prioritizable core.Prioritiz
 	}
 	oldPriority := prioritizable.GetPriority()
 
-	contextMap := map[string]string{core.APPLICATION_TYPE: applicationType}
+	contextMap := map[string]string{core.APPLICATION_TYPE: applicationType, common.TENANT_ID: tenantId}
 	prioritizables := FeatureRulesToPrioritizables(FindFeatureRuleByContext(contextMap))
 	reorganizedPrioritizables := UpdatePrioritizablesPriorities(prioritizables, oldPriority, newPriority)
 	if !findPrioritizableById(prioritizable.GetID(), reorganizedPrioritizables) {

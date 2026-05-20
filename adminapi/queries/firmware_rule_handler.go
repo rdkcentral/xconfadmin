@@ -48,8 +48,7 @@ func populateContext(w http.ResponseWriter, r *http.Request, isRead bool) (filte
 	filterContext = map[string]string{}
 	xutil.AddQueryParamsToContextMap(r, filterContext)
 
-	tenantId := xwhttp.GetTenantId(r, "")
-	filterContext[common.TENANT_ID] = tenantId
+	filterContext[common.TENANT_ID] = xwhttp.GetTenantId(r, "")
 
 	appType, found := filterContext[common.APPLICATION_TYPE]
 	if !found || util.IsBlank(appType) {

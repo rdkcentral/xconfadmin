@@ -154,7 +154,10 @@ func CreateFeatureRule(tenantId string, featureRule rfc.FeatureRule, application
 	if err != nil {
 		return nil, err
 	}
-	contextMap := map[string]string{xshared.APPLICATION_TYPE: featureRule.ApplicationType}
+	contextMap := map[string]string{
+		xshared.APPLICATION_TYPE: featureRule.ApplicationType,
+		common.TENANT_ID:         tenantId,
+	}
 	prioritizableRules := FeatureRulesToPrioritizables(FindFeatureRuleByContext(contextMap))
 	featureRules := AddNewPrioritizableAndReorganizePriorities(&featureRule, prioritizableRules)
 	if err = SaveFeatureRules(tenantId, featureRules); err != nil {
@@ -392,7 +395,10 @@ func UpdateFeatureRule(tenantId string, featureRule rfc.FeatureRule, application
 		return &featureRule, nil
 	}
 
-	contextMap := map[string]string{xwcommon.APPLICATION_TYPE: featureRule.ApplicationType}
+	contextMap := map[string]string{
+		xwcommon.APPLICATION_TYPE: featureRule.ApplicationType,
+		xwcommon.TENANT_ID:        tenantId,
+	}
 	prioritizableRules := FeatureRulesToPrioritizables(FindFeatureRuleByContext(contextMap))
 	featureRules := UpdatePrioritizablePriorityAndReorganize(&featureRule, prioritizableRules, featureRuleToUpdate.Priority)
 
