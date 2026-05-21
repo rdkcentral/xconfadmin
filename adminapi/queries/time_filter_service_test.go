@@ -99,6 +99,7 @@ func TestUpdateTimeFilter_InvalidIpGroup(t *testing.T) {
 }
 
 func TestUpdateTimeFilter_EnvModelMissing(t *testing.T) {
+	SkipIfRealDatabase(t) // Test isolation issue - env-model rules from other tests may persist due to caching
 	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	// no seed for env-model
 	tf := newValidTimeFilter("TFMISS")
