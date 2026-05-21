@@ -64,11 +64,10 @@ type TableData struct {
 }
 
 var (
-	testConfigFile     string
-	jsonTestConfigFile string
-	sc                 *xwcommon.ServerConfig
-	server             *oshttp.WebconfigServer
-	router             *mux.Router
+	testConfigFile string
+	sc             *xwcommon.ServerConfig
+	server         *oshttp.WebconfigServer
+	router         *mux.Router
 	//globAut            *apiUnitTest
 )
 
@@ -95,25 +94,6 @@ func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRec
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, r)
 	return recorder
-}
-
-func startTestWatchdog(pkgName string) func() {
-	done := make(chan struct{})
-	go func() {
-		start := time.Now()
-		ticker := time.NewTicker(2 * time.Minute)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				fmt.Fprintf(os.Stderr, "\n[TEST-WATCHDOG] package=%s elapsed=%s still running; dumping goroutines\n", pkgName, time.Since(start).Round(time.Second))
-				_ = pprof.Lookup("goroutine").WriteTo(os.Stderr, 1)
-			case <-done:
-				return
-			}
-		}
-	}()
-	return func() { close(done) }
 }
 
 func DeleteAllEntities() {

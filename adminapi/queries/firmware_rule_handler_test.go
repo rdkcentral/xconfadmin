@@ -984,8 +984,8 @@ func TestPostFirmwareRuleHandler_TagRuleTemplateValidation(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
-	CreateModel(&shared.Model{ID: "TEST_MODEL", Description: "Tag rule template test model"})
-	CreateModel(&shared.Model{ID: "TEST_MODEL_2", Description: "Tag rule template test model 2"})
+	CreateModel(db.GetDefaultTenantId(), &shared.Model{ID: "TEST_MODEL", Description: "Tag rule template test model"})
+	CreateModel(db.GetDefaultTenantId(), &shared.Model{ID: "TEST_MODEL_2", Description: "Tag rule template test model 2"})
 	db.GetCacheManager().ForceSyncChanges()
 
 	templateJSON := `{
