@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime/pprof"
 	"strings"
 	"testing"
 	"time"
@@ -77,6 +78,25 @@ func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRec
 	return recorder
 }
 
+func startTestWatchdog(pkgName string) func() {
+	done := make(chan struct{})
+	go func() {
+		start := time.Now()
+		ticker := time.NewTicker(2 * time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				fmt.Fprintf(os.Stderr, "\n[TEST-WATCHDOG] package=%s elapsed=%s still running; dumping goroutines\n", pkgName, time.Since(start).Round(time.Second))
+				_ = pprof.Lookup("goroutine").WriteTo(os.Stderr, 1)
+			case <-done:
+				return
+			}
+		}
+	}()
+	return func() { close(done) }
+}
+
 func DeleteAllEntities() {
 	// For mock database, just clear it - ultra fast!
 	if IsMockDatabaseEnabled() {
@@ -84,24 +104,15 @@ func DeleteAllEntities() {
 		return
 	}
 
-	// Original implementation for real database
-	dbClient := db.GetDatabaseClient()
-	cassandraClient, ok := dbClient.(*db.CassandraClient)
-	if !ok {
-		fmt.Println("Database client is not Cassandra client, cannot delete all entities")
-		return
-	}
-
-	var err error
+	// Real DB cleanup: delete rows individually to avoid TRUNCATE latency on Cassandra 5.x
 	tenantId := db.GetDefaultTenantId()
 	for _, tableInfo := range db.GetAllTableInfo() {
+		tid := tenantId
 		if tableInfo.TenantAgnostic {
-			err = cassandraClient.DeleteAllXconfData("", tableInfo.TableName)
-		} else {
-			err = cassandraClient.DeleteAllXconfData(tenantId, tableInfo.TableName)
+			tid = ""
 		}
-		if err != nil {
-			fmt.Printf("failed to delete all xconf data for table %s\n", tableInfo.TableName)
+		if err := truncateTable(tid, tableInfo.TableName); err != nil {
+			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
 		}
 		if tableInfo.Cached {
 			db.GetCachedSimpleDao().RefreshAll(tenantId, tableInfo.TableName)
@@ -110,16 +121,33 @@ func DeleteAllEntities() {
 }
 
 func truncateTable(tenantId string, tableName string) error {
-	dbClient := db.GetDatabaseClient()
-	cassandraClient, ok := dbClient.(*db.CassandraClient)
-	if ok {
-		return cassandraClient.DeleteAllXconfData(tenantId, tableName)
+	dao := db.GetCachedSimpleDao()
+	keys, err := dao.GetKeys(tenantId, tableName)
+	if err != nil {
+		// table may be empty or not yet exist; not an error
+		return nil
+	}
+	for _, key := range keys {
+		var keyStr string
+		switch k := key.(type) {
+		case string:
+			keyStr = k
+		case []byte:
+			keyStr = string(k)
+		default:
+			keyStr = fmt.Sprint(k)
+		}
+		if delErr := dao.DeleteOne(tenantId, tableName, keyStr); delErr != nil {
+			fmt.Printf("failed to delete %s from %s: %v\n", keyStr, tableName, delErr)
+		}
 	}
 	return nil
 }
 
 func TestMain(m *testing.M) {
 	fmt.Printf("in TestMain\n")
+	stopWatchdog := startTestWatchdog("adminapi/queries")
+	defer stopWatchdog()
 
 	// Check if we should use mock database (set via environment variable or default to true for speed)
 	useMock := os.Getenv("USE_MOCK_DB")
@@ -687,15 +715,15 @@ func TestAllQueriesApis(t *testing.T) {
 	table_data := []interface{}{
 		TableData{Tablename: "TABLE_ENVIRONMENTS", Tablerow: `{"id":"AX061AEI","updated":1591604177484,"description":"RT1319"}`},
 		TableData{Tablename: "TABLE_GENERIC_NS_LIST", Tablerow: ``},
-		TableData{Tablename: "TABLE_FIRMWARE_CONFIG", Tablerow: `{"id":"207dc5a5-d324-4e2e-9daf-5017ed98f8f3","updated":1558520642121,"description":"CPEAUTO_FW_AA:AA:AA:AA:AA:AA","supportedModelIds":["XCONFTESTMODEL"],"firmwareDownloadProtocol":"http","firmwareFilename":"DPC3941_3.3p17s1_DEV_sey-test","firmwareVersion":"DPC3941_3.3p17s1_DEV_sey-test","rebootImmediately":false,"applicationType":"stb"}`},
-		TableData{Tablename: "TABLE_FIRMWARE_RULE", Tablerow: `{"id":"437afab9-cbe3-4e4d-b175-220865e0f720","name":" Cisco Arris XG1","rule":{"negated":false,"compoundParts":[{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"ipAddress"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":""}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"env"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"VBN"}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"model"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"MX011ANC"}}}}}]},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"e675358b-506d-48f8-86c5-c8c8e3bb6254","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"IP_RULE","active":true}`},
-		TableData{Tablename: "TABLE_FIRMWARE_RULE", Tablerow: `{"id":"c4681132-c518-459a-99fb-9b93a1f42f37","name":"CDN-TESTING","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDN-TESTING"}}}}},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"dff46b03-be65-4f0c-804d-542d5ffec8ec","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"MAC_RULE","active":true,"applicationType":"stb"}`},
-		TableData{Tablename: "TABLE_FIRMWARE_RULE", Tablerow: `{"id":"67333656-9e8e-46a3-9a87-2f42644a35c9","name":"Arris_XG1v1_VBN_Moto-DEV","rule":{"negated":false,"compoundParts":[{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"env"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"VBN"}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"model"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"MX011ANM"}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"partnerId"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"testDEV"}}}}}]},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configEntries":[{"configId":"5de4a2df-2673-4be3-ae67-4e09648a929b","percentage":100.0,"startPercentRange":0.0,"endPercentRange":100.0}],"active":true,"firmwareCheckRequired":true,"rebootImmediately":true,"firmwareVersions":["MX011AN_3.8p3s1_VBN_sey","MX011AN_3.1p1s3_VBN_sey","MX011AN_3.2p6s1_VBN_sey-test"]},"type":"ENV_MODEL_RULE","active":true,"applicationType":"stb"}`},
-		TableData{Tablename: "TABLE_FIRMWARE_RULE", Tablerow: `{"id":"c4681132-c518-459a-99fb-9b93a1f41gf37","name":"Test_Ip_filter_device","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDN-TESTING"}}}}},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"dff46b03-be65-4f0c-804d-542d5ffec8ec","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"IP_FILTER","active":true,"applicationType":"stb"}`},
-		TableData{Tablename: "TABLE_FIRMWARE_RULE", Tablerow: `{"id":"c4681132-c518-459a-99fb-9b93a1f63534","name":"Test_Time_filter_device","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDN-TESTING"}}}}},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"dff46b03-be65-4f0c-804d-542d5ffec8ec","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"TIME_FILTER","active":true,"applicationType":"stb"}`},
-		TableData{Tablename: "TABLE_FIRMWARE_RULE", Tablerow: `{"id":"67f595ae-3e1d-418d-9b86-22b3e46816e4","name":"CPEAUTO_LF_80:f5:03:34:11:fd","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"ipAddress"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CPEAUTOIPGRP80f5033411fd"}}}}},"applicableAction":{"type":".DefinePropertiesAction","ttlMap":{},"actionType":"DEFINE_PROPERTIES","properties":{"firmwareLocation":"http://ssr.ccp.xcal.tv/cgi-bin/x1-sign-redirect.pl?K=10&F=stb_cdl","firmwareDownloadProtocol":"http","ipv6FirmwareLocation":""},"activationFirmwareVersions":{}},"type":"DOWNLOAD_LOCATION_FILTER","active":true,"applicationType":"stb"}`},
-		TableData{Tablename: "TABLE_SINGLETON_FILTER_VALUE", Tablerow: `{"type":"com.comcast.xconf.estbfirmware.DownloadLocationRoundRobinFilterValue","id":"DOWNLOAD_LOCATION_ROUND_ROBIN_FILTER_VALUE","updated":1616699042493,"applicationType":"stb","locations":[{"locationIp":"96.114.220.246","percentage":100.0},{"locationIp":"69.252.106.162","percentage":0.0}],"ipv6locations":[{"locationIp":"2600:1f18:227b:c01:b161:3d17:7a86:fe36","percentage":100.0},{"locationIp":"2001:558:1020:1:250:56ff:fe94:646f","percentage":0.0}],"httpLocation":"test.com","httpFullUrlLocation":"https://test.com/Images"}`},
-		TableData{Tablename: "TABLE_FIRMWARE_RULE", Tablerow: `{"id":"e313bc81-8a02-4087-8c91-1da6db4b3159","name":"CDL-ARRISXG1V4-QA","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDL-ARRISXG1V4-QA"}}}}},"applicableAction":{"type":".DefinePropertiesAction","ttlMap":{},"actionType":"DEFINE_PROPERTIES","properties":{"rebootImmediately":"true"},"byPassFilters":[]},"type":"REBOOT_IMMEDIATELY_FILTER","active":true}`},
+		TableData{Tablename: "TABLE_FIRMWARE_CONFIGS", Tablerow: `{"id":"207dc5a5-d324-4e2e-9daf-5017ed98f8f3","updated":1558520642121,"description":"CPEAUTO_FW_AA:AA:AA:AA:AA:AA","supportedModelIds":["XCONFTESTMODEL"],"firmwareDownloadProtocol":"http","firmwareFilename":"DPC3941_3.3p17s1_DEV_sey-test","firmwareVersion":"DPC3941_3.3p17s1_DEV_sey-test","rebootImmediately":false,"applicationType":"stb"}`},
+		TableData{Tablename: "TABLE_FIRMWARE_RULES", Tablerow: `{"id":"437afab9-cbe3-4e4d-b175-220865e0f720","name":" Cisco Arris XG1","rule":{"negated":false,"compoundParts":[{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"ipAddress"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":""}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"env"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"VBN"}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"model"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"MX011ANC"}}}}}]},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"e675358b-506d-48f8-86c5-c8c8e3bb6254","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"IP_RULE","active":true}`},
+		TableData{Tablename: "TABLE_FIRMWARE_RULES", Tablerow: `{"id":"c4681132-c518-459a-99fb-9b93a1f42f37","name":"CDN-TESTING","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDN-TESTING"}}}}},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"dff46b03-be65-4f0c-804d-542d5ffec8ec","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"MAC_RULE","active":true,"applicationType":"stb"}`},
+		TableData{Tablename: "TABLE_FIRMWARE_RULES", Tablerow: `{"id":"67333656-9e8e-46a3-9a87-2f42644a35c9","name":"Arris_XG1v1_VBN_Moto-DEV","rule":{"negated":false,"compoundParts":[{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"env"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"VBN"}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"model"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"MX011ANM"}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"partnerId"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"testDEV"}}}}}]},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configEntries":[{"configId":"5de4a2df-2673-4be3-ae67-4e09648a929b","percentage":100.0,"startPercentRange":0.0,"endPercentRange":100.0}],"active":true,"firmwareCheckRequired":true,"rebootImmediately":true,"firmwareVersions":["MX011AN_3.8p3s1_VBN_sey","MX011AN_3.1p1s3_VBN_sey","MX011AN_3.2p6s1_VBN_sey-test"]},"type":"ENV_MODEL_RULE","active":true,"applicationType":"stb"}`},
+		TableData{Tablename: "TABLE_FIRMWARE_RULES", Tablerow: `{"id":"c4681132-c518-459a-99fb-9b93a1f41gf37","name":"Test_Ip_filter_device","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDN-TESTING"}}}}},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"dff46b03-be65-4f0c-804d-542d5ffec8ec","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"IP_FILTER","active":true,"applicationType":"stb"}`},
+		TableData{Tablename: "TABLE_FIRMWARE_RULES", Tablerow: `{"id":"c4681132-c518-459a-99fb-9b93a1f63534","name":"Test_Time_filter_device","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDN-TESTING"}}}}},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"dff46b03-be65-4f0c-804d-542d5ffec8ec","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"TIME_FILTER","active":true,"applicationType":"stb"}`},
+		TableData{Tablename: "TABLE_FIRMWARE_RULES", Tablerow: `{"id":"67f595ae-3e1d-418d-9b86-22b3e46816e4","name":"CPEAUTO_LF_80:f5:03:34:11:fd","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"ipAddress"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CPEAUTOIPGRP80f5033411fd"}}}}},"applicableAction":{"type":".DefinePropertiesAction","ttlMap":{},"actionType":"DEFINE_PROPERTIES","properties":{"firmwareLocation":"http://ssr.ccp.xcal.tv/cgi-bin/x1-sign-redirect.pl?K=10&F=stb_cdl","firmwareDownloadProtocol":"http","ipv6FirmwareLocation":""},"activationFirmwareVersions":{}},"type":"DOWNLOAD_LOCATION_FILTER","active":true,"applicationType":"stb"}`},
+		TableData{Tablename: "TABLE_SINGLETON_FILTER_VALUES", Tablerow: `{"type":"com.comcast.xconf.estbfirmware.DownloadLocationRoundRobinFilterValue","id":"DOWNLOAD_LOCATION_ROUND_ROBIN_FILTER_VALUE","updated":1616699042493,"applicationType":"stb","locations":[{"locationIp":"96.114.220.246","percentage":100.0},{"locationIp":"69.252.106.162","percentage":0.0}],"ipv6locations":[{"locationIp":"2600:1f18:227b:c01:b161:3d17:7a86:fe36","percentage":100.0},{"locationIp":"2001:558:1020:1:250:56ff:fe94:646f","percentage":0.0}],"httpLocation":"test.com","httpFullUrlLocation":"https://test.com/Images"}`},
+		TableData{Tablename: "TABLE_FIRMWARE_RULES", Tablerow: `{"id":"e313bc81-8a02-4087-8c91-1da6db4b3159","name":"CDL-ARRISXG1V4-QA","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDL-ARRISXG1V4-QA"}}}}},"applicableAction":{"type":".DefinePropertiesAction","ttlMap":{},"actionType":"DEFINE_PROPERTIES","properties":{"rebootImmediately":"true"},"byPassFilters":[]},"type":"REBOOT_IMMEDIATELY_FILTER","active":true}`},
 	}
 	err := ImportTableData(table_data)
 	assert.NilError(t, err)

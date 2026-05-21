@@ -230,9 +230,12 @@ func TestDeleteFirmwareRuleByIdHandler_Success(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 
+	// Sync cache so the delete is visible to cached reads
+	db.GetCacheManager().ForceSyncChanges()
+
 	// Verify deletion
-	deleted, _ := firmware.GetFirmwareRuleOneDB(db.GetDefaultTenantId(), "rule-to-delete")
-	assert.Assert(t, deleted == nil)
+	deleted, err := firmware.GetFirmwareRuleOneDB(db.GetDefaultTenantId(), "rule-to-delete")
+	assert.Assert(t, deleted == nil || err != nil)
 }
 
 // TestDeleteFirmwareRuleByIdHandler_NotFound tests deleting non-existent rule

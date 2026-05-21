@@ -24,17 +24,43 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/gorilla/mux"
 	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	taggingapi_config "github.com/rdkcentral/xconfadmin/taggingapi/config"
+	proto_generated "github.com/rdkcentral/xconfadmin/taggingapi/proto/generated"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/proto"
 )
 
+var (
+	mockGroupServiceOnce sync.Once
+	mockGroupServiceURL  string
+	mockGroupServiceHTTP *http.Client
+)
+
+func initMockGroupService() {
+	mockGroupServiceOnce.Do(func() {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			groups := &proto_generated.XdasHashes{Fields: map[string]string{}}
+			data, _ := proto.Marshal(groups)
+			w.Header().Set("Content-Type", "application/x-protobuf")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(data)
+		}))
+
+		mockGroupServiceURL = server.URL
+		mockGroupServiceHTTP = server.Client()
+	})
+}
+
 func setupTestEnvironment() {
+	initMockGroupService()
+
 	if xhttp.WebConfServer == nil {
 		xhttp.WebConfServer = &xhttp.WebconfigServer{}
 	}
@@ -46,9 +72,9 @@ func setupTestEnvironment() {
 	}
 	if xhttp.WebConfServer.GroupServiceConnector == nil {
 		xhttp.WebConfServer.GroupServiceConnector = &xhttp.GroupServiceConnector{
-			BaseURL: "http://localhost:9999",
+			BaseURL: mockGroupServiceURL,
 			Client: &xhttp.HttpClient{
-				Client: &http.Client{}, // Create a proper http.Client
+				Client: mockGroupServiceHTTP,
 			},
 		}
 	}
