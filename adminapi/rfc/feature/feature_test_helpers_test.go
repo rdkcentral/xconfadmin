@@ -88,25 +88,15 @@ func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRec
 	return recorder
 }
 
-// DeleteAllEntities is deprecated. Use CleanupFeatureTables() instead.
-// Kept for backward compatibility with existing tests.
+// DeleteAllEntities clears all database tables
 func DeleteAllEntities() {
-	CleanupFeatureTables()
-}
-
-// CleanupFeatureTables clears feature-specific database tables
-// This is the scoped cleanup helper for feature tests (RFC package)
-func CleanupFeatureTables() {
-	featureTables := []string{
-		db.TABLE_XCONF_FEATURE,
-		db.TABLE_FEATURE_CONTROL_RULE,
-	}
-
-	for _, tableName := range featureTables {
-		if err := truncateTable(tableName); err != nil {
-			fmt.Printf("failed to truncate table %s\n", tableName)
+	for _, tableInfo := range db.GetAllTableInfo() {
+		if err := truncateTable(tableInfo.TableName); err != nil {
+			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
 		}
-		db.GetCachedSimpleDao().RefreshAll(tableName)
+		if tableInfo.CacheData {
+			db.GetCachedSimpleDao().RefreshAll(tableInfo.TableName)
+		}
 	}
 }
 

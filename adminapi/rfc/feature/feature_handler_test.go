@@ -37,11 +37,8 @@ var (
 
 func TestMain(m *testing.M) {
 	// Initialize mock database for fast testing (63s -> <5s)
-	useMock := os.Getenv("USE_MOCK_DB")
-	if useMock == "true" || useMock == "1" {
-		queries.InitMockDatabase()
-		defer queries.RestoreRealDatabase()
-	}
+	queries.InitMockDatabase()
+	defer queries.RestoreRealDatabase()
 
 	cfgFile := "../config/sample_xconfadmin.conf"
 	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
@@ -263,7 +260,6 @@ func TestPutFeatureSuccessAndNotFound(t *testing.T) {
 }
 
 func TestDeleteFeatureByIdSuccessAndNotFound(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test - FeaturePost uses db.GetCachedSimpleDao() directly
 	cleanDB()
 	fe := buildFeatureEntity("stb")
 	_, _ = FeaturePost(fe.CreateFeature())
@@ -619,22 +615,11 @@ func cleanDB() {
 		return
 	}
 	// Real database cleanup (only for integration tests)
-	featureTables := []string{
-		db.TABLE_XCONF_FEATURE,
-		db.TABLE_FEATURE_CONTROL_RULE,
-	}
-
-	for _, tableName := range featureTables {
+	for _, ti := range db.GetAllTableInfo() {
 		c := db.GetDatabaseClient().(*db.CassandraClient)
-		_ = c.DeleteAllXconfData(tableName)
-		db.GetCachedSimpleDao().RefreshAll(tableName)
-	}
-}
-
-// SkipIfMockDatabase skips the test if mock database is enabled
-// Use for tests that require the real database (integration tests)
-func SkipIfMockDatabase(t *testing.T) {
-	if queries.IsMockDatabaseEnabled() {
-		t.Skip("Skipping test - requires real database (integration test)")
+		_ = c.DeleteAllXconfData(ti.TableName)
+		if ti.CacheData {
+			db.GetCachedSimpleDao().RefreshAll(ti.TableName)
+		}
 	}
 }

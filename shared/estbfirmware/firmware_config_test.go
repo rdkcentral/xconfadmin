@@ -46,9 +46,9 @@ func TestNewEmptyFirmwareConfig(t *testing.T) {
 func TestFirmwareConfig_SetGetApplicationType(t *testing.T) {
 	fc := &FirmwareConfig{}
 
-	fc.SetApplicationType("rdkcloud")
-	if fc.GetApplicationType() != "rdkcloud" {
-		t.Errorf("expected ApplicationType 'rdkcloud', got %s", fc.GetApplicationType())
+	fc.SetApplicationType("xhome")
+	if fc.GetApplicationType() != "xhome" {
+		t.Errorf("expected ApplicationType 'xhome', got %s", fc.GetApplicationType())
 	}
 
 	fc.SetApplicationType("stb")

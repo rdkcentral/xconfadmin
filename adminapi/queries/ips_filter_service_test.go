@@ -280,13 +280,13 @@ func TestDeleteIpsFilter_WithApplicationType(t *testing.T) {
 		truncateTable(db.TABLE_FIRMWARE_RULE)
 	}
 
-	// Create IP filter with a non-default supported app type
-	ipFilter := newValidIpFilter("RdkCloudFilter")
-	createResp := UpdateIpFilter("rdkcloud", ipFilter)
+	// Create IP filter with xhome app type
+	ipFilter := newValidIpFilter("XHomeFilter")
+	createResp := UpdateIpFilter("xhome", ipFilter)
 	assert.Equal(t, 200, createResp.Status)
 
 	// Delete with correct app type
-	deleteResp := DeleteIpsFilter("RdkCloudFilter", "rdkcloud")
+	deleteResp := DeleteIpsFilter("XHomeFilter", "xhome")
 	assert.Equal(t, 204, deleteResp.Status)
 }
 
@@ -320,6 +320,7 @@ func TestUpdateIpFilter_MultipleApplicationTypes(t *testing.T) {
 		want    int
 	}{
 		{"stb app type", "stb", 200},
+		{"xhome app type", "xhome", 200},
 		{"rdkcloud app type", "rdkcloud", 200},
 		{"invalid app type", "invalid", 400},
 	}

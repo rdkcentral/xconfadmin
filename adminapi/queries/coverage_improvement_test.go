@@ -37,7 +37,7 @@ func TestQueriesHandlerGETEndpoints(t *testing.T) {
 		"/xconfAdminService/queries/environments",
 		"/xconfAdminService/queries/firmwareconfigs",
 		"/xconfAdminService/queries/firmwareconfigs/stb",
-		"/xconfAdminService/queries/firmwareconfigs/rdkcloud",
+		"/xconfAdminService/queries/firmwareconfigs/xhome",
 		"/xconfAdminService/queries/percentagebean",
 		"/xconfAdminService/queries/rules/ips",
 		"/xconfAdminService/queries/rules/macs",
@@ -263,7 +263,7 @@ func TestServiceFunctionsEdgeCases(t *testing.T) {
 	assert.NotNil(t, configs)
 	configs = GetFirmwareConfigs("stb")
 	assert.NotNil(t, configs)
-	configs = GetFirmwareConfigs("rdkcloud")
+	configs = GetFirmwareConfigs("xhome")
 	assert.NotNil(t, configs)
 
 	// Test GetFirmwareConfigsAS
@@ -354,7 +354,7 @@ func TestFeatureRuleServiceFunctions(t *testing.T) {
 	// Test GetAllFeatureRulesByType
 	rules := GetAllFeatureRulesByType("stb")
 	assert.NotNil(t, rules)
-	rules = GetAllFeatureRulesByType("rdkcloud")
+	rules = GetAllFeatureRulesByType("xhome")
 	assert.NotNil(t, rules)
 
 	// Test GetOne
@@ -388,7 +388,7 @@ func TestPercentFilterFunctions(t *testing.T) {
 	_ = filter
 	_ = err
 
-	filter, err = GetPercentFilter("rdkcloud")
+	filter, err = GetPercentFilter("xhome")
 	_ = filter
 	_ = err
 

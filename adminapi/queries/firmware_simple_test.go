@@ -77,8 +77,8 @@ func TestGetGlobalPercentageIdByApplication_STB(t *testing.T) {
 }
 
 func TestGetGlobalPercentageIdByApplication_Other(t *testing.T) {
-	result := GetGlobalPercentageIdByApplication("rdkcloud")
+	result := GetGlobalPercentageIdByApplication("xhome")
 	assert.NotEmpty(t, result)
 	assert.Contains(t, result, "GLOBAL_PERCENT")
-	assert.Contains(t, result, "RDKCLOUD")
+	assert.Contains(t, result, "XHOME")
 }

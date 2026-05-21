@@ -433,7 +433,7 @@ func TestGetPercentageBeanByIdHandler_AppTypeMismatch(t *testing.T) {
 	SkipIfMockDatabase(t)
 	DeleteAllEntities()
 	pb, _ := PreCreatePercentageBean()
-	url := fmt.Sprintf("%s/%s?applicationType=rdkcloud", PB_URL_BASE, pb.ID)
+	url := fmt.Sprintf("%s/%s?applicationType=xhome", PB_URL_BASE, pb.ID)
 	r := httptest.NewRequest(http.MethodGet, url, nil)
 	rr := ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusNotFound, rr.Code)

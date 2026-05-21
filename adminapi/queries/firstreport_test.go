@@ -343,7 +343,6 @@ func TestDoReport_WithCompleteInput(t *testing.T) {
 }
 
 func TestDoReport_WithChangeLogInput(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test - requires real database for change logs
 	macAddress := "BB:CC:DD:EE:FF:22"
 	testTime := time.Now()
 
