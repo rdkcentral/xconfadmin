@@ -112,7 +112,7 @@ func telemetryRuleValidate(tenantId string, tmrule *xwlogupload.TelemetryRule) *
 	}
 	err = queries.RunGlobalValidation(tenantId, *tmrule.GetRule(), queries.GetAllowedOperations)
 	if err != nil {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("%s: %s", tmrule.Name, err.Error()), nil)
 	}
 	tmrules := xwlogupload.GetTelemetryRuleListForAs(tenantId)
 	for _, extmrule := range tmrules {

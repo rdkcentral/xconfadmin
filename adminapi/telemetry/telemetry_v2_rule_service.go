@@ -278,7 +278,7 @@ func Create(tenantId string, entity *xwlogupload.TelemetryTwoRule, writeApplicat
 	}
 	err = queries.RunGlobalValidation(tenantId, *entity.GetRule(), queries.GetAllowedOperations)
 	if err != nil {
-		return err
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, entity.Name+": "+err.Error())
 	}
 	return xlogupload.SetOneTelemetryTwoRule(tenantId, entity.ID, entity)
 }
@@ -294,7 +294,7 @@ func Update(tenantId string, entity *xwlogupload.TelemetryTwoRule, writeApplicat
 	}
 	err = queries.RunGlobalValidation(tenantId, *entity.GetRule(), queries.GetAllowedOperations)
 	if err != nil {
-		return err
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, entity.Name+": "+err.Error())
 	}
 	return xlogupload.SetOneTelemetryTwoRule(tenantId, entity.ID, entity)
 }

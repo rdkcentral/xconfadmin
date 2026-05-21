@@ -31,6 +31,7 @@ import (
 func PutLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	if !auth.HasWritePermissionForTool(r) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "No write permission: tools")
+		return
 	}
 
 	xw, ok := w.(*xhttp.XResponseWriter)

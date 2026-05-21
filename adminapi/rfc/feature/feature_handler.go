@@ -234,6 +234,7 @@ func PostFeatureHandler(w http.ResponseWriter, r *http.Request) {
 	feature, err = FeaturePost(tenantId, feature)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
 	}
 	response, _ := util.XConfJSONMarshal(feature, true)
 	xwhttp.WriteXconfResponse(w, http.StatusCreated, []byte(response))
@@ -283,6 +284,7 @@ func PutFeatureHandler(w http.ResponseWriter, r *http.Request) {
 	feature, err = PutFeature(tenantId, feature)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
 	}
 	response, _ := util.XConfJSONMarshal(feature, true)
 	xwhttp.WriteXconfResponse(w, http.StatusOK, []byte(response))

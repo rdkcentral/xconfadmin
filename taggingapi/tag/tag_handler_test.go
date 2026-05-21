@@ -77,6 +77,8 @@ func setupTestEnvironment() {
 				Client: mockGroupServiceHTTP,
 			},
 		}
+		xhttp.WebConfServer.GroupServiceConnector.SetGetGroupsMembersTemplate("%s/path/%s")
+		xhttp.WebConfServer.GroupServiceConnector.SetGetAllGroupsTemplate("%s/path")
 	}
 	if xhttp.WebConfServer.GroupServiceSyncConnector == nil {
 		xhttp.WebConfServer.GroupServiceSyncConnector = &xhttp.GroupServiceSyncConnector{}
@@ -139,6 +141,25 @@ func TestAddMembersToTagHandler_ExceedsBatchSize(t *testing.T) {
 	AddMembersToTagHandler(xw, req)
 	assert.Equal(t, http.StatusBadRequest, recorder.Code)
 	assert.Contains(t, recorder.Body.String(), "exceeds maximum")
+}
+
+func TestGetTagValueFromRequest_QueryParameterPresent(t *testing.T) {
+	req := httptest.NewRequest("PUT", "/tags/test-tag/members?value=business", nil)
+
+	assert.Equal(t, "business", getTagValueFromRequest(req))
+}
+
+func TestGetTagValueFromRequest_EmptyQueryParameter(t *testing.T) {
+	req := httptest.NewRequest("PUT", "/tags/test-tag/members?value=", nil)
+
+	assert.Equal(t, "", getTagValueFromRequest(req))
+}
+
+func TestGetTagValueFromRequest_DefaultsToEmpty(t *testing.T) {
+	req := httptest.NewRequest("PUT", "/tags/test-tag/members", nil)
+	req = mux.SetURLVars(req, map[string]string{common.Tag: "test-tag"})
+
+	assert.Equal(t, "", getTagValueFromRequest(req))
 }
 
 func TestRemoveMembersFromTagHandler_MissingTag(t *testing.T) {

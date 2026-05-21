@@ -1,7 +1,7 @@
 # XConf Admin
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Version](https://img.shields.io/badge/Go-1.23%2B-blue.svg)](https://golang.org/)
+[![Go Version](https://img.shields.io/badge/Go-1.25%2B-blue.svg)](https://golang.org/)
 [![Build Status](https://img.shields.io/badge/Build-Passing-green.svg)]()
 
 XConf Admin is a comprehensive configuration management server designed for RDK (Reference Design Kit) devices. It provides a centralized platform for managing device configurations, firmware updates, telemetry settings, and various administrative functions across RDK deployments.
@@ -20,7 +20,7 @@ XConf Admin is a comprehensive configuration management server designed for RDK 
 
 ## 📋 Prerequisites
 
-- **Go 1.23+**: This project requires Go version 1.23 or later
+- **Go 1.25+**: This project requires Go version 1.25 or later
 - **Cassandra**: For data persistence (configure in config file)
 - **Git**: For version control and building
 

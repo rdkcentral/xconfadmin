@@ -176,7 +176,7 @@ func validateProperties(applicableAction *corefw.TemplateApplicableAction) error
 	return nil
 }
 
-func validateRule(fr *re.Rule, action *corefw.TemplateApplicableAction) error {
+func validateRule(tenantId string, fr *re.Rule, action *corefw.TemplateApplicableAction) error {
 	if err := ValidateRuleStructure(fr); err != nil {
 		return err
 	}
@@ -191,14 +191,37 @@ func validateRule(fr *re.Rule, action *corefw.TemplateApplicableAction) error {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FirmwareRuleTemplate "+fr.Id()+" should have a minimum one condition")
 	}
 	for _, c := range conditions {
+		if c == nil {
+			return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Condition is null")
+		}
 		if err := checkOperationName(c, GetFirmwareRuleAllowedOperations); err != nil {
 			return err
+		}
+		if (equalOperations(c.GetOperation(), re.StandardOperationIs) && c.GetFreeArg().GetName() == xwcommon.MODEL) ||
+			(equalOperations(c.GetOperation(), re.StandardOperationInList) && c.GetFreeArg().GetName() == xwcommon.IP_ADDRESS) {
+			fixedArg, ok := c.GetFixedArg().GetValue().(string)
+			if !ok {
+				return xwcommon.NewRemoteErrorAS(
+					http.StatusBadRequest,
+					fmt.Sprintf(
+						"FixedArg value should be string for freeArg '%s' with operation '%s', got %T",
+						c.GetFreeArg().GetName(),
+						c.GetOperation(),
+						c.GetFixedArg().GetValue(),
+					),
+				)
+			}
+			if !xutil.IsBlank(fixedArg) {
+				if err := checkFixedArgValue(tenantId, *c, isNotBlank); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return validateProperties(action)
 }
 
-func validateOneFirmwareRT(frt corefw.FirmwareRuleTemplate) error {
+func validateOneFirmwareRT(tenantId string, frt corefw.FirmwareRuleTemplate) error {
 	if frt.ApplicableAction == nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Missing applicable action type ")
 	}
@@ -215,7 +238,7 @@ func validateOneFirmwareRT(frt corefw.FirmwareRuleTemplate) error {
 	if !found {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Invalid action type "+string(frt.ApplicableAction.ActionType)+" in "+frt.GetName())
 	}
-	return validateRule(frt.GetRule(), frt.ApplicableAction)
+	return validateRule(tenantId, frt.GetRule(), frt.ApplicableAction)
 }
 
 func validateAgainstFirmwareRTs(frt *corefw.FirmwareRuleTemplate, entities []*corefw.FirmwareRuleTemplate) error {
@@ -329,7 +352,7 @@ func firmwareRuleTemplatesToPrioritizables(frts []*corefw.FirmwareRuleTemplate) 
 }
 
 func updateFirmwareRT(tenantId string, templateToUpdate corefw.FirmwareRuleTemplate, frtOnDb *corefw.FirmwareRuleTemplate) error {
-	err := validateOneFirmwareRT(templateToUpdate)
+	err := validateOneFirmwareRT(tenantId, templateToUpdate)
 	if err != nil {
 		return err
 	}
@@ -355,7 +378,7 @@ func updateFirmwareRT(tenantId string, templateToUpdate corefw.FirmwareRuleTempl
 }
 
 func createFirmwareRT(tenantId string, template corefw.FirmwareRuleTemplate) (templ *corefw.FirmwareRuleTemplate, err error) {
-	err = validateOneFirmwareRT(template)
+	err = validateOneFirmwareRT(tenantId, template)
 	if err != nil {
 		return nil, err
 	}

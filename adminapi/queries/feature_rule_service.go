@@ -256,7 +256,7 @@ func ValidateFeatureRule(tenantId string, featureRule *rfc.FeatureRule, applicat
 	}
 	err = RunGlobalValidation(tenantId, *featureRule.Rule, GetFeatureRuleAllowedOperations)
 	if err != nil {
-		return err
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, featureRule.Name+": "+err.Error())
 	}
 	if featureRule.Name == "" {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "FeatureRule name is blank")

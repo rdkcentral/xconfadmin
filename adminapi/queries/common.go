@@ -406,6 +406,7 @@ func UpdateAppSettings(w http.ResponseWriter, r *http.Request) {
 	// For updating app settings, tools permission is required
 	if !auth.HasWritePermissionForTool(r) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusUnauthorized, "")
+		return
 	}
 
 	// r.Body is already drained in the middleware

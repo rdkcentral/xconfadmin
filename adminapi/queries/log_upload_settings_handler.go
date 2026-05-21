@@ -155,6 +155,7 @@ func SaveLogUploadSettings(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Warn(fmt.Sprintf("error save logFileList for Id: %s", logUploadSettings.ID))
 			xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "Failed to save logFileList")
+			return
 		}
 	}
 	if !checkDateStrLength(logUploadSettings.FromDateTime) || !checkDateStrLength(logUploadSettings.ToDateTime) {

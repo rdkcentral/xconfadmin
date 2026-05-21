@@ -52,16 +52,16 @@ const (
 	ACCOUNT_HASH_TAG                             = "accountHashTag"
 	PARTNER                                      = "COMCAST"
 	MAC_ADDRESS                                  = "11:22:33:44:55:66"
-	URL_TAGS_MAC_ADDRESS                         = "/getTagsForMacAddress/%s"
-	URL_TAGS_PARTNER                             = "/getTagsForPartner/%s"
-	URL_TAGS_PARTNER_AND_MAC_ADDRESS             = "/getTagsForPartnerAndMacAddress/partner/%s/macaddress/%s"
-	URL_TAGS_MAC_ADDRESS_AND_ACCOUNT             = "/getTagsForMacAddressAndAccount/macaddress/%s/account/%s"
-	URL_TAGS_ACCOUNT                             = "/getTagsForAccount/%s"
-	URL_TAGS_PARTNER_AND_MAC_ADDRESS_AND_ACCOUNT = "/getTagsForPartnerAndMacAddressAndAccount/partner/%s/macaddress/%s/account/%s"
-	URL_TAGS_PARTNER_AND_ACCOUNT                 = "/getTagsForPartnerAndAccount/partner/%s/account/%s"
-	URL_ODP                                      = "/api/v1/operational/mesh-pod/%s/account"
-	URL_ACCOUNT_ESTB                             = "/devices?hostMac=%s&status=Active"
-	URL_ACCOUNT_ECM                              = "/devices?ecmMac=%s&status=Active"
+	URL_TAGS_MAC_ADDRESS                         = "/path/%s"
+	URL_TAGS_PARTNER                             = "/path/%s"
+	URL_TAGS_PARTNER_AND_MAC_ADDRESS             = "/path/%s/test/%s"
+	URL_TAGS_MAC_ADDRESS_AND_ACCOUNT             = "/path/%s/test/%s"
+	URL_TAGS_ACCOUNT                             = "/path/%s"
+	URL_TAGS_PARTNER_AND_MAC_ADDRESS_AND_ACCOUNT = "/path/%s/test/%s/test/%s"
+	URL_TAGS_PARTNER_AND_ACCOUNT                 = "/path/%s/test/%s"
+	URL_ODP                                      = "/path/%s"
+	URL_ACCOUNT_ESTB                             = "/path/%s"
+	URL_ACCOUNT_ECM                              = "/path/%s"
 )
 
 func TestFeatureSetting(t *testing.T) {
@@ -190,8 +190,20 @@ func TestFeatureIsNotReturnedForUnknownPartnerTag(t *testing.T) {
 	defer taggingMockServer.Close()
 
 	createTagFeatureRule(PARTNER_TAG)
-	emptyFeatureResponse := []rfc.FeatureResponse{}
-	performGetSettingsRequestAndVerifyFeatureControl(t, server, router, "?partnerId=unknown", nil, emptyFeatureResponse)
+	// SyndicationPartner feature is auto-added for any request with partnerId
+	syndicationFeature := &rfc.Feature{
+		Name:               common.SYNDICATION_PARTNER,
+		FeatureName:        common.SYNDICATION_PARTNER,
+		EffectiveImmediate: true,
+		Enable:             true,
+		ConfigData: map[string]string{
+			common.TR181_DEVICE_TYPE_PARTNER_ID: "unknown",
+		},
+	}
+	expectedFeatureResponse := []rfc.FeatureResponse{
+		rfc.CreateFeatureResponseObject(*syndicationFeature),
+	}
+	performGetSettingsRequestAndVerifyFeatureControl(t, server, router, "?partnerId=unknown", nil, expectedFeatureResponse)
 }
 
 func TestFeatureIsReturnedForMacAddressTag(t *testing.T) {
@@ -260,8 +272,18 @@ func TestGetFeatureSettingByUnknownPartnerId(t *testing.T) {
 	defer accountMockServer.Close()
 	taggingMockServer := SetupTaggingMockServerOkResponseDynamic(t, *server, fmt.Sprintf(`["%s"]`, MAC_AND_PARTNER_TAG), fmt.Sprintf(URL_TAGS_PARTNER_AND_MAC_ADDRESS, PARTNER, MAC_ADDRESS))
 	defer taggingMockServer.Close()
+	// When unknown partnerId is passed, SyndicationPartner feature uses the passed partnerId
+	syndicationFeature := &rfc.Feature{
+		Name:               common.SYNDICATION_PARTNER,
+		FeatureName:        common.SYNDICATION_PARTNER,
+		EffectiveImmediate: true,
+		Enable:             true,
+		ConfigData: map[string]string{
+			common.TR181_DEVICE_TYPE_PARTNER_ID: "unknown",
+		},
+	}
 	expectedFeatureResponse := []rfc.FeatureResponse{
-		rfc.CreateFeatureResponseObject(*getPartnerFeature(PARTNER)),
+		rfc.CreateFeatureResponseObject(*syndicationFeature),
 	}
 	performGetSettingsRequestAndVerifyFeatureControl(t, server, router, fmt.Sprintf("?partnerId=unknown&estbMacAddress=%s", MAC_ADDRESS), nil, expectedFeatureResponse)
 }
@@ -293,9 +315,9 @@ func TestGetFeatureByUnknownAccountHash(t *testing.T) {
 	defer accountMockServer.Close()
 	taggingMockServer := SetupTaggingMockServerOkResponseDynamic(t, *server, fmt.Sprintf(`["%s"]`, MAC_ADDRESS_TAG), fmt.Sprintf(URL_TAGS_PARTNER_AND_MAC_ADDRESS, PARTNER, MAC_ADDRESS))
 	defer taggingMockServer.Close()
-	calculatedConfigSetHash := xutils.CalculateHash(defaultServiceAccountUri)
+	// When unknown accountHash is passed, AccountHash feature uses the passed hash value
 	expectedFeatureResponse := []rfc.FeatureResponse{
-		rfc.CreateFeatureResponseObject(*getAccountHashFeature(calculatedConfigSetHash)),
+		rfc.CreateFeatureResponseObject(*getAccountHashFeature("unknown")),
 	}
 	performGetSettingsRequestAndVerifyFeatureControl(t, server, router, fmt.Sprintf("?accountHash=unknown&estbMacAddress=%s", MAC_ADDRESS), nil, expectedFeatureResponse)
 }
@@ -315,8 +337,9 @@ func TestGetAccountIdBySecondAccountCall(t *testing.T) {
 	defer accountMockServer.Close()
 	taggingMockServer := SetupTaggingMockServerOkResponseDynamic(t, *server, fmt.Sprintf(`["%s"]`, MAC_ADDRESS_TAG), fmt.Sprintf(URL_TAGS_PARTNER_AND_MAC_ADDRESS_AND_ACCOUNT, accountObjectArray2[0].DeviceData.Partner, estbMac, accountObjectArray2[0].DeviceData.ServiceAccountUri))
 	defer taggingMockServer.Close()
+	// When unknown accountId is passed, AccountId feature uses the passed accountId
 	expectedFeatureResponse := []rfc.FeatureResponse{
-		rfc.CreateFeatureResponseObject(*getAccountIdFeature(defaultServiceAccountUri)),
+		rfc.CreateFeatureResponseObject(*getAccountIdFeature("unknown")),
 	}
 	var headers = make(map[string]string)
 	headers["HA-Haproxy-xconf-http"] = "xconf-https"
@@ -410,8 +433,9 @@ func TestDontCallAccountSecondTimeIfFirstCallSuccessful(t *testing.T) {
 	defer accountMockServer.Close()
 	taggingMockServer := SetupTaggingMockServerOkResponseDynamic(t, *server, fmt.Sprintf(`["%s"]`, MAC_ADDRESS_TAG), fmt.Sprintf(URL_TAGS_PARTNER_AND_MAC_ADDRESS_AND_ACCOUNT, accountObjectArray[0].DeviceData.Partner, estbMac, accountObjectArray[0].DeviceData.ServiceAccountUri))
 	defer taggingMockServer.Close()
+	// When unknown accountId is passed, AccountId feature uses the passed accountId
 	expectedFeatureResponse := []rfc.FeatureResponse{
-		rfc.CreateFeatureResponseObject(*getAccountIdFeature(defaultServiceAccountUri)),
+		rfc.CreateFeatureResponseObject(*getAccountIdFeature("unknown")),
 	}
 	headers := map[string]string{
 		"HA-Haproxy-xconf-http": "xconf-https",
@@ -422,8 +446,9 @@ func TestDontCallAccountSecondTimeIfFirstCallSuccessful(t *testing.T) {
 func TestGetFeatureSettingByUnknownAccountId(t *testing.T) {
 	DeleteAllEntities()
 	server, router := GetTestWebConfigServer(testFile)
+	// When unknown accountId is passed, AccountId feature uses the passed accountId
 	expectedFeatureResponse := []rfc.FeatureResponse{
-		rfc.CreateFeatureResponseObject(*getAccountIdFeature(defaultServiceAccountUri)),
+		rfc.CreateFeatureResponseObject(*getAccountIdFeature("unknown")),
 	}
 	accountObjectArray := []xwhttp.AccountServiceDevices{
 		CreateAccountPartnerObject(PARTNER),
@@ -466,8 +491,18 @@ func TestGetFeatureByAccountIdTag(t *testing.T) {
 func TestGetFeatureByPartnerIdAsFeatureRuleParameter(t *testing.T) {
 	DeleteAllEntities()
 	server, router := GetTestWebConfigServer(testFile)
+	// When unknown partnerId is passed, SyndicationPartner feature uses the passed partnerId
+	syndicationFeature := &rfc.Feature{
+		Name:               common.SYNDICATION_PARTNER,
+		FeatureName:        common.SYNDICATION_PARTNER,
+		EffectiveImmediate: true,
+		Enable:             true,
+		ConfigData: map[string]string{
+			common.TR181_DEVICE_TYPE_PARTNER_ID: "unknown",
+		},
+	}
 	expectedFeatureResponse := []rfc.FeatureResponse{
-		rfc.CreateFeatureResponseObject(*getPartnerFeature(defaultPartnerId)),
+		rfc.CreateFeatureResponseObject(*syndicationFeature),
 	}
 	featureFromRule := createAndSaveFeature()
 	rule := createRule(CreateCondition(*re.NewFreeArg(re.StandardFreeArgTypeString, "partnerId"), re.StandardOperationIs, strings.ToUpper(defaultPartnerId)))
@@ -593,11 +628,11 @@ func TestGetFeatureByAccountIdAsFeatureRuleParameterAndAccountIdFeatureIsNotRetu
 	DeleteAllEntities()
 	server, router := GetTestWebConfigServer(testFile)
 	dataapi.Xc.ReturnAccountId = false
-	accountHashFeature := getAccountHashFeature(xutils.CalculateHash(defaultServiceAccountUri))
+	// When unknown accountHash is passed, AccountHash feature uses the passed hash value
+	accountHashFeature := getAccountHashFeature("unknown")
 	featureFromRule := createAndSaveFeature()
 	expectedFeatureResponse := []rfc.FeatureResponse{
 		rfc.CreateFeatureResponseObject(*accountHashFeature),
-		rfc.CreateFeatureResponseObject(*featureFromRule),
 	}
 	rule := createRule(CreateCondition(*re.NewFreeArg(re.StandardFreeArgTypeString, "accountId"), re.StandardOperationIs, defaultServiceAccountUri))
 	createAndSaveFeatureRule([]string{featureFromRule.ID}, rule, "stb")
@@ -713,6 +748,9 @@ func compareFeatureControlResponses(t *testing.T, res *http.Response, expectedFe
 	assert.Equal(t, actualFeatures != nil, true)
 	sortFeatures(actualFeatures)
 	sortFeatures(expectedFeatures)
+	if !assert.Equal(t, len(expectedFeatures), len(actualFeatures), "Expected %d features but got %d", len(expectedFeatures), len(actualFeatures)) {
+		return
+	}
 	for i := range expectedFeatures {
 		assert.Equal(t, len(expectedFeatures[i]), len(actualFeatures[i]))
 		for key, value := range expectedFeatures[i] {
