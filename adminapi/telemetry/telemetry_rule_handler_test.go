@@ -236,8 +236,8 @@ func TestGetTelemetryRuleByIdHandler_AllErrorCases(t *testing.T) {
 		rule := buildTelemetryRule("test-rule", "stb", perm.ID)
 		_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, rule.ID, rule)
 
-		// Query with different applicationType triggers 404 (not found)
-		url := fmt.Sprintf("/xconfAdminService/telemetry/rule/%s?applicationType=xhome", rule.ID)
+		// Query with different valid applicationType triggers 404 (not found)
+		url := fmt.Sprintf("/xconfAdminService/telemetry/rule/%s?applicationType=rdkcloud", rule.ID)
 		r := httptest.NewRequest(http.MethodGet, url, nil)
 		rr := ExecuteRequest(r, router)
 		assert.Equal(t, http.StatusNotFound, rr.Code)
@@ -282,7 +282,7 @@ func TestCreateTelemetryRuleHandler_AllErrorCases(t *testing.T) {
 		_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, rule.ID, rule)
 
 		// Try to create with different applicationType in body
-		rule.ApplicationType = "xhome"
+		rule.ApplicationType = "rdkcloud"
 		b, _ := json.Marshal(rule)
 		url := "/xconfAdminService/telemetry/rule?applicationType=stb"
 		r := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(b))
@@ -320,7 +320,7 @@ func TestUpdateTelemetryRuleHandler_AllErrorCases(t *testing.T) {
 		_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, rule.ID, rule)
 
 		// Try to update with different applicationType
-		rule.ApplicationType = "xhome"
+		rule.ApplicationType = "rdkcloud"
 		b, _ := json.Marshal(rule)
 		url := "/xconfAdminService/telemetry/rule?applicationType=stb"
 		r := httptest.NewRequest(http.MethodPut, url, bytes.NewReader(b))
@@ -410,7 +410,7 @@ func TestPutTelemetryRuleEntitiesHandler_AllErrorCases(t *testing.T) {
 		existingRule.Name = "existing-update-modified"
 
 		// Create a rule with wrong applicationType to trigger conflict
-		conflictRule := buildTelemetryRule("conflict-update", "xhome", perm.ID)
+		conflictRule := buildTelemetryRule("conflict-update", "rdkcloud", perm.ID)
 		_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, conflictRule.ID, conflictRule)
 		conflictRule.ApplicationType = "stb" // Change to trigger mismatch
 
