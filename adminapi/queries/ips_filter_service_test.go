@@ -252,9 +252,9 @@ func TestDeleteIpsFilter_NotFound(t *testing.T) {
 	// Try to delete non-existent filter
 	resp := DeleteIpsFilter("NonExistentFilter", "stb")
 
-	// Should still return 204 (NoContent) even if not found
-	assert.Equal(t, 204, resp.Status)
-	assert.Nil(t, resp.Error)
+	// Should return 500 (InternalServerError) and non-nil error for not found
+	assert.Equal(t, 500, resp.Status)
+	assert.NotNil(t, resp.Error)
 }
 
 func TestDeleteIpsFilter_EmptyName(t *testing.T) {
@@ -268,8 +268,8 @@ func TestDeleteIpsFilter_EmptyName(t *testing.T) {
 	// Try to delete with empty name
 	resp := DeleteIpsFilter("", "stb")
 
-	// Should return 204 as the filter won't be found
-	assert.Equal(t, 204, resp.Status)
+	// Should return 500 (InternalServerError) for empty name
+	assert.Equal(t, 500, resp.Status)
 }
 
 func TestDeleteIpsFilter_WithApplicationType(t *testing.T) {
@@ -280,13 +280,13 @@ func TestDeleteIpsFilter_WithApplicationType(t *testing.T) {
 		truncateTable(db.TABLE_FIRMWARE_RULE)
 	}
 
-	// Create IP filter with a non-default supported app type
-	ipFilter := newValidIpFilter("RdkCloudFilter")
-	createResp := UpdateIpFilter("rdkcloud", ipFilter)
+	// Create IP filter with xhome app type
+	ipFilter := newValidIpFilter("XHomeFilter")
+	createResp := UpdateIpFilter("xhome", ipFilter)
 	assert.Equal(t, 200, createResp.Status)
 
 	// Delete with correct app type
-	deleteResp := DeleteIpsFilter("RdkCloudFilter", "rdkcloud")
+	deleteResp := DeleteIpsFilter("XHomeFilter", "xhome")
 	assert.Equal(t, 204, deleteResp.Status)
 }
 
@@ -320,6 +320,7 @@ func TestUpdateIpFilter_MultipleApplicationTypes(t *testing.T) {
 		want    int
 	}{
 		{"stb app type", "stb", 200},
+		{"xhome app type", "xhome", 200},
 		{"rdkcloud app type", "rdkcloud", 200},
 		{"invalid app type", "invalid", 400},
 	}

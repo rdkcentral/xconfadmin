@@ -88,33 +88,38 @@ func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRec
 	return recorder
 }
 
-// DeleteAllEntities is deprecated. Use CleanupFeatureTables() instead.
-// Kept for backward compatibility with existing tests.
+// DeleteAllEntities clears all database tables
 func DeleteAllEntities() {
-	CleanupFeatureTables()
-}
-
-// CleanupFeatureTables clears feature-specific database tables
-// This is the scoped cleanup helper for feature tests (RFC package)
-func CleanupFeatureTables() {
-	featureTables := []string{
-		db.TABLE_XCONF_FEATURE,
-		db.TABLE_FEATURE_CONTROL_RULE,
-	}
-
-	for _, tableName := range featureTables {
-		if err := truncateTable(tableName); err != nil {
-			fmt.Printf("failed to truncate table %s\n", tableName)
+	for _, tableInfo := range db.GetAllTableInfo() {
+		if err := truncateTable(tableInfo.TableName); err != nil {
+			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
 		}
-		db.GetCachedSimpleDao().RefreshAll(tableName)
+		if tableInfo.CacheData {
+			db.GetCachedSimpleDao().RefreshAll(tableInfo.TableName)
+		}
 	}
 }
 
 func truncateTable(tableName string) error {
-	dbClient := db.GetDatabaseClient()
-	cassandraClient, ok := dbClient.(*db.CassandraClient)
-	if ok {
-		return cassandraClient.DeleteAllXconfData(tableName)
+	dao := db.GetCachedSimpleDao()
+	keys, err := dao.GetKeys(tableName)
+	if err != nil {
+		// table may be empty or not yet exist; not an error
+		return nil
+	}
+	for _, key := range keys {
+		var keyStr string
+		switch k := key.(type) {
+		case string:
+			keyStr = k
+		case []byte:
+			keyStr = string(k)
+		default:
+			keyStr = fmt.Sprint(k)
+		}
+		if delErr := dao.DeleteOne(tableName, keyStr); delErr != nil {
+			fmt.Printf("failed to delete %s from %s: %v\n", keyStr, tableName, delErr)
+		}
 	}
 	return nil
 }

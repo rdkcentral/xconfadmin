@@ -118,10 +118,10 @@ func TestCheckRuleTypeAndUpdate_AppTypeMismatch(t *testing.T) {
 	defer DeleteAllEntities()
 
 	entityOnDb := createTestFirmwareRule("rule-1", "Existing Rule", "stb")
-	rule := *createTestFirmwareRule("rule-1", "Updated Rule", "rdkcloud")
+	rule := *createTestFirmwareRule("rule-1", "Updated Rule", "xhome")
 
 	fields := log.Fields{}
-	err := checkRuleTypeAndUpdate(rule, entityOnDb, "rdkcloud", fields)
+	err := checkRuleTypeAndUpdate(rule, entityOnDb, "xhome", fields)
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "ApplicationType cannot be changed")
 }

@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/rdkcentral/xconfwebconfig/db"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
@@ -40,15 +39,10 @@ func ImportLogRepTableData(data []string, tabletype logupload.UploadRepository) 
 	return err
 }
 
-func CleanupLogRepoSettings() {
-	truncateTable(db.TABLE_UPLOAD_REPOSITORY)
-	db.GetCachedSimpleDao().RefreshAll(db.TABLE_UPLOAD_REPOSITORY)
-}
-
 func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test: requires external package data retrieval
-	CleanupLogRepoSettings()
-	defer CleanupLogRepoSettings()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	//GET ALL LOG REPO SETTINGS
 

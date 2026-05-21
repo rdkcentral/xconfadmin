@@ -645,7 +645,7 @@ func TestRebootImmediatelyFiltersByName_DifferentApplicationType(t *testing.T) {
 		}
 	}()
 
-	filter, err := RebootImmediatelyFiltersByName("rdkcloud", "test-filter")
+	filter, err := RebootImmediatelyFiltersByName("xhome", "test-filter")
 
 	if err != nil {
 		t.Logf("DB error (expected in test environment): %v", err)
@@ -653,7 +653,7 @@ func TestRebootImmediatelyFiltersByName_DifferentApplicationType(t *testing.T) {
 	}
 
 	// May be nil if not found or DB not configured
-	t.Logf("Filter search completed for rdkcloud application type")
+	t.Logf("Filter search completed for xhome application type")
 	_ = filter
 }
 

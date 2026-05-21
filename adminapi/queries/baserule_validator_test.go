@@ -20,7 +20,6 @@ package queries
 import (
 	"testing"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/stretchr/testify/assert"
 
 	xcommon "github.com/rdkcentral/xconfadmin/common"
@@ -1294,9 +1293,7 @@ func TestCheckFixedArgValue_InListOperationOnIPAddress_MissingIPList(t *testing.
 
 func TestCheckFixedArgValue_InListOperationOnIPAddress_ValidIPList(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	// Only truncate the tables needed for this test
-	truncateTable(ds.TABLE_GENERIC_NS_LIST)
-	RefreshAllInDao(ds.TABLE_GENERIC_NS_LIST)
+	DeleteAllEntities()
 
 	// Create a valid IP list using the package-level helper and service function
 	ipList := makeGenericList("TEST_IP_LIST", shared.IP_LIST, []string{"192.168.1.0/24"})
@@ -1311,9 +1308,7 @@ func TestCheckFixedArgValue_InListOperationOnIPAddress_ValidIPList(t *testing.T)
 	err := checkFixedArgValue(condition, isNotBlank)
 	assert.NoError(t, err)
 
-	// Only truncate the tables needed for this test
-	truncateTable(ds.TABLE_MODEL)
-	RefreshAllInDao(ds.TABLE_MODEL)
+	DeleteAllEntities()
 }
 
 func TestCheckFixedArgValue_InListOperationOnEstbIp_MissingIPList(t *testing.T) {

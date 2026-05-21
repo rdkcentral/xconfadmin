@@ -29,6 +29,14 @@ func (c *GroupServiceConnector) SetGroupServiceHost(host string) {
 	c.BaseURL = host
 }
 
+func (c *GroupServiceConnector) SetGetGroupsMembersTemplate(template string) {
+	c.getGroupsMembersTemplate = template
+}
+
+func (c *GroupServiceConnector) SetGetAllGroupsTemplate(template string) {
+	c.getAllGroupsTemplate = template
+}
+
 func NewGroupServiceConnector(conf *configuration.Config, tlsConfig *tls.Config) *GroupServiceConnector {
 	groupServiceName := conf.GetString("xconfwebconfig.xconf.group_service_name")
 	confKey := fmt.Sprintf("xconfwebconfig.%v.host", groupServiceName)

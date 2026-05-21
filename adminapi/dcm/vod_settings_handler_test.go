@@ -28,17 +28,10 @@ import (
 	"gotest.tools/assert"
 )
 
-func cleanupVodEntities() {
-	_ = truncateTable(db.TABLE_VOD_SETTINGS)
-	_ = db.GetCachedSimpleDao().RefreshAll(db.TABLE_VOD_SETTINGS)
-	_ = truncateTable(db.TABLE_DCM_RULE)
-	_ = db.GetCachedSimpleDao().RefreshAll(db.TABLE_DCM_RULE)
-}
-
 // TestGetVodSettingExportHandler_Success tests successful export of VOD settings
 func TestGetVodSettingExportHandler_Success(t *testing.T) {
-	cleanupVodEntities()
-	defer cleanupVodEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
@@ -63,8 +56,8 @@ func TestGetVodSettingExportHandler_Success(t *testing.T) {
 // TestGetVodSettingExportHandler_EmptyResult tests export with no data
 func TestGetVodSettingExportHandler_EmptyResult(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	cleanupVodEntities()
-	defer cleanupVodEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
@@ -89,8 +82,8 @@ func TestGetVodSettingExportHandler_EmptyResult(t *testing.T) {
 // TestGetVodSettingExportHandler_WithDcmFormulas tests export with DCM formulas
 func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	cleanupVodEntities()
-	defer cleanupVodEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	// Create DCM formulas
 	formula1 := &logupload.DCMGenericRule{
@@ -144,8 +137,8 @@ func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
 // TestGetVodSettingExportHandler_ApplicationTypeFilter tests that export respects application type
 func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	cleanupVodEntities()
-	defer cleanupVodEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	// Create DCM formulas with different application types
 	formulaSTB := &logupload.DCMGenericRule{
@@ -155,12 +148,12 @@ func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 	}
 	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formulaSTB.ID, formulaSTB)
 
-	formulaRdkCloud := &logupload.DCMGenericRule{
-		ID:              "formula-rdkcloud",
-		Name:            "Formula RdkCloud",
-		ApplicationType: "rdkcloud",
+	formulaXHome := &logupload.DCMGenericRule{
+		ID:              "formula-xhome",
+		Name:            "Formula XHome",
+		ApplicationType: "xhome",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formulaRdkCloud.ID, formulaRdkCloud)
+	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formulaXHome.ID, formulaXHome)
 
 	// Create corresponding VOD settings
 	vodSTB := &logupload.VodSettings{
@@ -171,13 +164,13 @@ func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 	}
 	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vodSTB.ID, vodSTB)
 
-	vodRdkCloud := &logupload.VodSettings{
-		ID:              formulaRdkCloud.ID,
-		Name:            "VOD RdkCloud",
-		LocationsURL:    "http://vodrdkcloud.com",
-		ApplicationType: "rdkcloud",
+	vodXHome := &logupload.VodSettings{
+		ID:              formulaXHome.ID,
+		Name:            "VOD XHome",
+		LocationsURL:    "http://vodxhome.com",
+		ApplicationType: "xhome",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vodRdkCloud.ID, vodRdkCloud)
+	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vodXHome.ID, vodXHome)
 
 	// Request export for stb only
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
@@ -199,8 +192,8 @@ func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 // TestGetVodSettingExportHandler_MissingVodSettings tests formulas without corresponding VOD settings
 func TestGetVodSettingExportHandler_MissingVodSettings(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	cleanupVodEntities()
-	defer cleanupVodEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	// Create DCM formula without corresponding VOD settings
 	formula := &logupload.DCMGenericRule{
@@ -229,8 +222,8 @@ func TestGetVodSettingExportHandler_MissingVodSettings(t *testing.T) {
 
 // TestGetVodSettingExportHandler_VerifyHeaders tests that export includes correct headers
 func TestGetVodSettingExportHandler_VerifyHeaders(t *testing.T) {
-	cleanupVodEntities()
-	defer cleanupVodEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
@@ -253,8 +246,8 @@ func TestGetVodSettingExportHandler_VerifyHeaders(t *testing.T) {
 
 // TestGetVodSettingExportHandler_MissingAuthCookie tests behavior when auth cookie is missing
 func TestGetVodSettingExportHandler_MissingAuthCookie(t *testing.T) {
-	cleanupVodEntities()
-	defer cleanupVodEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
@@ -275,11 +268,11 @@ func TestGetVodSettingExportHandler_MissingAuthCookie(t *testing.T) {
 // TestGetVodSettingExportHandler_DifferentApplicationTypes tests export for different application types
 func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	cleanupVodEntities()
-	defer cleanupVodEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	// Create formulas for different application types
-	apps := []string{"stb", "rdkcloud", "rdkcloud"}
+	apps := []string{"stb", "xhome", "rdkcloud"}
 	for i, app := range apps {
 		formula := &logupload.DCMGenericRule{
 			ID:              "formula-" + app,
@@ -314,27 +307,27 @@ func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, 1, len(vodListSTB), "Should return 1 VOD setting for stb")
 
-	// Test for rdkcloud
+	// Test for xhome
 	req2, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
 	req2.Header.Set("Accept", "application/json")
-	req2.AddCookie(&http.Cookie{Name: "applicationType", Value: "rdkcloud"})
+	req2.AddCookie(&http.Cookie{Name: "applicationType", Value: "xhome"})
 
 	res2 := ExecuteRequest(req2, router).Result()
 	defer res2.Body.Close()
 	assert.Equal(t, http.StatusOK, res2.StatusCode)
 
-	var vodListRdkCloud []*logupload.VodSettings
-	err = json.NewDecoder(res2.Body).Decode(&vodListRdkCloud)
+	var vodListXHome []*logupload.VodSettings
+	err = json.NewDecoder(res2.Body).Decode(&vodListXHome)
 	assert.NilError(t, err)
-	assert.Equal(t, 1, len(vodListRdkCloud), "Should return 1 VOD setting for rdkcloud")
+	assert.Equal(t, 1, len(vodListXHome), "Should return 1 VOD setting for xhome")
 }
 
 // TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings tests mixed scenario
 func TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	cleanupVodEntities()
-	defer cleanupVodEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	// Create 3 formulas but only 2 VOD settings
 	for i := 1; i <= 3; i++ {
@@ -384,8 +377,8 @@ func TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings(t *testin
 // TestGetVodSettingExportHandler_ValidateResponseStructure tests the structure of the response
 func TestGetVodSettingExportHandler_ValidateResponseStructure(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test
-	cleanupVodEntities()
-	defer cleanupVodEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	// Create a complete VOD setting
 	formula := &logupload.DCMGenericRule{

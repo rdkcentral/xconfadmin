@@ -32,13 +32,6 @@ import (
 	"gotest.tools/assert"
 )
 
-func cleanupFirmwareConfigEntities() {
-	_ = truncateTable(db.TABLE_FIRMWARE_CONFIG)
-	_ = RefreshAllInDao(db.TABLE_FIRMWARE_CONFIG)
-	_ = truncateTable(db.TABLE_MODEL)
-	_ = RefreshAllInDao(db.TABLE_MODEL)
-}
-
 // Helper function to setup test models
 func setupTestModels() {
 	models := []shared.Model{
@@ -54,9 +47,9 @@ func setupTestModels() {
 // TestPostFirmwareConfigEntitiesHandler_Success tests successful batch creation
 func TestPostFirmwareConfigEntitiesHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	entities := []estbfirmware.FirmwareConfig{
@@ -96,9 +89,9 @@ func TestPostFirmwareConfigEntitiesHandler_Success(t *testing.T) {
 // TestPostFirmwareConfigEntitiesHandler_DuplicateEntity tests duplicate detection
 func TestPostFirmwareConfigEntitiesHandler_DuplicateEntity(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	// Create first entity
@@ -132,9 +125,9 @@ func TestPostFirmwareConfigEntitiesHandler_DuplicateEntity(t *testing.T) {
 // TestPostFirmwareConfigEntitiesHandler_DuplicateDescription tests duplicate description detection
 func TestPostFirmwareConfigEntitiesHandler_DuplicateDescription(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	// Create first entity
@@ -176,9 +169,9 @@ func TestPostFirmwareConfigEntitiesHandler_DuplicateDescription(t *testing.T) {
 // TestPostFirmwareConfigEntitiesHandler_ApplicationTypeMismatch tests app type validation
 func TestPostFirmwareConfigEntitiesHandler_ApplicationTypeMismatch(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	entities := []estbfirmware.FirmwareConfig{
@@ -186,7 +179,7 @@ func TestPostFirmwareConfigEntitiesHandler_ApplicationTypeMismatch(t *testing.T)
 			ID:                "fc-app-mismatch",
 			Description:       "App Type Mismatch",
 			FirmwareVersion:   "1.0.0",
-			ApplicationType:   "rdkcloud", // Different from cookie
+			ApplicationType:   "xhome", // Different from cookie
 			SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 		},
 	}
@@ -213,9 +206,9 @@ func TestPostFirmwareConfigEntitiesHandler_ApplicationTypeMismatch(t *testing.T)
 // TestPostFirmwareConfigEntitiesHandler_InvalidJSON tests invalid JSON handling
 func TestPostFirmwareConfigEntitiesHandler_InvalidJSON(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	invalidJSON := []byte(`{bad json}`)
@@ -233,9 +226,9 @@ func TestPostFirmwareConfigEntitiesHandler_InvalidJSON(t *testing.T) {
 // TestPutFirmwareConfigEntitiesHandler_Success tests successful batch update
 func TestPutFirmwareConfigEntitiesHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	// Create initial entities
@@ -294,9 +287,9 @@ func TestPutFirmwareConfigEntitiesHandler_Success(t *testing.T) {
 // TestPutFirmwareConfigEntitiesHandler_NonExistentEntity tests updating non-existent entity
 func TestPutFirmwareConfigEntitiesHandler_NonExistentEntity(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	entities := []estbfirmware.FirmwareConfig{
@@ -327,9 +320,9 @@ func TestPutFirmwareConfigEntitiesHandler_NonExistentEntity(t *testing.T) {
 // TestPutFirmwareConfigEntitiesHandler_MixedSuccessAndFailure tests mixed batch update
 func TestPutFirmwareConfigEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	// Create one entity
@@ -380,9 +373,9 @@ func TestPutFirmwareConfigEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 // TestObsoleteGetFirmwareConfigPageHandler tests pagination endpoint
 func TestObsoleteGetFirmwareConfigPageHandler(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	// Create test firmware configs
@@ -411,9 +404,9 @@ func TestObsoleteGetFirmwareConfigPageHandler(t *testing.T) {
 // TestObsoleteGetFirmwareConfigPageHandler_InvalidPageNumber tests invalid pagination params
 func TestObsoleteGetFirmwareConfigPageHandler_InvalidPageNumber(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig/page?pageNumber=0&pageSize=10", nil)
@@ -430,9 +423,9 @@ func TestObsoleteGetFirmwareConfigPageHandler_InvalidPageNumber(t *testing.T) {
 // TestPostFirmwareConfigBySupportedModelsHandler_Success tests getting configs by models
 func TestPostFirmwareConfigBySupportedModelsHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	// Create firmware configs with different models
@@ -473,9 +466,9 @@ func TestPostFirmwareConfigBySupportedModelsHandler_Success(t *testing.T) {
 // TestPostFirmwareConfigBySupportedModelsHandler_InvalidJSON tests invalid JSON
 func TestPostFirmwareConfigBySupportedModelsHandler_InvalidJSON(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	invalidJSON := []byte(`{bad json}`)
@@ -493,9 +486,9 @@ func TestPostFirmwareConfigBySupportedModelsHandler_InvalidJSON(t *testing.T) {
 // TestGetFirmwareConfigFirmwareConfigMapHandler_Success tests getting config map
 func TestGetFirmwareConfigFirmwareConfigMapHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	// Create test firmware config
@@ -525,9 +518,9 @@ func TestGetFirmwareConfigFirmwareConfigMapHandler_Success(t *testing.T) {
 // TestPostFirmwareConfigGetSortedFirmwareVersionsIfExistOrNotHandler_Success tests sorting versions
 func TestPostFirmwareConfigGetSortedFirmwareVersionsIfExistOrNotHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	// Create firmware configs
@@ -567,9 +560,9 @@ func TestPostFirmwareConfigGetSortedFirmwareVersionsIfExistOrNotHandler_Success(
 // TestPostFirmwareConfigFilteredHandler_Success tests filtered search
 func TestPostFirmwareConfigFilteredHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	// Create test firmware configs
@@ -610,9 +603,9 @@ func TestPostFirmwareConfigFilteredHandler_Success(t *testing.T) {
 // TestPostFirmwareConfigFilteredHandler_InvalidPageNumber tests invalid pagination
 func TestPostFirmwareConfigFilteredHandler_InvalidPageNumber(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	filterContext := map[string]string{}
@@ -631,9 +624,9 @@ func TestPostFirmwareConfigFilteredHandler_InvalidPageNumber(t *testing.T) {
 // TestGetFirmwareConfigByIdHandler_Success tests getting config by ID
 func TestGetFirmwareConfigByIdHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	fc := &estbfirmware.FirmwareConfig{
@@ -658,9 +651,9 @@ func TestGetFirmwareConfigByIdHandler_Success(t *testing.T) {
 // TestGetFirmwareConfigByIdHandler_NotFound tests non-existent ID
 func TestGetFirmwareConfigByIdHandler_NotFound(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig/nonexistent-id", nil)
@@ -676,9 +669,9 @@ func TestGetFirmwareConfigByIdHandler_NotFound(t *testing.T) {
 // TestGetFirmwareConfigByIdHandler_WithExport tests export functionality
 func TestGetFirmwareConfigByIdHandler_WithExport(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	fc := &estbfirmware.FirmwareConfig{
@@ -707,16 +700,16 @@ func TestGetFirmwareConfigByIdHandler_WithExport(t *testing.T) {
 // TestGetFirmwareConfigByIdHandler_ApplicationTypeMismatch tests app type conflict
 func TestGetFirmwareConfigByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	fc := &estbfirmware.FirmwareConfig{
 		ID:                "fc-app-conflict",
 		Description:       "App Conflict",
 		FirmwareVersion:   "1.0.0",
-		ApplicationType:   "rdkcloud",
+		ApplicationType:   "xhome",
 		SupportedModelIds: []string{"TEST-MODEL-1"}, FirmwareFilename: "test.bin",
 	}
 	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
@@ -734,9 +727,9 @@ func TestGetFirmwareConfigByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 // TestGetFirmwareConfigHandler_Success tests getting all configs
 func TestGetFirmwareConfigHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	fc1 := &estbfirmware.FirmwareConfig{
@@ -769,9 +762,9 @@ func TestGetFirmwareConfigHandler_Success(t *testing.T) {
 // TestGetFirmwareConfigHandler_WithExport tests export all functionality
 func TestGetFirmwareConfigHandler_WithExport(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	fc := &estbfirmware.FirmwareConfig{
@@ -800,9 +793,9 @@ func TestGetFirmwareConfigHandler_WithExport(t *testing.T) {
 // TestGetFirmwareConfigHandler_EmptyResult tests empty result
 func TestGetFirmwareConfigHandler_EmptyResult(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 	setupTestModels()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig", nil)
@@ -818,9 +811,9 @@ func TestGetFirmwareConfigHandler_EmptyResult(t *testing.T) {
 // TestPostFirmwareConfigHandler_Success tests successful creation
 func TestPostFirmwareConfigHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	fc := &estbfirmware.FirmwareConfig{
 		Description:       "Test Config",
@@ -845,8 +838,8 @@ func TestPostFirmwareConfigHandler_Success(t *testing.T) {
 // TestPostFirmwareConfigHandler_Error tests error case with invalid JSON
 func TestPostFirmwareConfigHandler_Error(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
-	defer cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	// Test with invalid JSON to trigger error
 	invalidJSON := `{"invalid json`
@@ -863,9 +856,9 @@ func TestPostFirmwareConfigHandler_Error(t *testing.T) {
 // TestPutFirmwareConfigHandler_Success tests successful update
 func TestPutFirmwareConfigHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	// Create initial config
 	fc := &estbfirmware.FirmwareConfig{
@@ -895,8 +888,8 @@ func TestPutFirmwareConfigHandler_Success(t *testing.T) {
 // TestPutFirmwareConfigHandler_Error tests error case with invalid JSON
 func TestPutFirmwareConfigHandler_Error(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
-	defer cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	// Test with invalid JSON to trigger xhttp.AdminError
 	invalidJSON := `{"invalid json`
@@ -913,9 +906,9 @@ func TestPutFirmwareConfigHandler_Error(t *testing.T) {
 // TestObsoleteGetFirmwareConfigPageHandler_Error tests error case
 func TestObsoleteGetFirmwareConfigPageHandler_Error(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	// Test with invalid pageSize to trigger WriteAdminErrorResponse
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/page?pageNumber=1&pageSize=invalid", nil)
@@ -931,9 +924,9 @@ func TestObsoleteGetFirmwareConfigPageHandler_Error(t *testing.T) {
 // TestGetSupportedConfigsByEnvModelRuleName_Success tests successful retrieval
 func TestGetSupportedConfigsByEnvModelRuleName_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	// Create firmware config
 	fc := &estbfirmware.FirmwareConfig{
@@ -960,8 +953,8 @@ func TestGetSupportedConfigsByEnvModelRuleName_Success(t *testing.T) {
 // TestGetSupportedConfigsByEnvModelRuleName_Error tests error case with missing rule name
 func TestGetSupportedConfigsByEnvModelRuleName_Error(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
-	defer cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	// Test with empty rule name - should trigger WriteAdminErrorResponse
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareconfig/bySupportedModels/", nil)
@@ -978,9 +971,9 @@ func TestGetSupportedConfigsByEnvModelRuleName_Error(t *testing.T) {
 // TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_Success tests successful retrieval
 func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_Success(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	// Create firmware config
 	fc := &estbfirmware.FirmwareConfig{
@@ -1007,8 +1000,8 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_Success(t *testing
 // TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_Error tests error case
 func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_Error(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
-	defer cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	// Test with empty rule name to trigger WriteAdminErrorResponse
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/byEnvModelRuleName/", nil)
@@ -1025,8 +1018,8 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_Error(t *testing.T
 // TestXHttpAdminError tests xhttp.AdminError function
 func TestXHttpAdminError(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
-	defer cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	// Test AdminError by providing invalid JSON
 	invalidJSON := `{invalid`
@@ -1043,8 +1036,8 @@ func TestXHttpAdminError(t *testing.T) {
 // TestWriteAdminErrorResponse tests xhttp.WriteAdminErrorResponse function
 func TestWriteAdminErrorResponse(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
-	defer cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	// Test WriteAdminErrorResponse by providing invalid pagination params
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/page?pageNumber=abc&pageSize=10", nil)
@@ -1064,16 +1057,16 @@ func TestWriteAdminErrorResponse(t *testing.T) {
 // TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ApplicationTypeMismatch tests app type mismatch
 func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ApplicationTypeMismatch(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	// Create firmware config with different app type
 	fc := &estbfirmware.FirmwareConfig{
 		ID:                "fc-rule-mismatch",
 		Description:       "Rule Mismatch Test",
 		FirmwareVersion:   "1.0.0",
-		ApplicationType:   "rdkcloud",
+		ApplicationType:   "xhome",
 		SupportedModelIds: []string{"TEST-MODEL-1"},
 		FirmwareFilename:  "test.bin",
 	}
@@ -1093,9 +1086,9 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ApplicationTypeMis
 // TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_NullConfig tests null config response
 func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_NullConfig(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/byEnvModelRuleName/NONEXISTENT_RULE", nil)
 	assert.NilError(t, err)
@@ -1111,9 +1104,9 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_NullConfig(t *test
 // TestGetSupportedConfigsByEnvModelRuleName_NotFound tests when no configs match
 func TestGetSupportedConfigsByEnvModelRuleName_NotFound(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/supportedConfigsByEnvModelRuleName/NONEXISTENT_RULE", nil)
 	assert.NilError(t, err)
@@ -1128,9 +1121,9 @@ func TestGetSupportedConfigsByEnvModelRuleName_NotFound(t *testing.T) {
 // TestGetSupportedConfigsByEnvModelRuleName_MultipleConfigs tests returning multiple configs
 func TestGetSupportedConfigsByEnvModelRuleName_MultipleConfigs(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	// Create multiple firmware configs
 	fc1 := &estbfirmware.FirmwareConfig{
@@ -1166,9 +1159,9 @@ func TestGetSupportedConfigsByEnvModelRuleName_MultipleConfigs(t *testing.T) {
 // TestObsoleteGetFirmwareConfigPageHandler_WithFilters tests pagination with filter context
 func TestObsoleteGetFirmwareConfigPageHandler_WithFilters(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	// Create test firmware configs
 	fc1 := &estbfirmware.FirmwareConfig{
@@ -1204,9 +1197,9 @@ func TestObsoleteGetFirmwareConfigPageHandler_WithFilters(t *testing.T) {
 // TestObsoleteGetFirmwareConfigPageHandler_EmptyResult tests empty result set
 func TestObsoleteGetFirmwareConfigPageHandler_EmptyResult(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/page?pageNumber=1&pageSize=10", nil)
 	assert.NilError(t, err)
@@ -1221,9 +1214,9 @@ func TestObsoleteGetFirmwareConfigPageHandler_EmptyResult(t *testing.T) {
 // TestObsoleteGetFirmwareConfigPageHandler_LargePage tests large page size
 func TestObsoleteGetFirmwareConfigPageHandler_LargePage(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	// Create many firmware configs
 	for i := 1; i <= 20; i++ {
@@ -1251,9 +1244,9 @@ func TestObsoleteGetFirmwareConfigPageHandler_LargePage(t *testing.T) {
 // TestPutFirmwareConfigHandler_NonExistentConfig tests updating non-existent config
 func TestPutFirmwareConfigHandler_NonExistentConfig(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	fc := &estbfirmware.FirmwareConfig{
 		ID:                "fc-nonexistent-update",
@@ -1279,9 +1272,9 @@ func TestPutFirmwareConfigHandler_NonExistentConfig(t *testing.T) {
 // TestPutFirmwareConfigHandler_ApplicationTypeMismatch tests app type mismatch on update
 func TestPutFirmwareConfigHandler_ApplicationTypeMismatch(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	// Create config with one app type
 	fc := &estbfirmware.FirmwareConfig{
@@ -1299,7 +1292,7 @@ func TestPutFirmwareConfigHandler_ApplicationTypeMismatch(t *testing.T) {
 	req, err := http.NewRequest("PUT", "/xconfAdminService/ux/api/firmwareconfig", bytes.NewBuffer(body))
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "rdkcloud"})
+	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "xhome"})
 
 	res := ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
@@ -1309,9 +1302,9 @@ func TestPutFirmwareConfigHandler_ApplicationTypeMismatch(t *testing.T) {
 // TestPostFirmwareConfigHandler_InvalidApplicationType tests invalid app type
 func TestPostFirmwareConfigHandler_InvalidApplicationType(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	fc := &estbfirmware.FirmwareConfig{
 		Description:       "Invalid App Type",
@@ -1335,9 +1328,9 @@ func TestPostFirmwareConfigHandler_InvalidApplicationType(t *testing.T) {
 // TestPostFirmwareConfigHandler_EmptyDescription tests empty description
 func TestPostFirmwareConfigHandler_EmptyDescription(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	fc := &estbfirmware.FirmwareConfig{
 		Description:       "",
@@ -1361,9 +1354,9 @@ func TestPostFirmwareConfigHandler_EmptyDescription(t *testing.T) {
 // TestPostFirmwareConfigHandler_DuplicateDescription tests duplicate description
 func TestPostFirmwareConfigHandler_DuplicateDescription(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	// Create first config
 	fc1 := &estbfirmware.FirmwareConfig{
@@ -1399,9 +1392,9 @@ func TestPostFirmwareConfigHandler_DuplicateDescription(t *testing.T) {
 // TestObsoleteGetFirmwareConfigPageHandler_SortingOrder tests sorting
 func TestObsoleteGetFirmwareConfigPageHandler_SortingOrder(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	// Create configs with different descriptions to test sorting
 	fc1 := &estbfirmware.FirmwareConfig{
@@ -1445,9 +1438,9 @@ func TestObsoleteGetFirmwareConfigPageHandler_SortingOrder(t *testing.T) {
 // TestGetSupportedConfigsByEnvModelRuleName_InvalidRuleName tests missing rule name param
 func TestGetSupportedConfigsByEnvModelRuleName_InvalidRuleName(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	// Test with path that doesn't match route variable
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/supportedConfigsByEnvModelRuleName/", nil)
@@ -1463,9 +1456,9 @@ func TestGetSupportedConfigsByEnvModelRuleName_InvalidRuleName(t *testing.T) {
 // TestPutFirmwareConfigHandler_InvalidFirmwareVersion tests invalid firmware version
 func TestPutFirmwareConfigHandler_InvalidFirmwareVersion(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	// Create initial config
 	fc := &estbfirmware.FirmwareConfig{
@@ -1494,9 +1487,9 @@ func TestPutFirmwareConfigHandler_InvalidFirmwareVersion(t *testing.T) {
 // TestPostFirmwareConfigHandler_NoPermissions tests without permissions
 func TestPostFirmwareConfigHandler_NoPermissions(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	fc := &estbfirmware.FirmwareConfig{
 		Description:       "No Permissions Test",
@@ -1520,9 +1513,9 @@ func TestPostFirmwareConfigHandler_NoPermissions(t *testing.T) {
 // TestPutFirmwareConfigHandler_NoPermissions tests update without permissions
 func TestPutFirmwareConfigHandler_NoPermissions(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	fc := &estbfirmware.FirmwareConfig{
 		ID:                "fc-no-perms-update",
@@ -1547,9 +1540,9 @@ func TestPutFirmwareConfigHandler_NoPermissions(t *testing.T) {
 // TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ValidRuleWithMatchingConfig tests valid scenario
 func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ValidRuleWithMatchingConfig(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	// Create firmware config
 	fc := &estbfirmware.FirmwareConfig{
@@ -1575,9 +1568,9 @@ func TestGetFirmwareConfigByEnvModelRuleNameByRuleNameHandler_ValidRuleWithMatch
 // TestGetSupportedConfigsByEnvModelRuleName_EmptyResult tests empty result handling
 func TestGetSupportedConfigsByEnvModelRuleName_EmptyResult(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/ux/api/firmwareconfig/supportedConfigsByEnvModelRuleName/EMPTY_RULE", nil)
 	assert.NilError(t, err)
@@ -1592,9 +1585,9 @@ func TestGetSupportedConfigsByEnvModelRuleName_EmptyResult(t *testing.T) {
 // TestObsoleteGetFirmwareConfigPageHandler_WithContextFiltering tests context filtering
 func TestObsoleteGetFirmwareConfigPageHandler_WithContextFiltering(t *testing.T) {
 	SkipIfMockDatabase(t)
-	cleanupFirmwareConfigEntities()
+	DeleteAllEntities()
 	setupTestModels()
-	defer cleanupFirmwareConfigEntities()
+	defer DeleteAllEntities()
 
 	// Create test configs
 	fc1 := &estbfirmware.FirmwareConfig{

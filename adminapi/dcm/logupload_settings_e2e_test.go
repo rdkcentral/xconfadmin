@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/rdkcentral/xconfwebconfig/db"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
@@ -40,17 +39,13 @@ func ImportLogUploadTableData(data []string, tabletype logupload.LogUploadSettin
 	return err
 }
 
-func CleanupLogUploadSettings() {
-	truncateTable(ds.TABLE_LOG_UPLOAD_SETTINGS)
-	db.GetCachedSimpleDao().RefreshAll(ds.TABLE_LOG_UPLOAD_SETTINGS)
-}
-
 func TestAllLogUploadSettingsApis(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test: requires external package data retrieval
-	CleanupLogUploadSettings()
-	defer CleanupLogUploadSettings()
 
 	//GET ALL LOG REPO SETTINGS
+	DeleteAllEntities()
+	defer DeleteAllEntities()
+
 	var tableData = []string{
 		`{"id":"1845ea08-e2c3-4c36-8349-d613d93b78cup2","updated":1592418324468,"name":"dineshcreat2e23","uploadOnReboot":true,"numberOfDays":0,"areSettingsActive":true,"schedule":{"type":"ActNow","expression":"4 7 * * *","timeZone":"UTC","expressionL1":"","expressionL2":"","expressionL3":"","startDate":"","endDate":"","timeWindowMinutes":0},"logFileIds":null,"logFilesGroupId":"","modeToGetLogFiles":"","uploadRepositoryId":"f946b0da-619c-4bc8-a876-11f1af2918ca","activeDateTimeRange":false,"fromDateTime":"","toDateTime":"","applicationType":"stb"}`,
 	}

@@ -26,10 +26,9 @@ import (
 
 // MockDatabaseClient is a minimal implementation of db.DatabaseClient interface
 // This is only used to prevent panics when distributed locks are created in test mode
-// It implements lock-related methods and basic data storage for testing
+// It implements only the lock-related methods; all other methods return nil/empty values
 type MockDatabaseClient struct {
-	locks map[string]string            // lockName -> lockedBy
-	data  map[string]map[string][]byte // tableName -> rowKey -> data
+	locks map[string]string // lockName -> lockedBy
 	mu    sync.Mutex
 }
 
@@ -37,7 +36,6 @@ type MockDatabaseClient struct {
 func NewMockDatabaseClient() *MockDatabaseClient {
 	return &MockDatabaseClient{
 		locks: make(map[string]string),
-		data:  make(map[string]map[string][]byte),
 	}
 }
 
@@ -64,94 +62,27 @@ func (m *MockDatabaseClient) TearDown() error { return nil }
 func (m *MockDatabaseClient) Close() error    { return nil }
 func (m *MockDatabaseClient) Sleep()          {}
 func (m *MockDatabaseClient) SetXconfData(tableName string, rowKey string, value []byte, ttl int) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.data[tableName] == nil {
-		m.data[tableName] = make(map[string][]byte)
-	}
-	m.data[tableName][rowKey] = value
 	return nil
 }
 func (m *MockDatabaseClient) GetXconfData(tableName string, rowKey string) ([]byte, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.data[tableName] == nil {
-		return nil, nil
-	}
-	return m.data[tableName][rowKey], nil
+	return nil, nil
 }
 func (m *MockDatabaseClient) GetAllXconfDataByKeys(tableName string, rowKeys []string) [][]byte {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.data[tableName] == nil {
-		return nil
-	}
-	var result [][]byte
-	for _, key := range rowKeys {
-		if data, ok := m.data[tableName][key]; ok {
-			result = append(result, data)
-		}
-	}
-	return result
+	return nil
 }
 func (m *MockDatabaseClient) GetAllXconfKeys(tableName string) []string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.data[tableName] == nil {
-		return nil
-	}
-	var keys []string
-	for key := range m.data[tableName] {
-		keys = append(keys, key)
-	}
-	return keys
+	return nil
 }
 func (m *MockDatabaseClient) GetAllXconfDataAsList(tableName string, maxResults int) [][]byte {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.data[tableName] == nil {
-		return nil
-	}
-	var result [][]byte
-	count := 0
-	for _, data := range m.data[tableName] {
-		result = append(result, data)
-		count++
-		if maxResults > 0 && count >= maxResults {
-			break
-		}
-	}
-	return result
+	return nil
 }
 func (m *MockDatabaseClient) GetAllXconfDataAsMap(tableName string, maxResults int) map[string][]byte {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.data[tableName] == nil {
-		return nil
-	}
-	result := make(map[string][]byte)
-	count := 0
-	for key, data := range m.data[tableName] {
-		result[key] = data
-		count++
-		if maxResults > 0 && count >= maxResults {
-			break
-		}
-	}
-	return result
+	return nil
 }
 func (m *MockDatabaseClient) DeleteXconfData(tableName string, rowKey string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.data[tableName] != nil {
-		delete(m.data[tableName], rowKey)
-	}
 	return nil
 }
 func (m *MockDatabaseClient) DeleteAllXconfData(tableName string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	delete(m.data, tableName)
 	return nil
 }
 func (m *MockDatabaseClient) GetAllXconfData(tableName string, rowKey string) [][]byte {
@@ -259,12 +190,4 @@ func (m *MockDatabaseClient) QueryXconfDataRows(tableName string, rowKeys ...str
 // GetSecurityTokenFields retrieves security token device info (stub for tests)
 func (m *MockDatabaseClient) GetSecurityTokenFields(estbMac string) (*db.SecurityTokenDeviceInfo, error) {
 	return nil, nil
-}
-
-// Clear removes all stored data (useful for test cleanup)
-func (m *MockDatabaseClient) Clear() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.data = make(map[string]map[string][]byte)
-	m.locks = make(map[string]string)
 }

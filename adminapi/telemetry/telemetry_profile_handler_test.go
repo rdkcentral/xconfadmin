@@ -138,11 +138,8 @@ func TestMain(m *testing.M) {
 
 	// PERFORMANCE OPTIMIZATION: Initialize in-memory mock for <15s test execution
 	// Replaces slow Cassandra operations with instant in-memory operations
-	useMock := os.Getenv("USE_MOCK_DB")
-	if useMock == "true" || useMock == "1" {
-		InitMockDatabase()
-		log.Info("✓ Mock DAO initialized - ultra-fast unit tests enabled (<15s target)")
-	}
+	InitMockDatabase()
+	log.Info("✓ Mock DAO initialized - ultra-fast unit tests enabled (<15s target)")
 
 	// setup router
 	router = server.XW_XconfServer.GetRouter(false)
@@ -400,8 +397,8 @@ func DeleteTelemetryEntities() {
 		return
 	}
 
-	// Full cleanup for mixed test suites.
-	cleanupTelemetryTables([]string{
+	// SLOW PATH: Only used for real database integration tests
+	telemetryTables := []string{
 		ds.TABLE_TELEMETRY,
 		ds.TABLE_TELEMETRY_RULES,
 		ds.TABLE_TELEMETRY_TWO_PROFILES,
@@ -411,43 +408,21 @@ func DeleteTelemetryEntities() {
 		db.TABLE_XCONF_APPROVED_CHANGE,
 		db.TABLE_XCONF_TELEMETRY_TWO_CHANGE,
 		db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE,
-	})
-}
-
-// DeleteTelemetryV1Entities scopes cleanup to telemetry v1 tables.
-func DeleteTelemetryV1Entities() {
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
-		return
 	}
 
-	cleanupTelemetryTables([]string{
-		ds.TABLE_TELEMETRY,
-		ds.TABLE_TELEMETRY_RULES,
-		ds.TABLE_PERMANENT_TELEMETRY,
-		db.TABLE_XCONF_CHANGE,
-		db.TABLE_XCONF_APPROVED_CHANGE,
-	})
-}
-
-// DeleteTelemetryV2Entities scopes cleanup to telemetry v2 tables.
-func DeleteTelemetryV2Entities() {
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
-		return
+	for _, tableName := range telemetryTables {
+		truncateTable(tableName)
+		db.GetCachedSimpleDao().RefreshAll(tableName)
 	}
-
-	cleanupTelemetryTables([]string{
-		ds.TABLE_TELEMETRY_TWO_PROFILES,
-		ds.TABLE_TELEMETRY_TWO_RULES,
-		db.TABLE_XCONF_TELEMETRY_TWO_CHANGE,
-		db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE,
-	})
 }
 
-func cleanupTelemetryTables(telemetryTables []string) {
-	// Use shared test cleanup utility for consistency across all packages
-	_ = common.TruncateAndRefresh(telemetryTables)
+func truncateTable(tableName string) error {
+	dbClient := db.GetDatabaseClient()
+	cassandraClient, ok := dbClient.(*db.CassandraClient)
+	if ok {
+		return cassandraClient.DeleteAllXconfData(tableName)
+	}
+	return nil
 }
 
 func TestAddTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {

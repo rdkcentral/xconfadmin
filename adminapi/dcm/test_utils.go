@@ -22,9 +22,7 @@ import (
 	"testing"
 
 	"github.com/rdkcentral/xconfadmin/adminapi/dcm/mocks"
-	"github.com/rdkcentral/xconfadmin/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
-	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
 // testMutex ensures tests run sequentially to prevent mock data races
@@ -39,23 +37,12 @@ var mockLockInstance *mocks.MockDistributedLock
 // useMockDatabase determines if we're using mock or real database
 var useMockDatabase = false
 
-// originalGetCachedSimpleDaoFunc stores the original xwlogupload function to restore later
-var originalGetCachedSimpleDaoFunc func() db.CachedSimpleDao
-
 // InitMockDatabase initializes the mock database for testing
 // Call this in TestMain to enable mock mode
 func InitMockDatabase() *mocks.MockCachedSimpleDao {
 	mockDaoInstance = mocks.NewMockCachedSimpleDao()
 	mockLockInstance = mocks.NewMockDistributedLock(db.TABLE_DCM_RULE, 10)
 	useMockDatabase = true
-
-	// CRITICAL: Override the global GetCachedSimpleDaoFunc so ALL code uses our mock
-	// This includes handlers, services, and validation functions
-	originalGetCachedSimpleDaoFunc = xwlogupload.GetCachedSimpleDaoFunc
-	xwlogupload.GetCachedSimpleDaoFunc = func() db.CachedSimpleDao {
-		return mockDaoInstance
-	}
-
 	return mockDaoInstance
 }
 
@@ -73,10 +60,6 @@ func ClearMockDatabase() {
 
 // DisableMockDatabase disables mock mode (for real integration tests)
 func DisableMockDatabase() {
-	// Restore the original GetCachedSimpleDaoFunc
-	if originalGetCachedSimpleDaoFunc != nil {
-		xwlogupload.GetCachedSimpleDaoFunc = originalGetCachedSimpleDaoFunc
-	}
 	useMockDatabase = false
 	mockDaoInstance = nil
 	mockLockInstance = nil
@@ -116,22 +99,4 @@ func getMockOrRealDao() interface{} {
 		return mockDaoInstance
 	}
 	return db.GetCachedSimpleDao()
-}
-
-func getOneFromDao(tableName string, rowKey string) (interface{}, error) {
-	if useMockDatabase && mockDaoInstance != nil {
-		return mockDaoInstance.GetOne(tableName, rowKey)
-	}
-	return db.GetCachedSimpleDao().GetOne(tableName, rowKey)
-}
-
-func setOneInDao(tableName string, rowKey string, entity interface{}) error {
-	if useMockDatabase && mockDaoInstance != nil {
-		return mockDaoInstance.SetOne(tableName, rowKey, entity)
-	}
-	return db.GetCachedSimpleDao().SetOne(tableName, rowKey, entity)
-}
-
-func CleanupDeviceSettings() {
-	_ = common.TruncateAndRefresh([]string{db.TABLE_DEVICE_SETTINGS})
 }
