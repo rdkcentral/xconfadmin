@@ -111,10 +111,25 @@ func CleanupFeatureTables() {
 }
 
 func truncateTable(tableName string) error {
-	dbClient := db.GetDatabaseClient()
-	cassandraClient, ok := dbClient.(*db.CassandraClient)
-	if ok {
-		return cassandraClient.DeleteAllXconfData(tableName)
+	dao := db.GetCachedSimpleDao()
+	keys, err := dao.GetKeys(tableName)
+	if err != nil {
+		// table may be empty or not yet exist; not an error
+		return nil
+	}
+	for _, key := range keys {
+		var keyStr string
+		switch k := key.(type) {
+		case string:
+			keyStr = k
+		case []byte:
+			keyStr = string(k)
+		default:
+			keyStr = fmt.Sprint(k)
+		}
+		if delErr := dao.DeleteOne(tableName, keyStr); delErr != nil {
+			fmt.Printf("failed to delete %s from %s: %v\n", keyStr, tableName, delErr)
+		}
 	}
 	return nil
 }
