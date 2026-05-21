@@ -34,7 +34,7 @@ localtest:
 	export RUN_IN_LOCAL=true ; go test ./... -cover -count=1 -failfast
 
 cover:
-	go test ./... -count=1 -p 1 -coverprofile=coverage.out -timeout=45m
+	go test ./... -count=1 -coverprofile=coverage.out -timeout=45m
 
 html:
 	go tool cover -html=coverage.out

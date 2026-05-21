@@ -43,7 +43,7 @@ const changedTelemetryJsonConfig = "{\n    \"Description\":\"Changed Name Json D
 
 func TestTelemetryTwoProfileCreateHandler(t *testing.T) {
 
-	DeleteTelemetryV2Entities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
 
@@ -66,7 +66,7 @@ func TestTelemetryTwoProfileCreateHandler(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileCreateChangeHandlerAndApproveIt(t *testing.T) {
-	DeleteTelemetryV2Entities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
 
@@ -105,7 +105,7 @@ func TestTelemetryTwoProfileCreateChangeHandlerAndApproveIt(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileUpdateHandler(t *testing.T) {
-	DeleteTelemetryV2Entities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
 	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
@@ -133,8 +133,7 @@ func TestTelemetryTwoProfileUpdateHandler(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileUpdateChangeHandler(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test - requires real database for profile updates
-	DeleteTelemetryV2Entities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
 	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
@@ -178,7 +177,7 @@ func TestTelemetryTwoProfileUpdateChangeHandler(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileDeleteHandler(t *testing.T) {
-	DeleteTelemetryV2Entities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
 	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
@@ -199,7 +198,7 @@ func TestTelemetryTwoProfileDeleteHandler(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileDeleteChangeHandler(t *testing.T) {
-	DeleteTelemetryV2Entities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
 	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
@@ -269,7 +268,7 @@ func createTelemetryTwoProfile() *logupload.TelemetryTwoProfile {
 // Additional tests to improve coverage for telemetry_two_profile_handler.go without duplicating logic.
 
 func TestTelemetryTwoProfileListExport(t *testing.T) {
-	DeleteTelemetryV2Entities()
+	DeleteTelemetryEntities()
 
 	p := createTelemetryTwoProfile()
 	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
@@ -286,7 +285,7 @@ func TestTelemetryTwoProfileListExport(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileGetByIdExport(t *testing.T) {
-	DeleteTelemetryV2Entities()
+	DeleteTelemetryEntities()
 	p := createTelemetryTwoProfile()
 	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
@@ -299,7 +298,7 @@ func TestTelemetryTwoProfileGetByIdExport(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileFilteredSuccess(t *testing.T) {
-	DeleteTelemetryV2Entities()
+	DeleteTelemetryEntities()
 	p1 := createTelemetryTwoProfile()
 	p1.Name = "Alpha"
 	p2 := createTelemetryTwoProfile()
@@ -317,7 +316,7 @@ func TestTelemetryTwoProfileFilteredSuccess(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileByIdListSuccess(t *testing.T) {
-	DeleteTelemetryV2Entities()
+	DeleteTelemetryEntities()
 	p1 := createTelemetryTwoProfile()
 	p2 := createTelemetryTwoProfile()
 	SetOneInDao(ds.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
@@ -336,7 +335,7 @@ func TestTelemetryTwoProfileByIdListSuccess(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileEntitiesBatchCreate(t *testing.T) {
-	DeleteTelemetryV2Entities()
+	DeleteTelemetryEntities()
 	p1 := createTelemetryTwoProfile()
 	p2 := createTelemetryTwoProfile()
 	// Make second invalid by stripping required JSON (will fail validation)
@@ -356,7 +355,7 @@ func TestTelemetryTwoProfileEntitiesBatchCreate(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileEntitiesBatchUpdate(t *testing.T) {
-	DeleteTelemetryV2Entities()
+	DeleteTelemetryEntities()
 	p1 := createTelemetryTwoProfile()
 	p2 := createTelemetryTwoProfile()
 	// Set applicationType for both and store

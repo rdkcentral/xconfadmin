@@ -94,7 +94,7 @@ func TestIsValidFirmwareConfigByModelIdList(t *testing.T) {
 	modelIds2 := []string{"MODEL3", "MODEL4"}
 	fc1 := createTestFirmwareConfigForService("fc1", "version1.0", modelIds1, "stb")
 	fc2 := createTestFirmwareConfigForService("fc2", "version2.0", modelIds2, "stb")
-	createTestFirmwareConfigForService("fc3", "version3.0", []string{"MODEL5"}, "rdkcloud")
+	createTestFirmwareConfigForService("fc3", "version3.0", []string{"MODEL5"}, "xhome")
 
 	// Test 1: Valid config with matching model IDs
 	testModelIds := []string{"MODEL1"}
@@ -141,7 +141,7 @@ func TestIsValidFirmwareConfigByModelIds(t *testing.T) {
 	assert.Assert(t, result2, "Should return true because fc2 config ID exists in DB")
 
 	// Test 3: Wrong application type - but config ID still exists
-	result3 := IsValidFirmwareConfigByModelIds("TESTMODEL1", "rdkcloud", fc1)
+	result3 := IsValidFirmwareConfigByModelIds("TESTMODEL1", "xhome", fc1)
 	assert.Assert(t, result3, "Should return true when config ID exists even with wrong app type")
 
 	// Test 4: Config that exists

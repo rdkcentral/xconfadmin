@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/rdkcentral/xconfwebconfig/db"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
@@ -40,15 +39,10 @@ func ImportVodSettingsTableData(data []string, tabletype logupload.VodSettings) 
 	return err
 }
 
-func CleanupVodSettings() {
-	truncateTable(ds.TABLE_VOD_SETTINGS)
-	db.GetCachedSimpleDao().RefreshAll(ds.TABLE_VOD_SETTINGS)
-}
-
 func TestAllVodSettingsApis(t *testing.T) {
 	SkipIfMockDatabase(t) // Integration test: requires external package data retrieval
-	CleanupVodSettings()
-	defer CleanupVodSettings()
+	DeleteAllEntities()
+	defer DeleteAllEntities()
 
 	//GET ALL VOD SETTINGS
 	var tableData = []string{

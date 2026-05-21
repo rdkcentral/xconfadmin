@@ -93,7 +93,7 @@ func cleanupServiceTest() {
 				DeleteOneFromDao(tbl, v.ID)
 			}
 		}
-		_ = RefreshAllInDao(tbl)
+		ds.GetCachedSimpleDao().RefreshAll(tbl)
 	}
 }
 

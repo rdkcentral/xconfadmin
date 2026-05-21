@@ -19,10 +19,10 @@ package queries
 
 import (
 	"testing"
+	"time"
 
 	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
 
 	"github.com/google/uuid"
@@ -30,7 +30,6 @@ import (
 )
 
 func TestFeatureGetPostPutDeleteImport(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test - feature service uses db.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 
 	// test GET ALL
@@ -115,12 +114,12 @@ func TestFeatureGetPostPutDeleteImport(t *testing.T) {
 
 	// test DELETE
 	DeleteFeatureById(featureEntity1.ID)
-	_ = RefreshAllInDao(ds.TABLE_XCONF_FEATURE)
+	time.Sleep(1 * time.Second)
 	fe = GetFeatureEntityById(featureEntity1.ID)
 	assert.Equal(t, fe == nil, true)
 
 	DeleteFeatureById(featureEntity2.ID)
-	_ = RefreshAllInDao(ds.TABLE_XCONF_FEATURE)
+	time.Sleep(1 * time.Second)
 	fe = GetFeatureEntityById(featureEntity2.ID)
 	assert.Equal(t, fe == nil, true)
 }
@@ -141,7 +140,6 @@ func TestDoesFeatureExist(t *testing.T) {
 }
 
 func TestDoesFeatureInstanceExist(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test - feature service uses db.GetCachedSimpleDao() directly
 	DeleteAllEntities()
 	applicationType := "stb"
 	id1 := uuid.New().String()

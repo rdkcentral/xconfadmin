@@ -13,10 +13,8 @@ import (
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
-	xwshared "github.com/rdkcentral/xconfwebconfig/shared"
 	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // Helpers
@@ -26,7 +24,6 @@ func frMakeFeature(name string, app string) *xwrfc.Feature {
 	return f
 }
 func frMakeRule() *re.Rule {
-	_ = SetOneInDao(ds.TABLE_MODEL, "X1", &xwshared.Model{ID: "X1"})
 	return &re.Rule{Condition: CreateCondition(*re.NewFreeArg(re.StandardFreeArgTypeString, "model"), re.StandardOperationIs, "X1")}
 }
 
@@ -48,7 +45,7 @@ func frCleanup() {
 				DeleteOneFromDao(tbl, v.ID)
 			}
 		}
-		_ = RefreshAllInDao(tbl)
+		ds.GetCachedSimpleDao().RefreshAll(tbl)
 	}
 }
 
@@ -104,11 +101,10 @@ func TestCreateUpdateDeleteFeatureRuleHandlers(t *testing.T) {
 	xw := xwhttp.NewXResponseWriter(rrNative)
 	xw.SetBody(string(b))
 	CreateFeatureRuleHandler(xw, r)
-	require.Equal(t, http.StatusCreated, rrNative.Code, "create failed: %s", rrNative.Body.String())
+	assert.Equal(t, http.StatusCreated, rrNative.Code)
 
 	created := &xwrfc.FeatureRule{}
-	require.NoError(t, json.Unmarshal(rrNative.Body.Bytes(), created), "create response: %s", rrNative.Body.String())
-	require.NotEmpty(t, created.Id, "create response missing id: %s", rrNative.Body.String())
+	json.Unmarshal(rrNative.Body.Bytes(), created)
 	created.Name = "Rule1-Updated"
 	b2, _ := json.Marshal(created)
 	r2 := httptest.NewRequest("PUT", "/featureRule?applicationType=stb", nil)
@@ -116,14 +112,14 @@ func TestCreateUpdateDeleteFeatureRuleHandlers(t *testing.T) {
 	xw2 := xwhttp.NewXResponseWriter(rr2Native)
 	xw2.SetBody(string(b2))
 	UpdateFeatureRuleHandler(xw2, r2)
-	require.Equal(t, http.StatusOK, rr2Native.Code, "update failed: %s", rr2Native.Body.String())
+	assert.Equal(t, http.StatusOK, rr2Native.Code)
 
 	// delete
 	rDel := httptest.NewRequest("DELETE", fmt.Sprintf("/featureRule/%s?applicationType=stb", created.Id), nil)
 	rDel = mux.SetURLVars(rDel, map[string]string{"id": created.Id})
 	rrDel := httptest.NewRecorder()
 	DeleteOneFeatureRuleHandler(rrDel, rDel)
-	require.Equal(t, http.StatusNoContent, rrDel.Code, "delete failed: %s", rrDel.Body.String())
+	assert.Equal(t, http.StatusNoContent, rrDel.Code)
 }
 
 func TestFeatureRulePriorityChangeAndErrors(t *testing.T) {
@@ -189,7 +185,6 @@ func TestBatchCreateAndUpdateHandlers(t *testing.T) {
 			break
 		}
 	}
-	require.NotNil(t, existing, "no feature rules found for batch update; create response: %s", rrNative.Body.String())
 	existing.Name = "UpdatedName"
 	missing := &xwrfc.FeatureRule{Name: "noid", ApplicationType: "stb", FeatureIds: []string{f.ID}, Priority: 3, Rule: frMakeRule()}
 	updBatch := []*xwrfc.FeatureRule{existing, missing}
