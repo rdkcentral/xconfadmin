@@ -79,6 +79,15 @@ func BasicAuthHandler(w http.ResponseWriter, r *http.Request) {
 	var authRequest AuthRequest
 	err := json.NewDecoder(r.Body).Decode(&authRequest)
 	if err != nil {
+		if xw, ok := w.(*xwhttp.XResponseWriter); ok {
+			if body := xw.Body(); body != "" {
+				if err2 := json.Unmarshal([]byte(body), &authRequest); err2 == nil {
+					err = nil
+				}
+			}
+		}
+	}
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

@@ -91,7 +91,16 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 
 	basicAuthpath := r.PathPrefix("/xconfAdminService/auth/basic").Subrouter()
 	basicAuthpath.HandleFunc("", auth.BasicAuthHandler).Methods("POST").Name("Auth-Basic")
-	paths = append(paths, authInfoPath)
+	authPaths = append(authPaths, basicAuthpath)
+
+	// Backward-compatible ACL aliases expected by some admin UI builds.
+	aclAuthPath := r.PathPrefix("/xconfAdminService/acl/auth").Subrouter()
+	aclAuthPath.HandleFunc("", auth.BasicAuthHandler).Methods("POST").Name("Auth-Basic")
+	authPaths = append(authPaths, aclAuthPath)
+
+	aclLogoutPath := r.Path("/xconfAdminService/acl/logout").Subrouter()
+	aclLogoutPath.HandleFunc("", auth.AclLogoutHandler).Methods("GET").Name("Auth-Basic")
+	authPaths = append(authPaths, aclLogoutPath)
 
 	loginPath := r.Path("/xconfAdminService" + s.IdpLoginPath).Subrouter()
 	loginPath.HandleFunc("", auth.LoginUrlHandler).Methods("GET").Name("Auth-Xerxes")
@@ -797,7 +806,7 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	for _, p := range authPaths {
 		p.Use(c.Handler)
 		p.Use(s.XW_XconfServer.SpanMiddleware)
-		p.Use(s.XW_XconfServer.NoAuthMiddleware)
+		p.Use(s.NoAuthMiddleware)
 	}
 
 	for _, p := range paths {
