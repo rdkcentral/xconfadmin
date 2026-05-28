@@ -130,6 +130,7 @@ func DeleteLogRepoSettingsbyId(id string, app string) *xwhttp.ResponseEntity {
 
 	err = DeleteOneLogRepoSettings(id)
 	if err != nil {
+		log.WithFields(log.Fields{"entity_id": id, "error": err}).Error("failed to delete log repo settings")
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
@@ -200,6 +201,7 @@ func CreateLogRepoSettings(lr *logupload.UploadRepository, app string) *xwhttp.R
 	}
 	lr.Updated = util.GetTimestamp()
 	if err = db.GetCachedSimpleDao().SetOne(db.TABLE_UPLOAD_REPOSITORY, lr.ID, lr); err != nil {
+		log.WithFields(log.Fields{"entity_id": lr.ID, "error": err}).Error("failed to create log repo settings")
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, lr)
@@ -227,6 +229,7 @@ func UpdateLogRepoSettings(lr *logupload.UploadRepository, app string) *xwhttp.R
 
 	lr.Updated = util.GetTimestamp()
 	if err = db.GetCachedSimpleDao().SetOne(db.TABLE_UPLOAD_REPOSITORY, lr.ID, lr); err != nil {
+		log.WithFields(log.Fields{"entity_id": lr.ID, "error": err}).Error("failed to update log repo settings")
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 

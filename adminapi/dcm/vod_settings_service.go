@@ -97,6 +97,7 @@ func DeleteVodSettingsbyId(id string, app string) *xwhttp.ResponseEntity {
 
 	err = DeleteOneVodSettings(id)
 	if err != nil {
+		log.WithFields(log.Fields{"entity_id": id, "error": err}).Error("failed to delete vod settings")
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
@@ -180,6 +181,7 @@ func CreateVodSettings(vs *logupload.VodSettings, app string) *xwhttp.ResponseEn
 
 	vs.Updated = xutil.GetTimestamp()
 	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vs.ID, vs); err != nil {
+		log.WithFields(log.Fields{"entity_id": vs.ID, "error": err}).Error("failed to create vod settings")
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
@@ -203,6 +205,7 @@ func UpdateVodSettings(vs *logupload.VodSettings, app string) *xwhttp.ResponseEn
 
 	vs.Updated = xwutil.GetTimestamp()
 	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vs.ID, vs); err != nil {
+		log.WithFields(log.Fields{"entity_id": vs.ID, "error": err}).Error("failed to update vod settings")
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
