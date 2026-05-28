@@ -170,6 +170,7 @@ func GetTelemetryTwoRulesFilteredWithPage(w http.ResponseWriter, r *http.Request
 	}
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
+		log.Error("Failed to cast response writer to XResponseWriter in GetTelemetryTwoRulesFilteredWithPage")
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
@@ -202,6 +203,7 @@ func CreateTelemetryTwoRuleHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
+		log.Error("Unable to cast responsewriter to XResponseWriter in CreateTelemetryTwoRuleHandler")
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
@@ -282,6 +284,7 @@ func UpdateTelemetryTwoRuleHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
+		log.Error("Unable to cast responsewriter to XResponseWriter in UpdateTelemetryTwoRuleHandler")
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}

@@ -77,6 +77,7 @@ func CreateTelemetryEntryFor(w http.ResponseWriter, r *http.Request) {
 	}
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
+		log.Error("Unable to cast responsewriter to XResponseWriter in CreateTelemetryEntryFor")
 		xwhttp.Error(w, http.StatusInternalServerError, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}

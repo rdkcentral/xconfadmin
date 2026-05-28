@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	log "github.com/sirupsen/logrus"
 
 	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
@@ -66,6 +67,7 @@ func DeleteTelemetryRulebyId(id string, app string) *xwhttp.ResponseEntity {
 
 	err = DeleteOneTelemetryRule(id)
 	if err != nil {
+		log.WithFields(log.Fields{"entity_id": id, "error": err}).Error("Failed to delete telemetry rule")
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
@@ -159,6 +161,7 @@ func CreateTelemetryRule(tmrule *xwlogupload.TelemetryRule, app string) *xwhttp.
 
 	tmrule.Updated = xwutil.GetTimestamp()
 	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_TELEMETRY_RULES, tmrule.ID, tmrule); err != nil {
+		log.WithFields(log.Fields{"entity_id": tmrule.ID, "error": err}).Error("Failed to save telemetry rule")
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
@@ -187,6 +190,7 @@ func UpdateTelemetryRule(tmrule *xwlogupload.TelemetryRule, app string) *xwhttp.
 
 	tmrule.Updated = xwutil.GetTimestamp()
 	if err = db.GetCachedSimpleDao().SetOne(db.TABLE_TELEMETRY_RULES, tmrule.ID, tmrule); err != nil {
+		log.WithFields(log.Fields{"entity_id": tmrule.ID, "error": err}).Error("Failed to update telemetry rule")
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 

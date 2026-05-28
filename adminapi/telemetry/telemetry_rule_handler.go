@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 
 	xutil "github.com/rdkcentral/xconfadmin/util"
 
@@ -183,6 +184,7 @@ func UpdateTelemetryRuleHandler(w http.ResponseWriter, r *http.Request) {
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
+		log.Error("failed to cast responsewriter to XResponseWriter in UpdateTelemetryRuleHandler")
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "unable to cast XResponseWriter object")
 		return
 	}
