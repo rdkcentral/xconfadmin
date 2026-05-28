@@ -26,12 +26,14 @@ type RecookingStatus struct {
 func GetRecookingStatusHandler(w http.ResponseWriter, r *http.Request) {
 	cc, ok := db.GetDatabaseClient().(*db.CassandraClient)
 	if !ok {
+		log.Error("internal server error: Database client is not Cassandra client")
 		http.Error(w, "Database client is not Cassandra client", http.StatusInternalServerError)
 		return
 	}
 
 	status, updatedTime, err := cc.CheckFinalRecookingStatus(DEFAULT_XCRP_SERVICE_NAME)
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("failed to check recooking status")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -60,17 +62,20 @@ func GetRecookingStatusHandler(w http.ResponseWriter, r *http.Request) {
 func GetRecookingStatusDetailsHandler(w http.ResponseWriter, r *http.Request) {
 	cc, ok := db.GetDatabaseClient().(*db.CassandraClient)
 	if !ok {
+		log.Error("Database client is not Cassandra client")
 		http.Error(w, "Database client is not Cassandra client", http.StatusInternalServerError)
 		return
 	}
 	statuses, err := cc.GetRecookingStatusDetails()
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("failed to get recooking status details")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	response, err := json.Marshal(statuses)
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("failed to marshal recooking status details")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
