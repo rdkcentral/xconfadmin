@@ -33,7 +33,7 @@ const (
 	MaxMembersInTagResponse = 100000 // Max members returned in GetTagById
 	MemberFetchChunkSize    = 1000   // Chunk size for memory-safe pagination
 
-	QueryAddMemberBucketed       = `INSERT INTO tag_members_bucketed (tenant_id, tag_id, bucket_id, member, created) VALUES (?, ?, ?, ?, ?)`
+	QueryAddMemberBucketed       = `INSERT INTO tag_members_bucketed (tenant_id, tag_id, bucket_id, member, updated) VALUES (?, ?, ?, ?, ?)`
 	QueryRemoveMemberBucketed    = `DELETE FROM tag_members_bucketed WHERE tenant_id = ? AND tag_id = ? AND bucket_id = ? AND member = ?`
 	QueryGetMembersByBucket      = `SELECT member FROM tag_members_bucketed WHERE tenant_id = ? AND tag_id = ? AND bucket_id = ? AND member > ? LIMIT ?`
 	QueryGetMembersCountByBucket = `SELECT count(*) FROM tag_members_bucketed WHERE tenant_id = ? AND tag_id = ? AND bucket_id = ?`
@@ -94,13 +94,13 @@ func AddMembers(tenantId string, tagId string, members []string) error {
 		bucketGroups[bucketId] = append(bucketGroups[bucketId], member)
 	}
 
-	created := strconv.FormatInt(util.GetTimestamp(), 10)
+	updated := strconv.FormatInt(util.GetTimestamp(), 10)
 	shardId := strconv.Itoa(ds.GetShardId(tagId))
 	var allErrors []string
 	successCount := 0
 
 	for bucketId, bucketMembers := range bucketGroups {
-		if err := addMembersToBucket(tenantId, shardId, tagId, bucketId, bucketMembers, created); err != nil {
+		if err := addMembersToBucket(tenantId, shardId, tagId, bucketId, bucketMembers, updated); err != nil {
 			allErrors = append(allErrors, fmt.Sprintf("bucket %d: %v", bucketId, err))
 			log.Errorf("Failed to add %d members to bucket %d for tag %s: %v",
 				len(bucketMembers), bucketId, tagId, err)
@@ -119,12 +119,12 @@ func AddMembers(tenantId string, tagId string, members []string) error {
 	return nil
 }
 
-func addMembersToBucket(tenantId string, shardId string, tagId string, bucketId int, members []string, created string) error {
+func addMembersToBucket(tenantId string, shardId string, tagId string, bucketId int, members []string, updated string) error {
 	batch := ds.GetSimpleDao().NewBatch(UnloggedBatch)
 
 	// Add member records
 	for _, member := range members {
-		batch.Query(QueryAddMemberBucketed, tenantId, tagId, strconv.Itoa(bucketId), member, created)
+		batch.Query(QueryAddMemberBucketed, tenantId, tagId, strconv.Itoa(bucketId), member, updated)
 	}
 
 	// Add metadata record for this bucket (will be ignored if already exists)
