@@ -57,6 +57,7 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
 	query := r.URL.Query()
 	isPaginatedRequest := query.Has("limit") || query.Has("cursor")
 
@@ -67,7 +68,7 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		response, err := GetMembersPaginated(id, params.Limit, params.Cursor)
+		response, err := GetMembersPaginated(tenantId, id, params.Limit, params.Cursor)
 		if err != nil {
 			xhttp.WriteXconfErrorResponse(w, err)
 			return
@@ -82,7 +83,7 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponse(w, http.StatusOK, respBytes)
 	} else {
 		// Non-paginated mode: return plain array (V1 compatible)
-		members, wasTruncated, err := GetMembersNonPaginated(id)
+		members, wasTruncated, err := GetMembersNonPaginated(tenantId, id)
 		if err != nil {
 			xhttp.WriteXconfErrorResponse(w, err)
 			return
@@ -112,6 +113,7 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tagValue := getTagValueFromRequest(r)
+	tenantId := xwhttp.GetTenantId(r, "")
 
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
@@ -136,7 +138,7 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stored, err := AddMembersWithXdas(tagId, members, tagValue)
+	stored, err := AddMembersWithXdas(tenantId, tagId, members, tagValue)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -173,6 +175,8 @@ func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xwhttp.GetTenantId(r, "")
+
 	var members []string
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -196,7 +200,7 @@ func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	removed, err := RemoveMembersWithXdas(id, members)
+	removed, err := RemoveMembersWithXdas(tenantId, id, members)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -229,7 +233,8 @@ func RemoveMemberFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := RemoveMemberWithXdas(id, member)
+	tenantId := xwhttp.GetTenantId(r, "")
+	err := RemoveMemberWithXdas(tenantId, id, member)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -240,7 +245,8 @@ func RemoveMemberFromTagHandler(w http.ResponseWriter, r *http.Request) {
 
 // GetAllTagsHandler returns all tag IDs from V2 storage
 func GetAllTagsHandler(w http.ResponseWriter, r *http.Request) {
-	tagIds, err := GetAllTagIds()
+	tenantId := xwhttp.GetTenantId(r, "")
+	tagIds, err := GetAllTagIds(tenantId)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -263,7 +269,8 @@ func GetTagByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	members, wasTruncated, err := GetTagById(id)
+	tenantId := xwhttp.GetTenantId(r, "")
+	members, wasTruncated, err := GetTagById(tenantId, id)
 	if err != nil {
 		// Check if tag not found
 		if err.Error() == "tag not found" {
@@ -312,7 +319,8 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	populatedBuckets, err := getPopulatedBuckets(id)
+	tenantId := xwhttp.GetTenantId(r, "")
+	populatedBuckets, err := getPopulatedBuckets(tenantId, id)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -325,7 +333,7 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	auditId := xw.AuditId()
 	go func(tagId string) {
-		if err := DeleteTag(tagId); err != nil {
+		if err := DeleteTag(tenantId, tagId); err != nil {
 			log.WithFields(log.Fields{
 				"audit_id": auditId,
 				"endpoint": "DeleteTag",
