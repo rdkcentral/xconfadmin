@@ -8,6 +8,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 const (
@@ -28,7 +30,8 @@ func GetTagsByMemberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tags, err := GetTagsByMember(member)
+	tenantId := xwhttp.GetTenantId(r, "")
+	tags, err := GetTagsByMember(tenantId, member)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -49,7 +52,8 @@ func GetTagsWithValuesByMemberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tags, err := GetTagsWithValuesByMember(member)
+	tenantId := xwhttp.GetTenantId(r, "")
+	tags, err := GetTagsWithValuesByMember(tenantId, member)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return

@@ -28,7 +28,7 @@ func GetGroupServiceConnector() *http.GroupServiceConnector {
 	return http.WebConfServer.GroupServiceConnector
 }
 
-func GetTagsByMember(member string) ([]string, error) {
+func GetTagsByMember(tenantId string, member string) ([]string, error) {
 	member = ToNormalizedEcm(member)
 	tagsAsHashes, err := GetGroupServiceConnector().GetGroupsMemberBelongsTo(member)
 	if err != nil {
@@ -36,10 +36,12 @@ func GetTagsByMember(member string) ([]string, error) {
 		return []string{}, err
 	}
 	tagsMap := util.StringMap(tagsAsHashes.GetFields())
-	return filterTagEntriesByPrefix(tagsMap.Keys()), err
+	xdasTags := filterTagEntriesByPrefix(tagsMap.Keys())
+
+	return filterByTenant(tenantId, xdasTags)
 }
 
-func GetTagsWithValuesByMember(member string) (map[string]string, error) {
+func GetTagsWithValuesByMember(tenantId string, member string) (map[string]string, error) {
 	member = ToNormalizedEcm(member)
 	tagsAsHashes, err := GetGroupServiceConnector().GetGroupsMemberBelongsTo(member)
 	if err != nil {
@@ -47,7 +49,9 @@ func GetTagsWithValuesByMember(member string) (map[string]string, error) {
 		return map[string]string{}, err
 	}
 	tagsMap := util.StringMap(tagsAsHashes.GetFields())
-	return filterTagEntriesWithValuesByPrefix(tagsMap), err
+	xdasTags := filterTagEntriesWithValuesByPrefix(tagsMap)
+
+	return filterByTenantWithValues(tenantId, xdasTags)
 }
 
 func filterTagEntriesByPrefix(ftEntries []string) []string {
@@ -68,6 +72,48 @@ func filterTagEntriesWithValuesByPrefix(entries util.StringMap) map[string]strin
 		}
 	}
 	return result
+}
+
+// filterByTenant intersects XDAS tags with tenant-owned tags from Cassandra
+func filterByTenant(tenantId string, xdasTags []string) ([]string, error) {
+	tenantTags, err := GetAllTagIds(tenantId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant tags for filtering: %w", err)
+	}
+
+	tenantTagSet := make(map[string]bool, len(tenantTags))
+	for _, t := range tenantTags {
+		tenantTagSet[t] = true
+	}
+
+	filtered := make([]string, 0, len(xdasTags))
+	for _, tag := range xdasTags {
+		if tenantTagSet[tag] {
+			filtered = append(filtered, tag)
+		}
+	}
+	return filtered, nil
+}
+
+// filterByTenantWithValues intersects XDAS tags (with values) with tenant-owned tags from Cassandra
+func filterByTenantWithValues(tenantId string, xdasTags map[string]string) (map[string]string, error) {
+	tenantTags, err := GetAllTagIds(tenantId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant tags for filtering: %w", err)
+	}
+
+	tenantTagSet := make(map[string]bool, len(tenantTags))
+	for _, t := range tenantTags {
+		tenantTagSet[t] = true
+	}
+
+	filtered := make(map[string]string)
+	for tag, value := range xdasTags {
+		if tenantTagSet[tag] {
+			filtered[tag] = value
+		}
+	}
+	return filtered, nil
 }
 
 func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<- string, wg *sync.WaitGroup, tagValue string) {
