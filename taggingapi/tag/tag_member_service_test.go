@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -117,11 +118,11 @@ func TestBucketDistribution(t *testing.T) {
 }
 func TestBatchSizeValidation(t *testing.T) {
 	// Test empty members list
-	err := AddMembers("test-tag", []string{})
+	err := AddMembers(db.GetDefaultTenantId(), "test-tag", []string{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "member list is empty")
 
-	err = RemoveMembers("test-tag", []string{})
+	err = RemoveMembers(db.GetDefaultTenantId(), "test-tag", []string{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "member list is empty")
 
@@ -131,12 +132,12 @@ func TestBatchSizeValidation(t *testing.T) {
 		largeMembers[i] = fmt.Sprintf("member-%d", i)
 	}
 
-	err = AddMembers("test-tag", largeMembers)
+	err = AddMembers(db.GetDefaultTenantId(), "test-tag", largeMembers)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "batch size")
 	assert.Contains(t, err.Error(), "exceeds maximum")
 
-	err = RemoveMembers("test-tag", largeMembers)
+	err = RemoveMembers(db.GetDefaultTenantId(), "test-tag", largeMembers)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "batch size")
 	assert.Contains(t, err.Error(), "exceeds maximum")

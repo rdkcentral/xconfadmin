@@ -23,6 +23,7 @@ import (
 
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	taggingapi_config "github.com/rdkcentral/xconfadmin/taggingapi/config"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -139,6 +140,9 @@ func TestFilterTagEntriesByPrefix(t *testing.T) {
 
 func TestGetTagsByMember(t *testing.T) {
 	setupTestEnvironment()
+	if db.GetDatabaseClient() == nil {
+		t.Skip("Skipping test - requires initialized database client")
+	}
 
 	testMembers := []string{
 		"AA:BB:CC:DD:EE:FF",
@@ -147,7 +151,7 @@ func TestGetTagsByMember(t *testing.T) {
 	}
 
 	for _, member := range testMembers {
-		tags, err := GetTagsByMember(member)
+		tags, err := GetTagsByMember(db.GetDefaultTenantId(), member)
 		// Without real connector, expect error or empty result
 		if err != nil {
 			t.Logf("GetTagsByMember(%s) returned error: %v (expected without connector)", member, err)

@@ -9,16 +9,27 @@ mkdir -p "${LOG_DIR}"
 TS="$(date +%Y%m%d_%H%M%S)"
 JSON_LOG="${LOG_DIR}/go-test-${TS}.jsonl"
 SUMMARY_LOG="${LOG_DIR}/go-test-${TS}.summary.txt"
+STREAM_TEST_LOGS="${STREAM_TEST_LOGS:-0}"
 
 echo "Running tests with JSON logging..."
 echo "Log file: ${JSON_LOG}"
 echo "Summary file: ${SUMMARY_LOG}"
+if [[ "${STREAM_TEST_LOGS}" == "1" ]]; then
+    echo "Streaming full test logs to terminal: enabled"
+else
+    echo "Streaming full test logs to terminal: disabled"
+fi
 
 ulimit -n 10000
 
 set +e
-go test ./... -json -p 1 -parallel 1 -cover -count=1 -timeout=45m | tee "${JSON_LOG}"
-TEST_EXIT=${PIPESTATUS[0]}
+if [[ "${STREAM_TEST_LOGS}" == "1" ]]; then
+    go test ./... -json -p 1 -parallel 1 -cover -count=1 -timeout=45m | tee "${JSON_LOG}"
+    TEST_EXIT=${PIPESTATUS[0]}
+else
+    go test ./... -json -p 1 -parallel 1 -cover -count=1 -timeout=45m > "${JSON_LOG}"
+    TEST_EXIT=$?
+fi
 set -e
 
 python3 - "${JSON_LOG}" <<'PY' | tee "${SUMMARY_LOG}"
