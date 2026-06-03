@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-05-14
+status: proposed
+applies_to:
+  - openspec/specs/auth/auth-contract.md
