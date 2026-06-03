@@ -13,7 +13,6 @@ import (
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
-	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -94,7 +93,7 @@ func AddMembers(tenantId string, tagId string, members []string) error {
 		bucketGroups[bucketId] = append(bucketGroups[bucketId], member)
 	}
 
-	updated := strconv.FormatInt(util.GetTimestamp(), 10)
+	updated := time.Now()
 	shardId := strconv.Itoa(ds.GetShardId(tagId))
 	var allErrors []string
 	successCount := 0
@@ -119,7 +118,7 @@ func AddMembers(tenantId string, tagId string, members []string) error {
 	return nil
 }
 
-func addMembersToBucket(tenantId string, shardId string, tagId string, bucketId int, members []string, updated string) error {
+func addMembersToBucket(tenantId string, shardId string, tagId string, bucketId int, members []string, updated time.Time) error {
 	batch := ds.GetSimpleDao().NewBatch(UnloggedBatch)
 
 	// Add member records
