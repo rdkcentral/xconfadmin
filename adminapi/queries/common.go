@@ -281,15 +281,16 @@ func UpdateInfoTableRowKey(w http.ResponseWriter, r *http.Request) {
 	// Update data the DB as Json Data; first ensure the record exists
 	// by using the GetOneRaw function and avoid unmarshalling the object
 	var err error
+	updatedAt := util.GetTimestamp()
 	if tableInfo.IsCompressedAndSplit() {
 		_, err = db.GetCompressingDataDao().GetOne(tenantId, tableName, rowKey)
 		if err == nil {
-			err = db.GetCompressingDataDao().SetOne(tenantId, tableName, rowKey, jsonData)
+			err = db.GetCompressingDataDao().SetOne(tenantId, tableName, rowKey, jsonData, updatedAt)
 		}
 	} else {
 		_, err = db.GetSimpleDao().GetOne(tenantId, tableName, rowKey)
 		if err == nil {
-			err = db.GetSimpleDao().SetOne(tenantId, tableName, rowKey, jsonData)
+			err = db.GetSimpleDao().SetOne(tenantId, tableName, rowKey, jsonData, updatedAt)
 		}
 	}
 	if err != nil {

@@ -470,7 +470,7 @@ func CreateFirmwareRuleTemplates() {
 		if jsonData, err := json.Marshal(template); err != nil {
 			panic(err)
 		} else {
-			if err := db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULE_TEMPLATES, template.ID, jsonData); err != nil {
+			if err := db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULE_TEMPLATES, template.ID, jsonData, template.Updated); err != nil {
 				panic(err)
 			}
 		}

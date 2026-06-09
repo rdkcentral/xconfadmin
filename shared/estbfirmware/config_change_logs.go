@@ -183,7 +183,7 @@ func SetLastConfigLog(tenantId string, mac string, configChangeLog *ConfigChange
 	if err != nil {
 		return err
 	}
-	return db.GetListingDao().SetOne(tenantId, db.TABLE_CONFIG_CHANGE_LOGS, mac, LAST_CONFIG_LOG_ID, []byte(jsonData))
+	return db.GetListingDao().SetOne(tenantId, db.TABLE_CONFIG_CHANGE_LOGS, mac, LAST_CONFIG_LOG_ID, []byte(jsonData), configChangeLog.Updated)
 }
 
 func SetConfigChangeLog(tenantId string, mac string, configChangeLog *ConfigChangeLog) error {
@@ -192,7 +192,7 @@ func SetConfigChangeLog(tenantId string, mac string, configChangeLog *ConfigChan
 		configChangeLog.ID = id
 		jsonData, err := json.Marshal(configChangeLog)
 		if err == nil {
-			return db.GetListingDao().SetOne(tenantId, db.TABLE_CONFIG_CHANGE_LOGS, mac, id, []byte(jsonData))
+			return db.GetListingDao().SetOne(tenantId, db.TABLE_CONFIG_CHANGE_LOGS, mac, id, []byte(jsonData), configChangeLog.Updated)
 		}
 	}
 	return err

@@ -3,7 +3,6 @@ package change
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
@@ -40,14 +39,14 @@ func GetChangeList(tenantId string) []*xwchange.Change {
 }
 
 func SetOneApprovedChange(tenantId string, approvedChange *xwchange.ApprovedChange) error {
-	approvedChange.Updated = xwutil.GetTimestamp(time.Now().UTC())
+	approvedChange.Updated = xwutil.GetTimestamp()
 
 	approvedChangeBytes, err := json.Marshal(approvedChange)
 	if err != nil {
 		return err
 	}
 
-	return db.GetSimpleDao().SetOne(tenantId, db.TABLE_TELEMETRY_APPROVED_CHANGES, approvedChange.ID, approvedChangeBytes)
+	return db.GetSimpleDao().SetOne(tenantId, db.TABLE_TELEMETRY_APPROVED_CHANGES, approvedChange.ID, approvedChangeBytes, approvedChange.Updated)
 }
 
 func GetOneApprovedChange(tenantId string, id string) *xwchange.ApprovedChange {
@@ -125,7 +124,7 @@ func CreateOneChange(tenantId string, change *xwchange.Change) error {
 		return err
 	}
 
-	return db.GetSimpleDao().SetOne(tenantId, db.TABLE_TELEMETRY_CHANGES, change.ID, changeBytes)
+	return db.GetSimpleDao().SetOne(tenantId, db.TABLE_TELEMETRY_CHANGES, change.ID, changeBytes, change.Updated)
 }
 
 func GetApprovedTelemetryTwoChangesByApplicationType(tenantId string, applicationType string) []*xwchange.ApprovedTelemetryTwoChange {
@@ -171,7 +170,7 @@ func CreateOneTelemetryTwoChange(tenantId string, change *xwchange.TelemetryTwoC
 		return err
 	}
 
-	return db.GetSimpleDao().SetOne(tenantId, db.TABLE_TELEMETRY_TWO_CHANGES, change.ID, changeBytes)
+	return db.GetSimpleDao().SetOne(tenantId, db.TABLE_TELEMETRY_TWO_CHANGES, change.ID, changeBytes, change.Updated)
 }
 
 func GetAllApprovedTelemetryTwoChangeList(tenantId string) []*xwchange.ApprovedTelemetryTwoChange {
@@ -218,14 +217,14 @@ func SetOneApprovedTelemetryTwoChange(tenantId string, approvedChange *xwchange.
 	if util.IsBlank(approvedChange.ID) {
 		approvedChange.ID = uuid.New().String()
 	}
-	approvedChange.Updated = util.GetTimestamp(time.Now().UTC())
+	approvedChange.Updated = util.GetTimestamp()
 
 	approvedChangeBytes, err := json.Marshal(approvedChange)
 	if err != nil {
 		return err
 	}
 
-	return db.GetSimpleDao().SetOne(tenantId, db.TABLE_TELEMETRY_APPROVED_TWO_CHANGES, approvedChange.ID, approvedChangeBytes)
+	return db.GetSimpleDao().SetOne(tenantId, db.TABLE_TELEMETRY_APPROVED_TWO_CHANGES, approvedChange.ID, approvedChangeBytes, approvedChange.Updated)
 }
 
 func DeleteOneTelemetryTwoChange(tenantId string, id string) error {
