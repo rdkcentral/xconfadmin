@@ -539,9 +539,12 @@ func TestTelemetryProfileCreate(t *testing.T) {
 
 	createdProfile := unmarshalProfile(rr.Body.Bytes())
 
+	createdProfile.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, p, createdProfile)
 
 	dbProfile := logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
+	assert.True(t, dbProfile.Updated > 0, "profile should have a valid updated timestamp")
+	dbProfile.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, p, dbProfile, "profile to create should match created profile in database")
 }
 
@@ -576,11 +579,13 @@ func TestTelemetryProfileCreateChangeAndApproveIt(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	dbProfile = logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
+	dbProfile.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, p, dbProfile, "profile to create should match created profile in database")
 
 	approvedChange := admin_change.GetOneApprovedChange(db.GetDefaultTenantId(), change.ID)
 	assert.NotEmpty(t, approvedChange, "approved telemetry profile change should be created")
 	assert.Empty(t, approvedChange.OldEntity, "old entity should not present")
+	approvedChange.NewEntity.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, p, approvedChange.NewEntity, "old entity should not present")
 }
 
@@ -612,6 +617,7 @@ func TestTelemetryProfileUpdate(t *testing.T) {
 
 	updatedProfile := unmarshalProfile(rr.Body.Bytes())
 
+	updatedProfile.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, profileToUpdate, updatedProfile)
 
 	dbProfile := logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
@@ -666,11 +672,14 @@ func TestTelemetryProfileUpdateChangeAndApproveIt(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	dbProfile = logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
+	dbProfile.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, profileToUpdate, dbProfile, "profile to update should be equal updated profile in database")
 
 	approvedChange := admin_change.GetOneApprovedChange(db.GetDefaultTenantId(), change.ID)
 	assert.NotEmpty(t, approvedChange, "approved telemetry profile change should be created")
 	assert.Equal(t, change.ID, approvedChange.ID, "approved change id should be correct")
+	approvedChange.OldEntity.Updated = 0 // ignore updated timestamp for equality check
+	approvedChange.NewEntity.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, p, approvedChange.OldEntity, "old entity should not be present")
 	assert.Equal(t, profileToUpdate, approvedChange.NewEntity, "old entity should not be present")
 }

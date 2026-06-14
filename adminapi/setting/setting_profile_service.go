@@ -90,6 +90,7 @@ func DeleteSettingProfile(tenantId string, id string) {
 }
 
 func SetSettingProfile(tenantId string, id string, settingProfile *xwlogupload.SettingProfiles) error {
+	settingProfile.Updated = util.GetTimestamp()
 	if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_SETTING_PROFILES, id, settingProfile); err != nil {
 		log.Error("cannot save settingProfile to DB")
 		return err

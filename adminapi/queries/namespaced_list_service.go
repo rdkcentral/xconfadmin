@@ -500,6 +500,9 @@ func renameNamespacedListInUsedEntities(tenantId string, oldNamespacedListId str
 			if xrule, ok := v.(re.XRule); ok {
 				rule := xrule.GetRule()
 				if re.ChangeFixedArgToNewValue(oldNamespacedListId, newNamespacedListId, *rule, re.StandardOperationInList) {
+					if obj, ok := v.(db.Updatable); ok {
+						obj.SetUpdated(xutil.GetTimestamp())
+					}
 					if err := db.GetCachedSimpleDao().SetOne(tenantId, tableName, xrule.GetId(), v); err != nil {
 						return err
 					}

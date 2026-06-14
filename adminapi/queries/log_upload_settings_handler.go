@@ -138,20 +138,21 @@ func SaveLogUploadSettings(w http.ResponseWriter, r *http.Request) {
 		ids := logUploadSettings.LogFileIds
 		logFiles := getLogFilesByIds(tenantId, ids)
 
-		oneList, err := logupload.GetOneLogFileList(tenantId, logUploadSettings.ID)
-		for i, logFileInList := range oneList.Data {
+		logFileList, err := logupload.GetOneLogFileList(tenantId, logUploadSettings.ID)
+		for i, logFileInList := range logFileList.Data {
 			for _, logFile := range logFiles {
 				if logFile.ID == logFileInList.ID {
 					//remove this logFile from logFileList
-					oneList.Data = append(oneList.Data[:i], oneList.Data[i+1:]...)
+					logFileList.Data = append(logFileList.Data[:i], logFileList.Data[i+1:]...)
 					break
 				}
 			}
 		}
-		oneList.Data = append(oneList.Data, logFiles...)
+		logFileList.Data = append(logFileList.Data, logFiles...)
 		logupload.DeleteOneLogFileList(tenantId, logUploadSettings.ID)
 
-		err = db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_LOG_FILE_LISTS, logUploadSettings.ID, oneList)
+		logFileList.Updated = util.GetTimestamp()
+		err = db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_LOG_FILE_LISTS, logUploadSettings.ID, logFileList)
 		if err != nil {
 			log.Warn(fmt.Sprintf("error save logFileList for Id: %s", logUploadSettings.ID))
 			xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "Failed to save logFileList")

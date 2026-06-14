@@ -512,6 +512,7 @@ func GetOneLogUploadSettings(tenantId string, id string) *LogUploadSettings {
 }
 
 func SetOneLogUploadSettings(tenantId string, id string, logUploadSettings *LogUploadSettings) error {
+	logUploadSettings.Updated = util.GetTimestamp()
 	err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_LOG_UPLOAD_SETTINGS, id, logUploadSettings)
 	if err != nil {
 		log.Warn(fmt.Sprintf("error saving logUploadSettings for Id: %s", id))
@@ -598,15 +599,16 @@ func GetOneLogFileList(tenantId string, id string) (*LogFileList, error) {
 }
 
 func SetOneLogFile(tenantId string, id string, obj *LogFile) error {
-	oneList, err := GetOneLogFileList(tenantId, id)
-	for i, logFile := range oneList.Data {
+	fileList, err := GetOneLogFileList(tenantId, id)
+	for i, logFile := range fileList.Data {
 		if logFile.ID == obj.ID {
-			oneList.Data = append(oneList.Data[:i], oneList.Data[i+1:]...)
+			fileList.Data = append(fileList.Data[:i], fileList.Data[i+1:]...)
 			break
 		}
 	}
-	oneList.Data = append(oneList.Data, obj)
-	err = db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_LOG_FILE_LISTS, id, oneList)
+	fileList.Data = append(fileList.Data, obj)
+	fileList.Updated = util.GetTimestamp()
+	err = db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_LOG_FILE_LISTS, id, fileList)
 	if err != nil {
 		log.Warn(fmt.Sprintf("error save logFileList for Id: %s", id))
 		return err

@@ -66,7 +66,7 @@ type MacIpRuleConfig struct {
 func SetAppSetting(tenantId string, key string, value interface{}) (*shared.AppSetting, error) {
 	setting := shared.AppSetting{
 		ID:      key,
-		Updated: util.GetTimestamp(time.Now().UTC()),
+		Updated: util.GetTimestamp(),
 		Value:   value,
 	}
 

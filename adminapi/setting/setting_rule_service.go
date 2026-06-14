@@ -89,6 +89,7 @@ func DeleteSettingRuleOne(tenantId string, id string) {
 }
 
 func SetSettingRule(tenantId string, id string, settingProfile *logupload.SettingRule) error {
+	settingProfile.Updated = util.GetTimestamp()
 	if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_SETTING_RULES, id, settingProfile); err != nil {
 		log.Error("cannot save SettingRule to DB")
 		return err

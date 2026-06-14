@@ -88,6 +88,7 @@ func DeleteDcmFormulabyId(tenantId string, id string, appType string) *xcommon.R
 func SaveDcmRules(tenantId string, itemList []core.Prioritizable) error {
 	for _, item := range itemList {
 		rule := item.(*logupload.DCMGenericRule)
+		rule.Updated = util.GetTimestamp()
 		if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_DCM_RULES, rule.GetID(), rule); err != nil {
 			return err
 		}

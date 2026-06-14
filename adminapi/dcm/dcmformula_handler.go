@@ -30,6 +30,7 @@ import (
 	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	core "github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfadmin/util"
 	requtil "github.com/rdkcentral/xconfadmin/util"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -526,12 +527,9 @@ func DcmFormulaChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 	formulasByApplicationType := GetDcmRulesByApplicationType(tenantId, formulaToUpdate.ApplicationType)
 	prioritizables := DcmRulesToPrioritizables(formulasByApplicationType)
 	reorganizedFormulas := queries.UpdatePrioritizablesPriorities(prioritizables, formulaToUpdate.Priority, newPriority)
-	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("unable to re-organize priorities: %s", err))
-		return
-	}
 
 	for _, entry := range reorganizedFormulas {
+		entry.(*logupload.DCMGenericRule).Updated = util.GetTimestamp()
 		if err = db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_DCM_RULES, entry.GetID(), entry); err != nil {
 			xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("unable to update dcm rule: %s", err))
 			return

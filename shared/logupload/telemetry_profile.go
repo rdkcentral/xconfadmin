@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/rdkcentral/xconfadmin/util"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
@@ -14,6 +15,7 @@ import (
 const PermanentTelemetryProfileConst = "PermanentTelemetryProfile"
 
 func SetOnePermanentTelemetryProfile(tenantId string, rowKey string, profile *logupload.PermanentTelemetryProfile) error {
+	profile.Updated = util.GetTimestamp()
 	return logupload.GetCachedSimpleDaoFunc().SetOne(tenantId, db.TABLE_PERMANENT_TELEMETRY_PROFILES, rowKey, profile)
 }
 
@@ -99,6 +101,7 @@ func GetOneTelemetryTwoProfile(tenantId string, rowKey string) *logupload.Teleme
 }
 
 func SetOneTelemetryTwoProfile(tenantId string, profile *logupload.TelemetryTwoProfile) error {
+	profile.Updated = util.GetTimestamp()
 	return logupload.GetCachedSimpleDaoFunc().SetOne(tenantId, db.TABLE_TELEMETRY_TWO_PROFILES, profile.ID, profile)
 }
 
@@ -107,6 +110,7 @@ func DeleteTelemetryTwoProfile(tenantId string, rowKey string) error {
 }
 
 func SetOneTelemetryProfile(tenantId string, rowKey string, telemetry *logupload.TelemetryProfile) {
+	telemetry.Updated = util.GetTimestamp()
 	logupload.GetCachedSimpleDaoFunc().SetOne(tenantId, db.TABLE_TELEMETRY_PROFILES, rowKey, telemetry)
 }
 
@@ -147,6 +151,7 @@ func GetOneTelemetryTwoRule(tenantId string, rowKey string) *logupload.Telemetry
 }
 
 func SetOneTelemetryTwoRule(tenantId string, rowKey string, telemetry *logupload.TelemetryTwoRule) error {
+	telemetry.Updated = util.GetTimestamp()
 	return logupload.GetCachedSimpleDaoFunc().SetOne(tenantId, db.TABLE_TELEMETRY_TWO_RULES, rowKey, telemetry)
 }
 

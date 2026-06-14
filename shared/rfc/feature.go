@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	xshared "github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfadmin/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -106,7 +107,7 @@ func GetFilteredFeatureList(searchContext map[string]string) []*xwrfc.Feature {
 	tenantId := searchContext[xwcommon.TENANT_ID]
 	features, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_FEATURES, 0)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no feature found"))
+		log.Warn("no feature found")
 		return nil
 	}
 	predicates := getFeaturePredicates(searchContext)
@@ -127,6 +128,7 @@ func DeleteOneFeature(tenantId string, featureId string) {
 }
 
 func SetOneFeature(tenantId string, feature *xwrfc.Feature) (*xwrfc.Feature, error) {
+	feature.Updated = util.GetTimestamp()
 	err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_FEATURES, feature.ID, feature)
 	if err != nil {
 		log.Warn(fmt.Sprintf("error creating feature with featureId: %s", feature.ID))
@@ -139,7 +141,7 @@ func GetFilteredFeatureEntityList(searchContext map[string]string) []*xwrfc.Feat
 	tenantId := searchContext[xwcommon.TENANT_ID]
 	features, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_FEATURES, 0)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no feature found"))
+		log.Warn("no feature found")
 		return nil
 	}
 	predicates := getFeaturePredicates(searchContext)
@@ -167,7 +169,7 @@ func GetFeatureEntityList(tenantId string) []*rfc.FeatureEntity {
 	var featureEntityList []*rfc.FeatureEntity
 	features, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_FEATURES, 0)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no feature found"))
+		log.Warn("no feature found")
 		return nil
 	}
 	for idx := range features {
@@ -187,6 +189,7 @@ func GetFeatureRule(tenantId string, id string) *rfc.FeatureRule {
 }
 
 func SetFeatureRule(tenantId string, id string, featureRule *rfc.FeatureRule) error {
+	featureRule.Updated = util.GetTimestamp()
 	if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_FEATURE_CONTROL_RULES, id, featureRule); err != nil {
 		log.Error("cannot save featureRule to DB")
 		return err

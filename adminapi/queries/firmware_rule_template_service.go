@@ -318,16 +318,6 @@ func addNewFirmwareRTAndReorganize(newItem corefw.FirmwareRuleTemplate, itemsLis
 	return reorganizeFirmwareRTPriorities(itemsList, len(itemsList), int(newItem.Priority))
 }
 
-// func saveAllFirmwareRTs(templateList []*corefw.FirmwareRuleTemplate) error {
-// 	for _, template := range templateList {
-// 		template.Updated = xutil.GetTimestamp(time.Now().UTC())
-// 		if err := db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE_TEMPLATES, template.ID, template); err != nil {
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }
-
 func saveAllTemplates(tenantId string, templateList []xshared.Prioritizable) error {
 	for _, template := range templateList {
 		frt := template.(*corefw.FirmwareRuleTemplate)

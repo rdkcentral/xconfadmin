@@ -47,12 +47,11 @@ import (
 )
 
 const (
-	ContextAttributeName   = "contextAttributeName"
-	ExpectedValue          = "expectedValue"
-	RuleId                 = "ruleId"
-	Expires                = "expires"
-	TelemetryId            = "telemetryId"
-	cTelemetryChannelMapId = "channelMapId"
+	ContextAttributeName = "contextAttributeName"
+	ExpectedValue        = "expectedValue"
+	RuleId               = "ruleId"
+	Expires              = "expires"
+	TelemetryId          = "telemetryId"
 )
 
 func CreateTelemetryEntryFor(w http.ResponseWriter, r *http.Request) {

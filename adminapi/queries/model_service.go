@@ -81,7 +81,6 @@ func CreateModel(tenantId string, model *shared.Model) *xwhttp.ResponseEntity {
 
 	}
 
-	model.Updated = xwutil.GetTimestamp()
 	env, err := shared.SetOneModel(tenantId, model)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, model)
@@ -104,7 +103,6 @@ func UpdateModel(tenantId string, model *shared.Model) *xwhttp.ResponseEntity {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, errors.New(model.ID+" model does not exist"), model)
 	}
 
-	model.Updated = xwutil.GetTimestamp()
 	env, err := shared.SetOneModel(tenantId, model)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, model)

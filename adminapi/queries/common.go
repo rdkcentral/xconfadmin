@@ -204,7 +204,7 @@ func GetInfoTableRowKey(w http.ResponseWriter, r *http.Request) {
 func GetChangedKeysMapRaw(tenantId string) (map[string]interface{}, error) {
 	changedKeysTimeWindowSize := db.GetCacheManager().GetChangedKeysTimeWindowSize()
 
-	endTS := util.GetTimestamp(time.Now().UTC())
+	endTS := util.GetTimestamp()
 	endRowKey := endTS - (endTS % int64(changedKeysTimeWindowSize))
 
 	startTS := xutil.UtcOffsetPriorMinTimestamp(15)

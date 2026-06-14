@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/rdkcentral/xconfadmin/adminapi/dcm/mocks"
+	xutil "github.com/rdkcentral/xconfadmin/util"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
@@ -85,7 +86,7 @@ func IsMockDatabaseEnabled() bool {
 // Helper functions to abstract DAO operations for mock/real database
 
 // GetOneFromDao retrieves a single entity - works with both mock and real DAO
-func GetOneFromDao(tableName string, rowKey string) (interface{}, error) {
+func GetOneFromDao(tableName string, rowKey string) (any, error) {
 	if useMockDatabase && mockDaoInstance != nil {
 		return mockDaoInstance.GetOne(db.GetDefaultTenantId(), tableName, rowKey)
 	}
@@ -93,9 +94,12 @@ func GetOneFromDao(tableName string, rowKey string) (interface{}, error) {
 }
 
 // SetOneInDao stores a single entity - works with both mock and real DAO
-func SetOneInDao(tableName string, rowKey string, entity interface{}) error {
+func SetOneInDao(tableName string, rowKey string, entity any) error {
 	if useMockDatabase && mockDaoInstance != nil {
 		return mockDaoInstance.SetOne(db.GetDefaultTenantId(), tableName, rowKey, entity)
+	}
+	if obj, ok := entity.(db.Updatable); ok {
+		obj.SetUpdated(xutil.GetTimestamp())
 	}
 	return db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), tableName, rowKey, entity)
 }

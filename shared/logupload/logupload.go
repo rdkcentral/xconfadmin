@@ -118,6 +118,7 @@ func NewLogFileInf() interface{} {
 }
 
 func SetLogFile(tennantId string, id string, logFile *LogFile) error {
+	logFile.Updated = util.GetTimestamp()
 	err := db.GetCachedSimpleDao().SetOne(tennantId, db.TABLE_LOG_FILES, id, logFile)
 	if err != nil {
 		log.Warn("error saving logFile ")

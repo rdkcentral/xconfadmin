@@ -55,10 +55,11 @@ func TestTelemetryTwoProfileCreateHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, rr.Code)
 
 	createdProfile := unmarshalTelemetryTwoProfile(rr.Body.Bytes())
-
+	createdProfile.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, p, createdProfile)
 
 	dbProfile := logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
+	dbProfile.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, *p, *dbProfile, "profile to create should match created profile in database")
 }
 
@@ -93,11 +94,13 @@ func TestTelemetryTwoProfileCreateChangeHandlerAndApproveIt(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	dbProfile = logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
+	dbProfile.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, *p, *dbProfile, "profile to create should match created profile in database")
 
 	approvedChange := xchange.GetOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), change.ID)
 	assert.NotEmpty(t, approvedChange, "approved profile change should be created")
 	assert.Empty(t, approvedChange.OldEntity, "old entity should not present")
+	approvedChange.NewEntity.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, *p, *approvedChange.NewEntity, "old entity should not present")
 }
 
@@ -121,7 +124,7 @@ func TestTelemetryTwoProfileUpdateHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	updatedProfile := unmarshalTelemetryTwoProfile(rr.Body.Bytes())
-
+	updatedProfile.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, *changedProfile, *updatedProfile)
 
 	dbProfile := logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
@@ -165,12 +168,14 @@ func TestTelemetryTwoProfileUpdateChangeHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	dbProfile = logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
+	dbProfile.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, *changedProfile, *dbProfile, "profile to create should match created profile in database")
 	assert.Equal(t, changedTelemetryJsonConfig, dbProfile.Jsonconfig, "profile to create should match created profile in database")
 
 	approvedChange := xchange.GetOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), change.ID)
 	assert.NotEmpty(t, approvedChange, "approved profile change should be created")
 	assert.Equal(t, *p, *approvedChange.OldEntity, "old entity should correspond to the profile before updating it")
+	approvedChange.NewEntity.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, *changedProfile, *approvedChange.NewEntity, "new entity should correspond to the changed profile")
 }
 
