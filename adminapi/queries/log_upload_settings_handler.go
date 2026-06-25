@@ -119,7 +119,7 @@ func SaveLogUploadSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	nameErrorMessage := validateName(tenantId, &logUploadSettings)
 	if nameErrorMessage != "" {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, nameErrorMessage)

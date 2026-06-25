@@ -46,7 +46,7 @@ func GetAmvHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	result := GetAmvALL(tenantId)
 	appRules := []*ActivationVersionResponse{}
 	for _, rule := range result {
@@ -87,7 +87,7 @@ func GetAmvByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	amv := GetAmv(tenantId, id)
 	if amv == nil {
 		errorStr := fmt.Sprintf("%v not found", id)
@@ -144,7 +144,7 @@ func PostAmvFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
-	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
+	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r.Context(), r)
 
 	amvrules := AmvFilterByContext(contextMap)
 	sort.Slice(amvrules, func(i, j int) bool {
@@ -179,7 +179,7 @@ func DeleteAmvByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	respEntity := DeleteAmvbyId(tenantId, id, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -196,7 +196,7 @@ func CreateAmvHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	respEntity := CreateAmv(tenantId, &newAmv, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -245,7 +245,7 @@ func ImportAllAmvHandler(w http.ResponseWriter, r *http.Request) {
 		determinedAppType = applicationType
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	result, err := importOrUpdateAllAmvs(tenantId, amvlist, determinedAppType)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -267,7 +267,7 @@ func UpdateAmvHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	respEntity := UpdateAmv(tenantId, &newAmv, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -300,7 +300,7 @@ func PostAmvEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
@@ -344,7 +344,7 @@ func PutAmvEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
@@ -383,7 +383,7 @@ func GetAmvFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	contextMap := make(map[string]string)
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
-	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
+	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r.Context(), r)
 
 	amvrules := AmvFilterByContext(contextMap)
 	sort.Slice(amvrules, func(i, j int) bool {

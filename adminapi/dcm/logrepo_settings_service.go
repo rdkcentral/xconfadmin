@@ -139,7 +139,7 @@ func DeleteOneLogRepoSettings(tenantId string, id string) error {
 	return nil
 }
 
-func LogRepoSettingsValidate(lr *logupload.UploadRepository) *xwhttp.ResponseEntity {
+func LogRepoSettingsValidateForTenant(tenantId string, lr *logupload.UploadRepository) *xwhttp.ResponseEntity {
 	if lr == nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("Log Repository Settings should be specified"), nil)
 	}
@@ -167,7 +167,7 @@ func LogRepoSettingsValidate(lr *logupload.UploadRepository) *xwhttp.ResponseEnt
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("URL is InValid"), nil)
 	}
 
-	lrrules := GetLogRepoSettingsAll(db.GetDefaultTenantId())
+	lrrules := GetLogRepoSettingsAll(tenantId)
 	for _, exlrrule := range lrrules {
 		if exlrrule.ApplicationType != lr.ApplicationType {
 			continue
@@ -181,8 +181,8 @@ func LogRepoSettingsValidate(lr *logupload.UploadRepository) *xwhttp.ResponseEnt
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, nil)
 }
 
-func CreateLogRepoSettings(lr *logupload.UploadRepository, app string) *xwhttp.ResponseEntity {
-	_, err := db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_UPLOAD_REPOSITORIES, lr.ID)
+func CreateLogRepoSettingsForTenant(tenantId string, lr *logupload.UploadRepository, app string) *xwhttp.ResponseEntity {
+	_, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_UPLOAD_REPOSITORIES, lr.ID)
 	if err == nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(fmt.Sprintf("Entity with id %s already exists", lr.ID)), nil)
 	}
@@ -190,22 +190,22 @@ func CreateLogRepoSettings(lr *logupload.UploadRepository, app string) *xwhttp.R
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(fmt.Sprintf("Entity with id %s ApplicationType doesn't match", lr.ID)), nil)
 	}
 
-	respEntity := LogRepoSettingsValidate(lr)
+	respEntity := LogRepoSettingsValidateForTenant(tenantId, lr)
 	if respEntity.Error != nil {
 		return respEntity
 	}
 	lr.Updated = util.GetTimestamp()
-	if err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_UPLOAD_REPOSITORIES, lr.ID, lr); err != nil {
+	if err = db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_UPLOAD_REPOSITORIES, lr.ID, lr); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, lr)
 }
 
-func UpdateLogRepoSettings(lr *logupload.UploadRepository, app string) *xwhttp.ResponseEntity {
+func UpdateLogRepoSettingsForTenant(tenantId string, lr *logupload.UploadRepository, app string) *xwhttp.ResponseEntity {
 	if util.IsBlank(lr.ID) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New(" ID  is empty"), nil)
 	}
-	inst, err := db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_UPLOAD_REPOSITORIES, lr.ID)
+	inst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_UPLOAD_REPOSITORIES, lr.ID)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(fmt.Sprintf("Entity with id %s does not exists", lr.ID)), nil)
 	}
@@ -216,13 +216,13 @@ func UpdateLogRepoSettings(lr *logupload.UploadRepository, app string) *xwhttp.R
 	if exlrrule.ApplicationType != lr.ApplicationType {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(fmt.Sprintf("ApplicationType can not be changed")), nil)
 	}
-	respEntity := LogRepoSettingsValidate(lr)
+	respEntity := LogRepoSettingsValidateForTenant(tenantId, lr)
 	if respEntity.Error != nil {
 		return respEntity
 	}
 
 	lr.Updated = util.GetTimestamp()
-	if err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_UPLOAD_REPOSITORIES, lr.ID, lr); err != nil {
+	if err = db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_UPLOAD_REPOSITORIES, lr.ID, lr); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 

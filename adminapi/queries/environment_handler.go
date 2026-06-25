@@ -60,7 +60,7 @@ func UpdateEnvironmentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	respEntity := UpdateEnvironment(tenantId, &upEnv)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -96,7 +96,7 @@ func PostEnvironmentFilteredHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	xutil.AddQueryParamsToContextMap(r, contextMap)
-	contextMap[common.TENANT_ID] = xwhttp.GetTenantId(r, "")
+	contextMap[common.TENANT_ID] = xhttp.GetTenantId(r.Context(), r)
 
 	evrules := EnvironmentFilterByContext(contextMap)
 	sizeHeader := xhttp.CreateNumberOfItemsHttpHeaders(len(evrules))
@@ -132,7 +132,7 @@ func PostEnvironmentEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
@@ -175,7 +175,7 @@ func PutEnvironmentEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity

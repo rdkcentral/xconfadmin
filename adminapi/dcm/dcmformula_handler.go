@@ -45,7 +45,7 @@ func GetDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 
 	allFormulas := GetDcmFormulaAll(tenantId)
 
@@ -102,7 +102,7 @@ func GetDcmFormulaByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	formula := GetDcmFormula(tenantId, id)
 	if formula == nil {
 		errorStr := fmt.Sprintf("%v not found", id)
@@ -149,7 +149,7 @@ func GetDcmFormulaSizeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	final := []*logupload.DCMGenericRule{}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	result := GetDcmFormulaAll(tenantId)
 	for _, DcmRule := range result {
 		if DcmRule.ApplicationType == appType {
@@ -172,7 +172,7 @@ func GetDcmFormulaNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	final := []string{}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	result := GetDcmFormulaAll(tenantId)
 	for _, DcmRule := range result {
 		if DcmRule.ApplicationType == appType {
@@ -204,7 +204,7 @@ func DeleteDcmFormulaByIdHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(tenantId, owner); err != nil {
@@ -252,7 +252,7 @@ func CreateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(tenantId, owner); err != nil {
@@ -306,7 +306,7 @@ func UpdateDcmFormulaHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(tenantId, owner); err != nil {
@@ -373,7 +373,7 @@ func DcmFormulaSettingsAvailabilitygHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	dcmmap := make(map[string]map[string]bool)
 	for _, id := range idlist {
 		data := make(map[string]bool)
@@ -417,7 +417,7 @@ func DcmFormulasAvailabilitygHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := make(map[string]bool)
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	for _, id := range idlist {
 		data[id] = getiFormulaAvail(tenantId, id)
 	}
@@ -452,7 +452,7 @@ func PostDcmFormulaFilteredWithParamsHandler(w http.ResponseWriter, r *http.Requ
 	}
 	requtil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[core.APPLICATION_TYPE] = applicationType
-	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
+	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r.Context(), r)
 
 	dfrules := DcmFormulaFilterByContext(contextMap)
 	sizeHeader := xhttp.CreateNumberOfItemsHttpHeaders(len(dfrules))
@@ -491,7 +491,7 @@ func DcmFormulaChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(tenantId, owner); err != nil {
@@ -577,7 +577,7 @@ func ImportDcmFormulaWithOverwriteHandler(w http.ResponseWriter, r *http.Request
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(tenantId, owner); err != nil {
@@ -636,7 +636,7 @@ func ImportDcmFormulasHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(tenantId, owner); err != nil {
@@ -700,7 +700,7 @@ func PostDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(tenantId, owner); err != nil {
@@ -750,7 +750,7 @@ func PutDcmFormulaListHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := dcmRuleTableLock.Lock(tenantId, owner); err != nil {

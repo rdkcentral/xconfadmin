@@ -107,7 +107,7 @@ func TestPostLogRepoSettingsEntitiesHandler_DuplicateEntity(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "stb")
 
 	// Try to create the same entity again
 	entities := []logupload.UploadRepository{repo}
@@ -141,7 +141,7 @@ func TestPostLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure(t *testing.T)
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&existingRepo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &existingRepo, "stb")
 
 	// Batch with one new and one duplicate
 	entities := []logupload.UploadRepository{
@@ -195,8 +195,8 @@ func TestPutLogRepoSettingsEntitiesHandler_Success(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo1, "stb")
-	CreateLogRepoSettings(&repo2, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo1, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo2, "stb")
 
 	// Update both repositories
 	updatedEntities := []logupload.UploadRepository{
@@ -298,7 +298,7 @@ func TestPutLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure(t *testing.T) 
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&existingRepo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &existingRepo, "stb")
 
 	// Batch with one existing and one non-existent
 	entities := []logupload.UploadRepository{
@@ -455,7 +455,7 @@ func TestGetLogRepoSettingsByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "xhome",
 	}
-	CreateLogRepoSettings(&repo, "xhome")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "xhome")
 
 	// Try to access with "stb" application type
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/xhome-repo", nil)
@@ -481,7 +481,7 @@ func TestGetLogRepoSettingsByIdHandler_WithExport(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "stb")
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/export-repo?export=true", nil)
 	assert.NilError(t, err)
@@ -541,8 +541,8 @@ func TestGetLogRepoSettingsHandler_WithExport(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo1, "stb")
-	CreateLogRepoSettings(&repo2, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo1, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo2, "stb")
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository?export=true", nil)
 	assert.NilError(t, err)
@@ -591,7 +591,7 @@ func TestGetLogRepoSettingsSizeHandler_NonZeroCount(t *testing.T) {
 			Protocol:        "HTTP",
 			ApplicationType: "stb",
 		}
-		CreateLogRepoSettings(&repo, "stb")
+		CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "stb")
 	}
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/size", nil)
@@ -642,7 +642,7 @@ func TestGetLogRepoSettingsNamesHandler_WithNames(t *testing.T) {
 			Protocol:        "HTTP",
 			ApplicationType: "stb",
 		}
-		CreateLogRepoSettings(&repo, "stb")
+		CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "stb")
 	}
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/names", nil)
@@ -704,7 +704,7 @@ func TestDeleteLogRepoSettingsByIdHandler_Success(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "stb")
 
 	req, err := http.NewRequest("DELETE", "/xconfAdminService/dcm/uploadRepository/"+uniqueID, nil)
 	assert.NilError(t, err)
@@ -768,7 +768,7 @@ func TestCreateLogRepoSettingsHandler_DuplicateID(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "stb")
 
 	// Try to create another with same ID
 	body, _ := json.Marshal(repo)
@@ -837,7 +837,7 @@ func TestUpdateLogRepoSettingsHandler_Success(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "stb")
 
 	// Update it
 	repo.Name = "Updated Name"
@@ -910,7 +910,7 @@ func TestPostLogRepoSettingsFilteredWithParamsHandler_WithContext(t *testing.T) 
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo1, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo1, "stb")
 
 	contextMap := map[string]string{}
 	body, _ := json.Marshal(contextMap)

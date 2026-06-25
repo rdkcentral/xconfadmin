@@ -44,7 +44,7 @@ func GetFeatureEntityHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	featureEntityList := []*rfc.FeatureEntity{}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	features := GetAllFeatureEntity(tenantId)
 	for _, rule := range features {
 		if applicationType == rule.ApplicationType {
@@ -65,7 +65,7 @@ func GetFeatureEntityFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	contextMap := map[string]string{}
 	requtil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[common.APPLICATION_TYPE] = applicationType
-	contextMap[common.TENANT_ID] = xwhttp.GetTenantId(r, "")
+	contextMap[common.TENANT_ID] = xhttp.GetTenantId(r.Context(), r)
 
 	featureList := GetFeatureEntityFiltered(contextMap)
 	response, _ := util.XConfJSONMarshal(featureList, true)
@@ -85,7 +85,7 @@ func GetFeatureEntityByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	featureEntity := GetFeatureEntityById(tenantId, id)
 	if featureEntity == nil {
 		xwhttp.WriteXconfResponse(w, http.StatusNotFound, []byte(fmt.Sprintf("\"Entity with id: %s does not exist\"", id)))
@@ -133,7 +133,7 @@ func PostFeatureEntityImportAllHandler(w http.ResponseWriter, r *http.Request) {
 		determinedAppType = applicationType
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	featureEntityMap := ImportOrUpdateAllFeatureEntity(tenantId, featureEntityList, determinedAppType)
 	response, _ := util.XConfJSONMarshal(featureEntityMap, true)
 	xwhttp.WriteXconfResponse(w, http.StatusOK, []byte(response))
@@ -147,7 +147,7 @@ func PostFeatureEntityHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xrfc.DoesFeatureExist(tenantId, featureEntity.ID) {
 		xwhttp.WriteXconfResponse(w, http.StatusConflict, []byte(fmt.Sprintf("\"Entity with id: %s already exists\"", featureEntity.ID)))
 		return
@@ -184,7 +184,7 @@ func PutFeatureEntityHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if !xrfc.DoesFeatureExist(tenantId, featureEntity.ID) {
 		xwhttp.WriteXconfResponse(w, http.StatusNotFound, []byte(fmt.Sprintf("\"Entity with id: %s does not exist\"", featureEntity.ID)))
 		return

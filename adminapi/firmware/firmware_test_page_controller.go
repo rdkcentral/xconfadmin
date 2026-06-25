@@ -67,7 +67,7 @@ func GetFirmwareTestPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	context[xwcommon.TENANT_ID] = tenantId
 
 	// If input has any of these search-paramters, validate their values

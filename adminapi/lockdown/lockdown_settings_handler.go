@@ -25,11 +25,10 @@ import (
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	ccommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
-	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
 
 func PutLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
-	if !auth.HasWritePermissionForTool(r) {
+	if _, err := auth.CanWrite(r, auth.TOOL_ENTITY); err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "No write permission: tools")
 		return
 	}
@@ -47,7 +46,7 @@ func PutLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	respEntity := SetLockdownSetting(tenantId, &lockdownSettings)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -58,7 +57,7 @@ func PutLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 func GetLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// No permission check needed
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	lockdownSetting, err := GetLockdownSettings(tenantId)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())

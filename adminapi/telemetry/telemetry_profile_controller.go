@@ -95,7 +95,7 @@ func CreateTelemetryEntryFor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	timestampedRule := CreateTelemetryProfile(tenantId, contextAttributeName, expectedValue, &telemetryProfile)
 	response, err := util.JSONMarshal(timestampedRule)
 	if err != nil {
@@ -121,7 +121,7 @@ func DropTelemetryEntryFor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	telemetryProfileList := DropTelemetryFor(tenantId, contextAttributeName, expectedValue)
 	response, err := util.JSONMarshal(telemetryProfileList)
 	if err != nil {
@@ -145,7 +145,7 @@ func GetDescriptors(w http.ResponseWriter, r *http.Request) {
 	}
 
 	applicationType, _ := contextMap[xwcommon.APPLICATION_TYPE]
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	descriptors := GetAvailableDescriptors(tenantId, applicationType)
 	response, err := util.JSONMarshal(descriptors)
 	if err != nil {
@@ -169,7 +169,7 @@ func GetTelemetryDescriptors(w http.ResponseWriter, r *http.Request) {
 	}
 
 	applicationType, _ := contextMap[xwcommon.APPLICATION_TYPE]
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	descriptors := GetAvailableProfileDescriptors(tenantId, applicationType)
 	response, err := util.JSONMarshal(descriptors)
 	if err != nil {
@@ -214,7 +214,7 @@ func TempAddToPermanentRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	telemetryRule := xlogupload.GetOneTelemetryRule(tenantId, ruleId) //*TelemetryRule
 	if telemetryRule == nil {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("no rule found for ruleId"))
@@ -282,7 +282,7 @@ func BindToTelemetry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	profile := xlogupload.GetOnePermanentTelemetryProfile(tenantId, telemetryId) //*PermanentTelemetryProfile
 	if profile == nil {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("no rule found for ID "+telemetryId+" provided"))
@@ -331,7 +331,7 @@ func TelemetryTestPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
-	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
+	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r.Context(), r)
 
 	result := make(map[string]interface{})
 	result["context"] = contextMap
