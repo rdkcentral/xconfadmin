@@ -159,7 +159,10 @@ func PostFirmwareRuleFilteredHandler(w http.ResponseWriter, r *http.Request) {
 		return strings.Compare(strings.ToLower(dbrules[i].ID), strings.ToLower(dbrules[j].ID)) < 0
 	})
 
-	appFilter := map[string]string{xcommon.APPLICABLE_ACTION_TYPE: filterContext[xcommon.APPLICABLE_ACTION_TYPE]}
+	appFilter := map[string]string{
+		xcommon.APPLICABLE_ACTION_TYPE: filterContext[xcommon.APPLICABLE_ACTION_TYPE],
+		common.TENANT_ID:               filterContext[common.TENANT_ID],
+	}
 	delete(filterContext, xcommon.APPLICABLE_ACTION_TYPE)
 
 	// Filter the entries according to filterContext

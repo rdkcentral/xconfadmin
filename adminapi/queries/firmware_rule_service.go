@@ -89,6 +89,10 @@ func honoredByFirmwareRule(context map[string]string, rule *corefw.FirmwareRule)
 	}
 
 	tenantId := context[common.TENANT_ID]
+	if util.IsBlank(tenantId) {
+		log.Error("honoredByFirmwareRule: tenantId is empty in the context")
+		return false
+	}
 
 	fwVersion, filterByFW := xutil.FindEntryInContext(context, cFirmwareRuleFirmwareVersion, false)
 	if filterByFW {
