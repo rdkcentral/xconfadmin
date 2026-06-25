@@ -72,5 +72,5 @@ func TestGetCanarySettingsHandler(t *testing.T) {
 	common.SatOn = true
 	req = httptest.NewRequest(http.MethodGet, testURL, nil)
 	GetCanarySettingsHandler(w, req)
-	assert.Equal(t, http.StatusUnauthorized, w.Status())
+	assert.Equal(t, http.StatusForbidden, w.Status())
 }

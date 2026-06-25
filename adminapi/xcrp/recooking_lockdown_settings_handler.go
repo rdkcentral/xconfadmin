@@ -24,7 +24,7 @@ func GetXcrpConnector() *xhttp.XcrpConnector {
 }
 
 func PostRecookingLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
-	if !auth.HasWritePermissionForTool(r) {
+	if _, err := auth.CanWrite(r, auth.TOOL_ENTITY); err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "No write permission: tools")
 		return
 	}
@@ -53,7 +53,7 @@ func PostRecookingLockdownSettingsHandler(w http.ResponseWriter, r *http.Request
 
 	dao.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	var lockdownSettingFromDB *common.LockdownSettings
 	lockdownSettingFromDB, err = lockdown.GetLockdownSettings(tenantId)
 	if err != nil {

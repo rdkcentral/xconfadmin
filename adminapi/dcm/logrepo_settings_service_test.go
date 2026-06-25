@@ -53,7 +53,7 @@ func TestGetLogRepoSettings_Success(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	result := GetLogRepoSettings(db.GetDefaultTenantId(), "test-repo-1")
 	assert.Assert(t, result != nil)
@@ -94,7 +94,7 @@ func TestGetLogRepoSettingsAll_WithRepositories(t *testing.T) {
 	}
 
 	for _, repo := range repos {
-		CreateLogRepoSettings(repo, "stb")
+		CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 	}
 
 	result := GetLogRepoSettingsAll(db.GetDefaultTenantId())
@@ -108,7 +108,7 @@ func TestLogRepoSettingsValidate_NilInput(t *testing.T) {
 	DeleteAllEntities()
 	defer DeleteAllEntities()
 
-	respEntity := LogRepoSettingsValidate(nil)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), nil)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -128,7 +128,7 @@ func TestLogRepoSettingsValidate_EmptyApplicationType(t *testing.T) {
 		ApplicationType: "", // Empty
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -148,7 +148,7 @@ func TestLogRepoSettingsValidate_EmptyName(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -168,7 +168,7 @@ func TestLogRepoSettingsValidate_EmptyURL(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -188,7 +188,7 @@ func TestLogRepoSettingsValidate_InvalidURL(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -207,7 +207,7 @@ func TestLogRepoSettingsValidate_EmptyProtocol(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -227,7 +227,7 @@ func TestLogRepoSettingsValidate_InvalidProtocol(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -247,7 +247,7 @@ func TestLogRepoSettingsValidate_DuplicateName(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo1, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo1, "stb")
 
 	// Try to validate another with same name but different ID
 	repo2 := &logupload.UploadRepository{
@@ -258,7 +258,7 @@ func TestLogRepoSettingsValidate_DuplicateName(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo2)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo2)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -278,7 +278,7 @@ func TestLogRepoSettingsValidate_EmptyID(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusCreated, respEntity.Status)
 	assert.Assert(t, respEntity.Error == nil)
@@ -299,7 +299,7 @@ func TestLogRepoSettingsValidate_Success(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusCreated, respEntity.Status)
 	assert.Assert(t, respEntity.Error == nil)
@@ -319,10 +319,10 @@ func TestCreateLogRepoSettings_DuplicateID(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	// Try to create another with same ID
-	respEntity := CreateLogRepoSettings(repo, "stb")
+	respEntity := CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusConflict, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -342,7 +342,7 @@ func TestCreateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
 	}
 
 	// Pass different app type
-	respEntity := CreateLogRepoSettings(repo, "stb")
+	respEntity := CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusConflict, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -361,7 +361,7 @@ func TestCreateLogRepoSettings_ValidationError(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := CreateLogRepoSettings(repo, "stb")
+	respEntity := CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -381,7 +381,7 @@ func TestCreateLogRepoSettings_Success(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := CreateLogRepoSettings(repo, "stb")
+	respEntity := CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusCreated, respEntity.Status)
 	assert.Assert(t, respEntity.Error == nil)
@@ -403,7 +403,7 @@ func TestUpdateLogRepoSettings_EmptyID(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := UpdateLogRepoSettings(repo, "stb")
+	respEntity := UpdateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -422,7 +422,7 @@ func TestUpdateLogRepoSettings_NonExistent(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := UpdateLogRepoSettings(repo, "stb")
+	respEntity := UpdateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusConflict, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -442,7 +442,7 @@ func TestUpdateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	createResp := CreateLogRepoSettings(repo, "stb")
+	createResp := CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 	assert.Equal(t, http.StatusCreated, createResp.Status)
 
 	// Try to update with different app type in parameter
@@ -454,7 +454,7 @@ func TestUpdateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "xhome",
 	}
-	respEntity := UpdateLogRepoSettings(updateRepo, "xhome")
+	respEntity := UpdateLogRepoSettingsForTenant(db.GetDefaultTenantId(), updateRepo, "xhome")
 
 	assert.Equal(t, http.StatusConflict, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -473,11 +473,11 @@ func TestUpdateLogRepoSettings_ChangeApplicationType(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	// Try to change ApplicationType
 	repo.ApplicationType = "xhome"
-	respEntity := UpdateLogRepoSettings(repo, "stb")
+	respEntity := UpdateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusConflict, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -497,11 +497,11 @@ func TestUpdateLogRepoSettings_ValidationError(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	// Update with invalid data
 	repo.Name = "" // Empty name - validation error
-	respEntity := UpdateLogRepoSettings(repo, "stb")
+	respEntity := UpdateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -521,11 +521,11 @@ func TestUpdateLogRepoSettings_Success(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	// Update it
 	repo.Name = "Updated Name"
-	respEntity := UpdateLogRepoSettings(repo, "stb")
+	respEntity := UpdateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusOK, respEntity.Status)
 	assert.Assert(t, respEntity.Error == nil)
@@ -562,7 +562,7 @@ func TestDeleteLogRepoSettingsbyId_ApplicationTypeMismatch(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	// Try to delete with different app type
 	respEntity := DeleteLogRepoSettingsbyId(db.GetDefaultTenantId(), "test-id", "xhome")
@@ -584,7 +584,7 @@ func TestDeleteLogRepoSettingsbyId_InUse(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	// Create a LogUploadSettings that references this repository
 	// Note: This requires creating a DCM formula and LogUploadSettings
@@ -615,7 +615,7 @@ func TestDeleteLogRepoSettingsbyId_Success(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	// Delete it
 	respEntity := DeleteLogRepoSettingsbyId(db.GetDefaultTenantId(), uniqueID, "stb")
@@ -790,7 +790,7 @@ func TestLogRepoSettingsFilterByContext_EmptyContext(t *testing.T) {
 	}
 
 	for _, repo := range repos {
-		CreateLogRepoSettings(repo, repo.ApplicationType)
+		CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, repo.ApplicationType)
 	}
 
 	contextMap := map[string]string{
@@ -833,7 +833,7 @@ func TestLogRepoSettingsFilterByContext_FilterByApplicationType(t *testing.T) {
 	}
 
 	for _, repo := range repos {
-		CreateLogRepoSettings(repo, repo.ApplicationType)
+		CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, repo.ApplicationType)
 	}
 
 	contextMap := map[string]string{
@@ -880,7 +880,7 @@ func TestLogRepoSettingsFilterByContext_FilterByName(t *testing.T) {
 	}
 
 	for _, repo := range repos {
-		CreateLogRepoSettings(repo, repo.ApplicationType)
+		CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, repo.ApplicationType)
 	}
 
 	contextMap := map[string]string{
@@ -909,7 +909,7 @@ func TestLogRepoSettingsFilterByContext_NoMatches(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	contextMap := map[string]string{
 		common.APPLICATION_TYPE: "xhome", // Different type

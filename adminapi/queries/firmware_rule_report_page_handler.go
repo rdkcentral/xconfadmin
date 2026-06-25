@@ -56,7 +56,7 @@ func PostFirmwareRuleReportPageHandler(w http.ResponseWriter, r *http.Request) {
 	header["Content-Disposition"] = "attachment; filename=filename=report.xls"
 	header["Content-Type"] = "application/vnd.ms-excel"
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	macRules, _ := db.GetSimpleDao().GetAllByKeys(tenantId, db.TABLE_FIRMWARE_RULES, macRuleIds)
 	macIds := getMacAddresses(tenantId, macRules)
 	reportBytes, err := doReport(tenantId, macIds)

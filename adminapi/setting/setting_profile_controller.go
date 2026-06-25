@@ -54,7 +54,8 @@ func GetSettingProfilesAllExport(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	all := GetAll()
+	tenantId := xhttp.GetTenantId(r.Context(), r)
+	all := GetAllForTenant(tenantId)
 	settingProfiles := []*logupload.SettingProfiles{}
 	for _, entity := range all {
 		if entity.ApplicationType == applicationType {
@@ -86,7 +87,7 @@ func GetSettingProfileOneExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	settingProfile, _ := GetOne(tenantId, id)
 	if settingProfile == nil {
 		invalid := "Entity with id: " + id + " does not exist"
@@ -135,7 +136,8 @@ func GetAllSettingProfilesWithPage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	settingProfiles := GetAll()
+	tenantId := xhttp.GetTenantId(r.Context(), r)
+	settingProfiles := GetAllForTenant(tenantId)
 	featureRuleList := SettingProfilesGeneratePage(settingProfiles, pageNumber, pageSize)
 	response, err := util.JSONMarshal(featureRuleList)
 	if err != nil {
@@ -168,7 +170,7 @@ func DeleteOneSettingProfilesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	_, err = Delete(tenantId, id, applicationType)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -218,7 +220,7 @@ func GetSettingProfilesFilteredWithPage(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
-	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
+	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r.Context(), r)
 
 	settingProfiles := FindByContext(contextMap)
 	sort.Slice(settingProfiles, func(i, j int) bool {
@@ -256,7 +258,7 @@ func CreateSettingProfileHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	err = Create(tenantId, &settingProfiles, applicationType)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -291,7 +293,7 @@ func CreateSettingProfilesPackageHandler(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
@@ -338,7 +340,7 @@ func UpdateSettingProfilesHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	err = Update(tenantId, &settingProfiles, applicationType)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -370,7 +372,7 @@ func UpdateSettingProfilesPackageHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity

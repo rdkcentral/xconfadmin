@@ -59,7 +59,7 @@ func CreateLogFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if !isValidName(tenantId, logFile) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Name is already used")
 		return

@@ -90,6 +90,63 @@ const (
 	TELEMETRY_ENTITY string = "TelemetryEntity"
 )
 
+type SATv2Domain string
+
+const (
+	DOMAIN_CORE    SATv2Domain = "core"
+	DOMAIN_TAGGING SATv2Domain = "tagging"
+	DOMAIN_SYSTEM  SATv2Domain = "system"
+	DOMAIN_METRICS SATv2Domain = "metrics"
+)
+
+type RouteDomainMapping struct {
+	Prefix string
+	Domain SATv2Domain
+}
+
+var satV2RouteMappings = []RouteDomainMapping{
+	// system
+	{Prefix: "/queries/filters/downloadlocation", Domain: DOMAIN_SYSTEM},
+	{Prefix: "/updates/filters/downloadlocation", Domain: DOMAIN_SYSTEM},
+	{Prefix: "/roundrobinfilter", Domain: DOMAIN_SYSTEM},
+	{Prefix: "/rfc/recooking", Domain: DOMAIN_SYSTEM},
+	{Prefix: "/rfc/preprocess", Domain: DOMAIN_SYSTEM},
+	{Prefix: "/appsettings", Domain: DOMAIN_SYSTEM},
+	{Prefix: "/canarysettings", Domain: DOMAIN_SYSTEM},
+	{Prefix: "/lockdownsettings", Domain: DOMAIN_SYSTEM},
+	{Prefix: "/wakeuppool", Domain: DOMAIN_SYSTEM},
+
+	// core
+	{Prefix: "/dataservice", Domain: DOMAIN_CORE},
+	{Prefix: "/estbfirmware", Domain: DOMAIN_CORE},
+	{Prefix: "/queries", Domain: DOMAIN_CORE},
+	{Prefix: "/updates", Domain: DOMAIN_CORE},
+	{Prefix: "/delete", Domain: DOMAIN_CORE},
+	{Prefix: "/model", Domain: DOMAIN_CORE},
+	{Prefix: "/environment", Domain: DOMAIN_CORE},
+	{Prefix: "/genericnamespacedlist", Domain: DOMAIN_CORE},
+	{Prefix: "/firmwarerule", Domain: DOMAIN_CORE},
+	{Prefix: "/firmwareruletemplate", Domain: DOMAIN_CORE},
+	{Prefix: "/firmwareconfig", Domain: DOMAIN_CORE},
+	{Prefix: "/percentfilter", Domain: DOMAIN_CORE},
+	{Prefix: "/amv", Domain: DOMAIN_CORE},
+	{Prefix: "/activationminimumversion", Domain: DOMAIN_CORE},
+	{Prefix: "/settings", Domain: DOMAIN_CORE},
+	{Prefix: "/setting", Domain: DOMAIN_CORE},
+	{Prefix: "/featurerule", Domain: DOMAIN_CORE},
+	{Prefix: "/feature", Domain: DOMAIN_CORE},
+	{Prefix: "/rfc", Domain: DOMAIN_CORE},
+	{Prefix: "/changelog", Domain: DOMAIN_CORE},
+	{Prefix: "/log", Domain: DOMAIN_CORE},
+	{Prefix: "/reportpage", Domain: DOMAIN_CORE},
+	{Prefix: "/stats", Domain: DOMAIN_CORE},
+	{Prefix: "/migration", Domain: DOMAIN_CORE},
+	{Prefix: "/dcm", Domain: DOMAIN_CORE},
+	{Prefix: "/telemetry", Domain: DOMAIN_CORE},
+	{Prefix: "/change", Domain: DOMAIN_CORE},
+	{Prefix: "/penetrationdata", Domain: DOMAIN_CORE},
+}
+
 type EntityPermission struct {
 	ReadAll  string `json:"readAll,omitempty"`
 	Read     string `json:"read,omitempty"`
@@ -140,7 +197,7 @@ func getEntityPermission(entityType string) *EntityPermission {
 		return &CommonPermissions
 	}
 	if entityType == TOOL_ENTITY {
-		return &CommonPermissions
+		return &ToolPermissions
 	}
 	if entityType == CHANGE_ENTITY {
 		return &ChangePermissions
@@ -187,51 +244,209 @@ func getCurrentModule(r *http.Request, entityType string) string {
 	return ""
 }
 
-func HasReadPermissionForTool(r *http.Request) bool {
-	if !(owcommon.SatOn) {
-		return true
-	}
+func hasSATv2ReadCapability(capabilities []string, domain SATv2Domain) bool {
+	readCap := "xconf:" + string(domain) + ":readonly"
+	writeCap := "xconf:" + string(domain) + ":readwrite"
 
-	// checked capabilities from SAT token if available
-	if capabilities := xhttp.GetCapabilitiesFromContext(r); len(capabilities) > 0 {
-		if util.Contains(capabilities, XCONF_ALL) || util.Contains(capabilities, XCONF_READ) {
-			return true
-		}
-	} else {
-		// checked permissions from Login token
-		permissions := GetPermissionsFunc(r)
-		if util.Contains(permissions, getEntityPermission(TOOL_ENTITY).ReadAll) {
-			return true
-		}
-	}
-	return false
+	return util.Contains(capabilities, readCap) || util.Contains(capabilities, writeCap)
 }
 
-func HasWritePermissionForTool(r *http.Request) bool {
-	if !(owcommon.SatOn) {
-		return true
+func hasSATv2WriteCapability(capabilities []string, domain SATv2Domain) bool {
+	// metrics has no write capability
+	if domain == DOMAIN_METRICS {
+		return false
 	}
 
-	// checked capabilities from SAT token if available
-	if capabilities := xhttp.GetCapabilitiesFromContext(r); len(capabilities) > 0 {
-		if util.Contains(capabilities, XCONF_ALL) || util.Contains(capabilities, XCONF_WRITE) {
-			return true
-		}
-	} else {
-		// checked permissions from Login token
-		permissions := GetPermissionsFunc(r)
-		if util.Contains(permissions, getEntityPermission(TOOL_ENTITY).WriteAll) {
-			return true
+	writeCap := "xconf:" + string(domain) + ":readwrite"
+	return util.Contains(capabilities, writeCap)
+}
+
+func getTenantIdForSATv2(r *http.Request) string {
+	return xhttp.GetTenantIdFromHeader(r)
+}
+
+func authorizeSATv2TenantScope(r *http.Request) error {
+	tenantId := getTenantIdForSATv2(r)
+	if util.IsBlank(tenantId) {
+		return xwcommon.NewRemoteErrorAS(http.StatusForbidden, "Missing tenantId for SAT v2 authorization")
+	}
+
+	allowedPartners := xhttp.GetAllowedPartnersFromContext(r)
+	if len(allowedPartners) == 0 {
+		return xwcommon.NewRemoteErrorAS(http.StatusForbidden, "SAT token is missing allowed partners")
+	}
+	if !util.CaseInsensitiveContains(allowedPartners, tenantId) {
+		return xwcommon.NewRemoteErrorAS(http.StatusForbidden, "SAT token is not allowed for tenant "+tenantId)
+	}
+
+	return nil
+}
+
+func CanReadSatV2(r *http.Request, capabilities []string, applicationType string) (string, error) {
+	domain, ok := classifySATv2Domain(r.URL.Path)
+	if !ok {
+		return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No SAT v2 read permission for unmapped route")
+	}
+
+	if !hasSATv2ReadCapability(capabilities, domain) {
+		requiredCap := "xconf:" + string(domain) + ":readonly"
+		return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, fmt.Sprintf("SAT v2 token is missing required capability: %s", requiredCap))
+	}
+	if err := authorizeSATv2TenantScope(r); err != nil {
+		return "", err
+	}
+
+	return applicationType, nil
+}
+
+func CanWriteSatV2(r *http.Request, capabilities []string, applicationType string) (string, error) {
+	domain, ok := classifySATv2Domain(r.URL.Path)
+	if !ok {
+		return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No SAT v2 write permission for unmapped route")
+	}
+
+	if !hasSATv2WriteCapability(capabilities, domain) {
+		requiredCap := "xconf:" + string(domain) + ":readwrite"
+		return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, fmt.Sprintf("SAT v2 token is missing required capability: %s", requiredCap))
+	}
+	if err := authorizeSATv2TenantScope(r); err != nil {
+		return "", err
+	}
+
+	return applicationType, nil
+}
+
+func resolveApplicationType(r *http.Request, entityType string, vargs ...string) (string, error) {
+	if entityType == COMMON_ENTITY || entityType == TOOL_ENTITY {
+		return "", nil
+	}
+
+	applicationType := ""
+	if values, ok := r.URL.Query()[core.APPLICATION_TYPE]; ok {
+		applicationType = values[0]
+	}
+	if util.IsBlank(applicationType) {
+		applicationType = core.GetApplicationFromCookies(r)
+	}
+	if util.IsBlank(applicationType) {
+		if len(vargs) > 0 && vargs[0] != "" {
+			applicationType = vargs[0]
+		} else {
+			// work-around for backward compatibility
+			log.Debugf("applicationType not specified: auth_subject=%s path=%s", r.Header.Get(xhttp.AUTH_SUBJECT), r.URL.Path)
+			applicationType = core.STB
 		}
 	}
-	return false
+
+	if err := core.ValidateApplicationType(applicationType); err != nil {
+		return "", err
+	}
+
+	return applicationType, nil
+}
+
+func authorizeWrite(r *http.Request, entityType string, applicationType string, authType interface{}) error {
+	if !(owcommon.SatOn) {
+		return nil
+	}
+
+	if authType == xhttp.AUTH_TYPE_SAT_V2 || authType == xhttp.AUTH_TYPE_SAT_LEGACY {
+		// get capabilities from SAT token if available, return error if none found
+		capabilities := xhttp.GetCapabilitiesFromContext(r)
+		if len(capabilities) == 0 {
+			return xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No capabilities found in SAT token")
+		}
+		// if SAT is v2, do v2 check
+		if authType == xhttp.AUTH_TYPE_SAT_V2 {
+			_, err := CanWriteSatV2(r, capabilities, applicationType)
+			return err
+		}
+		// else assume legacy SAT
+		if entityType == COMMON_ENTITY && util.Contains(capabilities, XCONF_WRITE_MACLIST) {
+			return nil
+		}
+		if !(util.Contains(capabilities, XCONF_ALL) || util.Contains(capabilities, XCONF_WRITE)) {
+			return xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No write capabilities")
+		}
+		return nil
+	}
+
+	// check permissions from Login token since SAT token is not available
+	permissions := GetPermissionsFunc(r)
+	if util.Contains(permissions, getEntityPermission(entityType).WriteAll) {
+		return nil
+	}
+	if util.Contains(common.ApplicationTypes, applicationType) && util.Contains(permissions, getEntityPermission(entityType).Write+applicationType) {
+		return nil
+	}
+
+	// if we get here, it means user doesn't have required permissions, return error
+	if applicationType == "" {
+		return xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No write permission")
+	}
+	return xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No write permission for ApplicationType "+applicationType)
+}
+
+func authorizeRead(r *http.Request, entityType string, applicationType string, authType interface{}) error {
+	if !(owcommon.SatOn) {
+		return nil
+	}
+
+	if authType == xhttp.AUTH_TYPE_SAT_V2 || authType == xhttp.AUTH_TYPE_SAT_LEGACY {
+		// get capabilities from SAT token if available, return error if none found
+		capabilities := xhttp.GetCapabilitiesFromContext(r)
+		if len(capabilities) == 0 {
+			return xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No capabilities found in SAT token")
+		}
+		// if SAT is v2, do v2 check
+		if authType == xhttp.AUTH_TYPE_SAT_V2 {
+			_, err := CanReadSatV2(r, capabilities, applicationType)
+			return err
+		}
+		// else assume legacy SAT
+		if entityType == COMMON_ENTITY && util.Contains(capabilities, XCONF_READ_MACLIST) {
+			return nil
+		}
+		if !(util.Contains(capabilities, XCONF_ALL) || util.Contains(capabilities, XCONF_READ)) {
+			return xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No read capabilities")
+		}
+		return nil
+	}
+
+	// check permissions from Login token since SAT token is not available
+	permissions := GetPermissionsFunc(r)
+	if util.Contains(permissions, getEntityPermission(entityType).ReadAll) {
+		return nil
+	}
+
+	if util.Contains(common.ApplicationTypes, applicationType) && util.Contains(permissions, getEntityPermission(entityType).Read+applicationType) {
+		return nil
+	}
+
+	// if we get here, it means user doesn't have required permissions, return error
+	if applicationType == "" {
+		return xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No read permission")
+	}
+	return xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No read permission for ApplicationType "+applicationType)
 }
 
 // CanWrite returns the applicationType the user has write permission for non-common entityType,
 // otherwise returns error if applicationType is not specified in query parameter or cookie
 func CanWrite(r *http.Request, entityType string, vargs ...string) (applicationType string, err error) {
-	tenantId := xwhttp.GetTenantId(r, "")
+	authType := r.Context().Value(xhttp.CTX_KEY_AUTH_TYPE)
 
+	applicationType, err = resolveApplicationType(r, entityType, vargs...)
+	if err != nil {
+		return "", err
+	}
+
+	if err = authorizeWrite(r, entityType, applicationType, authType); err != nil {
+		return "", err
+	}
+
+	// Lockdown check runs after authorization: unauthorized callers should receive
+	// 401/403, not a 423 that reveals operational system state.
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if isLockdownMode(tenantId) {
 		lockdownModules := strings.Split(common.GetStringAppSetting(tenantId, common.PROP_LOCKDOWN_MODULES), ",")
 		if len(lockdownModules) != 0 {
@@ -241,113 +456,44 @@ func CanWrite(r *http.Request, entityType string, vargs ...string) (applicationT
 		}
 	}
 
-	if entityType != COMMON_ENTITY && entityType != TOOL_ENTITY {
-		if values, ok := r.URL.Query()[core.APPLICATION_TYPE]; ok {
-			applicationType = values[0]
-		}
-		if util.IsBlank(applicationType) {
-			applicationType = core.GetApplicationFromCookies(r)
-		}
-		if util.IsBlank(applicationType) {
-			if len(vargs) > 0 && vargs[0] != "" {
-				applicationType = vargs[0]
-			} else {
-				// work-around for backward compatibility
-				log.Infof("applicationType not specified: auth_subject=%s path=%s", r.Header.Get(xhttp.AUTH_SUBJECT), r.URL.Path)
-				applicationType = core.STB
-			}
-		}
-		if err := core.ValidateApplicationType(applicationType); err != nil {
-			return "", err
-		}
-	}
-
-	//TODO
-	if !(owcommon.SatOn) {
-		return applicationType, nil
-	}
-
-	// checked capabilities from SAT token if available
-	if capabilities := xhttp.GetCapabilitiesFromContext(r); len(capabilities) > 0 {
-		if entityType == COMMON_ENTITY && util.Contains(capabilities, XCONF_WRITE_MACLIST) {
-			return applicationType, nil
-		}
-		if !(util.Contains(capabilities, XCONF_ALL) || util.Contains(capabilities, XCONF_WRITE)) {
-			return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No write capabilities")
-		}
-		return applicationType, nil
-	} else {
-		// checked permissions from Login token
-		permissions := GetPermissionsFunc(r)
-		if util.Contains(permissions, getEntityPermission(entityType).WriteAll) {
-			return applicationType, nil
-		}
-		if util.Contains(common.ApplicationTypes, applicationType) && util.Contains(permissions, getEntityPermission(entityType).Write+applicationType) {
-			return applicationType, nil
-		}
-	}
-
-	if applicationType == "" {
-		return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No write permission")
-	} else {
-		return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No write permission for ApplicationType "+applicationType)
-	}
+	return applicationType, nil
 }
 
 // CanRead returns the applicationType the user has read permission for non-common entityType,
 // otherwise returns error if applicationType is not specified in query parameter or cookie
 func CanRead(r *http.Request, entityType string, vargs ...string) (applicationType string, err error) {
-	if entityType != COMMON_ENTITY && entityType != TOOL_ENTITY {
-		if values, ok := r.URL.Query()[core.APPLICATION_TYPE]; ok {
-			applicationType = values[0]
-		}
-		if util.IsBlank(applicationType) {
-			applicationType = core.GetApplicationFromCookies(r)
-		}
-		if util.IsBlank(applicationType) {
-			if len(vargs) > 0 && vargs[0] != "" {
-				applicationType = vargs[0]
-			} else {
-				// work-around for backward compatibility
-				log.Infof("applicationType not specified: auth_subject=%s path=%s", r.Header.Get(xhttp.AUTH_SUBJECT), r.URL.Path)
-				applicationType = core.STB
-			}
-		}
-		if err := core.ValidateApplicationType(applicationType); err != nil {
-			return "", err
+	authType := r.Context().Value(xhttp.CTX_KEY_AUTH_TYPE)
+
+	applicationType, err = resolveApplicationType(r, entityType, vargs...)
+	if err != nil {
+		return "", err
+	}
+
+	if err = authorizeRead(r, entityType, applicationType, authType); err != nil {
+		return "", err
+	}
+
+	return applicationType, nil
+}
+
+func classifySATv2Domain(path string) (SATv2Domain, bool) {
+	path = strings.ToLower(strings.TrimSuffix(path, "/"))
+
+	// tagging router is its own top-level domain
+	if strings.HasPrefix(path, "/taggingservice") {
+		return DOMAIN_TAGGING, true
+	}
+
+	// all other admin routes come through xconfAdminService
+	path = strings.TrimPrefix(path, "/xconfadminservice")
+
+	for _, m := range satV2RouteMappings {
+		if strings.HasPrefix(path, m.Prefix) {
+			return m.Domain, true
 		}
 	}
 
-	if !(owcommon.SatOn) {
-		return applicationType, nil
-	}
-
-	// checked capabilities from SAT token if available
-	if capabilities := xhttp.GetCapabilitiesFromContext(r); len(capabilities) > 0 {
-		if entityType == COMMON_ENTITY && util.Contains(capabilities, XCONF_READ_MACLIST) {
-			return applicationType, nil
-		}
-		if !(util.Contains(capabilities, XCONF_ALL) || util.Contains(capabilities, XCONF_READ)) {
-			return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No read capabilities")
-		}
-		return applicationType, nil
-	} else {
-		// checked permissions from Login token
-		permissions := GetPermissionsFunc(r)
-		if util.Contains(permissions, getEntityPermission(entityType).ReadAll) {
-			return applicationType, nil
-		}
-
-		if util.Contains(common.ApplicationTypes, applicationType) && util.Contains(permissions, getEntityPermission(entityType).Read+applicationType) {
-			return applicationType, nil
-		}
-	}
-
-	if applicationType == "" {
-		return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No read permission")
-	} else {
-		return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, "No read permission for ApplicationType "+applicationType)
-	}
+	return "", false
 }
 
 var GetPermissionsFunc = getPermissions

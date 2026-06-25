@@ -48,7 +48,7 @@ func populateContext(w http.ResponseWriter, r *http.Request, isRead bool) (filte
 	filterContext = map[string]string{}
 	xutil.AddQueryParamsToContextMap(r, filterContext)
 
-	filterContext[common.TENANT_ID] = xwhttp.GetTenantId(r, "")
+	filterContext[common.TENANT_ID] = xhttp.GetTenantId(r.Context(), r)
 
 	appType, found := filterContext[common.APPLICATION_TYPE]
 	if !found || util.IsBlank(appType) {
@@ -231,7 +231,7 @@ func PostFirmwareRuleImportAllHandler(w http.ResponseWriter, r *http.Request) {
 		determinedAppType = appType
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	result := importOrUpdateAllFirmwareRules(tenantId, firmwareRules, determinedAppType, fields)
 	response, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
@@ -253,7 +253,7 @@ func PostFirmwareRuleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if util.IsBlank(firmwareRule.ID) {
 		firmwareRule.ID = uuid.New().String()
 	} else {
@@ -285,7 +285,7 @@ func PostFirmwareRuleHandler(w http.ResponseWriter, r *http.Request) {
 func PutFirmwareRuleHandler(w http.ResponseWriter, r *http.Request) {
 	firmwareRule := firmware.NewEmptyFirmwareRule()
 	firmwareRule.ApplicationType = ""
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 
 	appType, err := auth.ExtractBodyAndCheckPermissions(firmwareRule, w, r, auth.FIRMWARE_ENTITY)
 	_, err = firmware.GetFirmwareRuleOneDB(tenantId, firmwareRule.ID)
@@ -323,7 +323,7 @@ func DeleteFirmwareRuleByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	entityOnDb, err := firmware.GetFirmwareRuleOneDB(tenantId, id)
 	if err == nil {
 		if entityOnDb.ApplicationType != appType {
@@ -358,7 +358,7 @@ func GetFirmwareRuleByTypeNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	nameMap := make(map[string]string)
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	dbrules, _ := firmware.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
 	for _, v := range dbrules {
 		if v.Type == givenType && appType == v.ApplicationType {
@@ -611,7 +611,7 @@ func PostPutFirmwareRuleEntitiesHandler(w http.ResponseWriter, r *http.Request, 
 	nameMap := make(map[string][]*firmware.FirmwareRule)
 	ruleMap := make(map[string][]*firmware.FirmwareRule)
 	estbMap := make(map[string][]*firmware.FirmwareRule)
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 
 	list, err := firmware.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
 	if err != nil {
@@ -753,7 +753,7 @@ func GetFirmwareRuleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	dbrules, _ := xfirmware.GetFirmwareSortedRuleAllAsListDB(tenantId)
 
 	filtRules := []*firmware.FirmwareRule{}
@@ -799,7 +799,7 @@ func GetFirmwareRuleByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	fr, _ := firmware.GetFirmwareRuleOneDB(tenantId, id)
 	if fr == nil {
 		errorStr := fmt.Sprintf("%v not found", id)

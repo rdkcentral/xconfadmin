@@ -277,9 +277,9 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 
 		ctx := r.Context()
 
-		// Check for SAT V2 token
+		// Check for SAT token
 		if satToken := getSatTokenFromRequest(r); satToken != "" {
-			if subject, capabilities, err := getSubjectAndCapabilitiesFromSatToken(satToken, s.VerifyStageHost); err != nil {
+			if subject, capabilities, allowedPartners, err := getSubjectAndCapabilitiesFromSatToken(satToken, s.VerifyStageHost); err != nil {
 				log.Error(err.Error())
 				http.Error(w, "invalid SAT token", http.StatusUnauthorized)
 				return
@@ -288,12 +288,19 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 
 				// Add capabilities to request context
 				ctx = context.WithValue(ctx, CTX_KEY_CAPABILITIES, capabilities)
+				ctx = context.WithValue(ctx, CTX_KEY_ALLOWED_PARTNERS, allowedPartners)
+
+				// check if SAT is legacy SAT or SAT v2 based on capabilities and set auth type in context
+				if isSATv2(capabilities) {
+					ctx = context.WithValue(ctx, CTX_KEY_AUTH_TYPE, AUTH_TYPE_SAT_V2)
+				} else {
+					ctx = context.WithValue(ctx, CTX_KEY_AUTH_TYPE, AUTH_TYPE_SAT_LEGACY)
+				}
 			}
 		} else if authToken := getLoginTokenFromRequest(r); authToken != "" {
 			if LoginToken, err := ValidateAndGetLoginToken(authToken); err != nil {
 				log.Error(err.Error())
 				http.Error(w, "invalid auth token", http.StatusUnauthorized)
-				ctx = context.WithValue(ctx, CTX_KEY_TOKEN, LoginToken)
 				return
 			} else {
 				// THIS IS LOGIN TOKEN SUCCESS CASE
@@ -303,6 +310,7 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 				ctx = context.WithValue(ctx, CTX_KEY_TOKEN, LoginToken)
 				permissions := getPermissionsFromLoginToken(LoginToken)
 				ctx = context.WithValue(ctx, CTX_KEY_PERMISSIONS, permissions)
+				ctx = context.WithValue(ctx, CTX_KEY_AUTH_TYPE, AUTH_TYPE_LOGIN_TOKEN)
 			}
 		} else if r.Header.Get(RequestID) != "adminui" && !xcommon.SatOn {
 			//allowing api request without sat_token if sat is off
@@ -405,6 +413,11 @@ func (s *WebconfigServer) logRequestStarts(w http.ResponseWriter, r *http.Reques
 		"xpc_trace":        xpcTrace,
 	}
 
+	// add field to distinguish between SAT v2, legacy SAT and login token in logs for better analysis of auth types in use
+	if authType, ok := r.Context().Value(CTX_KEY_AUTH_TYPE).(string); ok {
+		fields["authType"] = authType
+	}
+
 	xwriter := xhttp.NewXResponseWriter(w, time.Now(), token, fields)
 
 	if r.Method == "POST" || r.Method == "PUT" {
@@ -447,6 +460,11 @@ func (s *WebconfigServer) logRequestEnds(xw *xhttp.XResponseWriter, r *http.Requ
 
 	statusCode := xw.Status()
 	fields := xw.Audit()
+
+	// add field to distinguish between SAT v2, legacy SAT and login token in logs for better analysis of auth types in use
+	if authType, ok := r.Context().Value(CTX_KEY_AUTH_TYPE).(string); ok {
+		fields["authType"] = authType
+	}
 
 	fields["status"] = statusCode
 	fields["duration"] = duration

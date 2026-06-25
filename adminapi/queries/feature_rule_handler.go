@@ -64,7 +64,7 @@ func GetFeatureRulesFiltered(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	contextMap[common.APPLICATION_TYPE] = applicationType
-	contextMap[common.TENANT_ID] = xwhttp.GetTenantId(r, "")
+	contextMap[common.TENANT_ID] = xhttp.GetTenantId(r.Context(), r)
 
 	featureRules := FindFeatureRuleByContext(contextMap)
 	response, err := util.JSONMarshal(featureRules)
@@ -115,7 +115,7 @@ func GetFeatureRulesFilteredWithPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	contextMap[common.APPLICATION_TYPE] = applicationType
-	contextMap[common.TENANT_ID] = xwhttp.GetTenantId(r, "")
+	contextMap[common.TENANT_ID] = xhttp.GetTenantId(r.Context(), r)
 
 	featureRules := FindFeatureRuleByContext(contextMap)
 	featureRuleList := FeatureRulesGeneratePage(featureRules, pageNumber, pageSize)
@@ -158,7 +158,7 @@ func GetFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	featureRules := GetAllFeatureRulesByType(tenantId, applicationType)
 	response, err := util.JSONMarshal(featureRules)
 	if err != nil {
@@ -174,7 +174,7 @@ func GetFeatureRulesExportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	featureRules := GetAllFeatureRulesByType(tenantId, applicationType)
 	sort.Slice(featureRules, func(i, j int) bool {
 		return featureRules[j].Priority > featureRules[i].Priority
@@ -205,7 +205,7 @@ func GetFeatureRuleOneExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	featureRule := xrfc.GetFeatureRule(tenantId, id)
 	if featureRule == nil {
 		invalid := "Entity with id: " + id + " does not exist"
@@ -241,7 +241,7 @@ func GetFeatureRuleOne(w http.ResponseWriter, r *http.Request) {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("Id is blank"))
 		return
 	}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	featureRule := xrfc.GetFeatureRule(tenantId, id)
 	if featureRule == nil {
 		invalid := "Entity with id: " + id + " does not exist"
@@ -272,7 +272,7 @@ func CreateFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := featureRuleTableLock.Lock(tenantId, owner); err != nil {
@@ -311,7 +311,7 @@ func UpdateFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := featureRuleTableLock.Lock(tenantId, owner); err != nil {
@@ -379,7 +379,7 @@ func ImportAllFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := featureRuleTableLock.Lock(tenantId, owner); err != nil {
@@ -413,7 +413,7 @@ func DeleteOneFeatureRuleHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := featureRuleTableLock.Lock(tenantId, owner); err != nil {
@@ -505,7 +505,7 @@ func ChangeFeatureRulePrioritiesHandler(w http.ResponseWriter, r *http.Request) 
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := featureRuleTableLock.Lock(tenantId, owner); err != nil {
@@ -546,7 +546,7 @@ func GetFeatureRulesSizeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	size := GetFeatureRulesSize(tenantId, applicationType)
 	sizeString := strconv.Itoa(size)
 	response, err := util.JSONMarshal(sizeString)
@@ -596,7 +596,7 @@ func UpdateFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := featureRuleTableLock.Lock(tenantId, owner); err != nil {
@@ -660,7 +660,7 @@ func CreateFeatureRulesHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r.Context(), r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := featureRuleTableLock.Lock(tenantId, owner); err != nil {
