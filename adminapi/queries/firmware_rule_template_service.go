@@ -212,7 +212,7 @@ func validateRule(fr *re.Rule, action *corefw.TemplateApplicableAction) error {
 				)
 			}
 			if !xutil.IsBlank(fixedArg) {
-				if err := checkFixedArgValue(*c, isNotBlank); err != nil {
+				if err := checkFixedArgValue(db.GetDefaultTenantId(), *c, isNotBlank); err != nil {
 					return err
 				}
 			}

@@ -37,8 +37,6 @@ require (
 	gotest.tools v2.2.0+incompatible
 )
 
-replace github.com/rdkcentral/xconfwebconfig => /Users/kloder201@cable.comcast.com/Projects/xconfwebconfig
-
 require (
 	github.com/google/go-cmp v0.7.0
 	github.com/rs/cors v1.11.1

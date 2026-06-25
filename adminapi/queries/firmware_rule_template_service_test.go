@@ -403,7 +403,7 @@ func TestCreateFirmwareRT_ModelReferenceDoesNotExist(t *testing.T) {
 	err := json.Unmarshal([]byte(templateJSON), &template)
 	assert.NilError(t, err)
 
-	result, err := createFirmwareRT(template)
+	result, err := createFirmwareRT(db.GetDefaultTenantId(), template)
 	assert.Assert(t, err != nil)
 	assert.Assert(t, result == nil)
 	assert.ErrorContains(t, err, "Model does not exist")
@@ -440,7 +440,7 @@ func TestCreateFirmwareRT_IPListReferenceDoesNotExist(t *testing.T) {
 	err := json.Unmarshal([]byte(templateJSON), &template)
 	assert.NilError(t, err)
 
-	result, err := createFirmwareRT(template)
+	result, err := createFirmwareRT(db.GetDefaultTenantId(), template)
 	assert.Assert(t, err != nil)
 	assert.Assert(t, result == nil)
 	assert.ErrorContains(t, err, "IP list does not exist")
