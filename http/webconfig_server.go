@@ -414,8 +414,8 @@ func (s *WebconfigServer) logRequestStarts(w http.ResponseWriter, r *http.Reques
 	}
 
 	// add field to distinguish between SAT v2, legacy SAT and login token in logs for better analysis of auth types in use
-	if authType, ok := r.Context().Value(CTX_KEY_AUTH_TYPE).(string); ok {
-		fields["authType"] = authType
+	if authType, ok := r.Context().Value(CTX_KEY_AUTH_TYPE).(AuthType); ok {
+		fields["authType"] = string(authType)
 	}
 
 	xwriter := xhttp.NewXResponseWriter(w, time.Now(), token, fields)
@@ -462,8 +462,8 @@ func (s *WebconfigServer) logRequestEnds(xw *xhttp.XResponseWriter, r *http.Requ
 	fields := xw.Audit()
 
 	// add field to distinguish between SAT v2, legacy SAT and login token in logs for better analysis of auth types in use
-	if authType, ok := r.Context().Value(CTX_KEY_AUTH_TYPE).(string); ok {
-		fields["authType"] = authType
+	if authType, ok := r.Context().Value(CTX_KEY_AUTH_TYPE).(AuthType); ok {
+		fields["authType"] = string(authType)
 	}
 
 	fields["status"] = statusCode

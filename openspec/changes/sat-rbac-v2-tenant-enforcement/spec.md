@@ -56,7 +56,7 @@ For all SAT RBAC v2 requests:
 2. Read `allowedResources.allowedPartners` from SAT token.
 3. Allow only when `allowedPartners` contains the `tenantId` value.
 
-For this phase, the `tenantId` request header value SHALL be compared directly against the values in `allowedResources.allowedPartners` using exact membership matching. No separate tenant-to-partner translation is performed.
+For this phase, the `tenantId` request header value SHALL be compared against the values in `allowedResources.allowedPartners` using case-insensitive membership matching. No separate tenant-to-partner translation is performed.
 
 ### Tenant-Scope Failure Outcomes
 

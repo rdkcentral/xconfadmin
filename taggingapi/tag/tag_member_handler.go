@@ -113,7 +113,7 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 
 // AddMembersToTagHandler - Updated with bucketed implementation
 func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := auth.CanRead(r, auth.COMMON_ENTITY)
+	_, err := auth.CanWrite(r, auth.COMMON_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
