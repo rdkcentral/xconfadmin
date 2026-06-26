@@ -10,7 +10,7 @@ Capability authorization remains the first gate. Tenant enforcement is a second 
 
 1. Keep credential-path routing unchanged.
 2. Keep SAT RBAC v2 capability names and capability matching unchanged.
-3. Enforce tenant scope only for all SAT RBAC v2 requests.
+3. Enforce tenant scope for all SAT RBAC v2 requests.
 4. Deny with `403 Forbidden` for all tenant-enforcement failures.
 5. Preserve legacy SAT and login-token behavior.
 
@@ -35,7 +35,7 @@ Capability authorization remains the first gate. Tenant enforcement is a second 
 - If capability authorization fails, return `403 Forbidden`.
 
 5. Enforce SAT tenant scope (new phase)
-- For SAT RBAC v2 requests requiring tenant enforcement:
+- For all SAT RBAC v2 requests:
   - Read request tenant from header `tenantId`.
   - Read allowed partner list from SAT claim `allowedResources.allowedPartners`.
   - Allow only when `allowedPartners` contains `tenantId`.

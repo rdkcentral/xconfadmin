@@ -359,8 +359,7 @@ func TestGetApprovedAll_EmptyResult(t *testing.T) {
 		xchange.DeleteOneApprovedChange(db.GetDefaultTenantId(), ac.ID)
 	}
 
-	r := httptest.NewRequest(http.MethodGet, "/?applicationType=stb", nil)
-	result, err := GetApprovedAll(r)
+	result, err := GetApprovedAll(db.GetDefaultTenantId(), shared.STB)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -385,8 +384,7 @@ func TestGetApprovedAll_WithResults(t *testing.T) {
 		t.Fatalf("failed to create approved change: %v", err)
 	}
 
-	r := httptest.NewRequest(http.MethodGet, "/?applicationType=stb", nil)
-	result, err := GetApprovedAll(r)
+	result, err := GetApprovedAll(db.GetDefaultTenantId(), shared.STB)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

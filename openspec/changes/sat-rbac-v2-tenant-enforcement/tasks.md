@@ -12,18 +12,18 @@
 - [x] 2.5 Clarify ordering: capability checks first, tenant checks second.
 
 ## 3. Implementation
-- [ ] 3.1 Add SAT tenant-enforcement step in SAT RBAC v2 auth flow after capability success.
-- [ ] 3.2 Read and validate request header `tenantId`.
-- [ ] 3.3 Read and validate SAT claim `allowedResources.allowedPartners`.
-- [ ] 3.4 Enforce membership check (`tenantId` in `allowedPartners`).
-- [ ] 3.5 Return `403 Forbidden` for tenant authorization failures with fail-fast behavior.
-- [ ] 3.6 Keep legacy SAT and login-token/IDP flows unchanged.
+- [x] 3.1 Add SAT tenant-enforcement step in SAT RBAC v2 auth flow after capability success.
+- [x] 3.2 Read and validate request header `tenantId`.
+- [x] 3.3 Read and validate SAT claim `allowedResources.allowedPartners`.
+- [x] 3.4 Enforce membership check (`tenantId` in `allowedPartners`).
+- [x] 3.5 Return `403 Forbidden` for tenant authorization failures with fail-fast behavior.
+- [x] 3.6 Keep legacy SAT and login-token/IDP flows unchanged.
 
 ## 4. Validation
-- [ ] 4.1 Add tests for tenantId missing -> `403` (SAT tenant-enforced route).
-- [ ] 4.2 Add tests for allowedPartners missing -> `403`.
-- [ ] 4.3 Add tests for allowedPartners empty -> `403`.
-- [ ] 4.4 Add tests for tenant mismatch -> `403`.
-- [ ] 4.5 Add tests for tenant match -> allow.
-- [ ] 4.6 Add tests confirming capability failure still evaluated first.
-- [ ] 4.7 Add tests confirming legacy SAT and login-token paths are unchanged.
+- [x] 4.1 Add tests for tenantId missing -> `403` (SAT tenant-enforced route).
+- [x] 4.2 Add tests for allowedPartners missing -> `403`.
+- [x] 4.3 Add tests for allowedPartners empty -> `403`.
+- [x] 4.4 Add tests for tenant mismatch -> `403`.
+- [x] 4.5 Add tests for tenant match -> allow.
+- [x] 4.6 Add tests confirming capability failure still evaluated first.
+- [x] 4.7 Add tests confirming legacy SAT and login-token paths are unchanged.

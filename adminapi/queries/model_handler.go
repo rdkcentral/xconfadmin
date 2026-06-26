@@ -125,6 +125,10 @@ func PutModelEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ObsoleteGetModelPageHandler(w http.ResponseWriter, r *http.Request) {
+	if _, err := auth.CanRead(r, auth.COMMON_ENTITY); err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	tenantId := xhttp.GetTenantId(r.Context(), r)
 	entries := shared.GetAllModelList(tenantId)
 	sort.Slice(entries, func(i, j int) bool {

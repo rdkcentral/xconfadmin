@@ -105,6 +105,12 @@ type RouteDomainMapping struct {
 }
 
 var satV2RouteMappings = []RouteDomainMapping{
+	// tagging (own top-level router, must appear before xconfAdminService stripping)
+	{Prefix: "/taggingservice", Domain: DOMAIN_TAGGING},
+
+	// metrics
+	{Prefix: "/metrics", Domain: DOMAIN_METRICS},
+
 	// system
 	{Prefix: "/queries/filters/downloadlocation", Domain: DOMAIN_SYSTEM},
 	{Prefix: "/updates/filters/downloadlocation", Domain: DOMAIN_SYSTEM},
@@ -246,8 +252,13 @@ func getCurrentModule(r *http.Request, entityType string) string {
 
 func hasSATv2ReadCapability(capabilities []string, domain SATv2Domain) bool {
 	readCap := "xconf:" + string(domain) + ":readonly"
-	writeCap := "xconf:" + string(domain) + ":readwrite"
 
+	// metrics has no readwrite capability; only xconf:metrics:readonly is valid
+	if domain == DOMAIN_METRICS {
+		return util.Contains(capabilities, readCap)
+	}
+
+	writeCap := "xconf:" + string(domain) + ":readwrite"
 	return util.Contains(capabilities, readCap) || util.Contains(capabilities, writeCap)
 }
 
@@ -479,16 +490,22 @@ func CanRead(r *http.Request, entityType string, vargs ...string) (applicationTy
 func classifySATv2Domain(path string) (SATv2Domain, bool) {
 	path = strings.ToLower(strings.TrimSuffix(path, "/"))
 
-	// tagging router is its own top-level domain
-	if strings.HasPrefix(path, "/taggingservice") {
-		return DOMAIN_TAGGING, true
-	}
-
-	// all other admin routes come through xconfAdminService
-	path = strings.TrimPrefix(path, "/xconfadminservice")
-
+	// tagging paths are not under xconfAdminService; check registry before stripping prefix
 	for _, m := range satV2RouteMappings {
 		if strings.HasPrefix(path, m.Prefix) {
+			return m.Domain, true
+		}
+	}
+
+	// strip the xconfAdminService prefix and re-check for admin routes
+	adminPath := strings.TrimPrefix(path, "/xconfadminservice")
+	if adminPath == path {
+		// no prefix was stripped; no match found above
+		return "", false
+	}
+
+	for _, m := range satV2RouteMappings {
+		if strings.HasPrefix(adminPath, m.Prefix) {
 			return m.Domain, true
 		}
 	}

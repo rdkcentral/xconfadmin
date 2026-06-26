@@ -41,16 +41,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func GetApprovedAll(r *http.Request) ([]*xwchange.ApprovedChange, error) {
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+func GetApprovedAll(tenantId string, applicationType string) ([]*xwchange.ApprovedChange, error) {
 	approvedChangesAll := xchange.GetApprovedChangeList(tenantId)
 	approvedChanges := []*xwchange.ApprovedChange{}
-	application, err := auth.CanRead(r, auth.CHANGE_ENTITY)
-	if err != nil {
-		return nil, err
-	}
 	for _, approvedChange := range approvedChangesAll {
-		if xshared.ApplicationTypeEquals(application, approvedChange.ApplicationType) || xshared.ApplicationTypeEquals(application, xwshared.ALL) {
+		if xshared.ApplicationTypeEquals(applicationType, approvedChange.ApplicationType) || xshared.ApplicationTypeEquals(applicationType, xwshared.ALL) {
 			approvedChanges = append(approvedChanges, approvedChange)
 		}
 	}

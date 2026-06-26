@@ -95,7 +95,14 @@ func ApproveChangeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetApprovedHandler(w http.ResponseWriter, r *http.Request) {
-	approvedChange, err := GetApprovedAll(r)
+	applicationType, err := auth.CanRead(r, auth.CHANGE_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
+	tenantId := xhttp.GetTenantId(r.Context(), r)
+	approvedChange, err := GetApprovedAll(tenantId, applicationType)
 	if err != nil {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
 		return
@@ -217,7 +224,7 @@ func GetGroupedChangesHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	
+
 	tenantId := xhttp.GetTenantId(r.Context(), r)
 	changeList := xchange.GetChangeList(tenantId)
 	sort.Slice(changeList, func(i, j int) bool {
@@ -309,6 +316,11 @@ func ApprovedChangesGeneratePage(list []*xwchange.ApprovedChange, page int, page
 }
 
 func GetChangedEntityIdsHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanRead(r, auth.CHANGE_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	tenantId := xhttp.GetTenantId(r.Context(), r)
 	entityIds := GetChangedEntityIds(tenantId)
 	response, err := util.JSONMarshal(entityIds)

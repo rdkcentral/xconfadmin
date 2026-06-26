@@ -58,6 +58,14 @@ func writeErrorResponse(w http.ResponseWriter, r *http.Request, errorMsg string,
 }
 
 func GetFirmwareTestPageHandler(w http.ResponseWriter, r *http.Request) {
+	applicationType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
+	tenantId := xhttp.GetTenantId(r.Context(), r)
+
 	// Extract the search parameters from query params
 	context := make(map[string]string)
 	xutil.AddQueryParamsToContextMap(r, context)
@@ -67,7 +75,6 @@ func GetFirmwareTestPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
 	context[xwcommon.TENANT_ID] = tenantId
 
 	// If input has any of these search-paramters, validate their values
@@ -114,12 +121,6 @@ func GetFirmwareTestPageHandler(w http.ResponseWriter, r *http.Request) {
 	convertedContext := coreef.GetContextConverted(context)
 
 	// Evaluate rule
-	applicationType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
-	if err != nil {
-		xhttp.AdminError(w, err)
-		return
-	}
-
 	eval, err := ruleBase.Eval(context, convertedContext, applicationType, log.Fields{})
 	if err != nil {
 		errMsg := fmt.Sprintf("Rule Evaluation Error: %v", err)

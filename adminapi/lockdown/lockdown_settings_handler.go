@@ -56,7 +56,10 @@ func PutLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
-	// No permission check needed
+	if _, err := auth.CanRead(r, auth.TOOL_ENTITY); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "No read permission: tools")
+		return
+	}
 	tenantId := xhttp.GetTenantId(r.Context(), r)
 	lockdownSetting, err := GetLockdownSettings(tenantId)
 	if err != nil {
