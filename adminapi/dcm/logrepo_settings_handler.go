@@ -40,7 +40,7 @@ func GetLogRepoSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result := GetLogRepoSettingsAll(tenantId)
 	appRules := []*logupload.UploadRepository{}
 	for _, rule := range result {
@@ -79,7 +79,7 @@ func GetLogRepoSettingsByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	logreposettings := GetLogRepoSettings(tenantId, id)
 	if logreposettings == nil {
 		errorStr := fmt.Sprintf("%v not found", id)
@@ -121,7 +121,7 @@ func GetLogRepoSettingsSizeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	final := []*logupload.UploadRepository{}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result := GetLogRepoSettingsAll(tenantId)
 	for _, lr := range result {
 		if lr.ApplicationType == applicationType {
@@ -144,7 +144,7 @@ func GetLogRepoSettingsNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	final := []string{}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result := GetLogRepoSettingsAll(tenantId)
 	for _, lr := range result {
 		if lr.ApplicationType == applicationType {
@@ -173,7 +173,7 @@ func DeleteLogRepoSettingsByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := DeleteLogRepoSettingsbyId(tenantId, id, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -202,7 +202,8 @@ func CreateLogRepoSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	respEntity := CreateLogRepoSettings(&newlr, applicationType)
+	tenantId := xhttp.GetTenantId(r)
+	respEntity := CreateLogRepoSettingsForTenant(tenantId, &newlr, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -237,7 +238,8 @@ func UpdateLogRepoSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respEntity := UpdateLogRepoSettings(&newlrrule, applicationType)
+	tenantId := xhttp.GetTenantId(r)
+	respEntity := UpdateLogRepoSettingsForTenant(tenantId, &newlrrule, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
 		return
@@ -274,7 +276,7 @@ func PostLogRepoSettingsFilteredWithParamsHandler(w http.ResponseWriter, r *http
 	}
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[common.APPLICATION_TYPE] = applicationType
-	contextMap[common.TENANT_ID] = xwhttp.GetTenantId(r, "")
+	contextMap[common.TENANT_ID] = xhttp.GetTenantId(r)
 
 	lrrules := LogRepoSettingsFilterByContext(contextMap)
 	sizeHeader := xhttp.CreateNumberOfItemsHttpHeaders(len(lrrules))
@@ -311,8 +313,9 @@ func PostLogRepoSettingsEntitiesHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	entitiesMap := map[string]xhttp.EntityMessage{}
+	tenantId := xhttp.GetTenantId(r)
 	for _, entity := range entities {
-		respEntity := CreateLogRepoSettings(&entity, applicationType)
+		respEntity := CreateLogRepoSettingsForTenant(tenantId, &entity, applicationType)
 		if respEntity.Error != nil {
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_FAILURE,
@@ -352,8 +355,9 @@ func PutLogRepoSettingsEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	entitiesMap := map[string]xhttp.EntityMessage{}
+	tenantId := xhttp.GetTenantId(r)
 	for _, entity := range entities {
-		respEntity := UpdateLogRepoSettings(&entity, applicationType)
+		respEntity := UpdateLogRepoSettingsForTenant(tenantId, &entity, applicationType)
 		if respEntity.Error != nil {
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_FAILURE,
@@ -382,7 +386,7 @@ func GetLogRepoSettingsExportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	allFormulas := GetDcmFormulaAll(tenantId)
 	lusList := []*logupload.LogUploadSettings{}
 

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 
@@ -51,13 +52,19 @@ func parsePaginationParams(r *http.Request) (*PaginationParams, error) {
 // Non-paginated mode (V1 compatible): Returns []string with up to 100k members, HTTP 206 if truncated
 // Paginated mode: Returns paginated envelope when limit/cursor params are present
 func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanRead(r, auth.COMMON_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
 	id, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	query := r.URL.Query()
 	isPaginatedRequest := query.Has("limit") || query.Has("cursor")
 
@@ -106,6 +113,12 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 
 // AddMembersToTagHandler - Updated with bucketed implementation
 func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.COMMON_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
 	tagId, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
@@ -113,7 +126,7 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tagValue := getTagValueFromRequest(r)
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
@@ -169,13 +182,19 @@ func getTagValueFromRequest(r *http.Request) string {
 
 // RemoveMembersFromTagHandler - Updated with bucketed implementation
 func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.COMMON_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
 	id, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 
 	var members []string
 	body, err := io.ReadAll(r.Body)
@@ -221,6 +240,12 @@ func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 
 // RemoveMemberFromTagHandler - Updated with bucketed implementation
 func RemoveMemberFromTagHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.COMMON_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
 	id, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
@@ -233,8 +258,8 @@ func RemoveMemberFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
-	err := RemoveMemberWithXdas(tenantId, id, member)
+	tenantId := xhttp.GetTenantId(r)
+	err = RemoveMemberWithXdas(tenantId, id, member)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -245,7 +270,13 @@ func RemoveMemberFromTagHandler(w http.ResponseWriter, r *http.Request) {
 
 // GetAllTagsHandler returns all tag IDs from V2 storage
 func GetAllTagsHandler(w http.ResponseWriter, r *http.Request) {
-	tenantId := xwhttp.GetTenantId(r, "")
+	_, err := auth.CanRead(r, auth.COMMON_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
+	tenantId := xhttp.GetTenantId(r)
 	tagIds, err := GetAllTagIds(tenantId)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
@@ -263,13 +294,19 @@ func GetAllTagsHandler(w http.ResponseWriter, r *http.Request) {
 
 // GetTagByIdHandler retrieves a single tag with its members from V2 storage
 func GetTagByIdHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanRead(r, auth.COMMON_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
 	id, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	members, wasTruncated, err := GetTagById(tenantId, id)
 	if err != nil {
 		// Check if tag not found
@@ -307,6 +344,12 @@ func GetTagByIdHandler(w http.ResponseWriter, r *http.Request) {
 
 // DeleteTagHandler deletes a tag and all its members from V2 storage asynchronously
 func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanWrite(r, auth.COMMON_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
 	id, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
@@ -319,7 +362,7 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	populatedBuckets, err := getPopulatedBuckets(tenantId, id)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)

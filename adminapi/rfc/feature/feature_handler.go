@@ -52,7 +52,7 @@ func GetFeaturesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	_, isExport := r.URL.Query()["export"]
 	if isExport {
 		featureEntityList := GetFeatureEntityListByApplicationTypeSorted(tenantId, applicationType)
@@ -80,7 +80,7 @@ func GetFeatureByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	_, isExport := r.URL.Query()["export"]
 	if isExport {
 		featureEntity := GetFeatureEntityById(tenantId, id)
@@ -125,7 +125,7 @@ func DeleteFeatureByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	if !xrfc.DoesFeatureExistWithApplicationType(tenantId, id, applicationType) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", id))
 		return
@@ -159,7 +159,7 @@ func PutFeatureEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	entitiesMap := ImportFeatureEntities(tenantId, featureEntityList, true, applicationType)
 	response, _ := util.XConfJSONMarshal(entitiesMap, true)
 	xwhttp.WriteXconfResponse(w, http.StatusOK, []byte(response))
@@ -185,7 +185,7 @@ func PostFeatureEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	entitiesMap := ImportFeatureEntities(tenantId, featureEntityList, false, applicationType)
 	response, _ := util.XConfJSONMarshal(entitiesMap, true)
 	xwhttp.WriteXconfResponse(w, http.StatusOK, []byte(response))
@@ -210,7 +210,7 @@ func PostFeatureHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	feature := featureEntity.CreateFeature()
 
 	if xrfc.DoesFeatureExist(tenantId, feature.ID) {
@@ -260,7 +260,7 @@ func PutFeatureHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	feature := featureEntity.CreateFeature()
 	if feature.ID == "" {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Entity id is empty")
@@ -326,7 +326,7 @@ func GetFeaturesFilteredHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
-	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
+	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r)
 
 	features := GetFeatureFiltered(contextMap)
 	sort.SliceStable(features, func(i, j int) bool {
@@ -357,7 +357,7 @@ func GetFeaturesByIdListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	features := GetFeaturesByIdList(tenantId, featureIdList)
 	response, _ := util.JSONMarshal(features)
 	xwhttp.WriteXconfResponse(w, http.StatusOK, response)

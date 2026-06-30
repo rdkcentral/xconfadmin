@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/rdkcentral/xconfadmin/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 
 	"github.com/golang-jwt/jwt/v4"
 	log "github.com/sirupsen/logrus"
@@ -46,10 +47,20 @@ func (c AuthCtxKey) String() string {
 	return string(c)
 }
 
+type AuthType string
+
 const (
-	CTX_KEY_TOKEN        AuthCtxKey = "Token"
-	CTX_KEY_PERMISSIONS  AuthCtxKey = "Permissions"
-	CTX_KEY_CAPABILITIES AuthCtxKey = "Capabilities"
+	AUTH_TYPE_SAT_V2      AuthType = "SAT_V2"
+	AUTH_TYPE_SAT_LEGACY  AuthType = "SAT_LEGACY"
+	AUTH_TYPE_LOGIN_TOKEN AuthType = "LOGIN_TOKEN"
+)
+
+const (
+	CTX_KEY_TOKEN            AuthCtxKey = "Token"
+	CTX_KEY_PERMISSIONS      AuthCtxKey = "Permissions"
+	CTX_KEY_CAPABILITIES     AuthCtxKey = "Capabilities"
+	CTX_KEY_ALLOWED_PARTNERS AuthCtxKey = "AllowedPartners"
+	CTX_KEY_AUTH_TYPE        AuthCtxKey = "AuthType"
 )
 
 type LoginToken struct {
@@ -154,6 +165,28 @@ func GetCapabilitiesFromContext(r *http.Request) []string {
 		return []string{}
 	}
 	return capabilities.([]string)
+}
+
+func GetAllowedPartnersFromContext(r *http.Request) []string {
+	allowedPartners := r.Context().Value(CTX_KEY_ALLOWED_PARTNERS)
+	if allowedPartners == nil {
+		log.Debug("allowed partners not found in context")
+		return []string{}
+	}
+	return allowedPartners.([]string)
+}
+
+func GetTenantId(r *http.Request) string {
+	authType := r.Context().Value(CTX_KEY_AUTH_TYPE)
+	if authType == AUTH_TYPE_SAT_V2 {
+		return strings.ToUpper(GetTenantIdFromHeader(r))
+	}
+
+	return strings.ToUpper(db.GetDefaultTenantId())
+}
+
+func GetTenantIdFromHeader(r *http.Request) string {
+	return strings.TrimSpace(r.Header.Get("tenantId"))
 }
 
 func ValidateAndGetLoginToken(authToken string) (*LoginToken, error) {
@@ -279,9 +312,19 @@ func NewLoginToken(claims jwt.MapClaims) *LoginToken {
 	return LoginToken
 }
 
-// Get SAT V2 token
+// Get SAT token
 func getSatTokenFromRequest(r *http.Request) string {
 	return r.Header.Get(AUTHORIZATION)
+}
+
+// SAT v2 for capabilities starting with "xconf:" rather than "x1:coast"
+func isSATv2(capabilities []string) bool {
+	for _, c := range capabilities {
+		if strings.HasPrefix(c, "xconf:") {
+			return true
+		}
+	}
+	return false
 }
 
 func getLoginTokenFromRequest(r *http.Request) string {
@@ -312,7 +355,7 @@ func getWebValidator() *WebValidator {
 	}
 }
 
-func getSubjectAndCapabilitiesFromSatToken(token string, verifyStageHost bool) (string, []string, error) {
+func getSubjectAndCapabilitiesFromSatToken(token string, verifyStageHost bool) (string, []string, []string, error) {
 
 	var webValidator *WebValidator
 	var claims *Claims
@@ -327,7 +370,7 @@ func getSubjectAndCapabilitiesFromSatToken(token string, verifyStageHost bool) (
 		token = fragments[1]
 	}
 	if strings.TrimSpace(token) == "" {
-		return "", nil, errors.New("unable to extract required sat token")
+		return "", nil, nil, errors.New("unable to extract required sat token")
 	}
 
 	// 2 Validate Sat Token
@@ -336,7 +379,7 @@ func getSubjectAndCapabilitiesFromSatToken(token string, verifyStageHost bool) (
 		claims, err = webValidator.Validate(token)
 		if err != nil {
 			log.Error("Validation failed with staging host")
-			return "", nil, errors.New("unable to validate sat token with staging host")
+			return "", nil, nil, errors.New("unable to validate sat token with staging host")
 		}
 	} else {
 		// Validate with sat service host if flag is disabled.
@@ -349,15 +392,15 @@ func getSubjectAndCapabilitiesFromSatToken(token string, verifyStageHost bool) (
 		claims, err = webValidator.Validate(token)
 		if err != nil {
 			log.Error("Validation failed with prod host")
-			return "", nil, errors.New("unable to validate sat token with prod host")
+			return "", nil, nil, errors.New("unable to validate sat token with prod host")
 		}
 	}
 	// get capabilities
 	capabilities := claims.Capabilities
 	if len(capabilities) == 0 {
-		return "", nil, errors.New("unable to extract capabilities from sat token")
+		return "", nil, nil, errors.New("unable to extract capabilities from sat token")
 	}
-	return claims.Subject, capabilities, nil
+	return claims.Subject, capabilities, claims.AllowedResources.AllowedPartners, nil
 }
 
 func getJsonWebKey(header map[string]interface{}) *JsonWebKey {

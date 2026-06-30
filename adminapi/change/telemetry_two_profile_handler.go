@@ -56,7 +56,7 @@ func GetTelemetryTwoProfilesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	profiles := xlogupload.GetTelemetryTwoProfileListByApplicationType(tenantId, applicationType)
 
 	res, err := xhttp.ReturnJsonResponse(profiles, r)
@@ -228,7 +228,7 @@ func GetTelemetryTwoProfileByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	profile := xlogupload.GetOneTelemetryTwoProfile(tenantId, id)
 	if profile == nil {
 		errorStr := fmt.Sprintf("Entity with id %s does not exist", id)
@@ -276,7 +276,7 @@ func GetTelemetryTwoProfilePageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	profiles := xlogupload.GetAllTelemetryTwoProfileList(tenantId, applicationType)
 	profilesPerPage := GeneratePageTelemetryTwoProfiles(profiles, pageNumber, pageSize)
 	if err != nil {
@@ -313,7 +313,7 @@ func PostTelemetryTwoProfilesByIdListHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	profiles := GetTelemetryTwoProfilesByIdList(tenantId, applicationType, idList)
 
 	res, err := xhttp.ReturnJsonResponse(profiles, r)
@@ -362,7 +362,7 @@ func PostTelemetryTwoProfileFilteredHandler(w http.ResponseWriter, r *http.Reque
 	}
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
-	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
+	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r)
 
 	profiles := GetTelemetryTwoProfilesByContext(contextMap)
 	sort.SliceStable(profiles, func(i, j int) bool {
@@ -462,7 +462,7 @@ func PutTelemetryTwoProfileEntitiesHandler(w http.ResponseWriter, r *http.Reques
 func TelemetryTwoTestPageHandler(w http.ResponseWriter, r *http.Request) {
 	applicationType, err := auth.CanRead(r, auth.TELEMETRY_ENTITY)
 	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, err.(xcommon.XconfError).StatusCode, err.Error())
+		xhttp.AdminError(w, err)
 		return
 	}
 
@@ -485,7 +485,7 @@ func TelemetryTwoTestPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
-	contextMap[xwcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
+	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r)
 
 	telemetryProfileService := telemetry.NewTelemetryProfileService()
 	telemetryTwoRules := telemetryProfileService.ProcessTelemetryTwoRulesForAS(contextMap)

@@ -90,7 +90,7 @@ func GetInfoTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 
 	tableName := mux.Vars(r)[xcommon.TABLE_NAME]
 	tableInfo, _ := db.GetTableInfo(tableName)
@@ -155,7 +155,7 @@ func GetInfoTableRowKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 
 	tableName := mux.Vars(r)[xcommon.TABLE_NAME]
 	tableInfo, _ := db.GetTableInfo(tableName)
@@ -247,7 +247,7 @@ func UpdateInfoTableRowKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 
 	tableName := mux.Vars(r)[xcommon.TABLE_NAME]
 	tableInfo, _ := db.GetTableInfo(tableName)
@@ -365,7 +365,7 @@ func GetStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 
 	stats := db.GetCacheManager().GetStatistics(tenantId)
 	response, _ := util.JSONMarshal(stats.TableStats)
@@ -378,7 +378,7 @@ func GetInfoStatistics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 
 	stats := *db.GetCacheManager().GetStatistics(tenantId)
 	response, _ := util.JSONMarshal(stats)
@@ -387,12 +387,12 @@ func GetInfoStatistics(w http.ResponseWriter, r *http.Request) {
 
 func GetAppSettings(w http.ResponseWriter, r *http.Request) {
 	// For retrieving app settings, tools permission is required
-	if !auth.HasReadPermissionForTool(r) {
-		xhttp.WriteAdminErrorResponse(w, http.StatusUnauthorized, "")
+	if _, err := auth.CanRead(r, auth.TOOL_ENTITY); err != nil {
+		xhttp.AdminError(w, err)
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 
 	settings, err := xcommon.GetAppSettings(tenantId)
 	if err != nil {
@@ -405,8 +405,8 @@ func GetAppSettings(w http.ResponseWriter, r *http.Request) {
 
 func UpdateAppSettings(w http.ResponseWriter, r *http.Request) {
 	// For updating app settings, tools permission is required
-	if !auth.HasWritePermissionForTool(r) {
-		xhttp.WriteAdminErrorResponse(w, http.StatusUnauthorized, "")
+	if _, err := auth.CanWrite(r, auth.TOOL_ENTITY); err != nil {
+		xhttp.AdminError(w, err)
 		return
 	}
 
@@ -424,7 +424,7 @@ func UpdateAppSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 
 	for k, v := range settings {
 		if !xcommon.IsValidAppSetting(k) {
@@ -446,7 +446,7 @@ func GetInfoRefreshAllHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 
 	failedToRefreshTables := db.GetCacheManager().RefreshAll(tenantId)
 	if len(failedToRefreshTables) == 0 {
@@ -464,7 +464,7 @@ func GetInfoRefreshHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 
 	tableName := mux.Vars(r)[xcommon.TABLE_NAME]
 	err := db.GetCacheManager().Refresh(tenantId, tableName)

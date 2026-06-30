@@ -29,12 +29,12 @@ import (
 )
 
 func PutLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
-	if !auth.HasWritePermissionForTool(r) {
-		xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "No write permission: tools")
+	if _, err := auth.CanWrite(r, auth.TOOL_ENTITY); err != nil {
+		xhttp.AdminError(w, err)
 		return
 	}
 
-	xw, ok := w.(*xhttp.XResponseWriter)
+	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "responsewriter cast error")
 		return
@@ -47,7 +47,7 @@ func PutLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := SetLockdownSetting(tenantId, &lockdownSettings)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -57,8 +57,11 @@ func PutLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetLockdownSettingsHandler(w http.ResponseWriter, r *http.Request) {
-	// No permission check needed
-	tenantId := xwhttp.GetTenantId(r, "")
+	if _, err := auth.CanRead(r, auth.TOOL_ENTITY); err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+	tenantId := xhttp.GetTenantId(r)
 	lockdownSetting, err := GetLockdownSettings(tenantId)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
