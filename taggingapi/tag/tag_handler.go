@@ -35,7 +35,7 @@ func GetTagsByMemberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	tags, err := GetTagsByMember(tenantId, member)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
@@ -63,7 +63,7 @@ func GetTagsWithValuesByMemberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	tags, err := GetTagsWithValuesByMember(tenantId, member)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)

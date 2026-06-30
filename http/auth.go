@@ -16,7 +16,6 @@
 package http
 
 import (
-	"context"
 	"crypto/rsa"
 	"encoding/base64"
 	"errors"
@@ -177,15 +176,12 @@ func GetAllowedPartnersFromContext(r *http.Request) []string {
 	return allowedPartners.([]string)
 }
 
-func GetTenantId(ctx context.Context, r *http.Request) string {
-	if ctx != nil {
-		authType := ctx.Value(CTX_KEY_AUTH_TYPE)
-		if authType != nil {
-			if authType == AUTH_TYPE_SAT_V2 {
-				return strings.ToUpper(GetTenantIdFromHeader(r))
-			}
-		}
+func GetTenantId(r *http.Request) string {
+	authType := r.Context().Value(CTX_KEY_AUTH_TYPE)
+	if authType == AUTH_TYPE_SAT_V2 {
+		return strings.ToUpper(GetTenantIdFromHeader(r))
 	}
+
 	return strings.ToUpper(db.GetDefaultTenantId())
 }
 

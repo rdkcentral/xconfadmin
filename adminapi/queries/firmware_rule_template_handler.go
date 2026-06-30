@@ -49,7 +49,7 @@ func GetFirmwareRuleTemplateFilteredHandler(w http.ResponseWriter, r *http.Reque
 	util.AddQueryParamsToContextMap(r, filterContext)
 
 	var err error
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	allTemplates, err := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -110,7 +110,7 @@ func PostFirmwareRuleTemplateFilteredHandler(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	allTemplates, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 	sort.Slice(allTemplates, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(allTemplates[i].ID), strings.ToLower(allTemplates[j].ID)) < 0
@@ -196,7 +196,7 @@ func PostFirmwareRuleTemplateImportAllHandler(w http.ResponseWriter, r *http.Req
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := fwRuleTemplateTableLock.Lock(tenantId, owner); err != nil {
@@ -260,7 +260,7 @@ func PostFirmwareRuleTemplateImportHandler(w http.ResponseWriter, r *http.Reques
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := fwRuleTemplateTableLock.Lock(tenantId, owner); err != nil {
@@ -330,7 +330,7 @@ func PostChangePriorityHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	frt, err := corefw.GetFirmwareRuleTemplateOneDB(tenantId, templateId)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("unable to find template with id  %s", templateId))
@@ -410,7 +410,7 @@ func PostFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := fwRuleTemplateTableLock.Lock(tenantId, owner); err != nil {
@@ -467,7 +467,7 @@ func PutFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := fwRuleTemplateTableLock.Lock(tenantId, owner); err != nil {
@@ -512,7 +512,7 @@ func DeleteFirmwareRuleTemplateByIdHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 
 	// Check for usage in FirmwareRule
 	rules, err := corefw.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
@@ -611,7 +611,7 @@ func GetFirmwareRuleTemplateByIdHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	frt := GetFirmwareRuleTemplateById(tenantId, id)
 	if frt == nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, fmt.Sprintf("unable to find FirmwareRuleTemplate with id : %v", id))
@@ -668,7 +668,7 @@ func PostFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Requ
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := fwRuleTemplateTableLock.Lock(tenantId, owner); err != nil {
@@ -744,7 +744,7 @@ func PutFirmwareRuleTemplateEntitiesHandler(w http.ResponseWriter, r *http.Reque
 
 	db.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	if xhttp.WebConfServer.DistributedLockConfig.Enabled {
 		owner := auth.GetDistributedLockOwner(r)
 		if err := fwRuleTemplateTableLock.Lock(tenantId, owner); err != nil {
@@ -795,7 +795,7 @@ func ObsoleteGetFirmwareRuleTemplatePageHandler(w http.ResponseWriter, r *http.R
 	pageContext := map[string]string{}
 	util.AddQueryParamsToContextMap(r, pageContext)
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	dbrules, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 	sort.Slice(dbrules, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(dbrules[i].ID), strings.ToLower(dbrules[j].ID)) < 0
@@ -821,7 +821,7 @@ func GetFirmwareRuleTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	dbrules, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 	sort.Slice(dbrules, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(dbrules[i].ID), strings.ToLower(dbrules[j].ID)) < 0
@@ -855,7 +855,7 @@ func GetFirmwareRuleTemplateAllByTypeHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	dbrules, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 	tempIds := []corefw.FirmwareRuleTemplate{}
 	for _, v := range dbrules {
@@ -883,7 +883,7 @@ func GetFirmwareRuleTemplateIdsHandler(w http.ResponseWriter, r *http.Request) {
 	applicableActionTypes, ok := queryParams[xcommon.TYPE]
 	if ok {
 		applicableActionType := applicableActionTypes[0]
-		tenantId := xhttp.GetTenantId(r.Context(), r)
+		tenantId := xhttp.GetTenantId(r)
 		dbrules, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 		tempIds := []string{}
 		for _, v := range dbrules {
@@ -925,7 +925,7 @@ func GetFirmwareRuleTemplateWithVarWithVarHandler(w http.ResponseWriter, r *http
 	if editVar == "true" {
 		editable = true
 	}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	dbrules, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")
 	tempIds := []corefw.FirmwareRuleTemplate{}
 	for _, v := range dbrules {
@@ -951,7 +951,7 @@ func GetFirmwareRuleTemplateExportHandler(w http.ResponseWriter, r *http.Request
 	}
 	queryParams := r.URL.Query()
 	actionTypes, ok := queryParams[xcommon.TYPE]
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	if ok {
 		actionType := actionTypes[0]
 		entities, _ := corefw.GetFirmwareRuleTemplateAllAsListDBForAS(tenantId, "")

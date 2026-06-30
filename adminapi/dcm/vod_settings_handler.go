@@ -42,7 +42,7 @@ func GetVodSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	result := GetVodSettingsAll(tenantId)
 	appRules := []*logupload.VodSettings{}
 	for _, rule := range result {
@@ -69,7 +69,7 @@ func GetVodSettingsByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	vodsettings := GetVodSettings(tenantId, id)
 	if vodsettings == nil {
 		errorStr := fmt.Sprintf("%v not found", id)
@@ -93,7 +93,7 @@ func GetVodSettingsSizeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	final := []*logupload.VodSettings{}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	result := GetVodSettingsAll(tenantId)
 	for _, vs := range result {
 		if vs.ApplicationType == applicationType {
@@ -112,7 +112,7 @@ func GetVodSettingsNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	final := []string{}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	result := GetVodSettingsAll(tenantId)
 	for _, vs := range result {
 		if vs.ApplicationType == applicationType {
@@ -137,7 +137,7 @@ func DeleteVodSettingsByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := DeleteVodSettingsbyId(tenantId, id, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -167,7 +167,7 @@ func CreateVodSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := CreateVodSettings(tenantId, &newvs, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -203,7 +203,7 @@ func UpdateVodSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := UpdateVodSettings(tenantId, &newvsrule, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -241,7 +241,7 @@ func PostVodSettingsFilteredWithParamsHandler(w http.ResponseWriter, r *http.Req
 	}
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
-	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r.Context(), r)
+	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r)
 
 	vsrules := VodSettingsFilterByContext(contextMap)
 	sizeHeader := xhttp.CreateNumberOfItemsHttpHeaders(len(vsrules))
@@ -261,7 +261,7 @@ func GetVodSettingExportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	allFormulas := GetDcmFormulaAll(tenantId)
 	vodList := []*logupload.VodSettings{}
 

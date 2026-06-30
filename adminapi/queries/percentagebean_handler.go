@@ -47,18 +47,19 @@ const (
 )
 
 func GetPercentageBeanAllHandler(w http.ResponseWriter, r *http.Request) {
-	contextMap := make(map[string]string)
-
 	applicationType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
 	}
+
+	contextMap := make(map[string]string)
+
 	util.AddQueryParamsToContextMap(r, contextMap)
 
 	var result interface{}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	result, err = GetAllPercentageBeansFromDB(tenantId, applicationType, true, false)
 
 	if err != nil {
@@ -102,7 +103,7 @@ func GetPercentageBeanByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	bean, err := GetOnePercentageBeanFromDB(tenantId, id)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, "Entity with id: "+id+" does not exist")
@@ -141,17 +142,18 @@ func DeletePercentageBeanByIdHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetAllPercentageBeanAsRule(w http.ResponseWriter, r *http.Request) {
-	contextMap := make(map[string]string)
 	applicationType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
 	}
+	contextMap := make(map[string]string)
+
 	util.AddQueryParamsToContextMap(r, contextMap)
 
 	var result []*firmware.FirmwareRule
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	result, err = GetAllGlobalPercentageBeansAsRuleFromDB(tenantId, applicationType, true)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -186,7 +188,7 @@ func GetPercentageBeanAsRuleById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	fwRule, err := GetOnePercentageBeanFromDB(tenantId, id)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, "\"<h2>404 NOT FOUND</h2>\"")
@@ -232,7 +234,7 @@ func PostPercentageBeanEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 
 	fields := xw.Audit()
 	entitiesMap := map[string]xhttp.EntityMessage{}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	for _, entity := range entities {
 		entity := entity
 		respEntity := CreatePercentageBean(tenantId, &entity, applicationType, fields)
@@ -277,7 +279,7 @@ func PutPercentageBeanEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	entitiesMap := map[string]xhttp.EntityMessage{}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	for _, entity := range entities {
 		entity := entity
 		respEntity := UpdatePercentageBean(tenantId, &entity, applicationType, fields)
@@ -323,7 +325,7 @@ func PostPercentageBeanFilteredWithParamsHandler(w http.ResponseWriter, r *http.
 	}
 	util.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[common.APPLICATION_TYPE] = applicationType
-	contextMap[common.TENANT_ID] = xhttp.GetTenantId(r.Context(), r)
+	contextMap[common.TENANT_ID] = xhttp.GetTenantId(r)
 
 	pbrules := PercentageBeanFilterByContext(contextMap, applicationType)
 	sizeHeader := xhttp.CreateNumberOfItemsHttpHeaders(len(pbrules))
@@ -368,7 +370,7 @@ func CreateWakeupPoolHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.WithFields(fields).Infof("Received request to create wakeup pool. force=%v", force)
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	err := CreateWakeupPoolList(tenantId, shared.STB, force, fields)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)

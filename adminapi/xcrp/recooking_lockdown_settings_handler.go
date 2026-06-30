@@ -53,7 +53,7 @@ func PostRecookingLockdownSettingsHandler(w http.ResponseWriter, r *http.Request
 
 	dao.GetCacheManager().ForceSyncChanges()
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	var lockdownSettingFromDB *common.LockdownSettings
 	lockdownSettingFromDB, err = lockdown.GetLockdownSettings(tenantId)
 	if err != nil {

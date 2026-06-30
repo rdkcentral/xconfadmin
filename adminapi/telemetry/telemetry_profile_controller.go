@@ -28,8 +28,6 @@ import (
 
 	"github.com/rdkcentral/xconfwebconfig/dataapi/dcm/telemetry"
 
-	xcommon "github.com/rdkcentral/xconfadmin/common"
-
 	"github.com/rdkcentral/xconfadmin/shared"
 	xlogupload "github.com/rdkcentral/xconfadmin/shared/logupload"
 
@@ -94,7 +92,7 @@ func CreateTelemetryEntryFor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	timestampedRule := CreateTelemetryProfile(tenantId, contextAttributeName, expectedValue, &telemetryProfile)
 	response, err := util.JSONMarshal(timestampedRule)
 	if err != nil {
@@ -120,7 +118,7 @@ func DropTelemetryEntryFor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	telemetryProfileList := DropTelemetryFor(tenantId, contextAttributeName, expectedValue)
 	response, err := util.JSONMarshal(telemetryProfileList)
 	if err != nil {
@@ -144,7 +142,7 @@ func GetDescriptors(w http.ResponseWriter, r *http.Request) {
 	}
 
 	applicationType, _ := contextMap[xwcommon.APPLICATION_TYPE]
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	descriptors := GetAvailableDescriptors(tenantId, applicationType)
 	response, err := util.JSONMarshal(descriptors)
 	if err != nil {
@@ -168,7 +166,7 @@ func GetTelemetryDescriptors(w http.ResponseWriter, r *http.Request) {
 	}
 
 	applicationType, _ := contextMap[xwcommon.APPLICATION_TYPE]
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	descriptors := GetAvailableProfileDescriptors(tenantId, applicationType)
 	response, err := util.JSONMarshal(descriptors)
 	if err != nil {
@@ -213,7 +211,7 @@ func TempAddToPermanentRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	telemetryRule := xlogupload.GetOneTelemetryRule(tenantId, ruleId) //*TelemetryRule
 	if telemetryRule == nil {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("no rule found for ruleId"))
@@ -281,7 +279,7 @@ func BindToTelemetry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	profile := xlogupload.GetOnePermanentTelemetryProfile(tenantId, telemetryId) //*PermanentTelemetryProfile
 	if profile == nil {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("no rule found for ID "+telemetryId+" provided"))
@@ -300,6 +298,11 @@ func BindToTelemetry(w http.ResponseWriter, r *http.Request) {
 }
 
 func TelemetryTestPageHandler(w http.ResponseWriter, r *http.Request) {
+	applicationType, err := auth.CanRead(r, auth.TELEMETRY_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("Unable to extract body"))
@@ -308,7 +311,6 @@ func TelemetryTestPageHandler(w http.ResponseWriter, r *http.Request) {
 
 	body := xw.Body()
 	contextMap := make(map[string]string)
-	var err error
 	if body != "" {
 		err = json.Unmarshal([]byte(body), &contextMap)
 		if err != nil {
@@ -323,14 +325,8 @@ func TelemetryTestPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	applicationType, err := auth.CanRead(r, auth.TELEMETRY_ENTITY)
-	if err != nil {
-		xhttp.WriteAdminErrorResponse(w, err.(xcommon.XconfError).StatusCode, err.Error())
-		return
-	}
-
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
-	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r.Context(), r)
+	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r)
 
 	result := make(map[string]interface{})
 	result["context"] = contextMap

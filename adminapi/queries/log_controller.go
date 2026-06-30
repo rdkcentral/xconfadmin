@@ -49,7 +49,7 @@ func GetLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := make(map[string]interface{}, 2)
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	last := estbfirmware.GetLastConfigLog(tenantId, macAddress) //*ConfigChangeLog
 	if last != nil {
 		configChangeLogList := estbfirmware.GetConfigChangeLogsOnly(tenantId, macAddress) //[]*ConfigChangeLog

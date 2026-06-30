@@ -75,7 +75,7 @@ func GetDeviceSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	result := GetDeviceSettingsAll(tenantId)
 	appRules := []*logupload.DeviceSettings{}
 	for _, rule := range result {
@@ -105,7 +105,7 @@ func GetDeviceSettingsByIdHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, errorStr)
 		return
 	}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	devicesettings := GetDeviceSettings(tenantId, id)
 	if devicesettings == nil {
 		errorStr := fmt.Sprintf("%v not found", id)
@@ -133,7 +133,7 @@ func GetDeviceSettingsSizeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	final := []*logupload.DeviceSettings{}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	result := GetDeviceSettingsAll(tenantId)
 	for _, ds := range result {
 		if ds.ApplicationType == appType {
@@ -156,7 +156,7 @@ func GetDeviceSettingsNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	final := []string{}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	result := GetDeviceSettingsAll(tenantId)
 	for _, ds := range result {
 		if ds.ApplicationType == appType {
@@ -184,7 +184,7 @@ func DeleteDeviceSettingsByIdHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, errorStr)
 		return
 	}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := DeleteDeviceSettingsbyId(tenantId, id, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -213,7 +213,7 @@ func CreateDeviceSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := CreateDeviceSettings(tenantId, &newds, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -248,7 +248,7 @@ func UpdateDeviceSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := UpdateDeviceSettings(tenantId, &newdsrule, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -286,7 +286,7 @@ func PostDeviceSettingsFilteredWithParamsHandler(w http.ResponseWriter, r *http.
 	}
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
-	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r.Context(), r)
+	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r)
 
 	dsrules := DeviceSettingsFilterByContext(contextMap)
 	sizeHeader := xhttp.CreateNumberOfItemsHttpHeaders(len(dsrules))
@@ -310,7 +310,7 @@ func GetDeviceSettingsExportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	allFormulas := GetDcmFormulaAll(tenantId)
 	dsList := []*logupload.DeviceSettings{}
 

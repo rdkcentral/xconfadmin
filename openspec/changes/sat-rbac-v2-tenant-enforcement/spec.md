@@ -11,11 +11,11 @@ This change updates openspec/specs/auth/auth-contract.md with the following norm
 - Authorization SHALL allow only when `allowedPartners` contains `tenantId`.
 - Authorization SHALL deny with `403 Forbidden` when:
   - `tenantId` is missing
-  - `allowedResources.allowedPartners` is missing
-  - `allowedResources.allowedPartners` is empty
   - `allowedPartners` does not contain `tenantId`
 - Legacy SAT behavior and login token/IDP behavior remain unchanged.
 - Capability strings remain unchanged.
+
+Note: Missing or empty `allowedResources.allowedPartners` may be caught during SAT token validation (resulting in 401 Unauthorized), depending on validator behavior. If validation does not enforce this claim, the absence will be discovered during this authorization check and SHALL return 403 Forbidden.
 
 ## Definitions
 
@@ -93,7 +93,9 @@ For all SAT RBAC v2 requests, the system SHALL return `403 Forbidden` when any o
 |---|---|---|---|---|
 | Fail | Any | Any | Any | Existing deny behavior |
 | Pass | Missing | Present | N/A | `403 Forbidden` |
-| Pass | Present | Missing | N/A | `403 Forbidden` |
-| Pass | Present | Empty | N/A | `403 Forbidden` |
+| Pass | Present | Missing | N/A | `403 Forbidden` * |
+| Pass | Present | Empty | N/A | `403 Forbidden` * |
 | Pass | Present | Present | No | `403 Forbidden` |
 | Pass | Present | Present | Yes | Allow |
+
+* Note: If SAT token validation enforces allowedResources.allowedPartners as a required claim, missing/empty values result in 401 Unauthorized during token validation and do not reach this authorization check.

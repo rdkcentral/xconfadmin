@@ -138,7 +138,7 @@ func GetApprovedTelemetryTwoChangesByContext(searchContext map[string]string) []
 }
 
 func ApproveTelemetryTwoChange(r *http.Request, changeId string) (*xwchange.ApprovedTelemetryTwoChange, error) {
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	change := xchange.GetOneTelemetryTwoChange(tenantId, changeId)
 	if change == nil {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id  %s does not exist", changeId))
@@ -173,7 +173,7 @@ func ApproveTelemetryTwoChanges(r *http.Request, changeIds []string) map[string]
 	errorMessages := make(map[string]string)
 	mergedUpdateChangesByEntityId := make(map[string]*logupload.TelemetryTwoProfile)
 	entityToByCancelChange := []string{}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	changesToApprove := GetTelemetryTwoChangesByIds(tenantId, changeIds)
 	for _, change := range changesToApprove {
 		var err error
@@ -219,7 +219,7 @@ func SaveToApprovedApprovedTelemetryTwoChange(r *http.Request, change *xwchange.
 		return nil, err
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	if err := xchange.SetOneApprovedTelemetryTwoChange(tenantId, approvedChange); err != nil {
 		return nil, err
 	}
@@ -248,7 +248,7 @@ func DeleteApprovedTelemetryTwoChange(tenantId string, changeId string) error {
 }
 
 func RevertTelemetryTwoChange(r *http.Request, approvedId string) *xwhttp.ResponseEntity {
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	approvedChange := xchange.GetOneApprovedTelemetryTwoChange(tenantId, approvedId)
 	if approvedChange == nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, fmt.Errorf("ApprovedTelemetryTwoChange with %s id does not exist", approvedId), nil)
@@ -268,7 +268,7 @@ func RevertTelemetryTwoChange(r *http.Request, approvedId string) *xwhttp.Respon
 func RevertTelemetryTwoChanges(r *http.Request, approvedIds []string) map[string]string {
 	errorMessages := make(map[string]string)
 	changesToRevert := make([]xwchange.ApprovedTelemetryTwoChange, 0, len(approvedIds))
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	for _, approvedId := range approvedIds {
 		approvedChange := xchange.GetOneApprovedTelemetryTwoChange(tenantId, approvedId)
 		if approvedChange != nil {
@@ -420,7 +420,7 @@ func revertDeleteApprovedTelemetryTwoChange(r *http.Request, approvedChange *xwc
 		return err
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	if err := DeleteApprovedTelemetryTwoChange(tenantId, approvedChange.ID); err != nil {
 		return err
 	}
@@ -428,7 +428,7 @@ func revertDeleteApprovedTelemetryTwoChange(r *http.Request, approvedChange *xwc
 }
 
 func revertCreateOrUpdateApprovedTelemetryTwoChange(r *http.Request, approvedChange *xwchange.ApprovedTelemetryTwoChange) error {
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	entityToRevert := logupload.GetOneTelemetryTwoProfile(tenantId, approvedChange.EntityID)
 	if entityToRevert == nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("TelemetryTwoProfile with id %s does not exist", approvedChange.EntityID))
@@ -486,7 +486,7 @@ func buildToDeleteTelemetryTwoChange(oldEntity *logupload.TelemetryTwoProfile, a
 
 func updateDeleteEntityTelemetryTwoChange(r *http.Request, change *xwchange.TelemetryTwoChange) (*xwchange.ApprovedTelemetryTwoChange, error) {
 	currentEntity := change.OldEntity
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	entityToChange := logupload.GetOneTelemetryTwoProfile(tenantId, change.EntityID)
 	// in Java, equalPendingEntities(currentEntity, entityToChange) always return true
 	//if (entityToChange != null && equalPendingEntities(currentEntity, entityToChange)) {
@@ -541,7 +541,7 @@ func saveToApprovedAndCleanUpTelemetryTwoChange(r *http.Request, change *xwchang
 		return err
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	if err := DeleteTelemetryTwoChange(tenantId, change.ID); err != nil {
 		return err
 	}
@@ -551,7 +551,7 @@ func saveToApprovedAndCleanUpTelemetryTwoChange(r *http.Request, change *xwchang
 }
 
 func cancelApprovedTelemetryTwoChangesByEntityId(r *http.Request, entityIdsToByCancelChanges []string, changeIdsToBeExcluded []string) error {
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	for _, entityId := range entityIdsToByCancelChanges {
 		changes := GetTelemetryTwoChangesByEntityId(tenantId, entityId)
 		for _, change := range changes {

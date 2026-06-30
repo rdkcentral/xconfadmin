@@ -64,7 +64,7 @@ func WriteCreateChangeTelemetryTwoProfile(r *http.Request, profile *xwlogupload.
 		return nil, err
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 
 	if err := beforeCreatingTelemetryTwoProfile(tenantId, profile, applicationType); err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func WriteUpdateChangeOrSaveTelemetryTwoProfile(r *http.Request, newProfile *xwl
 		return nil, err
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 
 	if err := beforeUpdatingTelemetryTwoProfile(tenantId, newProfile, applicationType); err != nil {
 		return nil, err
@@ -132,7 +132,7 @@ func WriteDeleteChangeTelemetryTwoProfile(r *http.Request, id string) (*xwchange
 		return nil, err
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 
 	deleteProfile, err := beforeRemovingTelemetryTwoProfile(tenantId, id, applicationType)
 	if err != nil {
@@ -195,7 +195,7 @@ func CreateTelemetryTwoProfile(r *http.Request, newProfile *xwlogupload.Telemetr
 		return nil, err
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 
 	if err := beforeCreatingTelemetryTwoProfile(tenantId, newProfile, applicationType); err != nil {
 		return nil, err
@@ -215,7 +215,7 @@ func UpdateTelemetryTwoProfile(r *http.Request, profile *xwlogupload.TelemetryTw
 		return nil, err
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 
 	if err := beforeUpdatingTelemetryTwoProfile(tenantId, profile, applicationType); err != nil {
 		return nil, err
@@ -234,7 +234,7 @@ func DeleteTelemetryTwoProfile(r *http.Request, id string) error {
 	if err != nil {
 		return err
 	}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	if _, err := beforeRemovingTelemetryTwoProfile(tenantId, id, applicationType); err != nil {
 		return err
 	}

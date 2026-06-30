@@ -46,7 +46,7 @@ func GetTelemetryRulesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := []*xwlogupload.TelemetryRule{}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	ruleList := xwlogupload.GetTelemetryRuleListForAs(tenantId)
 	for _, teleRule := range ruleList {
 		if teleRule.ApplicationType != applicationType {
@@ -83,7 +83,7 @@ func GetTelemetryRuleByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	teleRule := xlogupload.GetOneTelemetryRule(tenantId, id)
 	if teleRule == nil {
 		errorStr := fmt.Sprintf("%v not found", id)
@@ -131,7 +131,7 @@ func DeleteTelmetryRuleByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := DeleteTelemetryRulebyId(tenantId, id, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -161,7 +161,7 @@ func CreateTelemetryRuleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := CreateTelemetryRule(tenantId, &newtmrule, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -198,7 +198,7 @@ func UpdateTelemetryRuleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := UpdateTelemetryRule(tenantId, &newtmrule, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -234,7 +234,7 @@ func PostTelemtryRuleEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	entitiesMap := map[string]xhttp.EntityMessage{}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	for _, entity := range entities {
 		entity := entity
 		respEntity := CreateTelemetryRule(tenantId, &entity, applicationType)
@@ -278,7 +278,7 @@ func PutTelemetryRuleEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	entitiesMap := map[string]xhttp.EntityMessage{}
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	for _, entity := range entities {
 		entity := entity
 		respEntity := UpdateTelemetryRule(tenantId, &entity, applicationType)
@@ -325,7 +325,7 @@ func PostTelemetryRuleFilteredWithParamsHandler(w http.ResponseWriter, r *http.R
 	}
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
-	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r.Context(), r)
+	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r)
 
 	tmrules := TelemetryRuleFilterByContext(contextMap)
 	sizeHeader := xhttp.CreateNumberOfItemsHttpHeaders(len(tmrules))

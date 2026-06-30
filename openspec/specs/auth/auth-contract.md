@@ -24,6 +24,27 @@ This specification does not describe:
 The system SHALL validate supplied credentials and determine
 their validity deterministically.
 
+### SAT Token Validation Requirements
+
+For SAT token authentication, specific claims may be required for a token
+to be considered valid.
+
+Normative behavior:
+
+- The system SHALL validate SAT tokens for structure, signature, and
+  required claims.
+- Required claims MAY include `allowedResources.allowedPartners`,
+as enforced by the SAT token validation implementation.
+- If required claims are missing or invalid, the token SHALL be rejected.
+- Such failures SHALL result in `401 Unauthorized`.
+
+This validation occurs during authentication and is independent of
+SAT RBAC v2 authorization semantics.
+
+Note: Missing or invalid `allowedResources.allowedPartners` MAY be treated
+as an authentication failure during SAT token validation and result in
+`401 Unauthorized`, depending on validator behavior.
+
 ### Authentication Result
 On successful authentication, the system SHALL return an
 identity representation suitable for downstream use.
@@ -113,13 +134,10 @@ Normative behavior for SAT RBAC v2 requests requiring tenant scope:
 	the request `tenantId` value.
 - If `tenantId` is missing, authorization SHALL be denied with
 	`403 Forbidden`.
-- If `allowedResources.allowedPartners` is missing or empty,
-	authorization SHALL be denied with `403 Forbidden`.
 - If `allowedPartners` does not contain `tenantId`, authorization SHALL
 	be denied with `403 Forbidden`.
 
-SAT RBAC v2 tenant scope enforcement SHALL NOT modify SAT capability
-strings and SHALL use request metadata plus SAT claims only.
+SAT RBAC v2 tenant scope enforcement SHALL rely only on request metadata and SAT claims and SHALL NOT modify capability strings.
 
 ### Tenant Resolution By Auth Path
 
@@ -130,8 +148,7 @@ Tenant resolution SHALL be path-specific in this phase:
 	- Authorization SHALL enforce membership against SAT claim
 		`allowedResources.allowedPartners`.
 - Legacy SAT path:
-	- Legacy SAT authorization semantics remain unchanged.
-	- Token validation SHALL NOT enforce tenant or partner claims.
+	- Legacy SAT authorization semantics remain unchanged, including any validation requirements for token claims such as allowedPartners.
 	- Request processing SHALL continue to support multi-tenancy.
 	- In this phase, request processing SHALL resolve `tenantId`
 		to the default tenant.

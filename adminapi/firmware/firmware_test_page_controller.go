@@ -64,7 +64,7 @@ func GetFirmwareTestPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 
 	// Extract the search parameters from query params
 	context := make(map[string]string)

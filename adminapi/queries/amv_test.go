@@ -142,7 +142,7 @@ func TestAmvAllApi(t *testing.T) {
 	//	config := GetTestConfig()
 	//	_, router := GetTestWebConfigServer(config)
 
-	//Badrequest
+	// Badrequest
 	req, err := http.NewRequest("POST", AMV_URL, bytes.NewBuffer(jsonAmvCreateData))
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
@@ -251,16 +251,16 @@ func TestAmvAllApi(t *testing.T) {
 		assert.Equal(t, len(bodyMap["NOT_IMPORTED"]) > 0, true)
 	}
 
-	//update ImportALL error
+	// update ImportALL error - applicationType mismatch should return 409 conflict
 	req, err = http.NewRequest("POST", urlimport, bytes.NewBuffer(jsonAmvImportupdateErrData))
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
 	res = ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
-	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
+	assert.Equal(t, res.StatusCode, http.StatusConflict)
 
-	//update ImportALL
+	// update ImportALL
 	req, err = http.NewRequest("POST", urlimport, bytes.NewBuffer(jsonAmvImportupdateData))
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
@@ -487,6 +487,6 @@ func TestAmv_ImportAll_MixingApplicationTypes(t *testing.T) {
 	assert.NilError(t, err)
 	res := ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
-	// observed status is 400 due to validation of applicationType wrong
-	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
+	// observed status is 409 due to validation of applicationType wrong
+	assert.Equal(t, res.StatusCode, http.StatusConflict)
 }

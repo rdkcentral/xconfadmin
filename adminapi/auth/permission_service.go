@@ -457,7 +457,7 @@ func CanWrite(r *http.Request, entityType string, vargs ...string) (applicationT
 
 	// Lockdown check runs after authorization: unauthorized callers should receive
 	// 401/403, not a 423 that reveals operational system state.
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	if isLockdownMode(tenantId) {
 		lockdownModules := strings.Split(common.GetStringAppSetting(tenantId, common.PROP_LOCKDOWN_MODULES), ",")
 		if len(lockdownModules) != 0 {
@@ -630,6 +630,10 @@ func GetDistributedLockOwner(r *http.Request) (owner string) {
 }
 
 func ExtractBodyAndCheckPermissions(obj owcommon.ApplicationTypeAware, w http.ResponseWriter, r *http.Request, entityType string) (applicationType string, err error) {
+	applicationType, err = CanWrite(r, entityType, obj.GetApplicationType())
+	if err != nil {
+		return "", err
+	}
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
 		return "", xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "responsewriter cast error")
@@ -638,11 +642,6 @@ func ExtractBodyAndCheckPermissions(obj owcommon.ApplicationTypeAware, w http.Re
 	err = json.Unmarshal([]byte(body), &obj)
 	if err != nil {
 		return "", xwcommon.NewRemoteErrorAS(http.StatusBadRequest, err.Error())
-	}
-
-	applicationType, err = CanWrite(r, entityType, obj.GetApplicationType())
-	if err != nil {
-		return "", err
 	}
 
 	if obj.GetApplicationType() == "" {

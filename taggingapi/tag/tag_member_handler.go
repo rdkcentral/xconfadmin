@@ -64,7 +64,7 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	query := r.URL.Query()
 	isPaginatedRequest := query.Has("limit") || query.Has("cursor")
 
@@ -126,7 +126,7 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tagValue := getTagValueFromRequest(r)
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
@@ -194,7 +194,7 @@ func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 
 	var members []string
 	body, err := io.ReadAll(r.Body)
@@ -258,7 +258,7 @@ func RemoveMemberFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	err = RemoveMemberWithXdas(tenantId, id, member)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
@@ -276,7 +276,7 @@ func GetAllTagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	tagIds, err := GetAllTagIds(tenantId)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
@@ -306,7 +306,7 @@ func GetTagByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	members, wasTruncated, err := GetTagById(tenantId, id)
 	if err != nil {
 		// Check if tag not found
@@ -362,7 +362,7 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	populatedBuckets, err := getPopulatedBuckets(tenantId, id)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)

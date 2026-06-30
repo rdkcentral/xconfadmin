@@ -110,7 +110,7 @@ func UpdatePercentFilterGlobalHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := UpdatePercentFilterGlobal(tenantId, applicationType, globalPercentage)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -148,7 +148,7 @@ func GetPercentFilterGlobalHandler(w http.ResponseWriter, r *http.Request) {
 	contextMap := make(map[string]string)
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	globalpercent, err := GetPercentFilterGlobal(tenantId, applicationType)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("unable to get globalpercent reponse. error: %v", err))
@@ -209,7 +209,7 @@ func GetGlobalPercentFilterHandler(w http.ResponseWriter, r *http.Request) {
 	contextMap := make(map[string]string)
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	globalpercent, err := GetGlobalPercentFilter(tenantId, applicationType)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("unable to get globalpercent reponse. error: %v", err))
@@ -295,7 +295,7 @@ func GetGlobalPercentFilterAsRuleHandler(w http.ResponseWriter, r *http.Request)
 	contextMap := make(map[string]string)
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 
-	tenantId := xhttp.GetTenantId(r.Context(), r)
+	tenantId := xhttp.GetTenantId(r)
 	globalpercentasrule, err := GetGlobalPercentFilterAsRule(tenantId, applicationType)
 	if err != nil {
 		globalPercentage := coreef.NewGlobalPercentage()

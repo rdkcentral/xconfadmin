@@ -54,6 +54,8 @@ Capability authorization remains the first gate. Tenant enforcement is a second 
 | `tenantId` not found in `allowedPartners` | `403 Forbidden` |
 | `tenantId` found in `allowedPartners` | Allow |
 
+* If the token validator enforces allowedResources.allowedPartners as a required claim (per auth-contract.md SAT Token Validation Requirements), missing/empty values result in 401 Unauthorized during token validation and do not reach this phase.
+
 ## Error Semantics
 
 - `401 Unauthorized` remains only for missing/invalid authentication.
