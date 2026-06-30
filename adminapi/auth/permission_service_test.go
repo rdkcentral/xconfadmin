@@ -675,3 +675,55 @@ func TestSATv2UnclassifiedRouteReturns403(t *testing.T) {
 		t.Fatalf("expected 403 authorization denial for unclassified route, got: %v", err)
 	}
 }
+
+// Dev profile permissions include VIEW_TOOLS and WRITE_TOOLS so that TOOL_ENTITY
+// endpoints (e.g. penetration metrics) pass CanRead/CanWrite checks without a SAT token.
+func TestGetPermissionsDevProfileIncludesToolPermissions(t *testing.T) {
+	oldActive := owcommon.ActiveAuthProfiles
+	oldDefault := owcommon.DefaultAuthProfiles
+	owcommon.ActiveAuthProfiles = "dev"
+	owcommon.DefaultAuthProfiles = "prod"
+	defer func() {
+		owcommon.ActiveAuthProfiles = oldActive
+		owcommon.DefaultAuthProfiles = oldDefault
+	}()
+
+	r := httptest.NewRequest("GET", "/xconfAdminService/penetrationdata/AA:BB:CC:DD:EE:FF", nil)
+	permissions := GetPermissionsFunc(r)
+
+	for _, required := range []string{VIEW_TOOLS, WRITE_TOOLS} {
+		found := false
+		for _, p := range permissions {
+			if p == required {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("dev profile permissions missing %q; got: %v", required, permissions)
+		}
+	}
+}
+
+// TOOL_ENTITY CanRead succeeds under dev profile without a SAT token when SAT_ON=true.
+func TestCanReadToolEntitySucceedsInDevProfileWithSATOn(t *testing.T) {
+	oldSatOn := owcommon.SatOn
+	oldActive := owcommon.ActiveAuthProfiles
+	oldDefault := owcommon.DefaultAuthProfiles
+	owcommon.SatOn = true
+	owcommon.ActiveAuthProfiles = "dev"
+	owcommon.DefaultAuthProfiles = "prod"
+	defer func() {
+		owcommon.SatOn = oldSatOn
+		owcommon.ActiveAuthProfiles = oldActive
+		owcommon.DefaultAuthProfiles = oldDefault
+	}()
+
+	// No auth context set — simulates NoAuthMiddleware (test router behaviour)
+	r := httptest.NewRequest("GET", "/xconfAdminService/penetrationdata/AA:BB:CC:DD:EE:FF", nil)
+
+	_, err := CanRead(r, TOOL_ENTITY)
+	if err != nil {
+		t.Fatalf("expected CanRead to succeed for TOOL_ENTITY in dev profile with SAT_ON=true, got: %v", err)
+	}
+}

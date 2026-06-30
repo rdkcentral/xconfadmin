@@ -522,7 +522,8 @@ func getPermissions(r *http.Request) (permissions []string) {
 			WRITE_FIRMWARE_ALL, READ_FIRMWARE_ALL,
 			WRITE_DCM_ALL, READ_DCM_ALL,
 			WRITE_TELEMETRY_ALL, READ_TELEMETRY_ALL,
-			READ_CHANGES_ALL, WRITE_CHANGES_ALL}
+			READ_CHANGES_ALL, WRITE_CHANGES_ALL,
+			VIEW_TOOLS, WRITE_TOOLS}
 	} else {
 		permissions = xhttp.GetPermissionsFromContext(r)
 	}
