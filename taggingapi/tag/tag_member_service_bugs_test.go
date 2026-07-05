@@ -20,21 +20,59 @@ import (
 
 // mockDbClient injects Cassandra query behavior for service-level tests.
 // The embedded interface panics on any method the test does not stub,
-// which flags unexpected database usage.
+// which flags unexpected database usage. Batch and modify operations succeed
+// by default; set the optional funcs to override.
 type mockDbClient struct {
 	db.DatabaseClient
-	queryFunc func(query string, params ...string) ([]map[string]any, error)
+	queryFunc   func(query string, params ...string) ([]map[string]any, error)
+	modifyFunc  func(query string, params ...string) error
+	execBatchFn func(batch *mockBatch) error
+}
+
+type mockBatch struct {
+	statements []string
+}
+
+func (b *mockBatch) Query(stmt string, args ...any) {
+	b.statements = append(b.statements, stmt)
+}
+
+func (b *mockBatch) Size() int {
+	return len(b.statements)
 }
 
 func (m *mockDbClient) QueryXconfDataRows(query string, params ...string) ([]map[string]any, error) {
 	return m.queryFunc(query, params...)
 }
 
-func withMockDb(t *testing.T, queryFunc func(query string, params ...string) ([]map[string]any, error)) {
+func (m *mockDbClient) ModifyXconfData(query string, params ...string) error {
+	if m.modifyFunc != nil {
+		return m.modifyFunc(query, params...)
+	}
+	return nil
+}
+
+func (m *mockDbClient) NewBatch(batchType int) db.BatchOperation {
+	return &mockBatch{}
+}
+
+func (m *mockDbClient) ExecuteBatch(batch db.BatchOperation) error {
+	if m.execBatchFn != nil {
+		return m.execBatchFn(batch.(*mockBatch))
+	}
+	return nil
+}
+
+func withMockDbClient(t *testing.T, client *mockDbClient) {
 	t.Helper()
 	old := db.GetDatabaseClient()
-	db.SetDatabaseClient(&mockDbClient{queryFunc: queryFunc})
+	db.SetDatabaseClient(client)
 	t.Cleanup(func() { db.SetDatabaseClient(old) })
+}
+
+func withMockDb(t *testing.T, queryFunc func(query string, params ...string) ([]map[string]any, error)) {
+	t.Helper()
+	withMockDbClient(t, &mockDbClient{queryFunc: queryFunc})
 }
 
 func isMetadataQuery(query string) bool {
