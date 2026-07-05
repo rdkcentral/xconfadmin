@@ -158,11 +158,13 @@ func RemoveMembers(tenantId string, tagId string, members []string) error {
 			allErrors = append(allErrors, fmt.Sprintf("bucket %d: %v", bucketId, err))
 			log.Errorf("Failed to remove %d members from bucket %d for tag %s: %v",
 				len(bucketMembers), bucketId, tagId, err)
-		} else {
-			successCount += len(bucketMembers)
-			log.Debugf("Successfully removed %d members from bucket %d for tag %s",
-				len(bucketMembers), bucketId, tagId)
+			// The delete failed, so the bucket cannot have become empty —
+			// skip the metadata cleanup check
+			continue
 		}
+		successCount += len(bucketMembers)
+		log.Debugf("Successfully removed %d members from bucket %d for tag %s",
+			len(bucketMembers), bucketId, tagId)
 		// Clean up bucket metadata if bucket is now empty
 		membersCount, err := getMembersCountOfBucket(tenantId, tagId, bucketId)
 		if err != nil {
@@ -415,20 +417,6 @@ func parseBucketedCursor(cursor string) (BucketedCursor, error) {
 	}
 
 	return state, nil
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 // getReadWorkerCount returns the worker count for concurrent read operations
@@ -776,7 +764,7 @@ func GetTagById(tenantId string, tagId string) ([]string, bool, error) {
 	}
 
 	if len(populatedBuckets) == 0 {
-		return nil, false, fmt.Errorf("tag not found")
+		return nil, false, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf(NotFoundErrorMsg, tagId))
 	}
 
 	log.Infof("Fetching tag '%s' with %d populated buckets", tagId, len(populatedBuckets))
@@ -866,8 +854,11 @@ func deleteBucketMembers(tenantId string, tagId string, bucketId int) (int, erro
 		}
 
 		if len(removedFromXdas) < len(chunk) {
-			log.Warnf("partial XDAS deletion: %d/%d members removed", len(removedFromXdas), len(chunk))
-			return totalDeleted, nil
+			// Partial XDAS failure must fail the bucket: returning success here
+			// would let DeleteTag report a completed deletion while leftover
+			// members and bucket metadata remain in both stores.
+			return totalDeleted, fmt.Errorf("partial XDAS deletion in bucket %d: %d/%d members removed",
+				bucketId, len(removedFromXdas), len(chunk))
 		}
 
 		if len(chunk) < MaxBatchSizeV2 {

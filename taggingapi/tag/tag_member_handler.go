@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"sync"
 
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	"github.com/rdkcentral/xconfadmin/common"
@@ -309,11 +310,6 @@ func GetTagByIdHandler(w http.ResponseWriter, r *http.Request) {
 	tenantId := xhttp.GetTenantId(r)
 	members, wasTruncated, err := GetTagById(tenantId, id)
 	if err != nil {
-		// Check if tag not found
-		if err.Error() == "tag not found" {
-			xhttp.WriteXconfResponse(w, http.StatusNotFound, []byte(fmt.Sprintf(NotFoundErrorMsg, id)))
-			return
-		}
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
@@ -341,6 +337,11 @@ func GetTagByIdHandler(w http.ResponseWriter, r *http.Request) {
 
 	xhttp.WriteXconfResponse(w, statusCode, respBytes)
 }
+
+// inFlightTagDeletions deduplicates concurrent background deletions of the
+// same tag on this instance, keyed by "tenantId|tagId". Interim guard until
+// tag deletion state is tracked cross-instance (tag registry, topic 3).
+var inFlightTagDeletions sync.Map
 
 // DeleteTagHandler deletes a tag and all its members from V2 storage asynchronously
 func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
@@ -374,8 +375,25 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	deletionKey := tenantId + "|" + id
+	if _, alreadyRunning := inFlightTagDeletions.LoadOrStore(deletionKey, true); alreadyRunning {
+		response := map[string]string{
+			"status":  "accepted",
+			"message": fmt.Sprintf("Tag '%s' deletion is already in progress", id),
+			"tag":     id,
+		}
+		respBytes, err := json.Marshal(response)
+		if err != nil {
+			xhttp.WriteXconfErrorResponse(w, err)
+			return
+		}
+		xhttp.WriteXconfResponse(w, http.StatusAccepted, respBytes)
+		return
+	}
+
 	auditId := xw.AuditId()
 	go func(tagId string) {
+		defer inFlightTagDeletions.Delete(deletionKey)
 		if err := DeleteTag(tenantId, tagId); err != nil {
 			log.WithFields(log.Fields{
 				"audit_id": auditId,
