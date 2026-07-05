@@ -2,8 +2,10 @@ package tag
 
 import (
 	"fmt"
+	"net/http"
 	"testing"
 
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,46 +44,48 @@ func TestGetBucketId(t *testing.T) {
 
 func TestParseBucketedCursor(t *testing.T) {
 	// Test empty cursor
-	cursor := parseBucketedCursor("")
+	cursor, err := parseBucketedCursor("")
+	assert.NoError(t, err)
 	assert.Equal(t, 0, cursor.BucketId)
 	assert.Equal(t, "", cursor.LastMember)
-	assert.Equal(t, 0, cursor.TotalCollected)
 
 	// Test valid cursor
-	validCursor := generateBucketedCursor(5, "test-member", 100)
-	parsed := parseBucketedCursor(validCursor)
+	validCursor := generateBucketedCursor(5, "test-member")
+	parsed, err := parseBucketedCursor(validCursor)
+	assert.NoError(t, err)
 	assert.Equal(t, 5, parsed.BucketId)
 	assert.Equal(t, "test-member", parsed.LastMember)
-	assert.Equal(t, 100, parsed.TotalCollected)
 
-	// Test invalid cursor
-	invalidCursor := parseBucketedCursor("invalid-cursor")
-	assert.Equal(t, 0, invalidCursor.BucketId)
+	// Invalid cursor is a 400 error, not a silent reset to bucket 0
+	_, err = parseBucketedCursor("invalid-cursor")
+	assert.Error(t, err)
+	assert.Equal(t, http.StatusBadRequest, xwcommon.GetXconfErrorStatusCode(err))
 
-	// Test cursor with invalid bucket ID
-	invalidBucketCursor := generateBucketedCursor(9999, "member", 100)
-	parsed2 := parseBucketedCursor(invalidBucketCursor)
-	assert.Equal(t, 0, parsed2.BucketId, "Invalid bucket ID should be reset to 0")
+	// Out-of-range bucket ID is a 400 error
+	invalidBucketCursor := generateBucketedCursor(9999, "member")
+	_, err = parseBucketedCursor(invalidBucketCursor)
+	assert.Error(t, err)
+	assert.Equal(t, http.StatusBadRequest, xwcommon.GetXconfErrorStatusCode(err))
 }
 
 func TestGenerateBucketedCursor(t *testing.T) {
-	cursor := generateBucketedCursor(10, "member123", 500)
+	cursor := generateBucketedCursor(10, "member123")
 	assert.NotEmpty(t, cursor, "Cursor should not be empty")
 
 	// Should be base64 encoded
-	parsed := parseBucketedCursor(cursor)
+	parsed, err := parseBucketedCursor(cursor)
+	assert.NoError(t, err)
 	assert.Equal(t, 10, parsed.BucketId)
 	assert.Equal(t, "member123", parsed.LastMember)
-	assert.Equal(t, 500, parsed.TotalCollected)
 
 	// Test edge cases
-	cursor2 := generateBucketedCursor(0, "", 0)
+	cursor2 := generateBucketedCursor(0, "")
 	assert.NotEmpty(t, cursor2, "Cursor should not be empty even with zero values")
 
-	parsed2 := parseBucketedCursor(cursor2)
+	parsed2, err := parseBucketedCursor(cursor2)
+	assert.NoError(t, err)
 	assert.Equal(t, 0, parsed2.BucketId)
 	assert.Equal(t, "", parsed2.LastMember)
-	assert.Equal(t, 0, parsed2.TotalCollected)
 }
 
 func TestBucketDistribution(t *testing.T) {
