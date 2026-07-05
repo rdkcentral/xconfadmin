@@ -45,12 +45,13 @@ const (
 	QueryDeleteBucketMetadata = `DELETE FROM tag_member_metadata WHERE tenant_id = ? AND shard_id = ? AND tag_id = ? AND bucket_id = ?`
 
 	CountMembersCassandraResp = "count"
+
+	InvalidCursorErrorMsg = "invalid pagination cursor"
 )
 
 type BucketedCursor struct {
-	BucketId       int    `json:"bucketId"`
-	LastMember     string `json:"lastMember,omitempty"`
-	TotalCollected int    `json:"totalCollected"`
+	BucketId   int    `json:"bucketId"`
+	LastMember string `json:"lastMember,omitempty"`
 }
 
 type PaginatedMembersResponse struct {
@@ -244,9 +245,15 @@ func GetMembersPaginated(tenantId string, tagId string, limit int, cursor string
 
 	log.Debugf("Getting paginated members for tag %s, limit %d, cursor %s", tagId, limit, cursor)
 
+	state, err := parseBucketedCursor(cursor)
+	if err != nil {
+		return nil, err
+	}
+
 	populatedBuckets, err := getPopulatedBuckets(tenantId, tagId)
 	if err != nil {
 		log.Errorf("Error getting populated buckets for tag %s: %v", tagId, err)
+		return nil, fmt.Errorf("failed to get populated buckets: %w", err)
 	}
 
 	if len(populatedBuckets) == 0 {
@@ -255,15 +262,23 @@ func GetMembersPaginated(tenantId string, tagId string, limit int, cursor string
 
 	log.Debugf("Found %d populated buckets for tag %s", len(populatedBuckets), tagId)
 
-	state := parseBucketedCursor(cursor)
 	var allMembers []string
 
-	startIndex := 0
+	// Find the first populated bucket at or after the cursor position. If none
+	// exists (buckets were emptied since the previous page), the enumeration is
+	// complete — do not wrap around to the beginning.
+	startIndex := -1
 	for i, bucketId := range populatedBuckets {
 		if bucketId >= state.BucketId {
 			startIndex = i
 			break
 		}
+	}
+	if startIndex == -1 {
+		return &PaginatedMembersResponse{
+			Data:    []string{},
+			HasMore: false,
+		}, nil
 	}
 
 	// Build work items for remaining buckets (apply cursor's lastMember to first bucket only)
@@ -285,10 +300,16 @@ func GetMembersPaginated(tenantId string, tagId string, limit int, cursor string
 
 	orderedResults := fetchBucketsConcurrent(tenantId, tagId, workItems, workers)
 
-	// Merge in bucket order, building cursor at the truncation point
+	// Merge in bucket order, building cursor at the truncation point.
+	// A failed bucket fails the whole page: returning partial data would let the
+	// cursor advance past the failed bucket and silently omit its members from
+	// the enumeration. The caller retries with the same cursor instead.
 	lastProcessedBucketIndex := startIndex - 1
 	for idx, result := range orderedResults {
-		if result.err != nil || len(result.members) == 0 {
+		if result.err != nil {
+			return nil, fmt.Errorf("failed to fetch members from bucket %d: %w", remainingBuckets[idx], result.err)
+		}
+		if len(result.members) == 0 {
 			lastProcessedBucketIndex = startIndex + idx
 			continue
 		}
@@ -298,7 +319,7 @@ func GetMembersPaginated(tenantId string, tagId string, limit int, cursor string
 
 		if len(result.members) > needed {
 			allMembers = append(allMembers, result.members[:needed]...)
-			nextCursor := generateBucketedCursor(currentBucketId, result.members[needed-1], len(allMembers))
+			nextCursor := generateBucketedCursor(currentBucketId, result.members[needed-1])
 			log.Debugf("Returning %d members for tag %s with more data in bucket %d",
 				len(allMembers), tagId, currentBucketId)
 			return &PaginatedMembersResponse{
@@ -321,7 +342,7 @@ func GetMembersPaginated(tenantId string, tagId string, limit int, cursor string
 	var nextCursor string
 	if hasMore {
 		nextBucketId := populatedBuckets[lastProcessedBucketIndex+1]
-		nextCursor = generateBucketedCursor(nextBucketId, "", 0)
+		nextCursor = generateBucketedCursor(nextBucketId, "")
 	}
 
 	log.Debugf("Returning %d members for tag %s, hasMore: %v", len(allMembers), tagId, hasMore)
@@ -360,11 +381,10 @@ func getMembersFromBucket(tenantId string, tagId string, bucketId int, lastMembe
 }
 
 // Cursor management functions
-func generateBucketedCursor(bucketId int, lastMember string, totalCollected int) string {
+func generateBucketedCursor(bucketId int, lastMember string) string {
 	cursor := BucketedCursor{
-		BucketId:       bucketId,
-		LastMember:     lastMember,
-		TotalCollected: totalCollected,
+		BucketId:   bucketId,
+		LastMember: lastMember,
 	}
 
 	data, err := json.Marshal(cursor)
@@ -375,30 +395,26 @@ func generateBucketedCursor(bucketId int, lastMember string, totalCollected int)
 	return base64.URLEncoding.EncodeToString(data)
 }
 
-func parseBucketedCursor(cursor string) BucketedCursor {
+func parseBucketedCursor(cursor string) (BucketedCursor, error) {
 	if cursor == "" {
-		return BucketedCursor{BucketId: 0}
+		return BucketedCursor{BucketId: 0}, nil
 	}
 
 	data, err := base64.URLEncoding.DecodeString(cursor)
 	if err != nil {
-		log.Errorf("Error decoding cursor: %v", err)
-		return BucketedCursor{BucketId: 0}
+		return BucketedCursor{}, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, InvalidCursorErrorMsg)
 	}
 
 	var state BucketedCursor
 	if err := json.Unmarshal(data, &state); err != nil {
-		log.Errorf("Error unmarshaling cursor: %v", err)
-		return BucketedCursor{BucketId: 0}
+		return BucketedCursor{}, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, InvalidCursorErrorMsg)
 	}
 
-	// Validate cursor values
 	if state.BucketId < 0 || state.BucketId >= BucketCount {
-		log.Warnf("Invalid bucket ID in cursor: %d, resetting to 0", state.BucketId)
-		return BucketedCursor{BucketId: 0}
+		return BucketedCursor{}, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, InvalidCursorErrorMsg)
 	}
 
-	return state
+	return state, nil
 }
 
 func min(a, b int) int {
@@ -532,15 +548,21 @@ func fetchMembersFromBucketsConcurrent(tenantId string, tagId string, bucketIds 
 
 	orderedResults := fetchBucketsConcurrent(tenantId, tagId, workItems, workers)
 
-	// Merge in bucket order, stop at totalLimit
+	// Merge in bucket order, stop at totalLimit.
+	// A failed bucket fails the whole read — a partial result would silently
+	// under-report the tag's membership.
 	collected := make([]string, 0)
-	for _, result := range orderedResults {
-		if result.err != nil || len(result.members) == 0 {
-			continue
-		}
+	for idx, result := range orderedResults {
 		space := totalLimit - len(collected)
 		if space <= 0 {
+			// Response already full — errors in later buckets are irrelevant
 			return collected, true, nil
+		}
+		if result.err != nil {
+			return nil, false, fmt.Errorf("failed to fetch members from bucket %d: %w", bucketIds[idx], result.err)
+		}
+		if len(result.members) == 0 {
+			continue
 		}
 		if len(result.members) > space {
 			collected = append(collected, result.members[:space]...)
