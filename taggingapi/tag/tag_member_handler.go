@@ -23,6 +23,11 @@ const (
 	MaxPageSize     = 5000
 )
 
+// inFlightTagDeletions deduplicates concurrent background deletions of the
+// same tag on this instance, keyed by "tenantId|tagId". Interim guard until
+// tag deletion state is tracked cross-instance (tag registry, topic 3).
+var inFlightTagDeletions sync.Map
+
 func parsePaginationParams(r *http.Request) (*PaginationParams, error) {
 	query := r.URL.Query()
 
@@ -337,11 +342,6 @@ func GetTagByIdHandler(w http.ResponseWriter, r *http.Request) {
 
 	xhttp.WriteXconfResponse(w, statusCode, respBytes)
 }
-
-// inFlightTagDeletions deduplicates concurrent background deletions of the
-// same tag on this instance, keyed by "tenantId|tagId". Interim guard until
-// tag deletion state is tracked cross-instance (tag registry, topic 3).
-var inFlightTagDeletions sync.Map
 
 // DeleteTagHandler deletes a tag and all its members from V2 storage asynchronously
 func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
