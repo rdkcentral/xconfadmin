@@ -70,6 +70,14 @@ func (c *GroupServiceSyncConnector) SetGroupServiceSyncHost(host string) {
 	c.BaseURL = host
 }
 
+func (c *GroupServiceSyncConnector) SetAddGroupMemberTemplate(template string) {
+	c.addGroupMemberTemplate = template
+}
+
+func (c *GroupServiceSyncConnector) SetRemoveGroupMemberTemplate(template string) {
+	c.removeGroupMemberTemplate = template
+}
+
 func (c *GroupServiceSyncConnector) DoRequest(method string, url string, headers map[string]string, body []byte) ([]byte, error) {
 	rbytes, err := c.Client.DoWithRetries(method, url, headers, body, log.Fields{}, groupServiceSyncServiceName)
 	return rbytes, err
