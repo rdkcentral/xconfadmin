@@ -48,7 +48,7 @@ func BenchmarkGenerateBucketedCursor(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		generateBucketedCursor(i%BucketCount, fmt.Sprintf("member-%d", i), i)
+		generateBucketedCursor(i%BucketCount, fmt.Sprintf("member-%d", i))
 	}
 }
 
@@ -56,13 +56,13 @@ func BenchmarkParseBucketedCursor(b *testing.B) {
 	// Pre-generate cursors
 	cursors := make([]string, 1000)
 	for i := 0; i < 1000; i++ {
-		cursors[i] = generateBucketedCursor(i%BucketCount, fmt.Sprintf("member-%d", i), i)
+		cursors[i] = generateBucketedCursor(i%BucketCount, fmt.Sprintf("member-%d", i))
 	}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		parseBucketedCursor(cursors[i%1000])
+		parseBucketedCursor(cursors[i%1000]) //nolint:errcheck // benchmark only measures parse cost
 	}
 }
 
@@ -202,7 +202,7 @@ func BenchmarkGetMembersV2PaginatedWithCursor(b *testing.B) {
 	}
 
 	tagId := "benchmark-tag-pagination-cursor"
-	cursor := generateBucketedCursor(100, "member-12345", 500)
+	cursor := generateBucketedCursor(100, "member-12345")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
