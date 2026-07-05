@@ -145,12 +145,12 @@ func TestFindByContextForChanges(t *testing.T) {
 		t.Fatalf("setup: %v", err)
 	}
 	// filter by author substring
-	res := FindByContextForChanges(map[string]string{"author": "ali"})
+	res := FindByContextForChanges(db.GetDefaultTenantId(), map[string]string{"author": "ali"})
 	if len(res) != 1 || res[0].Author != "alice" {
 		t.Fatalf("expected filter by author matched alice only")
 	}
 	// filter by profile name substring
-	res = FindByContextForChanges(map[string]string{"entity": "beta"})
+	res = FindByContextForChanges(db.GetDefaultTenantId(), map[string]string{"entity": "beta"})
 	if len(res) != 1 || res[0].NewEntity.Name != "telemetry-beta" {
 		t.Fatalf("expected beta profile filter")
 	}
@@ -183,7 +183,7 @@ func TestGetChangedEntityIds(t *testing.T) {
 	if err := xchange.CreateOneChange(db.GetDefaultTenantId(), c); err != nil {
 		t.Fatalf("setup: %v", err)
 	}
-	ids := GetChangedEntityIds()
+	ids := GetChangedEntityIds(db.GetDefaultTenantId())
 	if ids == nil || len(*ids) == 0 {
 		t.Fatalf("expected at least one changed entity id")
 	}
@@ -359,8 +359,7 @@ func TestGetApprovedAll_EmptyResult(t *testing.T) {
 		xchange.DeleteOneApprovedChange(db.GetDefaultTenantId(), ac.ID)
 	}
 
-	r := httptest.NewRequest(http.MethodGet, "/?applicationType=stb", nil)
-	result, err := GetApprovedAll(r)
+	result, err := GetApprovedAll(db.GetDefaultTenantId(), shared.STB)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -385,8 +384,7 @@ func TestGetApprovedAll_WithResults(t *testing.T) {
 		t.Fatalf("failed to create approved change: %v", err)
 	}
 
-	r := httptest.NewRequest(http.MethodGet, "/?applicationType=stb", nil)
-	result, err := GetApprovedAll(r)
+	result, err := GetApprovedAll(db.GetDefaultTenantId(), shared.STB)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -397,7 +395,7 @@ func TestGetApprovedAll_WithResults(t *testing.T) {
 
 func TestFindByContextForChanges_EmptyContext(t *testing.T) {
 	context := make(map[string]string)
-	result := FindByContextForChanges(context)
+	result := FindByContextForChanges(db.GetDefaultTenantId(), context)
 	if result == nil {
 		t.Fatalf("expected non-nil result")
 	}
@@ -418,7 +416,7 @@ func TestFindByContextForChanges_WithApplicationType(t *testing.T) {
 	}
 
 	context := map[string]string{"applicationType": shared.STB}
-	result := FindByContextForChanges(context)
+	result := FindByContextForChanges(db.GetDefaultTenantId(), context)
 	if len(result) == 0 {
 		t.Fatalf("expected results")
 	}

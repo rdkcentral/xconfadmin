@@ -36,8 +36,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func GetAll() []*xwlogupload.SettingProfiles {
-	SettingProfiles := GetSettingProfileList(db.GetDefaultTenantId())
+func GetAllForTenant(tenantId string) []*xwlogupload.SettingProfiles {
+	SettingProfiles := GetSettingProfileList(tenantId)
 	sort.Slice(SettingProfiles, func(i, j int) bool {
 		return strings.ToLower(SettingProfiles[i].SettingProfileID) < strings.ToLower(SettingProfiles[j].SettingProfileID)
 	})

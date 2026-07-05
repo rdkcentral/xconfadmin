@@ -56,7 +56,8 @@ func GetProfileChangesHandler(w http.ResponseWriter, r *http.Request) {
 
 	searchContext := make(map[string]string)
 	searchContext[xwcommon.APPLICATION_TYPE] = applicationType
-	changes := FindByContextForChanges(searchContext)
+	tenantId := xhttp.GetTenantId(r)
+	changes := FindByContextForChanges(tenantId, searchContext)
 	sort.Slice(changes, func(i, j int) bool {
 		return changes[j].Updated < changes[i].Updated
 	})
@@ -88,13 +89,20 @@ func ApproveChangeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	headerMap := createHeadersMap(tenantId, applicationType)
 	xwhttp.WriteXconfResponseWithHeaders(w, headerMap, http.StatusOK, nil)
 }
 
 func GetApprovedHandler(w http.ResponseWriter, r *http.Request) {
-	approvedChange, err := GetApprovedAll(r)
+	applicationType, err := auth.CanRead(r, auth.CHANGE_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
+	tenantId := xhttp.GetTenantId(r)
+	approvedChange, err := GetApprovedAll(tenantId, applicationType)
 	if err != nil {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
 		return
@@ -113,7 +121,7 @@ func RevertChangeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 
 	approveId, found := mux.Vars(r)[xcommon.APPROVE_ID]
 	if !found || approveId == "" {
@@ -137,7 +145,7 @@ func CancelChangeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 
 	changeId, found := mux.Vars(r)[xcommon.CHANGE_ID]
 	if !found || changeId == "" {
@@ -216,8 +224,8 @@ func GetGroupedChangesHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	
-	tenantId := xwhttp.GetTenantId(r, "")
+
+	tenantId := xhttp.GetTenantId(r)
 	changeList := xchange.GetChangeList(tenantId)
 	sort.Slice(changeList, func(i, j int) bool {
 		return changeList[i].Updated < changeList[j].Updated
@@ -264,7 +272,7 @@ func GetGroupedApprovedChangesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	changeList := xchange.GetApprovedChangeList(tenantId)
 	sort.Slice(changeList, func(i, j int) bool {
 		return changeList[j].Updated < changeList[i].Updated
@@ -308,7 +316,13 @@ func ApprovedChangesGeneratePage(list []*xwchange.ApprovedChange, page int, page
 }
 
 func GetChangedEntityIdsHandler(w http.ResponseWriter, r *http.Request) {
-	entityIds := GetChangedEntityIds()
+	_, err := auth.CanRead(r, auth.CHANGE_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+	tenantId := xhttp.GetTenantId(r)
+	entityIds := GetChangedEntityIds(tenantId)
 	response, err := util.JSONMarshal(entityIds)
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal entityIds error: %v", err))
@@ -323,7 +337,7 @@ func ApproveChangesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
@@ -432,7 +446,8 @@ func GetApprovedFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal ApprovedChangesMap error: %v", err))
 	}
-	changeList := FindByContextForChanges(searchContext)
+	tenantId := xhttp.GetTenantId(r)
+	changeList := FindByContextForChanges(tenantId, searchContext)
 	headerMap := createHeadersWithEntitySize(len(changeList), len(approvedChangeList))
 	xwhttp.WriteXconfResponseWithHeaders(w, headerMap, http.StatusOK, response)
 }
@@ -479,7 +494,8 @@ func GetChangesFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	searchContext[xwcommon.APPLICATION_TYPE] = applicationType
 
-	changeList := FindByContextForChanges(searchContext)
+	tenantId := xhttp.GetTenantId(r)
+	changeList := FindByContextForChanges(tenantId, searchContext)
 	sort.Slice(changeList, func(i, j int) bool {
 		return changeList[j].Updated < changeList[i].Updated
 	})

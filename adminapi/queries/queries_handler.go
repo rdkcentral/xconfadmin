@@ -61,7 +61,7 @@ func GetQueriesPercentageBean(w http.ResponseWriter, r *http.Request) {
 
 	var result interface{}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	fieldName, found := contextMap[xcommon.FIELD]
 	if found {
 		result, err = GetPercentageBeanFilterFieldValues(tenantId, fieldName, applicationType)
@@ -109,7 +109,7 @@ func GetQueriesPercentageBeanById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	bean, err := GetOnePercentageBeanFromDB(tenantId, id)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, "Entity with id: "+id+" does not exist")
@@ -154,7 +154,7 @@ func CreatePercentageBeanHandler(w http.ResponseWriter, r *http.Request) {
 		percentageBean.ApplicationType = applicationType
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := CreatePercentageBean(tenantId, percentageBean, applicationType, fields)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -191,7 +191,7 @@ func UpdatePercentageBeanHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := UpdatePercentageBean(tenantId, percentageBean, applicationType, fields)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -225,7 +225,7 @@ func DeletePercentageBeanHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := DeletePercentageBean(tenantId, id, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -240,7 +240,7 @@ func GetQueriesEnvironments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result := shared.GetAllEnvironmentList(tenantId)
 	res, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
@@ -272,7 +272,7 @@ func GetQueriesEnvironmentsById(w http.ResponseWriter, r *http.Request) {
 	}
 	id = strings.ToUpper(id)
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	env := GetEnvironment(tenantId, id)
 	if env == nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, "Environment does not exist")
@@ -322,7 +322,7 @@ func CreateEnvironmentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := CreateEnvironment(tenantId, &newEnv)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -351,7 +351,7 @@ func DeleteEnvironmentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id = strings.ToUpper(id)
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := DeleteEnvironment(tenantId, id)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -366,7 +366,7 @@ func GetQueriesModels(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result := GetModels(tenantId)
 	res, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
@@ -390,7 +390,7 @@ func GetQueriesModelsById(w http.ResponseWriter, r *http.Request) {
 	}
 	id = strings.ToUpper(id)
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	model := GetModel(tenantId, id)
 	if model == nil {
 		values, ok := r.URL.Query()[xcommon.VERSION]
@@ -433,7 +433,7 @@ func CreateModelHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := CreateModel(tenantId, &newModel)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -468,7 +468,7 @@ func UpdateModelHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := UpdateModel(tenantId, &newModel)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -497,7 +497,7 @@ func DeleteModelHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id = strings.ToUpper(id)
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := DeleteModel(tenantId, id)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -507,7 +507,7 @@ func DeleteModelHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getQueriesFirmwareConfigsASFlavor(w http.ResponseWriter, r *http.Request, app string) {
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result := GetFirmwareConfigsAS(tenantId, app)
 	sort.Slice(result, func(i, j int) bool {
 		return strings.Compare(strings.ToUpper(result[i].Description), strings.ToUpper(result[j].Description)) < 0
@@ -535,7 +535,7 @@ func GetQueriesFirmwareConfigsById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	errorStr := fmt.Sprintf("\"FirmwareConfig with id %s does not exist\"", id)
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	fc := GetFirmwareConfigByIdAS(tenantId, id)
 	if fc == nil {
 		values, ok := r.URL.Query()[xcommon.VERSION]
@@ -579,7 +579,7 @@ func GetQueriesFirmwareConfigsByIdASFlavor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	firmwareConfig := GetFirmwareConfigByIdAS(tenantId, id)
 	if firmwareConfig != nil {
 		res, err := xhttp.ReturnJsonResponse(firmwareConfig, r)
@@ -621,7 +621,7 @@ func GetQueriesFirmwareConfigsByModelId(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	model := shared.GetOneModel(tenantId, modelId)
 	if model == nil {
 		errorStr := fmt.Sprintf("%v not found", modelId)
@@ -652,7 +652,7 @@ func GetQueriesFirmwareConfigsByModelIdASFlavor(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	model := shared.GetOneModel(tenantId, modelId)
 	if model == nil {
 		errorStr := fmt.Sprintf("%v not found", modelId)
@@ -695,7 +695,7 @@ func CreateFirmwareConfigHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := CreateFirmwareConfig(tenantId, firmwareConfig, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -736,7 +736,7 @@ func UpdateFirmwareConfigHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := UpdateFirmwareConfig(tenantId, firmwareConfig, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -762,7 +762,7 @@ func DeleteFirmwareConfigHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := DeleteFirmwareConfig(tenantId, id, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -784,7 +784,7 @@ func DeleteFirmwareConfigHandlerASFlavor(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := DeleteFirmwareConfig(tenantId, id, appType)
 	status := respEntity.Status
 	err = respEntity.Error
@@ -804,7 +804,7 @@ func GetQueriesRulesIps(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ipRuleService := daef.IpRuleService{}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	ipRuleBeans := ipRuleService.GetByApplicationType(tenantId, applicationType)
 	ipRuleBeansResponse := []*IpRuleBeanResponse{}
 	for _, ipRuleBean := range ipRuleBeans {
@@ -834,7 +834,7 @@ func GetQueriesRulesMacs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	macRuleService := daef.MacRuleService{}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	macRuleBeans := macRuleService.GetRulesWithMacCondition(tenantId, applicationType)
 	macRuleBeansResponse := []*MacRuleBeanResponse{}
 	for _, macRuleBean := range macRuleBeans {
@@ -861,7 +861,7 @@ func GetQueriesRulesEnvModels(w http.ResponseWriter, r *http.Request) {
 	}
 
 	emRuleService := daef.EnvModelRuleService{}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	emRuleBeans := emRuleService.GetByApplicationType(tenantId, applicationType)
 	envModelRulesResponse := []*EnvModelRuleBeanResponse{}
 	for _, emRuleBean := range emRuleBeans {
@@ -886,7 +886,7 @@ func GetQueriesFiltersDownloadLocation(w http.ResponseWriter, r *http.Request) {
 
 	id := xcoreef.GetRoundRobinIdByApplication(applicationType)
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	singletonFilterValue, err := coreef.GetDownloadLocationRoundRobinFilterValOneDB(tenantId, id)
 	if err != nil {
 		log.Errorf("unable to get singleton filter value. error: %+v", err)
@@ -911,7 +911,7 @@ func UpdateDownloadLocationFilterHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := UpdateDownloadLocationRoundRobinFilter(tenantId, applicationType, locationRoundRobinFilter)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -933,7 +933,7 @@ func GetQueriesFiltersIps(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result, err := coreef.IpFiltersByApplicationType(tenantId, applicationType)
 	if err != nil {
 		log.Errorf("unable to get ip filter value. error: %+v", err)
@@ -960,7 +960,7 @@ func GetQueriesFiltersIpsByName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result, err := coreef.IpFilterByName(tenantId, name, applicationType)
 	if err != nil {
 		log.Errorf("unable to get ip filter value. error: %+v", err)
@@ -1000,7 +1000,7 @@ func UpdateIpsFilterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := UpdateIpFilter(tenantId, applicationType, ipFilter)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -1028,7 +1028,7 @@ func DeleteIpsFilterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := DeleteIpsFilter(tenantId, name, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -1044,7 +1044,7 @@ func GetQueriesFiltersTime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result, err := coreef.TimeFiltersByApplicationType(tenantId, applicationType)
 	if err != nil {
 		log.Errorf("unable to get ip filter value. error: %+v", err)
@@ -1071,7 +1071,7 @@ func GetQueriesFiltersTimeByName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result, err := coreef.TimeFilterByName(tenantId, name, applicationType)
 	if err != nil {
 		log.Errorf("unable to get ip filter value. error: %+v", err)
@@ -1106,7 +1106,7 @@ func UpdateTimeFilterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := UpdateTimeFilter(tenantId, applicationType, timeFilter)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -1134,7 +1134,7 @@ func DeleteTimeFilterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := DeleteTimeFilter(tenantId, name, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -1150,7 +1150,7 @@ func GetQueriesFiltersLocation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result, err := coreef.DownloadLocationFiltersByApplicationType(tenantId, applicationType)
 	if err != nil {
 		log.Errorf("unable to get ip filter value. error: %+v", err)
@@ -1177,7 +1177,7 @@ func GetQueriesFiltersLocationByName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result, err := coreef.DownloadLocationFiltersByName(tenantId, applicationType, name)
 	if err != nil {
 		log.Errorf("unable to get ip filter value. error: %+v", err)
@@ -1225,7 +1225,7 @@ func UpdateLocationFilterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := UpdateLocationFilter(tenantId, applicationType, &locationFilter)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -1253,7 +1253,7 @@ func DeleteLocationFilterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := DeleteLocationFilter(tenantId, name, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -1273,7 +1273,7 @@ func GetQueriesFiltersPercent(w http.ResponseWriter, r *http.Request) {
 	xutil.AddQueryParamsToContextMap(r, contextMap)
 	var result interface{}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	fieldName, found := contextMap[xcommon.FIELD]
 	if found {
 		result, err = GetPercentFilterFieldValues(tenantId, fieldName, applicationType)
@@ -1323,7 +1323,7 @@ func UpdatePercentFilterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := UpdatePercentFilter(tenantId, applicationType, percentFilter)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -1345,7 +1345,7 @@ func GetQueriesFiltersRebootImmediately(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result, err := coreef.RebootImmediatelyFiltersByApplicationType(tenantId, applicationType)
 	if err != nil {
 		log.Errorf("unable to get reboot immediately filter value. error: %+v", err)
@@ -1372,7 +1372,7 @@ func GetQueriesFiltersRebootImmediatelyByName(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result, err := xcoreef.RebootImmediatelyFiltersByName(tenantId, applicationType, name)
 	if err != nil {
 		log.Errorf("unable to get ip filter value. error: %+v", err)
@@ -1407,7 +1407,7 @@ func UpdateRebootImmediatelyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := UpdateRebootImmediatelyFilter(tenantId, applicationType, rebootFilter)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -1435,7 +1435,7 @@ func DeleteRebootImmediatelyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := DeleteRebootImmediatelyFilter(tenantId, name, applicationType)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -1453,7 +1453,7 @@ func GetRoundRobinFilterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	id := xcoreef.GetRoundRobinIdByApplication(applicationType)
 	singletonFilterValue, err := coreef.GetDownloadLocationRoundRobinFilterValOneDB(tenantId, id)
 	if err != nil {
@@ -1506,7 +1506,7 @@ func GetIpRuleById(w http.ResponseWriter, r *http.Request) {
 
 	var ipRuleBean *coreef.IpRuleBean
 	ipRuleService := daef.IpRuleService{}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	ipRuleBeans := ipRuleService.GetByApplicationType(tenantId, applicationType)
 	for _, bean := range ipRuleBeans {
 		if bean.Name == ruleName {
@@ -1552,7 +1552,7 @@ func GetIpRuleByIpAddressGroup(w http.ResponseWriter, r *http.Request) {
 
 	ipRules := []*IpRuleBeanResponse{}
 	ipRuleService := daef.IpRuleService{}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	ipRuleBeans := ipRuleService.GetByApplicationType(tenantId, applicationType)
 	for _, bean := range ipRuleBeans {
 		if bean.IpAddressGroup != nil && ipAddressGroupName == bean.IpAddressGroup.Name {
@@ -1591,7 +1591,7 @@ func UpdateIpRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	ipRuleBean_origin := ipRuleBean
 	if ipRuleBean.Name == "" {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Name is empty")
@@ -1711,7 +1711,7 @@ func GetMACRuleByName(w http.ResponseWriter, r *http.Request) {
 
 	var macRuleBean *coreef.MacRuleBean
 	macRuleService := daef.MacRuleService{}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	macRuleBeans := macRuleService.GetRulesWithMacCondition(tenantId, applicationType)
 	for _, mrBean := range macRuleBeans {
 		if mrBean.Name == ruleName {
@@ -1759,7 +1759,7 @@ func GetMACRulesByMAC(w http.ResponseWriter, r *http.Request) {
 	result := []*coreef.MacRuleBeanResponse{}
 	if util.IsValidMacAddress(macAddress) {
 		macRuleService := daef.MacRuleService{}
-		tenantId := xwhttp.GetTenantId(r, "")
+		tenantId := xhttp.GetTenantId(r)
 		macRuleBeans := macRuleService.SearchMacRules(tenantId, macAddress, applicationType)
 		for _, macRule := range macRuleBeans {
 			macRule = wrap(tenantId, macRule, apiVersion)
@@ -1826,7 +1826,7 @@ func SaveMACRule(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "MAC address list is empty or blank")
 		return
 	}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	if err := corefw.ValidateRuleName(tenantId, macRule.Id, macRule.Name, applicationType); err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -1954,7 +1954,7 @@ func DeleteMACRule(w http.ResponseWriter, r *http.Request) {
 
 	var macRuleBean *coreef.MacRuleBean
 	macRuleService := daef.MacRuleService{}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	macRuleBeans := macRuleService.GetByApplicationType(tenantId, applicationType)
 	for _, mrBean := range macRuleBeans {
 		if mrBean.Name == name {
@@ -1991,7 +1991,7 @@ func GetEnvModelRuleByNameHandler(w http.ResponseWriter, r *http.Request) {
 
 	var envModelRule *coreef.EnvModelBean
 	emRuleService := daef.EnvModelRuleService{}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	emRuleBeans := emRuleService.GetByApplicationType(tenantId, applicationType)
 	for _, emRuleBean := range emRuleBeans {
 		if strings.EqualFold(emRuleBean.Name, name) {
@@ -2043,7 +2043,7 @@ func UpdateEnvModelRuleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	if envModelRuleBean.Name == "" {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "Name is empty")
 		return
@@ -2133,7 +2133,7 @@ func DeleteEnvModelRuleBeanHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	emRuleService := daef.EnvModelRuleService{}
 	emRuleBeans := emRuleService.GetByApplicationType(tenantId, applicationType)
 	for _, emRuleBean := range emRuleBeans {
@@ -2169,7 +2169,7 @@ func DeleteIpRule(w http.ResponseWriter, r *http.Request) {
 
 	var ipRuleBean *coreef.IpRuleBean
 	ipRuleService := daef.IpRuleService{}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	ipRuleBeans := ipRuleService.GetByApplicationType(tenantId, applicationType)
 	for _, bean := range ipRuleBeans {
 		if bean.Name == name {

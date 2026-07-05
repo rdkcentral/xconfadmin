@@ -57,7 +57,7 @@ func PostFirmwareConfigHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	status := http.StatusCreated
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := CreateFirmwareConfigAS(tenantId, firmwareConfig, applicationType, true)
 	data := respEntity.Data
 	status = respEntity.Status
@@ -88,7 +88,7 @@ func PutFirmwareConfigHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	status := http.StatusOK
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := UpdateFirmwareConfigAS(tenantId, firmwareConfig, appType, true)
 	data := respEntity.Data
 	status = respEntity.Status
@@ -161,7 +161,7 @@ func PutPostFirmwareConfigEntitiesHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	descMap := make(map[string][]*estbfirmware.FirmwareConfig)
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	list, err := estbfirmware.GetFirmwareConfigAsListDB(tenantId)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -279,7 +279,7 @@ func PostFirmwareConfigBySupportedModelsHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result := GetFirmwareConfigsByModelIdsAndApplication(tenantId, modelIds, appType)
 	res, err := xhttp.ReturnJsonResponse(result, r)
 	if err != nil {
@@ -299,7 +299,7 @@ func GetFirmwareConfigFirmwareConfigMapHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	configMap, err := estb.GetFirmwareConfigAsMapDB(tenantId, appType)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -341,7 +341,7 @@ func PostFirmwareConfigGetSortedFirmwareVersionsIfExistOrNotHandler(w http.Respo
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	result := GetSortedFirmwareVersionsIfDoesExistOrNot(tenantId, fcData, appType)
 
 	response, err := xhttp.ReturnJsonResponse(result, r)
@@ -405,7 +405,7 @@ func PostFirmwareConfigFilteredHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	filterContext[xcommon.APPLICATION_TYPE] = appType
-	filterContext[xcommon.TENANT_ID] = xwhttp.GetTenantId(r, "")
+	filterContext[xcommon.TENANT_ID] = xhttp.GetTenantId(r)
 
 	// Get all entries and sort them
 	entries, _ := estbfirmware.GetFirmwareConfigAsListDB(filterContext[xcommon.TENANT_ID])
@@ -454,7 +454,7 @@ func GetFirmwareConfigByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	fc, _ := estbfirmware.GetFirmwareConfigOneDB(tenantId, id)
 	if fc == nil {
 		errorStr := fmt.Sprintf("Entity with id: %s does not exist", id)
@@ -499,7 +499,7 @@ func GetFirmwareConfigHandler(w http.ResponseWriter, r *http.Request) {
 	_, ok2 := queryParams[common.EXPORTALL]
 
 	if ok1 || ok2 {
-		tenantId := xwhttp.GetTenantId(r, "")
+		tenantId := xhttp.GetTenantId(r)
 		entries := GetFirmwareConfigsAS(tenantId, appType)
 
 		res, err := xhttp.ReturnJsonResponse(entries, r)
@@ -530,7 +530,7 @@ func GetSupportedConfigsByEnvModelRuleName(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	fwConfig := getSupportedConfigsByEnvModelRuleName(tenantId, ruleName, appType)
 	if len(fwConfig) == 0 {
 		errorStr := fmt.Sprintf("%s not found", ruleName)
@@ -562,7 +562,7 @@ func GetFirmwareConfigByEnvModelRuleNameByRuleNameHandler(w http.ResponseWriter,
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	fwConfig := getFirmwareConfigByEnvModelRuleName(tenantId, entry)
 	if fwConfig != nil && fwConfig.ApplicationType != appType {
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, fmt.Sprintf("Entity with id: %s aplicationType does not match", fwConfig.ID))

@@ -22,6 +22,7 @@ import (
 	"net/http"
 
 	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xshared "github.com/rdkcentral/xconfadmin/shared"
 
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
@@ -77,7 +78,7 @@ func UpdatePermanentTelemetryProfile(tenantId string, updatedProfile *logupload.
 
 func CreatePermanentTelemetryProfile(r *http.Request, profile *logupload.PermanentTelemetryProfile) (*logupload.PermanentTelemetryProfile, error) {
 	normalizeOnSaveAfterApproving(profile)
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	err := beforeCreating(tenantId, profile)
 	if err != nil {
 		return nil, err
@@ -89,7 +90,7 @@ func SavePermanentTelemetryProfile(r *http.Request, entity *logupload.PermanentT
 	if err := auth.ValidateWrite(r, entity.ApplicationType, auth.TELEMETRY_ENTITY); err != nil {
 		return nil, err
 	}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	if err := beforeSavingPermanentTelemetryProfile(tenantId, entity); err != nil {
 		return nil, err
 	}
@@ -174,7 +175,7 @@ func DeletePermanentTelemetryProfile(r *http.Request, id string) (*logupload.Per
 	if err != nil {
 		return nil, err
 	}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	profile, err := beforeRemoving(tenantId, id, writeApplication)
 	if err != nil {
 		return nil, err
@@ -246,7 +247,7 @@ func WriteCreateChange(r *http.Request, profile *logupload.PermanentTelemetryPro
 	if err := auth.ValidateWrite(r, profile.ApplicationType, auth.TELEMETRY_ENTITY); err != nil {
 		return nil, err
 	}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	if err := beforeCreating(tenantId, profile); err != nil {
 		return nil, err
 	}
@@ -279,7 +280,7 @@ func WriteUpdateChangeOrSave(r *http.Request, newProfile *logupload.PermanentTel
 	if err := auth.ValidateWrite(r, newProfile.ApplicationType, auth.TELEMETRY_ENTITY); err != nil {
 		return nil, err
 	}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	if err := beforeUpdating(tenantId, newProfile); err != nil {
 		return nil, err
 	}
@@ -317,7 +318,7 @@ func WriteDeleteChange(r *http.Request, profileId string) (*core_change.Change, 
 	if err != nil {
 		return nil, err
 	}
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	profile, err := beforeRemoving(tenantId, profileId, writeApplication)
 	if err != nil {
 		return nil, err

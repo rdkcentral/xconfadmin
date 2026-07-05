@@ -27,12 +27,11 @@ import (
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xchange "github.com/rdkcentral/xconfadmin/shared/change"
 	xutil "github.com/rdkcentral/xconfadmin/util"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	"github.com/rdkcentral/xconfwebconfig/db"
-	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	xwshared "github.com/rdkcentral/xconfwebconfig/shared"
 	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
@@ -42,16 +41,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func GetApprovedAll(r *http.Request) ([]*xwchange.ApprovedChange, error) {
-	tenantId := xwhttp.GetTenantId(r, "")
+func GetApprovedAll(tenantId string, applicationType string) ([]*xwchange.ApprovedChange, error) {
 	approvedChangesAll := xchange.GetApprovedChangeList(tenantId)
 	approvedChanges := []*xwchange.ApprovedChange{}
-	application, err := auth.CanRead(r, auth.CHANGE_ENTITY)
-	if err != nil {
-		return nil, err
-	}
 	for _, approvedChange := range approvedChangesAll {
-		if xshared.ApplicationTypeEquals(application, approvedChange.ApplicationType) || xshared.ApplicationTypeEquals(application, xwshared.ALL) {
+		if xshared.ApplicationTypeEquals(applicationType, approvedChange.ApplicationType) || xshared.ApplicationTypeEquals(applicationType, xwshared.ALL) {
 			approvedChanges = append(approvedChanges, approvedChange)
 		}
 	}
@@ -87,7 +81,7 @@ func beforeSavingChange(r *http.Request, change *xwchange.Change) error {
 		return err
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	return validateAllChanges(tenantId, change)
 }
 
@@ -164,7 +158,7 @@ func CreateApprovedChange(r *http.Request, change *xwchange.Change) (*xwchange.A
 		return nil, err
 	}
 
-	tenantId := db.GetDefaultTenantId()
+	tenantId := xhttp.GetTenantId(r)
 	approvedChange := xwchange.ApprovedChange(*change)
 	xchange.SetOneApprovedChange(tenantId, &approvedChange)
 	jsonBytes, _ := json.Marshal(change)
@@ -176,7 +170,7 @@ func Revert(r *http.Request, approvedId string) error {
 	if approvedId == "" {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Id is blank")
 	}
-	tenantId := db.GetDefaultTenantId()
+	tenantId := xhttp.GetTenantId(r)
 	approvedChange := xchange.GetOneApprovedChange(tenantId, approvedId)
 	if approvedChange == nil {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, "ApprovedChange with "+approvedId+" id does not exist")
@@ -193,13 +187,13 @@ func Revert(r *http.Request, approvedId string) error {
 
 func revertDelete(r *http.Request, id string, approvedChange *xwchange.ApprovedChange) *xwchange.ApprovedChange {
 	CreatePermanentTelemetryProfile(r, approvedChange.OldEntity)
-	tenantId := db.GetDefaultTenantId()
+	tenantId := xhttp.GetTenantId(r)
 	xchange.DeleteOneApprovedChange(tenantId, id)
 	return approvedChange
 }
 
 func revertCreateOrUpdateChange(r *http.Request, changeId string, entityId string, approvedChange *xwchange.ApprovedChange) *xwchange.ApprovedChange {
-	tenantId := db.GetDefaultTenantId()
+	tenantId := xhttp.GetTenantId(r)
 	entityToRevert := logupload.GetOnePermanentTelemetryProfile(tenantId, entityId)
 	// in Java, equalPendingEntities(PermanentTelemetryProfile oldEntity, PermanentTelemetryProfile newEntity) always returns true
 	//if (equalPendingEntities(approvedChange.getNewEntity(), entityToRevert)) { is being ignored
@@ -213,7 +207,7 @@ func revertCreateOrUpdateChange(r *http.Request, changeId string, entityId strin
 }
 
 func CancelChange(r *http.Request, changeId string) error {
-	tenantId := db.GetDefaultTenantId()
+	tenantId := xhttp.GetTenantId(r)
 	canceledChange, err := Delete(tenantId, changeId)
 	if err != nil {
 		return err
@@ -257,9 +251,8 @@ func groupApprovedChange(change *xwchange.ApprovedChange, groupedChanges map[str
 	}
 }
 
-func GetChangedEntityIds() *[]string {
+func GetChangedEntityIds(tenantId string) *[]string {
 	ids := []string{}
-	tenantId := db.GetDefaultTenantId()
 	changeList := xchange.GetChangeList(tenantId)
 	for _, change := range changeList {
 		ids = append(ids, change.EntityID)
@@ -297,7 +290,7 @@ func GetChangesByEntityId(tenantId, entityId string) []*xwchange.Change {
 }
 
 func Approve(r *http.Request, id string) (*xwchange.ApprovedChange, error) {
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	change := xchange.GetOneChange(tenantId, id)
 	if change == nil {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, "Change with "+id+" id does not exist")
@@ -340,7 +333,7 @@ func getChangeIds(changes []*xwchange.Change) []string {
 }
 
 func ApproveChanges(r *http.Request, changeIds *[]string) (map[string]string, error) {
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	changesToApprove, err := GetChangesByEntityIds(tenantId, changeIds)
 	if err != nil {
 		return nil, err
@@ -380,7 +373,7 @@ func ApproveChanges(r *http.Request, changeIds *[]string) (map[string]string, er
 }
 
 func SaveToApprovedAndCleanUpChange(r *http.Request, change *xwchange.Change) (*xwchange.ApprovedChange, error) {
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	userName := auth.GetUserNameOrUnknown(r)
 	change.ApprovedUser = userName
 	approvedChange, err := CreateApprovedChange(r, change)
@@ -393,7 +386,7 @@ func SaveToApprovedAndCleanUpChange(r *http.Request, change *xwchange.Change) (*
 }
 
 func CancelApprovedChangesByEntityId(r *http.Request, entityIdsToByCancelChanges []string, changeIdsToBeExcluded []string) error {
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	for _, entityId := range entityIdsToByCancelChanges {
 		changes := GetChangesByEntityId(tenantId, entityId)
 		for _, changeByEntityId := range changes {
@@ -417,7 +410,7 @@ func logAndCollectChangeException(change *xwchange.Change, err error, errorMessa
 }
 
 func RevertChanges(r *http.Request, changeIds *[]string) (map[string]string, error) {
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	changesToRevert := []*xwchange.ApprovedChange{}
 	for _, changeId := range *changeIds {
 		approvedChange := xchange.GetOneApprovedChange(tenantId, changeId)
@@ -440,8 +433,7 @@ func RevertChanges(r *http.Request, changeIds *[]string) (map[string]string, err
 	return errorMessages, nil
 }
 
-func FindByContextForChanges(searchContext map[string]string) []*xwchange.Change {
-	tenantId := db.GetDefaultTenantId()
+func FindByContextForChanges(tenantId string, searchContext map[string]string) []*xwchange.Change {
 	changes := xchange.GetChangeList(tenantId)
 	changesFound := []*xwchange.Change{}
 	for _, change := range changes {
@@ -479,7 +471,7 @@ func FindByContextForChanges(searchContext map[string]string) []*xwchange.Change
 }
 
 func FindByContextForApprovedChanges(r *http.Request, searchContext map[string]string) []*xwchange.ApprovedChange {
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	approvedChanges := xchange.GetApprovedChangeList(tenantId)
 	changesFound := []*xwchange.ApprovedChange{}
 	for _, change := range approvedChanges {

@@ -30,8 +30,8 @@ import (
 )
 
 func PutCanarySettingsHandler(w http.ResponseWriter, r *http.Request) {
-	if !auth.HasWritePermissionForTool(r) {
-		xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "No write permission: tools")
+	if _, err := auth.CanWrite(r, auth.TOOL_ENTITY); err != nil {
+		xhttp.AdminError(w, err)
 		return
 	}
 
@@ -48,7 +48,7 @@ func PutCanarySettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	respEntity := SetCanarySetting(tenantId, &canarySettings)
 	if respEntity.Error != nil {
 		xhttp.WriteAdminErrorResponse(w, respEntity.Status, respEntity.Error.Error())
@@ -58,12 +58,12 @@ func PutCanarySettingsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetCanarySettingsHandler(w http.ResponseWriter, r *http.Request) {
-	if !auth.HasReadPermissionForTool(r) {
-		xhttp.WriteAdminErrorResponse(w, http.StatusUnauthorized, "")
+	if _, err := auth.CanRead(r, auth.TOOL_ENTITY); err != nil {
+		xhttp.AdminError(w, err)
 		return
 	}
 
-	tenantId := xwhttp.GetTenantId(r, "")
+	tenantId := xhttp.GetTenantId(r)
 	canarySetting, err := GetCanarySettings(tenantId)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
