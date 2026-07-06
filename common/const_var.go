@@ -212,6 +212,7 @@ const (
 	HeaderAccountID            = "X-System-AccountID"
 	HeaderXconfDataService     = "XconfDataService"
 	HeaderXconfAdminService    = "XconfAdminService"
+	HeaderTenantID             = "TenantId"
 )
 
 // const (
