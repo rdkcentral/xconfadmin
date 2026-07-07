@@ -75,17 +75,25 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 	isPaginatedRequest := query.Has("limit") || query.Has("cursor")
 
 	if isPaginatedRequest {
+		audit := newOpAudit(w, OpGetMembersPage, tenantId)
+		audit.setTag(id)
+
 		params, err := parsePaginationParams(r)
 		if err != nil {
 			xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
 			return
 		}
+		audit.set("page_limit", params.Limit)
+		audit.set("has_cursor", params.Cursor != "")
 
-		response, err := GetMembersPaginated(tenantId, id, params.Limit, params.Cursor)
+		response, stats, err := GetMembersPaginated(tenantId, id, params.Limit, params.Cursor)
+		audit.setReadStats(stats)
 		if err != nil {
 			xhttp.WriteXconfErrorResponse(w, err)
 			return
 		}
+		audit.set("num_results", len(response.Data))
+		audit.set("has_more", response.HasMore)
 
 		respBytes, err := json.Marshal(response)
 		if err != nil {
@@ -96,11 +104,17 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponse(w, http.StatusOK, respBytes)
 	} else {
 		// Non-paginated mode: return plain array (V1 compatible)
-		members, wasTruncated, err := GetMembersNonPaginated(tenantId, id)
+		audit := newOpAudit(w, OpGetMembersFull, tenantId)
+		audit.setTag(id)
+
+		members, wasTruncated, stats, err := GetMembersNonPaginated(tenantId, id)
+		audit.setReadStats(stats)
 		if err != nil {
 			xhttp.WriteXconfErrorResponse(w, err)
 			return
 		}
+		audit.set("num_results", len(members))
+		audit.set("truncated", wasTruncated)
 
 		respBytes, err := json.Marshal(members)
 		if err != nil {
@@ -157,7 +171,11 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stored, err := AddMembersWithXdas(tenantId, tagId, members, tagValue)
+	audit := newOpAudit(w, OpAddMembers, tenantId)
+	audit.setTag(tagId)
+
+	stats, err := AddMembersWithXdas(tenantId, tagId, members, tagValue)
+	audit.setWriteStats(stats)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -165,7 +183,7 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := map[string]int{
 		"requested": len(members),
-		"stored":    stored,
+		"stored":    stats.CassandraOk,
 	}
 	respBytes, err := json.Marshal(response)
 	if err != nil {
@@ -225,7 +243,11 @@ func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	removed, err := RemoveMembersWithXdas(tenantId, id, members)
+	audit := newOpAudit(w, OpRemoveMembers, tenantId)
+	audit.setTag(id)
+
+	stats, err := RemoveMembersWithXdas(tenantId, id, members)
+	audit.setWriteStats(stats)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -233,7 +255,7 @@ func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := map[string]int{
 		"requested": len(members),
-		"removed":   removed,
+		"removed":   stats.CassandraOk,
 	}
 	respBytes, err := json.Marshal(response)
 	if err != nil {
@@ -265,7 +287,11 @@ func RemoveMemberFromTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tenantId := xhttp.GetTenantId(r)
-	err = RemoveMemberWithXdas(tenantId, id, member)
+	audit := newOpAudit(w, OpRemoveMember, tenantId)
+	audit.setTag(id)
+
+	stats, err := RemoveMemberWithXdas(tenantId, id, member)
+	audit.setWriteStats(stats)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -283,11 +309,14 @@ func GetAllTagsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tenantId := xhttp.GetTenantId(r)
+	audit := newOpAudit(w, OpGetAllTags, tenantId)
+
 	tagIds, err := GetAllTagIds(tenantId)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
+	audit.set("num_results", len(tagIds))
 
 	respBytes, err := json.Marshal(tagIds)
 	if err != nil {
@@ -313,11 +342,17 @@ func GetTagByIdHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tenantId := xhttp.GetTenantId(r)
-	members, wasTruncated, err := GetTagById(tenantId, id)
+	audit := newOpAudit(w, OpGetTag, tenantId)
+	audit.setTag(id)
+
+	members, wasTruncated, stats, err := GetTagById(tenantId, id)
+	audit.setReadStats(stats)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
+	audit.set("num_results", len(members))
+	audit.set("truncated", wasTruncated)
 
 	// Build response matching V1 format (without updated field)
 	response := struct {
@@ -364,6 +399,9 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tenantId := xhttp.GetTenantId(r)
+	audit := newOpAudit(w, OpDeleteTag, tenantId)
+	audit.setTag(id)
+
 	populatedBuckets, err := getPopulatedBuckets(tenantId, id)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
@@ -374,9 +412,11 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponse(w, http.StatusNotFound, []byte(fmt.Sprintf(NotFoundErrorMsg, id)))
 		return
 	}
+	audit.set("buckets", len(populatedBuckets))
 
 	deletionKey := tenantId + "|" + id
 	if _, alreadyRunning := inFlightTagDeletions.LoadOrStore(deletionKey, true); alreadyRunning {
+		audit.set("deletion_state", "already_in_progress")
 		response := map[string]string{
 			"status":  "accepted",
 			"message": fmt.Sprintf("Tag '%s' deletion is already in progress", id),
@@ -390,22 +430,20 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponse(w, http.StatusAccepted, respBytes)
 		return
 	}
+	audit.set("deletion_state", "accepted")
 
 	auditId := xw.AuditId()
 	go func(tagId string) {
 		defer inFlightTagDeletions.Delete(deletionKey)
-		if err := DeleteTag(tenantId, tagId); err != nil {
+		// DeleteTag logs its own START/PROGRESS/END lines with the audit_id;
+		// only the failure needs an extra line here.
+		if err := DeleteTag(tenantId, tagId, auditId); err != nil {
 			log.WithFields(log.Fields{
 				"audit_id": auditId,
-				"endpoint": "DeleteTag",
+				"op":       OpDeleteTag,
+				"tenant":   tenantId,
 				"tag":      tagId,
 			}).Errorf("background deletion failed: %v", err)
-		} else {
-			log.WithFields(log.Fields{
-				"audit_id": auditId,
-				"endpoint": "DeleteTag",
-				"tag":      tagId,
-			}).Info("tagging background deletion completed")
 		}
 	}(id)
 

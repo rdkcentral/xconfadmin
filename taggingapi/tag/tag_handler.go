@@ -36,11 +36,15 @@ func GetTagsByMemberHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tenantId := xhttp.GetTenantId(r)
-	tags, err := GetTagsByMember(tenantId, member)
+	audit := newOpAudit(w, OpReverseLookup, tenantId)
+
+	tags, xdasTagCount, err := GetTagsByMember(tenantId, member)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
+	audit.set("xdas_tags", xdasTagCount)
+	audit.set("num_results", len(tags))
 
 	respBytes, err := json.Marshal(tags)
 	if err != nil {
@@ -64,11 +68,15 @@ func GetTagsWithValuesByMemberHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tenantId := xhttp.GetTenantId(r)
-	tags, err := GetTagsWithValuesByMember(tenantId, member)
+	audit := newOpAudit(w, OpReverseLookupValues, tenantId)
+
+	tags, xdasTagCount, err := GetTagsWithValuesByMember(tenantId, member)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
+	audit.set("xdas_tags", xdasTagCount)
+	audit.set("num_results", len(tags))
 
 	respBytes, err := json.Marshal(tags)
 	if err != nil {

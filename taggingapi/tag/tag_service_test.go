@@ -151,7 +151,7 @@ func TestGetTagsByMember(t *testing.T) {
 	}
 
 	for _, member := range testMembers {
-		tags, err := GetTagsByMember(db.GetDefaultTenantId(), member)
+		tags, _, err := GetTagsByMember(db.GetDefaultTenantId(), member)
 		// Without real connector, expect error or empty result
 		if err != nil {
 			t.Logf("GetTagsByMember(%s) returned error: %v (expected without connector)", member, err)
