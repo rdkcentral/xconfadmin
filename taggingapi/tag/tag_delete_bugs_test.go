@@ -67,7 +67,7 @@ func TestDeleteTag_PartialXdasFailureReturnsError(t *testing.T) {
 	}
 	withMockDbClient(t, mock)
 
-	err := DeleteTag("some-tag")
+	err := DeleteTag("some-tag", "test-audit-id")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "partial XDAS deletion")
 

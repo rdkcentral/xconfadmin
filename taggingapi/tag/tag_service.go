@@ -70,7 +70,10 @@ func filterTagEntriesWithValuesByPrefix(entries util.StringMap) map[string]strin
 	return result
 }
 
-func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<- string, wg *sync.WaitGroup, tagValue string) {
+// Per-member errors go into the aggregator (count + first message) instead of
+// being logged one line per member — an XDAS outage during a 5000-member
+// batch must not emit 5000 error lines.
+func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<- string, wg *sync.WaitGroup, tagValue string, agg *errorAggregator) {
 	defer wg.Done()
 	xdasMembers := proto.XdasHashes{
 		Fields: map[string]string{id: tagValue},
@@ -84,22 +87,17 @@ func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<-
 		err := GetGroupServiceSyncConnector().AddMembersToTag(normalizedEcm, &xdasMembers)
 		if err != nil {
 			failCount++
-			log.Errorf("xdas error adding member to %s group: ecm=%s, error=%s", id, normalizedEcm, err.Error())
+			agg.add(err)
 		} else {
 			successCount++
 			savedMembers <- member
 		}
 	}
 
-	// Worker summary log (one line per worker)
-	if failCount > 0 {
-		log.Warnf("XDAS worker completed for tag %s: success=%d, failed=%d", id, successCount, failCount)
-	} else {
-		log.Debugf("XDAS worker completed for tag %s: success=%d", id, successCount)
-	}
+	log.Debugf("XDAS worker completed for tag %s: success=%d, failed=%d", id, successCount, failCount)
 }
 
-func removeTagMembersFromXdas(id string, members <-chan string, removedMembers chan<- string, wg *sync.WaitGroup) {
+func removeTagMembersFromXdas(id string, members <-chan string, removedMembers chan<- string, wg *sync.WaitGroup, agg *errorAggregator) {
 	defer wg.Done()
 
 	successCount := 0
@@ -110,19 +108,14 @@ func removeTagMembersFromXdas(id string, members <-chan string, removedMembers c
 		err := GetGroupServiceSyncConnector().RemoveGroupMembers(normalizedEcm, id)
 		if err != nil {
 			failCount++
-			log.Errorf("xdas error removing member from %s group: ecm=%s, error=%s", id, normalizedEcm, err.Error())
+			agg.add(err)
 		} else {
 			successCount++
 			removedMembers <- member
 		}
 	}
 
-	// Worker summary log (one line per worker)
-	if failCount > 0 {
-		log.Warnf("XDAS remove worker completed for tag %s: success=%d, failed=%d", id, successCount, failCount)
-	} else {
-		log.Debugf("XDAS remove worker completed for tag %s: success=%d", id, successCount)
-	}
+	log.Debugf("XDAS remove worker completed for tag %s: success=%d, failed=%d", id, successCount, failCount)
 }
 
 func CheckBatchSizeExceeded(batchSize int) error {

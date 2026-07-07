@@ -87,7 +87,7 @@ func TestGetMembersPaginated_DbErrorIsNot404(t *testing.T) {
 		return nil, errors.New("cassandra unavailable")
 	})
 
-	resp, err := GetMembersPaginated("some-tag", 10, "")
+	resp, _, err := GetMembersPaginated("some-tag", 10, "")
 	assert.Nil(t, resp)
 	assert.Error(t, err)
 	assert.Equal(t, http.StatusInternalServerError, xwcommon.GetXconfErrorStatusCode(err))
@@ -100,7 +100,7 @@ func TestGetMembersPaginated_UnknownTagIs404(t *testing.T) {
 		return []map[string]any{}, nil
 	})
 
-	resp, err := GetMembersPaginated("missing-tag", 10, "")
+	resp, _, err := GetMembersPaginated("missing-tag", 10, "")
 	assert.Nil(t, resp)
 	assert.Error(t, err)
 	assert.Equal(t, http.StatusNotFound, xwcommon.GetXconfErrorStatusCode(err))
@@ -120,7 +120,7 @@ func TestGetMembersPaginated_BucketFetchErrorFailsPage(t *testing.T) {
 		return []map[string]any{{"member": "AA:BB:CC:DD:EE:01"}}, nil
 	})
 
-	resp, err := GetMembersPaginated("some-tag", 10, "")
+	resp, _, err := GetMembersPaginated("some-tag", 10, "")
 	assert.Nil(t, resp)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "bucket 2")
@@ -138,7 +138,7 @@ func TestGetTagById_BucketFetchErrorFails(t *testing.T) {
 		return nil, errors.New("read timeout")
 	})
 
-	members, truncated, err := GetTagById("some-tag")
+	members, truncated, _, err := GetTagById("some-tag")
 	assert.Error(t, err)
 	assert.Nil(t, members)
 	assert.False(t, truncated)
@@ -158,7 +158,7 @@ func TestGetMembersPaginated_CursorBeyondLastBucketEndsEnumeration(t *testing.T)
 	})
 
 	cursor := generateBucketedCursor(500, "")
-	resp, err := GetMembersPaginated("some-tag", 10, cursor)
+	resp, _, err := GetMembersPaginated("some-tag", 10, cursor)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.Empty(t, resp.Data)
@@ -176,7 +176,7 @@ func TestGetMembersPaginated_InvalidCursorReturns400(t *testing.T) {
 		return nil, nil
 	})
 
-	resp, err := GetMembersPaginated("some-tag", 10, "!!!not-a-cursor!!!")
+	resp, _, err := GetMembersPaginated("some-tag", 10, "!!!not-a-cursor!!!")
 	assert.Nil(t, resp)
 	assert.Error(t, err)
 	assert.Equal(t, http.StatusBadRequest, xwcommon.GetXconfErrorStatusCode(err))
@@ -214,13 +214,13 @@ func TestGetMembersPaginated_TwoPageWalk(t *testing.T) {
 		return nil, fmt.Errorf("unexpected bucket %s", params[1])
 	})
 
-	page1, err := GetMembersPaginated("some-tag", 1, "")
+	page1, _, err := GetMembersPaginated("some-tag", 1, "")
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"m1"}, page1.Data)
 	assert.True(t, page1.HasMore)
 	assert.NotEmpty(t, page1.NextCursor)
 
-	page2, err := GetMembersPaginated("some-tag", 1, page1.NextCursor)
+	page2, _, err := GetMembersPaginated("some-tag", 1, page1.NextCursor)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"m2"}, page2.Data)
 	assert.False(t, page2.HasMore)

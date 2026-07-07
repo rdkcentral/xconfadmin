@@ -67,17 +67,25 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 	isPaginatedRequest := query.Has("limit") || query.Has("cursor")
 
 	if isPaginatedRequest {
+		audit := newOpAudit(w, OpGetMembersPage)
+		audit.setTag(id)
+
 		params, err := parsePaginationParams(r)
 		if err != nil {
 			xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
 			return
 		}
+		audit.set("page_limit", params.Limit)
+		audit.set("has_cursor", params.Cursor != "")
 
-		response, err := GetMembersPaginated(id, params.Limit, params.Cursor)
+		response, stats, err := GetMembersPaginated(id, params.Limit, params.Cursor)
+		audit.setReadStats(stats)
 		if err != nil {
 			xhttp.WriteXconfErrorResponse(w, err)
 			return
 		}
+		audit.set("num_results", len(response.Data))
+		audit.set("has_more", response.HasMore)
 
 		respBytes, err := json.Marshal(response)
 		if err != nil {
@@ -88,11 +96,17 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponse(w, http.StatusOK, respBytes)
 	} else {
 		// Non-paginated mode: return plain array (V1 compatible)
-		members, wasTruncated, err := GetMembersNonPaginated(id)
+		audit := newOpAudit(w, OpGetMembersFull)
+		audit.setTag(id)
+
+		members, wasTruncated, stats, err := GetMembersNonPaginated(id)
+		audit.setReadStats(stats)
 		if err != nil {
 			xhttp.WriteXconfErrorResponse(w, err)
 			return
 		}
+		audit.set("num_results", len(members))
+		audit.set("truncated", wasTruncated)
 
 		respBytes, err := json.Marshal(members)
 		if err != nil {
@@ -142,7 +156,11 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stored, err := AddMembersWithXdas(tagId, members, tagValue)
+	audit := newOpAudit(w, OpAddMembers)
+	audit.setTag(tagId)
+
+	stats, err := AddMembersWithXdas(tagId, members, tagValue)
+	audit.setWriteStats(stats)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -150,7 +168,7 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := map[string]int{
 		"requested": len(members),
-		"stored":    stored,
+		"stored":    stats.CassandraOk,
 	}
 	respBytes, err := json.Marshal(response)
 	if err != nil {
@@ -202,7 +220,11 @@ func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	removed, err := RemoveMembersWithXdas(id, members)
+	audit := newOpAudit(w, OpRemoveMembers)
+	audit.setTag(id)
+
+	stats, err := RemoveMembersWithXdas(id, members)
+	audit.setWriteStats(stats)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -210,7 +232,7 @@ func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := map[string]int{
 		"requested": len(members),
-		"removed":   removed,
+		"removed":   stats.CassandraOk,
 	}
 	respBytes, err := json.Marshal(response)
 	if err != nil {
@@ -235,7 +257,11 @@ func RemoveMemberFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := RemoveMemberWithXdas(id, member)
+	audit := newOpAudit(w, OpRemoveMember)
+	audit.setTag(id)
+
+	stats, err := RemoveMemberWithXdas(id, member)
+	audit.setWriteStats(stats)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -246,11 +272,14 @@ func RemoveMemberFromTagHandler(w http.ResponseWriter, r *http.Request) {
 
 // GetAllTagsHandler returns all tag IDs from V2 storage
 func GetAllTagsHandler(w http.ResponseWriter, r *http.Request) {
+	audit := newOpAudit(w, OpGetAllTags)
+
 	tagIds, err := GetAllTagIds()
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
+	audit.set("num_results", len(tagIds))
 
 	respBytes, err := json.Marshal(tagIds)
 	if err != nil {
@@ -269,11 +298,17 @@ func GetTagByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	members, wasTruncated, err := GetTagById(id)
+	audit := newOpAudit(w, OpGetTag)
+	audit.setTag(id)
+
+	members, wasTruncated, stats, err := GetTagById(id)
+	audit.setReadStats(stats)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
+	audit.set("num_results", len(members))
+	audit.set("truncated", wasTruncated)
 
 	// Build response matching V1 format (without updated field)
 	response := struct {
@@ -313,6 +348,9 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	audit := newOpAudit(w, OpDeleteTag)
+	audit.setTag(id)
+
 	populatedBuckets, err := getPopulatedBuckets(id)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
@@ -323,9 +361,11 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponse(w, http.StatusNotFound, []byte(fmt.Sprintf(NotFoundErrorMsg, id)))
 		return
 	}
+	audit.set("buckets", len(populatedBuckets))
 
 	deletionKey := id
 	if _, alreadyRunning := inFlightTagDeletions.LoadOrStore(deletionKey, true); alreadyRunning {
+		audit.set("deletion_state", "already_in_progress")
 		response := map[string]string{
 			"status":  "accepted",
 			"message": fmt.Sprintf("Tag '%s' deletion is already in progress", id),
@@ -339,22 +379,19 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponse(w, http.StatusAccepted, respBytes)
 		return
 	}
+	audit.set("deletion_state", "accepted")
 
 	auditId := xw.AuditId()
 	go func(tagId string) {
 		defer inFlightTagDeletions.Delete(deletionKey)
-		if err := DeleteTag(tagId); err != nil {
+		// DeleteTag logs its own START/PROGRESS/END lines with the audit_id;
+		// only the failure needs an extra line here.
+		if err := DeleteTag(tagId, auditId); err != nil {
 			log.WithFields(log.Fields{
 				"audit_id": auditId,
-				"endpoint": "DeleteTag",
+				"op":       OpDeleteTag,
 				"tag":      tagId,
 			}).Errorf("background deletion failed: %v", err)
-		} else {
-			log.WithFields(log.Fields{
-				"audit_id": auditId,
-				"endpoint": "DeleteTag",
-				"tag":      tagId,
-			}).Info("tagging background deletion completed")
 		}
 	}(id)
 
