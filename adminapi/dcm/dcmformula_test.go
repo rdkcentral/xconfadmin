@@ -898,8 +898,12 @@ func DeleteAllEntities() {
 	var err error
 	tenantId := db.GetDefaultTenantId()
 	for _, tableInfo := range db.GetAllTableInfo() {
-		if tableInfo.TenantAgnostic {
-			err = cassandraClient.DeleteAllXconfData("", tableInfo.TableName)
+		if tableInfo.Unsharded {
+			tableName := tableInfo.TableName
+			if tableName == db.TABLE_LOGS {
+				tableName = cassandraClient.GetTableNameFromLogKeyspace(tableName)
+			}
+			err = cassandraClient.Query(fmt.Sprintf(`TRUNCATE table %s`, tableName)).Exec()
 		} else {
 			err = cassandraClient.DeleteAllXconfData(tenantId, tableInfo.TableName)
 		}

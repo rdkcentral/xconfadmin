@@ -106,11 +106,7 @@ func DeleteAllEntities() {
 	// Real DB cleanup: delete rows individually to avoid TRUNCATE latency on Cassandra 5.x
 	tenantId := db.GetDefaultTenantId()
 	for _, tableInfo := range db.GetAllTableInfo() {
-		tid := tenantId
-		if tableInfo.TenantAgnostic {
-			tid = ""
-		}
-		if err := truncateTable(tid, tableInfo.TableName); err != nil {
+		if err := truncateTable(tenantId, tableInfo.TableName); err != nil {
 			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
 		}
 		if tableInfo.Cached {
@@ -120,24 +116,20 @@ func DeleteAllEntities() {
 }
 
 func truncateTable(tenantId string, tableName string) error {
-	dao := db.GetCachedSimpleDao()
-	keys, err := dao.GetKeys(tenantId, tableName)
-	if err != nil {
-		// table may be empty or not yet exist; not an error
-		return nil
-	}
-	for _, key := range keys {
-		var keyStr string
-		switch k := key.(type) {
-		case string:
-			keyStr = k
-		case []byte:
-			keyStr = string(k)
-		default:
-			keyStr = fmt.Sprint(k)
+	dbClient := db.GetDatabaseClient()
+	cassandraClient, ok := dbClient.(*db.CassandraClient)
+	if ok {
+		tableInfo, err := db.GetTableInfo(tableName)
+		if err != nil {
+			return err
 		}
-		if delErr := dao.DeleteOne(tenantId, tableName, keyStr); delErr != nil {
-			fmt.Printf("failed to delete %s from %s: %v\n", keyStr, tableName, delErr)
+		if tableInfo.Unsharded {
+			if tableName == db.TABLE_LOGS {
+				tableName = cassandraClient.GetTableNameFromLogKeyspace(tableName)
+			}
+			return cassandraClient.Query(fmt.Sprintf(`TRUNCATE table %s`, tableName)).Exec()
+		} else {
+			return cassandraClient.DeleteAllXconfData(tenantId, tableName)
 		}
 	}
 	return nil

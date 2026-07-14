@@ -38,9 +38,10 @@ func frMakeFeatureRule(featureIds []string, app string, priority int) *xwrfc.Fea
 }
 
 func frCleanup() {
+	tenantId := db.GetDefaultTenantId()
 	tables := []string{db.TABLE_FEATURE_CONTROL_RULES, db.TABLE_FEATURES}
 	for _, tbl := range tables {
-		truncateTable(db.GetDefaultTenantId(), tbl)
+		truncateTable(tenantId, tbl)
 	}
 }
 

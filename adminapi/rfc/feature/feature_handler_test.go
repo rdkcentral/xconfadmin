@@ -623,19 +623,37 @@ func cleanDB() {
 		queries.ClearMockDatabase()
 		return
 	}
-	// Real database cleanup (only for integration tests)
-	c := db.GetDatabaseClient().(*db.CassandraClient)
+
+	// Real DB cleanup: delete rows individually to avoid TRUNCATE latency on Cassandra 5.x
 	tenantId := db.GetDefaultTenantId()
-	for _, ti := range db.GetAllTableInfo() {
-		if ti.TenantAgnostic {
-			_ = c.DeleteAllXconfData("", ti.TableName)
-		} else {
-			_ = c.DeleteAllXconfData(tenantId, ti.TableName)
+	for _, tableInfo := range db.GetAllTableInfo() {
+		if err := truncateTable(tableInfo.TableName); err != nil {
+			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
 		}
-		if ti.Cached {
-			db.GetCachedSimpleDao().RefreshAll(tenantId, ti.TableName)
+		if tableInfo.Cached {
+			db.GetCachedSimpleDao().RefreshAll(tenantId, tableInfo.TableName)
 		}
 	}
+}
+
+func truncateTable(tableName string) error {
+	dbClient := db.GetDatabaseClient()
+	cassandraClient, ok := dbClient.(*db.CassandraClient)
+	if ok {
+		tableInfo, err := db.GetTableInfo(tableName)
+		if err != nil {
+			return err
+		}
+		if tableInfo.Unsharded {
+			if tableName == db.TABLE_LOGS {
+				tableName = cassandraClient.GetTableNameFromLogKeyspace(tableName)
+			}
+			return cassandraClient.Query(fmt.Sprintf(`TRUNCATE table %s`, tableName)).Exec()
+		} else {
+			return cassandraClient.DeleteAllXconfData(db.GetDefaultTenantId(), tableName)
+		}
+	}
+	return nil
 }
 
 // SkipIfMockDatabase skips the test if mock database is enabled

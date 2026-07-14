@@ -90,50 +90,32 @@ func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRec
 
 // DeleteAllEntities clears all database tables
 func DeleteAllEntities() {
-	dbClient := db.GetDatabaseClient()
-	cassandraClient, ok := dbClient.(*db.CassandraClient)
-	if !ok {
-		fmt.Println("Database client is not Cassandra client, cannot delete all entities")
-		return
-	}
-
-	var err error
-	tenantId := db.GetDefaultTenantId()
+	// Real DB cleanup: delete rows individually to avoid TRUNCATE latency on Cassandra 5.x
 	for _, tableInfo := range db.GetAllTableInfo() {
-		if tableInfo.TenantAgnostic {
-			err = cassandraClient.DeleteAllXconfData("", tableInfo.TableName)
-		} else {
-			err = cassandraClient.DeleteAllXconfData(tenantId, tableInfo.TableName)
-		}
-		if err != nil {
-			fmt.Printf("failed to delete all xconf data for table %s\n", tableInfo.TableName)
+		if err := truncateTable(tableInfo.TableName); err != nil {
+			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
 		}
 		if tableInfo.Cached {
-			db.GetCachedSimpleDao().RefreshAll(tenantId, tableInfo.TableName)
+			db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), tableInfo.TableName)
 		}
 	}
-
 }
 
 func truncateTable(tableName string) error {
-	dao := db.GetCachedSimpleDao()
-	keys, err := dao.GetKeys(db.GetDefaultTenantId(), tableName)
-	if err != nil {
-		// table may be empty or not yet exist; not an error
-		return nil
-	}
-	for _, key := range keys {
-		var keyStr string
-		switch k := key.(type) {
-		case string:
-			keyStr = k
-		case []byte:
-			keyStr = string(k)
-		default:
-			keyStr = fmt.Sprint(k)
+	dbClient := db.GetDatabaseClient()
+	cassandraClient, ok := dbClient.(*db.CassandraClient)
+	if ok {
+		tableInfo, err := db.GetTableInfo(tableName)
+		if err != nil {
+			return err
 		}
-		if delErr := dao.DeleteOne(db.GetDefaultTenantId(), tableName, keyStr); delErr != nil {
-			fmt.Printf("failed to delete %s from %s: %v\n", keyStr, tableName, delErr)
+		if tableInfo.Unsharded {
+			if tableName == db.TABLE_LOGS {
+				tableName = cassandraClient.GetTableNameFromLogKeyspace(tableName)
+			}
+			return cassandraClient.Query(fmt.Sprintf(`TRUNCATE table %s`, tableName)).Exec()
+		} else {
+			return cassandraClient.DeleteAllXconfData(db.GetDefaultTenantId(), tableName)
 		}
 	}
 	return nil
