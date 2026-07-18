@@ -32,7 +32,7 @@ const (
 	MaxMembersInTagResponse = 100000 // Max members returned in GetTagById
 	MemberFetchChunkSize    = 1000   // Chunk size for memory-safe pagination
 
-	QueryAddMemberBucketed       = `INSERT INTO tag_members_bucketed (tenant_id, tag_id, bucket_id, member, updated) VALUES (?, ?, ?, ?, ?)`
+	QueryAddMemberBucketed       = `INSERT INTO tag_members_bucketed (tenant_id, tag_id, bucket_id, member, value, updated) VALUES (?, ?, ?, ?, ?, ?)`
 	QueryRemoveMemberBucketed    = `DELETE FROM tag_members_bucketed WHERE tenant_id = ? AND tag_id = ? AND bucket_id = ? AND member = ?`
 	QueryGetMembersByBucket      = `SELECT member FROM tag_members_bucketed WHERE tenant_id = ? AND tag_id = ? AND bucket_id = ? AND member > ? LIMIT ?`
 	QueryGetMembersCountByBucket = `SELECT count(*) FROM tag_members_bucketed WHERE tenant_id = ? AND tag_id = ? AND bucket_id = ?`
@@ -79,8 +79,10 @@ func getBucketId(member string) int {
 }
 
 // AddMembers writes members to the bucketed Cassandra tables. Returns the
-// number of members stored and the number of buckets touched.
-func AddMembers(tenantId string, tagId string, members []string) (int, int, error) {
+// number of members stored and the number of buckets touched. The value is
+// per-request (one PUT carries one value) and is stored alongside every member
+// so Cassandra, the source of truth, can restore it if XDAS loses the entry.
+func AddMembers(tenantId string, tagId string, members []string, value string) (int, int, error) {
 	if len(members) > MaxBatchSizeV2 {
 		return 0, 0, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
@@ -102,7 +104,7 @@ func AddMembers(tenantId string, tagId string, members []string) (int, int, erro
 	successCount := 0
 
 	for bucketId, bucketMembers := range bucketGroups {
-		if err := addMembersToBucket(tenantId, shardId, tagId, bucketId, bucketMembers, updated); err != nil {
+		if err := addMembersToBucket(tenantId, shardId, tagId, bucketId, bucketMembers, value, updated); err != nil {
 			agg.add(fmt.Errorf("bucket %d: %w", bucketId, err))
 		} else {
 			successCount += len(bucketMembers)
@@ -123,12 +125,12 @@ func AddMembers(tenantId string, tagId string, members []string) (int, int, erro
 	return successCount, len(bucketGroups), nil
 }
 
-func addMembersToBucket(tenantId string, shardId string, tagId string, bucketId int, members []string, updated time.Time) error {
+func addMembersToBucket(tenantId string, shardId string, tagId string, bucketId int, members []string, value string, updated time.Time) error {
 	batch := ds.GetSimpleDao().NewBatch(UnloggedBatch)
 
 	// Add member records
 	for _, member := range members {
-		batch.Query(QueryAddMemberBucketed, tenantId, tagId, strconv.Itoa(bucketId), member, updated)
+		batch.Query(QueryAddMemberBucketed, tenantId, tagId, strconv.Itoa(bucketId), member, value, updated)
 	}
 
 	// Add metadata record for this bucket (will be ignored if already exists)
@@ -598,7 +600,7 @@ func AddMembersWithXdas(tenantId string, tagId string, members []string, tagValu
 	stats.FirstError = firstError
 
 	if stats.XdasOk > 0 {
-		stored, buckets, err := AddMembers(tenantId, tagId, savedToXdasMembers)
+		stored, buckets, err := AddMembers(tenantId, tagId, savedToXdasMembers, tagValue)
 		stats.CassandraOk = stored
 		stats.CassandraFail = stats.XdasOk - stored
 		stats.Buckets = buckets
