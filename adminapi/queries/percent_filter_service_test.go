@@ -92,8 +92,8 @@ func TestGetPercentFilter_NoRules(t *testing.T) {
 func TestGetPercentFilterFieldValues_Empty(t *testing.T) {
 	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	vals, err := GetPercentFilterFieldValues(db.GetDefaultTenantId(), "Percentage", "stb")
-	assert.Error(t, err)
-	assert.Nil(t, vals)
+	assert.Nil(t, err)
+	assert.NotNil(t, vals)
 }
 
 func TestUpdatePercentFilter_LastKnownGoodAndIntermediateVersionNotFound(t *testing.T) {

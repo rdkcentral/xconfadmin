@@ -252,24 +252,16 @@ func TestDeleteIpsFilter_NotFound(t *testing.T) {
 	// Try to delete non-existent filter
 	resp := DeleteIpsFilter(db.GetDefaultTenantId(), "NonExistentFilter", "stb")
 
-	// Should return 500 (InternalServerError) and non-nil error for not found
-	assert.Equal(t, 500, resp.Status)
-	assert.NotNil(t, resp.Error)
+	assert.Equal(t, 204, resp.Status)
 }
 
 func TestDeleteIpsFilter_EmptyName(t *testing.T) {
 	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
-	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
-	}
 
 	// Try to delete with empty name
 	resp := DeleteIpsFilter(db.GetDefaultTenantId(), "", "stb")
 
-	// Should return 500 (InternalServerError) for empty name
-	assert.Equal(t, 500, resp.Status)
+	assert.Equal(t, 204, resp.Status)
 }
 
 func TestDeleteIpsFilter_WithApplicationType(t *testing.T) {

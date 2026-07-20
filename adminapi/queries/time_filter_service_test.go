@@ -99,16 +99,26 @@ func TestUpdateTimeFilter_InvalidIpGroup(t *testing.T) {
 }
 
 func TestUpdateTimeFilter_EnvModelMissing(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	if IsMockDatabaseEnabled() {
+		ClearMockDatabase()
+	} else {
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		truncateTable(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST)
+	}
 	// no seed for env-model
 	tf := newValidTimeFilter("TFMISS")
+	// use ids that are not seeded anywhere else to avoid cross-test collisions
+	tf.EnvModelRuleBean.ModelId = "MISSING_MODEL_TFMISS"
+	tf.EnvModelRuleBean.EnvironmentId = "MISSING_ENV_TFMISS"
+	tf.EnvModelRuleBean.Id = "MISSING_RULE_TFMISS"
 	// add a valid stored IP group to bypass IsChangedIpAddressGroup and avoid nil deref chain
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_TMP", "G_TMP", []string{"10.1.1.1"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
 	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.1.1.1"}
 	tf.IpWhiteList = ipGrp
-	assert.Equal(t, 400, UpdateTimeFilter(db.GetDefaultTenantId(), "stb", tf).Status)
+	status := UpdateTimeFilter(db.GetDefaultTenantId(), "stb", tf)
+	assert.Equal(t, 400, status.Status)
 }
 
 func TestDeleteTimeFilter_Paths(t *testing.T) {
