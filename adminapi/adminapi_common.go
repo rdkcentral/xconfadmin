@@ -21,12 +21,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rdkcentral/xconfwebconfig/dataapi"
-
 	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
 	common "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
-
+	"github.com/rdkcentral/xconfwebconfig/dataapi"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -112,53 +111,26 @@ func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 	Xc = xc
 }
 
-func initDB(tenantId string) error {
-	// Initialize FirmwareRule templates
-	if err := queries.CreateFirmwareRuleTemplates(tenantId); err != nil {
-		return err
-	}
-	// Initialize Application settings
-	if err := initAppSettings(tenantId); err != nil {
-		return err
-	}
-	return nil
-}
-
-func initAppSettings(tenantId string) error {
-	settings, err := common.GetAppSettings(tenantId)
+// OnboardTenant onboards a new tenant by creating it in the database,
+// initializing firmware rule templates and application settings.
+func OnboardTenant(id string, name string) error {
+	tenant, err := db.CreateTenant(id, name)
 	if err != nil {
 		return err
 	}
-	if _, ok := settings[common.PROP_LOCKDOWN_ENABLED]; !ok {
-		common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_ENABLED, false)
+
+	// Initialize FirmwareRule templates
+	if err := queries.CreateFirmwareRuleTemplates(tenant.ID); err != nil {
+		return err
 	}
-	if _, ok := settings[common.PROP_CANARY_MAXSIZE]; !ok {
-		common.SetAppSetting(tenantId, common.PROP_CANARY_MAXSIZE, common.CanarySize)
+
+	// Initialize other tenant-specific settings
+	if err := common.InitAppSettings(tenant.ID); err != nil {
+		return err
 	}
-	if _, ok := settings[common.PROP_CANARY_DISTRIBUTION_PERCENTAGE]; !ok {
-		common.SetAppSetting(tenantId, common.PROP_CANARY_DISTRIBUTION_PERCENTAGE, common.CanaryDistributionPercentage)
-	}
-	if _, ok := settings[common.PROP_CANARY_FW_UPGRADE_STARTTIME]; !ok {
-		common.SetAppSetting(tenantId, common.PROP_CANARY_FW_UPGRADE_STARTTIME, common.CanaryFwUpgradeStartTime)
-	}
-	if _, ok := settings[common.PROP_CANARY_FW_UPGRADE_ENDTIME]; !ok {
-		common.SetAppSetting(tenantId, common.PROP_CANARY_FW_UPGRADE_ENDTIME, common.CanaryFwUpgradeEndTime)
-	}
-	if _, ok := settings[common.PROP_LOCKDOWN_STARTTIME]; !ok {
-		common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_STARTTIME, common.DefaultLockdownStartTime)
-	}
-	if _, ok := settings[common.PROP_LOCKDOWN_ENDTIME]; !ok {
-		common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_ENDTIME, common.DefaultLockdownEndTime)
-	}
-	if _, ok := settings[common.PROP_LOCKDOWN_MODULES]; !ok {
-		common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_MODULES, common.DefaultLockdownModules)
-	}
-	if _, ok := settings[common.PROP_PRECOOK_LOCKDOWN_ENABLED]; !ok {
-		common.SetAppSetting(tenantId, common.PROP_PRECOOK_LOCKDOWN_ENABLED, common.DefaultPrecookLockdownEnabled)
-	}
-	if _, ok := settings[common.PROP_CANARY_TIMEZONE_LIST]; !ok {
-		common.SetAppSetting(tenantId, common.PROP_CANARY_TIMEZONE_LIST, common.DefaultCanaryTimezone)
-	}
+
+	// Initialize tenant data in cache manager
+	db.GetCacheManager().InitTenantCache(tenant.ID)
 
 	return nil
 }

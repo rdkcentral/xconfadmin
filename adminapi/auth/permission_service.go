@@ -272,12 +272,8 @@ func hasSATv2WriteCapability(capabilities []string, domain SATv2Domain) bool {
 	return util.Contains(capabilities, writeCap)
 }
 
-func getTenantIdForSATv2(r *http.Request) string {
-	return xhttp.GetTenantIdFromHeader(r)
-}
-
 func authorizeSATv2TenantScope(r *http.Request) error {
-	tenantId := getTenantIdForSATv2(r)
+	tenantId := xhttp.GetTenantIdFromContext(r)
 	if util.IsBlank(tenantId) {
 		return xwcommon.NewRemoteErrorAS(http.StatusForbidden, "Missing tenantId for SAT v2 authorization")
 	}

@@ -93,6 +93,48 @@ func GetBooleanAppSetting(tenantId string, key string, vargs ...bool) bool {
 	return setting.Value.(bool)
 }
 
+func InitAppSettings(tenantId string) error {
+	settings, err := GetAppSettings(tenantId)
+	if err != nil {
+		return err
+	}
+
+	log.WithFields(log.Fields{"tenantId": tenantId}).Infof("Initializing AppSettings...")
+
+	if _, ok := settings[PROP_LOCKDOWN_ENABLED]; !ok {
+		SetAppSetting(tenantId, PROP_LOCKDOWN_ENABLED, false)
+	}
+	if _, ok := settings[PROP_CANARY_MAXSIZE]; !ok {
+		SetAppSetting(tenantId, PROP_CANARY_MAXSIZE, CanarySize)
+	}
+	if _, ok := settings[PROP_CANARY_DISTRIBUTION_PERCENTAGE]; !ok {
+		SetAppSetting(tenantId, PROP_CANARY_DISTRIBUTION_PERCENTAGE, CanaryDistributionPercentage)
+	}
+	if _, ok := settings[PROP_CANARY_FW_UPGRADE_STARTTIME]; !ok {
+		SetAppSetting(tenantId, PROP_CANARY_FW_UPGRADE_STARTTIME, CanaryFwUpgradeStartTime)
+	}
+	if _, ok := settings[PROP_CANARY_FW_UPGRADE_ENDTIME]; !ok {
+		SetAppSetting(tenantId, PROP_CANARY_FW_UPGRADE_ENDTIME, CanaryFwUpgradeEndTime)
+	}
+	if _, ok := settings[PROP_LOCKDOWN_STARTTIME]; !ok {
+		SetAppSetting(tenantId, PROP_LOCKDOWN_STARTTIME, DefaultLockdownStartTime)
+	}
+	if _, ok := settings[PROP_LOCKDOWN_ENDTIME]; !ok {
+		SetAppSetting(tenantId, PROP_LOCKDOWN_ENDTIME, DefaultLockdownEndTime)
+	}
+	if _, ok := settings[PROP_LOCKDOWN_MODULES]; !ok {
+		SetAppSetting(tenantId, PROP_LOCKDOWN_MODULES, DefaultLockdownModules)
+	}
+	if _, ok := settings[PROP_PRECOOK_LOCKDOWN_ENABLED]; !ok {
+		SetAppSetting(tenantId, PROP_PRECOOK_LOCKDOWN_ENABLED, DefaultPrecookLockdownEnabled)
+	}
+	if _, ok := settings[PROP_CANARY_TIMEZONE_LIST]; !ok {
+		SetAppSetting(tenantId, PROP_CANARY_TIMEZONE_LIST, DefaultCanaryTimezone)
+	}
+
+	return nil
+}
+
 type ResponseEntity struct {
 	Status int
 	Error  error
@@ -507,4 +549,35 @@ func (obj *LockdownSettings) Validate() error {
 	}
 
 	return nil
+}
+
+func DeleteTenant(tenantId string) error {
+	if tenantId == "" {
+		return fmt.Errorf("tenantId cannot be empty")
+	}
+
+	dbClient := db.GetDatabaseClient()
+
+	var errs []error
+	for _, tableInfo := range db.GetAllTableInfo() {
+		// Only delete data for tables that are sharded, i.e. partitioned by tenant ID
+		if !tableInfo.Unsharded {
+			if err := dbClient.DeleteAllXconfData(tenantId, tableInfo.TableName); err != nil {
+				errs = append(errs, fmt.Errorf("failed to delete data for table %s: %v", tableInfo.TableName, err))
+			}
+		}
+	}
+
+	if err := dbClient.DeleteTenant(tenantId); err != nil {
+		errs = append(errs, fmt.Errorf("failed to delete tenant %s: %v", tenantId, err))
+	}
+
+	db.GetCacheManager().DeleteTenantCache(tenantId)
+
+	err := errors.Join(errs...)
+	if err != nil {
+		log.WithFields(log.Fields{"tenantId": tenantId}).Errorf("Errors occurred while deleting tenant: %v", err)
+	}
+
+	return err
 }

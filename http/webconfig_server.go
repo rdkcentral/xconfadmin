@@ -13,20 +13,16 @@ import (
 	"strings"
 	"time"
 
-	taggingapi_config "github.com/rdkcentral/xconfadmin/taggingapi/config"
-
-	xcommon "github.com/rdkcentral/xconfadmin/common"
-
-	"github.com/rdkcentral/xconfwebconfig/common"
-	"github.com/rdkcentral/xconfwebconfig/db"
-	xhttp "github.com/rdkcentral/xconfwebconfig/http"
-	"github.com/rdkcentral/xconfwebconfig/util"
-
-	"github.com/rdkcentral/xconfwebconfig/tracing"
-
 	"github.com/go-akka/configuration"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
+	taggingapi_config "github.com/rdkcentral/xconfadmin/taggingapi/config"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/tracing"
+	"github.com/rdkcentral/xconfwebconfig/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -72,6 +68,7 @@ type WebconfigServer struct {
 	IdpCodePath           string
 	IdpUrlPath            string
 	VerifyStageHost       bool
+	OnboardTenantFunc     func(id, name string) error
 }
 
 type DistributedLockConfig struct {
@@ -320,6 +317,32 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 			return
 		}
 
+		tenantId := GetTenantIdFromHeader(r)
+		if tenantId == "" {
+			tenantId = db.GetDefaultTenantId()
+		}
+		ctx = context.WithValue(ctx, CTX_KEY_TENANT_ID, tenantId)
+
+		// Check if tenant exists; onboard if it does not
+		tenant, err := db.GetDatabaseClient().GetTenant(tenantId)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if tenant == nil {
+			if s.OnboardTenantFunc == nil {
+				log.WithFields(log.Fields{"tenantId": tenantId}).Error("tenant onboarding function is not set")
+				http.Error(w, "tenant onboarding function is not set", http.StatusInternalServerError)
+				return
+			} else {
+				if err := s.OnboardTenantFunc(tenantId, tenantId); err != nil {
+					log.WithFields(log.Fields{"tenantId": tenantId}).Errorf("failed to onboard new tenant: %v", err)
+					http.Error(w, "failed to onboard new tenant", http.StatusInternalServerError)
+					return
+				}
+			}
+		}
+
 		newReq := r.WithContext(ctx)
 		xw := s.logRequestStarts(w, newReq)
 		defer s.logRequestEnds(xw, newReq)
@@ -419,6 +442,8 @@ func (s *WebconfigServer) logRequestStarts(w http.ResponseWriter, r *http.Reques
 		"req_moracide_tag": xpcTrace.ReqMoracideTag,
 		"xpc_trace":        xpcTrace,
 	}
+
+	fields["tenant_id"] = r.Context().Value(CTX_KEY_TENANT_ID)
 
 	// add field to distinguish between SAT v2, legacy SAT and login token in logs for better analysis of auth types in use
 	if authType, ok := r.Context().Value(CTX_KEY_AUTH_TYPE).(AuthType); ok {

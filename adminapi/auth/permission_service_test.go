@@ -41,6 +41,7 @@ func requestWithSAT(path string, queryApplicationType string, authType xhttp.Aut
 	ctx := context.WithValue(r.Context(), xhttp.CTX_KEY_AUTH_TYPE, authType)
 	ctx = context.WithValue(ctx, xhttp.CTX_KEY_CAPABILITIES, capabilities)
 	ctx = context.WithValue(ctx, xhttp.CTX_KEY_ALLOWED_PARTNERS, []string{"comcast"})
+	ctx = context.WithValue(ctx, xhttp.CTX_KEY_TENANT_ID, strings.ToUpper("comcast"))
 	return r.WithContext(ctx)
 }
 
@@ -53,6 +54,7 @@ func requestWithSATScope(path string, method string, tenantId string, authType x
 	ctx := context.WithValue(r.Context(), xhttp.CTX_KEY_AUTH_TYPE, authType)
 	ctx = context.WithValue(ctx, xhttp.CTX_KEY_CAPABILITIES, capabilities)
 	ctx = context.WithValue(ctx, xhttp.CTX_KEY_ALLOWED_PARTNERS, allowedPartners)
+	ctx = context.WithValue(ctx, xhttp.CTX_KEY_TENANT_ID, strings.ToUpper(tenantId))
 	return r.WithContext(ctx)
 }
 

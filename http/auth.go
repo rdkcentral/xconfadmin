@@ -61,6 +61,7 @@ const (
 	CTX_KEY_CAPABILITIES     AuthCtxKey = "Capabilities"
 	CTX_KEY_ALLOWED_PARTNERS AuthCtxKey = "AllowedPartners"
 	CTX_KEY_AUTH_TYPE        AuthCtxKey = "AuthType"
+	CTX_KEY_TENANT_ID        AuthCtxKey = "TenantId"
 )
 
 type LoginToken struct {
@@ -177,16 +178,21 @@ func GetAllowedPartnersFromContext(r *http.Request) []string {
 }
 
 func GetTenantId(r *http.Request) string {
-	authType := r.Context().Value(CTX_KEY_AUTH_TYPE)
-	if authType == AUTH_TYPE_SAT_V2 {
-		return strings.ToUpper(GetTenantIdFromHeader(r))
+	if tenantId := GetTenantIdFromContext(r); tenantId != "" {
+		return tenantId
 	}
-
 	return strings.ToUpper(db.GetDefaultTenantId())
 }
 
+// GetTenantIdFromContext returns the raw tenant ID stored in the request context
+// with no default fallback. Returns empty string if not set or explicitly empty.
+func GetTenantIdFromContext(r *http.Request) string {
+	tenantId, _ := r.Context().Value(CTX_KEY_TENANT_ID).(string)
+	return tenantId
+}
+
 func GetTenantIdFromHeader(r *http.Request) string {
-	return strings.TrimSpace(r.Header.Get("tenantId"))
+	return strings.ToUpper(strings.TrimSpace(r.Header.Get("tenantId")))
 }
 
 func ValidateAndGetLoginToken(authToken string) (*LoginToken, error) {

@@ -441,7 +441,7 @@ func CreateFirmwareRuleTemplates(tenantId string) (e error) {
 		return
 	}
 
-	log.Info("Creating templates...")
+	log.WithFields(log.Fields{"tenantId": tenantId}).Infof("Creating default FirmwareRuleTemplate...")
 
 	ruleFactory := coreef.NewRuleFactory()
 	templateList := []corefw.FirmwareRuleTemplate{}

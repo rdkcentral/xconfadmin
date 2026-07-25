@@ -34,7 +34,6 @@ import (
 	"github.com/rdkcentral/xconfadmin/adminapi/setting"
 	"github.com/rdkcentral/xconfadmin/adminapi/telemetry"
 	"github.com/rdkcentral/xconfadmin/adminapi/xcrp"
-
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
@@ -52,9 +51,12 @@ func XconfSetup(server *xhttp.WebconfigServer, r *mux.Router) {
 	auth.WebServerInjection(server)
 	dataapi.RegisterTables()
 
-	db.GetCacheManager() // Initialize cache manager
-	if err := initDB(db.GetDefaultTenantId()); err != nil {
-		panic("Failed to initialize DB: " + err.Error())
+	// Initialize function for onboarding new tenants to avoid circular dependency
+	server.OnboardTenantFunc = OnboardTenant
+
+	tenantId := db.GetDefaultTenantId()
+	if err := OnboardTenant(tenantId, tenantId); err != nil {
+		panic("Failed to initialize DB for tenant " + tenantId + ": " + err.Error())
 	}
 
 	if server.XW_XconfServer.ServerConfig.GetBoolean("xconfwebconfig.xconf.dataservice_enabled") {
