@@ -68,7 +68,7 @@ type WebconfigServer struct {
 	IdpCodePath           string
 	IdpUrlPath            string
 	VerifyStageHost       bool
-	OnboardTenantFunc     func(id, name string) error
+	OnboardTenantFunc     func(id, name string) (*db.Tenant, error)
 }
 
 type DistributedLockConfig struct {
@@ -335,7 +335,7 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 				http.Error(w, "tenant onboarding function is not set", http.StatusInternalServerError)
 				return
 			} else {
-				if err := s.OnboardTenantFunc(tenantId, tenantId); err != nil {
+				if _, err := s.OnboardTenantFunc(tenantId, tenantId); err != nil {
 					log.WithFields(log.Fields{"tenantId": tenantId}).Errorf("failed to onboard new tenant: %v", err)
 					http.Error(w, "failed to onboard new tenant", http.StatusInternalServerError)
 					return

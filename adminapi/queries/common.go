@@ -440,6 +440,82 @@ func UpdateAppSettings(w http.ResponseWriter, r *http.Request) {
 	xwhttp.WriteXconfResponse(w, http.StatusNoContent, nil)
 }
 
+// GetTenantsHandler handles GET /xconfAdminService/tenants
+func GetTenantsHandler(w http.ResponseWriter, r *http.Request) {
+	if _, err := auth.CanRead(r, auth.TOOL_ENTITY); err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
+	tenants := db.GetDatabaseClient().GetAllTenants()
+	if tenants == nil {
+		tenants = []*db.Tenant{}
+	}
+	response, _ := util.JSONMarshal(tenants)
+	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
+}
+
+// CreateTenantHandler handles POST /xconfAdminService/tenants
+func CreateTenantHandler(w http.ResponseWriter, r *http.Request) {
+	if _, err := auth.CanWrite(r, auth.TOOL_ENTITY); err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
+	// r.Body is already drained in the middleware
+	xw, ok := w.(*xwhttp.XResponseWriter)
+	if !ok {
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "responsewriter cast error")
+		return
+	}
+	body := xw.Body()
+	newTenant := db.Tenant{}
+	err := json.Unmarshal([]byte(body), &newTenant)
+	if err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if err := newTenant.Validate(); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	tenant, err := xhttp.WebConfServer.OnboardTenantFunc(newTenant.ID, newTenant.Name)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+	response, err := xhttp.ReturnJsonResponse(tenant, r)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+	xwhttp.WriteXconfResponse(w, http.StatusCreated, response)
+}
+
+// DeleteTenantHandler handles DELETE /xconfAdminService/tenants/{id}
+func DeleteTenantHandler(w http.ResponseWriter, r *http.Request) {
+	if _, err := auth.CanWrite(r, auth.TOOL_ENTITY); err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
+	id, found := mux.Vars(r)[xwcommon.ID]
+	if !found {
+		errorStr := fmt.Sprintf("%v is invalid", xwcommon.ID)
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, errorStr)
+		return
+	}
+
+	if err := xcommon.DeleteTenant(id); err != nil {
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	xwhttp.WriteXconfResponse(w, http.StatusNoContent, nil)
+}
+
 func GetInfoRefreshAllHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err := auth.CanRead(r, auth.TOOL_ENTITY); err != nil {
 		xhttp.AdminError(w, err)

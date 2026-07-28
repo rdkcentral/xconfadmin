@@ -113,24 +113,24 @@ func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 
 // OnboardTenant onboards a new tenant by creating it in the database,
 // initializing firmware rule templates and application settings.
-func OnboardTenant(id string, name string) error {
+func OnboardTenant(id string, name string) (*db.Tenant, error) {
 	tenant, err := db.CreateTenant(id, name)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Initialize FirmwareRule templates
 	if err := queries.CreateFirmwareRuleTemplates(tenant.ID); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Initialize other tenant-specific settings
 	if err := common.InitAppSettings(tenant.ID); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Initialize tenant data in cache manager
 	db.GetCacheManager().InitTenantCache(tenant.ID)
 
-	return nil
+	return tenant, nil
 }

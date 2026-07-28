@@ -55,7 +55,7 @@ func XconfSetup(server *xhttp.WebconfigServer, r *mux.Router) {
 	server.OnboardTenantFunc = OnboardTenant
 
 	tenantId := db.GetDefaultTenantId()
-	if err := OnboardTenant(tenantId, tenantId); err != nil {
+	if _, err := OnboardTenant(tenantId, tenantId); err != nil {
 		panic("Failed to initialize DB for tenant " + tenantId + ": " + err.Error())
 	}
 
@@ -798,6 +798,13 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	wakeupPoolCreationPath := r.PathPrefix("/xconfAdminService/wakeuppool").Subrouter()
 	wakeupPoolCreationPath.HandleFunc("", queries.CreateWakeupPoolHandler).Methods("POST").Name("createwakeuppool")
 	authPaths = append(authPaths, wakeupPoolCreationPath)
+
+	// tenants
+	tenantsPath := r.PathPrefix("/xconfAdminService/tenants").Subrouter()
+	tenantsPath.HandleFunc("", queries.GetTenantsHandler).Methods("GET").Name("GetTenants")
+	tenantsPath.HandleFunc("", queries.CreateTenantHandler).Methods("POST").Name("CreateTenant")
+	tenantsPath.HandleFunc("/{id}", queries.DeleteTenantHandler).Methods("DELETE").Name("DeleteTenant")
+	paths = append(paths, tenantsPath)
 
 	// CORS
 	c := cors.New(cors.Options{

@@ -145,8 +145,8 @@ func TestAuthMiddleware_TenantNotFound_OnboardFuncError(t *testing.T) {
 	defer func() { xcommon.SatOn = oldSatOn }()
 
 	resetOnboardTenantFunc(t)
-	testServer.OnboardTenantFunc = func(id, name string) error {
-		return errors.New("onboard failed")
+	testServer.OnboardTenantFunc = func(id, name string) (*db.Tenant, error) {
+		return nil, errors.New("onboard failed")
 	}
 
 	r := httptest.NewRequest(http.MethodGet, "/test", nil)
@@ -167,9 +167,9 @@ func TestAuthMiddleware_TenantNotFound_OnboardFuncSuccess(t *testing.T) {
 
 	resetOnboardTenantFunc(t)
 	onboardCalled := false
-	testServer.OnboardTenantFunc = func(id, name string) error {
+	testServer.OnboardTenantFunc = func(id, name string) (*db.Tenant, error) {
 		onboardCalled = true
-		return nil
+		return nil, nil
 	}
 
 	r := httptest.NewRequest(http.MethodGet, "/test", nil)
@@ -195,9 +195,9 @@ func TestAuthMiddleware_TenantExists_NoOnboard(t *testing.T) {
 
 	resetOnboardTenantFunc(t)
 	onboardCalled := false
-	testServer.OnboardTenantFunc = func(id, name string) error {
+	testServer.OnboardTenantFunc = func(id, name string) (*db.Tenant, error) {
 		onboardCalled = true
-		return nil
+		return nil, nil
 	}
 
 	r := httptest.NewRequest(http.MethodGet, "/test", nil)
