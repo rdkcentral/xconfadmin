@@ -31,14 +31,29 @@ type mockDbClient struct {
 
 type mockBatch struct {
 	statements []string
+	// args are captured alongside statements so tests can assert on the values
+	// written, not merely that a statement was issued. Without this any
+	// assertion about a column's value passes vacuously.
+	args [][]any
 }
 
 func (b *mockBatch) Query(stmt string, args ...any) {
 	b.statements = append(b.statements, stmt)
+	b.args = append(b.args, args)
 }
 
 func (b *mockBatch) Size() int {
 	return len(b.statements)
+}
+
+// argsFor returns the arguments of the first occurrence of a statement.
+func (b *mockBatch) argsFor(stmt string) []any {
+	for i, s := range b.statements {
+		if s == stmt {
+			return b.args[i]
+		}
+	}
+	return nil
 }
 
 func (m *mockDbClient) QueryXconfDataRows(query string, params ...string) ([]map[string]any, error) {

@@ -39,11 +39,21 @@ const (
 	QueryGetMembersCountByBucket = `SELECT count(*) FROM "TagMembersBucketed" WHERE tag_id = ? and bucket_id = ?`
 	QueryGetMembersByBucketFirst = `SELECT member FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ? LIMIT ?`
 
-	QueryGetPopulatedBuckets  = `SELECT bucket_id FROM "TagBucketMetadata" WHERE tag_id = ?`
-	QueryAddBucketMetadata    = `INSERT INTO "TagBucketMetadata" (tag_id, bucket_id) VALUES (?, ?)`
-	QueryGetAllTagIds         = `SELECT tag_id FROM "TagBucketMetadata"`
-	QueryDeleteBucketMembers  = `DELETE FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ?`
-	QueryDeleteBucketMetadata = `DELETE FROM "TagBucketMetadata" WHERE tag_id = ? AND bucket_id = ?`
+	QueryGetPopulatedBuckets = `SELECT bucket_id FROM "TagBucketMetadata" WHERE tag_id = ?`
+	QueryAddBucketMetadata   = `INSERT INTO "TagBucketMetadata" (tag_id, bucket_id) VALUES (?, ?)`
+	QueryGetAllTagIds        = `SELECT tag_id FROM "TagBucketMetadata"`
+
+	// Typed variants, used only when the tag_type column has been applied to the
+	// schema (see tag_type_column_enabled). Kept separate from the untyped
+	// statements above so the binary can run against a cluster that has not had
+	// the ALTER applied yet — the two statements share an UnloggedBatch with the
+	// member inserts, so referencing a missing column would fail every add, not
+	// just account ones.
+	QueryAddBucketMetadataTyped = `INSERT INTO "TagBucketMetadata" (tag_id, bucket_id, tag_type) VALUES (?, ?, ?)`
+	QueryGetAllTagIdsTyped      = `SELECT tag_id, tag_type FROM "TagBucketMetadata"`
+	QueryGetTagMetadataTyped    = `SELECT bucket_id, tag_type FROM "TagBucketMetadata" WHERE tag_id = ?`
+	QueryDeleteBucketMembers    = `DELETE FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ?`
+	QueryDeleteBucketMetadata   = `DELETE FROM "TagBucketMetadata" WHERE tag_id = ? AND bucket_id = ?`
 
 	CountMembersCassandraResp = "count"
 
@@ -81,7 +91,7 @@ func getBucketId(member string) int {
 
 // AddMembers writes members to the bucketed Cassandra tables. Returns the
 // number of members stored and the number of buckets touched.
-func AddMembers(tagId string, members []string) (int, int, error) {
+func AddMembers(tagId string, members []string, tagType string) (int, int, error) {
 	if len(members) > MaxBatchSizeV2 {
 		return 0, 0, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
@@ -102,7 +112,7 @@ func AddMembers(tagId string, members []string) (int, int, error) {
 	successCount := 0
 
 	for bucketId, bucketMembers := range bucketGroups {
-		if err := addMembersToBucket(tagId, bucketId, bucketMembers, created); err != nil {
+		if err := addMembersToBucket(tagId, bucketId, bucketMembers, created, tagType); err != nil {
 			agg.add(fmt.Errorf("bucket %d: %w", bucketId, err))
 		} else {
 			successCount += len(bucketMembers)
@@ -123,16 +133,22 @@ func AddMembers(tagId string, members []string) (int, int, error) {
 	return successCount, len(bucketGroups), nil
 }
 
-func addMembersToBucket(tagId string, bucketId int, members []string, created string) error {
+func addMembersToBucket(tagId string, bucketId int, members []string, created string, tagType string) error {
 	batch := ds.GetSimpleDao().NewBatch(UnloggedBatch)
 
-	// Add member records
+	// Add member records. Deliberately no tag_type here: it would cost one text
+	// cell per member on the hottest write path with no reader — the type is a
+	// property of the tag, and lives on the metadata row.
 	for _, member := range members {
 		batch.Query(QueryAddMemberBucketed, tagId, strconv.Itoa(bucketId), member, created)
 	}
 
 	// Add metadata record for this bucket (will be ignored if already exists)
-	batch.Query(QueryAddBucketMetadata, tagId, strconv.Itoa(bucketId))
+	if tagTypeColumnEnabled() {
+		batch.Query(QueryAddBucketMetadataTyped, tagId, strconv.Itoa(bucketId), tagType)
+	} else {
+		batch.Query(QueryAddBucketMetadata, tagId, strconv.Itoa(bucketId))
+	}
 
 	return ds.GetSimpleDao().ExecuteBatch(batch)
 }
@@ -226,20 +242,111 @@ func removeMembersFromBucket(tagId string, bucketId int, members []string) error
 	return ds.GetSimpleDao().ExecuteBatch(batch)
 }
 
+// tagTypeColumnEnabled reports whether the tag_type column may be referenced.
+// Defaults to false when config is absent so tests and partially-migrated
+// clusters take the untyped path.
+func tagTypeColumnEnabled() bool {
+	config := GetTagApiConfig()
+	return config != nil && config.TagTypeColumnEnabled
+}
+
 func getPopulatedBuckets(tagId string) ([]int, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryGetPopulatedBuckets, tagId)
+	buckets, _, err := getTagMeta(tagId)
+	return buckets, err
+}
+
+// getTagMeta reads a tag's metadata partition once, returning both its populated
+// buckets and its resolved type. Callers that need the type get it without a
+// second round trip, since it comes from the same single-partition read
+// getPopulatedBuckets already performs.
+//
+// A tag with no metadata rows does not exist yet: buckets is empty and the type
+// is TagTypeLegacy, which callers treat as "unclaimed".
+func getTagMeta(tagId string) ([]int, string, error) {
+	typed := tagTypeColumnEnabled()
+	query := QueryGetPopulatedBuckets
+	if typed {
+		query = QueryGetTagMetadataTyped
+	}
+
+	rows, err := ds.GetSimpleDao().Query(query, tagId)
 	if err != nil {
-		return nil, err
+		return nil, TagTypeLegacy, err
 	}
 
 	buckets := make([]int, 0, len(rows))
+	rowTypes := make([]string, 0, len(rows))
 	for _, row := range rows {
 		if bucketId, ok := row["bucket_id"].(int); ok {
 			buckets = append(buckets, bucketId)
 		}
+		if typed {
+			rowTypes = append(rowTypes, tagTypeFromRow(row))
+		}
 	}
 
-	return buckets, nil
+	return buckets, resolveTagType(rowTypes), nil
+}
+
+// tagTypeFromRow reads tag_type from a Cassandra row. A NULL text column comes
+// back as either a missing key or an empty string; both mean legacy.
+func tagTypeFromRow(row map[string]interface{}) string {
+	if value, ok := row["tag_type"].(string); ok {
+		return value
+	}
+	return TagTypeLegacy
+}
+
+// resolveTagType collapses the per-bucket tag_type values of one tag into a
+// single answer.
+//
+// Rows can disagree: two concurrent first-ever adds of the same new tag id with
+// different types both see "unclaimed" and proceed, and because members hash to
+// different buckets neither overwrites the other. Account wins in that case, so
+// the tag reads consistently as account and the next mac write gets a clean
+// conflict instead of the mixture flapping between types.
+func resolveTagType(rowTypes []string) string {
+	for _, rowType := range rowTypes {
+		if rowType == TagTypeAccount {
+			return TagTypeAccount
+		}
+	}
+	return TagTypeLegacy
+}
+
+// ensureTagTypeCompatible rejects writes that would give one tag id two types.
+//
+// This matters beyond tidiness: tag_id is the Cassandra partition key, so a mac
+// tag and an account tag sharing an id would share partitions, and reads,
+// pagination and deletes would each operate on a mixture of MACs and account ids.
+//
+// Legacy (untyped) writes are exempt, which keeps the existing routes behaving
+// exactly as they do today.
+func ensureTagTypeCompatible(tagId string, requestedType string) error {
+	if requestedType == TagTypeLegacy || !tagTypeColumnEnabled() {
+		return nil
+	}
+
+	_, existing, err := getTagMeta(tagId)
+	if err != nil {
+		// Fail closed: an unreadable type is not permission to overwrite it.
+		return err
+	}
+
+	if existing == requestedType {
+		return nil
+	}
+	// An unclaimed or legacy tag can be adopted by a mac write — mac and legacy
+	// are the same equivalence class.
+	if existing == TagTypeLegacy && requestedType == TagTypeMac {
+		return nil
+	}
+	if existing == TagTypeLegacy && requestedType == TagTypeAccount {
+		return xwcommon.NewRemoteErrorAS(http.StatusConflict,
+			fmt.Sprintf("tag '%s' already exists as a mac tag and cannot be reused as an account tag", tagId))
+	}
+	return xwcommon.NewRemoteErrorAS(http.StatusConflict,
+		fmt.Sprintf("tag '%s' already exists with type '%s'", tagId, existing))
 }
 
 // GetMembersPaginated returns one page of members plus the Cassandra cost of
@@ -579,7 +686,7 @@ func fetchMembersFromBucketsConcurrent(tagId string, bucketIds []int, totalLimit
 // approach). The returned WriteStats carry per-store outcome counts for the
 // request log — populated on error paths too. The former per-request summary
 // Infof lines are gone: the counts land on the framework "request ends" line.
-func AddMembersWithXdas(tagId string, members []string, tagValue string) (WriteStats, error) {
+func AddMembersWithXdas(tagId string, members []string, tagValue string, tagType string) (WriteStats, error) {
 	stats := WriteStats{Requested: len(members)}
 
 	if len(members) == 0 {
@@ -590,13 +697,28 @@ func AddMembersWithXdas(tagId string, members []string, tagValue string) (WriteS
 		return stats, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
 
-	savedToXdasMembers, xdasFail, firstError := addMembersToXdas(tagId, members, tagValue)
+	// Must run before the XDAS phase. A conflict detected afterwards would leave
+	// members written to one keyspace with no Cassandra record pointing at them,
+	// and XDAS cannot be enumerated to find them again.
+	if err := ensureTagTypeCompatible(tagId, tagType); err != nil {
+		return stats, err
+	}
+
+	savedToXdasMembers, xdasFail, firstError := addMembersToXdas(tagId, members, tagValue, tagType)
 	stats.XdasOk = len(savedToXdasMembers)
 	stats.XdasFail = xdasFail
 	stats.FirstError = firstError
 
+	// Every XDAS write failed. Previously this fell through to a 202 reporting
+	// stored=0, so a misconfigured keyspace looked like a healthy API that
+	// silently stored nothing.
+	if stats.XdasOk == 0 && stats.XdasFail > 0 {
+		return stats, xwcommon.NewRemoteErrorAS(http.StatusBadGateway,
+			fmt.Sprintf("all %d XDAS writes failed: %s", stats.XdasFail, firstError))
+	}
+
 	if stats.XdasOk > 0 {
-		stored, buckets, err := AddMembers(tagId, savedToXdasMembers)
+		stored, buckets, err := AddMembers(tagId, savedToXdasMembers, tagType)
 		stats.CassandraOk = stored
 		stats.CassandraFail = stats.XdasOk - stored
 		stats.Buckets = buckets
@@ -614,7 +736,7 @@ func AddMembersWithXdas(tagId string, members []string, tagValue string) (WriteS
 
 // RemoveMembersWithXdas removes members from both XDAS and Cassandra
 // (XDAS-first approach). See AddMembersWithXdas for the stats contract.
-func RemoveMembersWithXdas(tagId string, members []string) (WriteStats, error) {
+func RemoveMembersWithXdas(tagId string, members []string, tagType string) (WriteStats, error) {
 	stats := WriteStats{Requested: len(members)}
 
 	if len(members) == 0 {
@@ -625,10 +747,21 @@ func RemoveMembersWithXdas(tagId string, members []string) (WriteStats, error) {
 		return stats, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
 
-	successfulRemovals, xdasFail, firstError := removeMembersFromXDAS(tagId, members)
+	// Without this, DELETE /tags/account/{macTag}/members would issue deletes
+	// against the account keyspace for a tag whose members live in the device one.
+	if err := ensureTagTypeCompatible(tagId, tagType); err != nil {
+		return stats, err
+	}
+
+	successfulRemovals, xdasFail, firstError := removeMembersFromXDAS(tagId, members, tagType)
 	stats.XdasOk = len(successfulRemovals)
 	stats.XdasFail = xdasFail
 	stats.FirstError = firstError
+
+	if stats.XdasOk == 0 && stats.XdasFail > 0 {
+		return stats, xwcommon.NewRemoteErrorAS(http.StatusBadGateway,
+			fmt.Sprintf("all %d XDAS removals failed: %s", stats.XdasFail, firstError))
+	}
 
 	if stats.XdasOk > 0 {
 		removed, buckets, err := RemoveMembers(tagId, successfulRemovals)
@@ -648,15 +781,15 @@ func RemoveMembersWithXdas(tagId string, members []string) (WriteStats, error) {
 }
 
 // RemoveMemberWithXdas removes a single member from both XDAS and Cassandra V2
-func RemoveMemberWithXdas(tagId string, member string) (WriteStats, error) {
-	return RemoveMembersWithXdas(tagId, []string{member})
+func RemoveMemberWithXdas(tagId string, member string, tagType string) (WriteStats, error) {
+	return RemoveMembersWithXdas(tagId, []string{member}, tagType)
 }
 
 // addMembersToXdas adds members to Xdas using concurrent workers (similar to
 // V1 pattern). Returns the saved members, the failure count, and the
 // first error message. Partial failure is reported through the counts, not an
 // error — the caller decides how to surface it.
-func addMembersToXdas(tagId string, members []string, tagValue string) ([]string, int, string) {
+func addMembersToXdas(tagId string, members []string, tagValue string, tagType string) ([]string, int, string) {
 	tagId = SetTagPrefix(tagId)
 
 	membersChannel := make(chan string, len(members))
@@ -680,7 +813,7 @@ func addMembersToXdas(tagId string, members []string, tagValue string) ([]string
 	}
 	for i := 0; i < numOfWorkers; i++ {
 		wg.Add(1)
-		go storeTagMembersInXdas(tagId, membersChannel, savedMembersChannel, wg, tagValue, errAgg)
+		go storeTagMembersInXdas(tagId, membersChannel, savedMembersChannel, wg, tagValue, tagType, errAgg)
 	}
 
 	go func() {
@@ -699,7 +832,7 @@ func addMembersToXdas(tagId string, members []string, tagValue string) ([]string
 
 // removeMembersFromXDAS removes members from XDAS using concurrent workers.
 // See addMembersToXdas for the return contract.
-func removeMembersFromXDAS(tagId string, members []string) ([]string, int, string) {
+func removeMembersFromXDAS(tagId string, members []string, tagType string) ([]string, int, string) {
 	tagId = SetTagPrefix(tagId)
 
 	membersChannel := make(chan string, len(members))
@@ -723,7 +856,7 @@ func removeMembersFromXDAS(tagId string, members []string) ([]string, int, strin
 	}
 	for i := 0; i < numOfWorkers; i++ {
 		wg.Add(1)
-		go removeTagMembersFromXdas(tagId, membersChannel, removedMembersChannel, wg, agg)
+		go removeTagMembersFromXdas(tagId, membersChannel, removedMembersChannel, wg, tagType, agg)
 	}
 
 	go func() {
@@ -741,27 +874,63 @@ func removeMembersFromXDAS(tagId string, members []string) ([]string, int, strin
 }
 
 // GetAllTagIds returns all tag IDs from V2 tables
-func GetAllTagIds() ([]string, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryGetAllTagIds)
+// GetAllTagIds lists distinct tag ids, optionally restricted to one tag type.
+//
+// An empty tagTypeFilter returns every tag. Filtering is done in Go over the
+// existing full-table scan rather than with a WHERE clause: tag_type has two
+// distinct values across ~105K rows, so a secondary index on it would create two
+// index partitions and hotspot the nodes that own them, and ALLOW FILTERING
+// would be strictly worse than the scan we already pay for.
+func GetAllTagIds(tagTypeFilter string) ([]string, error) {
+	typed := tagTypeColumnEnabled()
+	query := QueryGetAllTagIds
+	if typed {
+		query = QueryGetAllTagIdsTyped
+	}
+
+	rows, err := ds.GetSimpleDao().Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tag IDs: %w", err)
 	}
 
-	tagIdSet := make(map[string]bool)
+	// One row per (tag_id, bucket_id), so a tag appears up to BucketCount times
+	// and its per-row types must be collapsed before filtering.
+	rowTypes := make(map[string][]string)
 	for _, row := range rows {
-		if tagId, ok := row["tag_id"].(string); ok {
-			cleanTagId := RemovePrefixFromTag(tagId)
-			tagIdSet[cleanTagId] = true
+		tagId, ok := row["tag_id"].(string)
+		if !ok {
+			continue
+		}
+		if typed {
+			rowTypes[tagId] = append(rowTypes[tagId], tagTypeFromRow(row))
+		} else if _, seen := rowTypes[tagId]; !seen {
+			rowTypes[tagId] = nil
 		}
 	}
 
-	tagIds := make([]string, 0, len(tagIdSet))
-	for tagId := range tagIdSet {
-		tagIds = append(tagIds, tagId)
+	tagIds := make([]string, 0, len(rowTypes))
+	for tagId, types := range rowTypes {
+		if matchesTagTypeFilter(resolveTagType(types), tagTypeFilter) {
+			tagIds = append(tagIds, tagId)
+		}
 	}
 
-	log.Debugf("Retrieved %d unique tag IDs from V2 storage", len(tagIds))
+	log.Debugf("Retrieved %d unique tag IDs from V2 storage (filter=%q)", len(tagIds), tagTypeFilter)
 	return tagIds, nil
+}
+
+// matchesTagTypeFilter reports whether a resolved tag type satisfies a filter.
+// A mac filter must also match legacy rows, since legacy tags are mac tags that
+// predate the type column.
+func matchesTagTypeFilter(resolved string, filter string) bool {
+	switch filter {
+	case TagTypeLegacy:
+		return true
+	case TagTypeMac:
+		return resolved == TagTypeLegacy || resolved == TagTypeMac
+	default:
+		return resolved == filter
+	}
 }
 
 // GetTagById retrieves a tag with up to MaxMembersInTagResponse members
@@ -804,13 +973,20 @@ func DeleteTag(tagId string, auditId string) error {
 		"tag":      tagId,
 	}
 
-	populatedBuckets, err := getPopulatedBuckets(tagId)
+	// The type is resolved from storage, never from the request. A tag's keyspace
+	// is a property of the tag, so deleting an account tag through the legacy
+	// untyped route must still delete from the account keyspace — otherwise the
+	// Cassandra rows go and the XDAS entries are orphaned with no way to find them.
+	populatedBuckets, tagType, err := getTagMeta(tagId)
 	if err != nil {
 		return fmt.Errorf("failed to get populated buckets: %w", err)
 	}
 
 	if len(populatedBuckets) == 0 {
 		return fmt.Errorf("tag not found")
+	}
+	if tagType != TagTypeLegacy {
+		fields["tag_type"] = tagType
 	}
 
 	startTime := time.Now()
@@ -821,7 +997,7 @@ func DeleteTag(tagId string, auditId string) error {
 
 	// Process each bucket: fetch members in chunks, delete from XDAS, then delete from Cassandra
 	for _, bucketId := range populatedBuckets {
-		membersDeleted, err := deleteBucketMembers(tagId, bucketId)
+		membersDeleted, err := deleteBucketMembers(tagId, bucketId, tagType)
 		totalMembersDeleted += membersDeleted
 		if err != nil {
 			// Return error with partial progress saved
@@ -844,7 +1020,7 @@ func DeleteTag(tagId string, auditId string) error {
 
 // deleteBucketMembers deletes all members from a single bucket (XDAS first, then Cassandra)
 // Returns number of members deleted
-func deleteBucketMembers(tagId string, bucketId int) (int, error) {
+func deleteBucketMembers(tagId string, bucketId int, tagType string) (int, error) {
 	totalDeleted := 0
 	lastMember := ""
 
@@ -861,7 +1037,7 @@ func deleteBucketMembers(tagId string, bucketId int) (int, error) {
 		log.Debugf("Fetched %d members from bucket %d for tag '%s' (total deleted so far: %d)",
 			len(chunk), bucketId, tagId, totalDeleted)
 
-		removedFromXdas, _, firstError := removeMembersFromXDAS(tagId, chunk)
+		removedFromXdas, _, firstError := removeMembersFromXDAS(tagId, chunk, tagType)
 
 		if len(removedFromXdas) > 0 {
 			// Delete successfully removed members from Cassandra

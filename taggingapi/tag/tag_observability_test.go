@@ -11,6 +11,7 @@ import (
 
 	"github.com/rdkcentral/xconfadmin/common"
 
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
@@ -126,8 +127,12 @@ func TestAddMembers_XdasOutageDoesNotFloodLogs(t *testing.T) {
 		members[i] = fmt.Sprintf("AA:BB:CC:00:%02X:%02X", i/256, i%256)
 	}
 
-	stats, err := AddMembersWithXdas("outage-tag", members, "")
-	assert.NoError(t, err)
+	stats, err := AddMembersWithXdas("outage-tag", members, "", TagTypeLegacy)
+	// A total XDAS outage is an error, not a 202 reporting stored=0. Previously
+	// this returned nil and the handler answered 202, so a keyspace that
+	// rejected every write looked like a healthy API storing nothing.
+	assert.Error(t, err)
+	assert.Equal(t, http.StatusBadGateway, xwcommon.GetXconfErrorStatusCode(err))
 	assert.Equal(t, 200, stats.XdasFail)
 	assert.Equal(t, 0, stats.XdasOk)
 	assert.NotEmpty(t, stats.FirstError)
@@ -201,7 +206,7 @@ func TestAddMembers_CassandraOutageDoesNotFloodLogs(t *testing.T) {
 		members[i] = fmt.Sprintf("AA:BB:CC:01:%02X:%02X", i/256, i%256)
 	}
 
-	stats, err := AddMembersWithXdas("cass-outage-tag", members, "")
+	stats, err := AddMembersWithXdas("cass-outage-tag", members, "", TagTypeLegacy)
 	assert.Error(t, err)
 	assert.Equal(t, 200, stats.XdasOk)
 	assert.Equal(t, 200, stats.CassandraFail)

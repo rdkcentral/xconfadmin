@@ -6,11 +6,13 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/gorilla/mux"
@@ -60,6 +62,13 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 	id, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
+		return
+	}
+
+	// Reads resolve by tag_id alone, but an unknown type in the path is still a
+	// bad request rather than something to ignore.
+	if _, err := getTagTypeFromRequest(r); err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
 
@@ -131,6 +140,19 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tagType, err := getTagTypeFromRequest(r)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+
+	// Only enforced on the create path — existing tags with reserved ids (there
+	// are none in any environment) keep working through the legacy routes.
+	if err := validateTagId(tagId); err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+
 	tagValue := getTagValueFromRequest(r)
 
 	xw, ok := w.(*xwhttp.XResponseWriter)
@@ -158,8 +180,9 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	audit := newOpAudit(w, OpAddMembers)
 	audit.setTag(tagId)
+	audit.setTagType(tagType)
 
-	stats, err := AddMembersWithXdas(tagId, members, tagValue)
+	stats, err := AddMembersWithXdas(tagId, members, tagValue, tagType)
 	audit.setWriteStats(stats)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
@@ -187,6 +210,43 @@ func getTagValueFromRequest(r *http.Request) string {
 	}
 
 	return ""
+}
+
+// getTagTypeFromRequest reads the {tagType} path variable, falling back to the
+// ?tagType= query parameter (which the untyped list endpoint uses as a filter).
+//
+// Absent means TagTypeLegacy — deliberately NOT TagTypeMac. The empty string is
+// what tells the service layer "this came in on an untyped route, stay
+// permissive"; collapsing it to mac would make the strictness of the typed
+// routes leak onto the legacy ones.
+func getTagTypeFromRequest(r *http.Request) (string, error) {
+	tagType, found := mux.Vars(r)[common.TagType]
+	if !found {
+		tagType = r.URL.Query().Get(common.TagType)
+	}
+	if err := ValidateTagType(tagType); err != nil {
+		return "", err
+	}
+	return tagType, nil
+}
+
+// reservedTagIds cannot be used as tag ids because they are path segments in the
+// typed routes: a tag named "account" would make /taggingService/tags/account
+// ambiguous, and gorilla/mux would resolve it to the typed route, leaving the
+// tag unreachable. "members" is reserved for the same reason and additionally
+// fixes a pre-existing ambiguity with /taggingService/tags/members/{member}.
+var reservedTagIds = map[string]bool{
+	TagTypeMac:          true,
+	TagTypeAccount:      true,
+	common.Member + "s": true,
+}
+
+func validateTagId(tagId string) error {
+	if reservedTagIds[strings.ToLower(tagId)] {
+		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest,
+			fmt.Sprintf("tag id '%s' is reserved and cannot be used", tagId))
+	}
+	return nil
 }
 
 // RemoveMembersFromTagHandler - Updated with bucketed implementation
@@ -220,10 +280,17 @@ func RemoveMembersFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tagType, err := getTagTypeFromRequest(r)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+
 	audit := newOpAudit(w, OpRemoveMembers)
 	audit.setTag(id)
+	audit.setTagType(tagType)
 
-	stats, err := RemoveMembersWithXdas(id, members)
+	stats, err := RemoveMembersWithXdas(id, members, tagType)
 	audit.setWriteStats(stats)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
@@ -257,10 +324,17 @@ func RemoveMemberFromTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tagType, err := getTagTypeFromRequest(r)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+
 	audit := newOpAudit(w, OpRemoveMember)
 	audit.setTag(id)
+	audit.setTagType(tagType)
 
-	stats, err := RemoveMemberWithXdas(id, member)
+	stats, err := RemoveMemberWithXdas(id, member, tagType)
 	audit.setWriteStats(stats)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
@@ -274,7 +348,16 @@ func RemoveMemberFromTagHandler(w http.ResponseWriter, r *http.Request) {
 func GetAllTagsHandler(w http.ResponseWriter, r *http.Request) {
 	audit := newOpAudit(w, OpGetAllTags)
 
-	tagIds, err := GetAllTagIds()
+	// On the typed routes {tagType} narrows the listing; on the legacy route an
+	// absent type means "everything", preserving the current response.
+	tagType, err := getTagTypeFromRequest(r)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+	audit.setTagType(tagType)
+
+	tagIds, err := GetAllTagIds(tagType)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -295,6 +378,11 @@ func GetTagByIdHandler(w http.ResponseWriter, r *http.Request) {
 	id, found := mux.Vars(r)[common.Tag]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Tag)))
+		return
+	}
+
+	if _, err := getTagTypeFromRequest(r); err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
 
@@ -348,10 +436,19 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	requestedType, err := getTagTypeFromRequest(r)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+
 	audit := newOpAudit(w, OpDeleteTag)
 	audit.setTag(id)
 
-	populatedBuckets, err := getPopulatedBuckets(id)
+	// Resolved synchronously, before the background goroutine starts: a lookup
+	// failure must surface as an error response, not as a log line the caller
+	// never sees after already receiving a 202.
+	populatedBuckets, storedType, err := getTagMeta(id)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -362,10 +459,27 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	audit.set("buckets", len(populatedBuckets))
+	audit.setTagType(storedType)
 
+	// Deleting through a typed route that disagrees with the stored type would
+	// silently delete a different kind of tag than the caller named.
+	if requestedType != TagTypeLegacy && tagTypeColumnEnabled() {
+		if err := ensureTagTypeCompatible(id, requestedType); err != nil {
+			xhttp.WriteXconfErrorResponse(w, err)
+			return
+		}
+	}
+
+	// Keyed on the bare tag id, NOT on type+id. Tag ids are unique across types,
+	// so type+id would name the same tag under two different keys and let a typed
+	// and an untyped DELETE both pass this guard and run concurrent deletions
+	// over the same partitions.
 	deletionKey := id
-	if _, alreadyRunning := inFlightTagDeletions.LoadOrStore(deletionKey, true); alreadyRunning {
+	if existing, alreadyRunning := inFlightTagDeletions.LoadOrStore(deletionKey, storedType); alreadyRunning {
 		audit.set("deletion_state", "already_in_progress")
+		if inFlightType, ok := existing.(string); ok && inFlightType != TagTypeLegacy {
+			audit.set("in_flight_tag_type", inFlightType)
+		}
 		response := map[string]string{
 			"status":  "accepted",
 			"message": fmt.Sprintf("Tag '%s' deletion is already in progress", id),

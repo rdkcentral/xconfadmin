@@ -71,6 +71,18 @@ func (a opAudit) setTag(tagId string) {
 	a.set("tag", tagId)
 }
 
+// setTagType records the tag type as a log field only.
+//
+// Deliberately not a Prometheus label: the metric vectors are declared with
+// []string{"op"} and consumed by dashboards keyed on that, so adding a label
+// would reset every existing series, while minting per-type op values would
+// leave panels pinned to the current ones silently under-reporting.
+func (a opAudit) setTagType(tagType string) {
+	if tagType != TagTypeLegacy {
+		a.set("tag_type", tagType)
+	}
+}
+
 func (a opAudit) setWriteStats(s WriteStats) {
 	a.set("requested", s.Requested)
 	a.set("xdas_ok", s.XdasOk)
