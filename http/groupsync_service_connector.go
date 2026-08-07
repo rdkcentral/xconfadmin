@@ -75,7 +75,7 @@ func NewGroupServiceSyncConnector(conf *configuration.Config, tlsConfig *tls.Con
 	// if present they must be well-formed.
 	mustBeValidTemplate(host+path, "addGroupMemberTemplate", addGroupMemberTemplate, 2)
 	mustBeValidTemplate(host+path, "removeGroupMemberTemplate", removeGroupMemberTemplate, 3)
-	mustBeValidTemplate(host+path, "addAccountGroupMemberTemplate", addAccountGroupMemberTemplate, 2)
+	mustBeValidTemplate(host+path, "addAccountGroupMemberTemplate", addAccountGroupMemberTemplate, 3)
 	mustBeValidTemplate(host+path, "removeAccountGroupMemberTemplate", removeAccountGroupMemberTemplate, 3)
 
 	return &GroupServiceSyncConnector{

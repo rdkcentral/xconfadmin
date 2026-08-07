@@ -39,6 +39,26 @@ func ValidateTagType(tagType string) error {
 	}
 }
 
+// ensureTagTypeSupported rejects account requests while tag_type_column_enabled
+// is off.
+//
+// Without the column the type cannot be persisted, so an account write would
+// answer 200 and store an untyped metadata row: the tag then reads back as
+// legacy forever — missing from the account listing and matched by the mac one —
+// while its members have already landed in the account keyspace. Reads are
+// rejected for the same reason: the account filter can only ever return an empty
+// list, which is indistinguishable from "no account tags exist".
+//
+// 503 rather than 400: the request is well formed, the deployment just has not
+// had the ALTER applied yet, and the flag makes it retryable.
+func ensureTagTypeSupported(tagType string) error {
+	if IsAccountTag(tagType) && !tagTypeColumnEnabled() {
+		return xwcommon.NewRemoteErrorAS(http.StatusServiceUnavailable,
+			fmt.Sprintf("tag type %q is not available: tag_type_column_enabled is false", TagTypeAccount))
+	}
+	return nil
+}
+
 func IsAccountTag(tagType string) bool {
 	return tagType == TagTypeAccount
 }

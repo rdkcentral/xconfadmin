@@ -42,6 +42,25 @@ func TestGetBucketId(t *testing.T) {
 	assert.True(t, len(buckets) >= 2, "Members should distribute across buckets")
 }
 
+// The member→bucket mapping is a storage contract: bucket ids are never stored
+// with a member — they are recomputed from the member string on every add,
+// remove and lookup — so any change to the mapping strands existing rows in
+// buckets the code no longer looks in. These golden values pin FNV-1a mod 1000
+// with the modulo in uint32 space, which keeps the ids platform-independent
+// (converting to int before the modulo goes negative for half the hash space
+// on 32-bit platforms).
+func TestGetBucketId_GoldenMapping(t *testing.T) {
+	golden := map[string]int{
+		"AA:BB:CC:DD:EE:01":   228,
+		"AABBCCDDEEFF":        15,
+		"2846573900878987927": 654,
+		"some-member":         358,
+	}
+	for member, expected := range golden {
+		assert.Equal(t, expected, getBucketId(member), "bucket for %q", member)
+	}
+}
+
 func TestParseBucketedCursor(t *testing.T) {
 	// Test empty cursor
 	cursor, err := parseBucketedCursor("")
@@ -174,38 +193,29 @@ func TestPaginationParamsValidation(t *testing.T) {
 	t.Log("Parameter validation logic tests completed")
 }
 
-// Test dynamic worker scaling logic
-func TestDynamicWorkerScaling(t *testing.T) {
-	// Test min/max helper functions
-	assert.Equal(t, 5, min(5, 10))
-	assert.Equal(t, 5, min(10, 5))
-	assert.Equal(t, 10, max(5, 10))
-	assert.Equal(t, 10, max(10, 5))
-
-	// Test scaling logic scenarios
+// Worker scaling for the XDAS write phase. The floor-at-one cases pin a
+// regression: a non-positive tag_update_worker_count used to yield zero
+// workers for batches under 100 members, turning writes into silent no-ops.
+func TestGetWriteWorkerCount(t *testing.T) {
 	testCases := []struct {
 		name        string
 		memberCount int
 		baseWorkers int
-		expectedMin int
-		expectedMax int
+		expected    int
 	}{
-		{"Small batch", 50, 20, 20, 20},        // Uses base workers (50/100=0, max with base=20)
-		{"Medium batch", 200, 20, 20, 20},      // Uses base workers (200/100=2, max with base=20)
-		{"Large batch", 1000, 20, 20, 20},      // Uses base workers (1000/100=10, max with base=20)
-		{"Huge batch", 5000, 20, 50, 50},       // Uses scaled workers (5000/100=50)
-		{"Max batch", 10000, 20, 100, 100},     // Uses max workers (10000/100=100, capped at 100)
-		{"Extreme batch", 15000, 10, 100, 100}, // Uses max workers (15000/100=150, capped at 100)
+		{"small batch uses base workers", 50, 20, 20},
+		{"medium batch uses base workers", 1000, 20, 20},
+		{"huge batch scales past base", 5000, 20, 50},
+		{"scaling capped at MaxWorkersV2", 15000, 10, 100},
+		{"never more workers than members", 3, 20, 3},
+		{"zero worker count floors at one", 50, 0, 1},
+		{"negative worker count floors at one", 50, -5, 1},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Simulate the scaling logic: min(max(memberCount/100, baseWorkers), MaxWorkersV2)
-			scaledWorkers := min(max(tc.memberCount/100, tc.baseWorkers), MaxWorkersV2)
-			assert.True(t, scaledWorkers >= tc.expectedMin,
-				"Workers %d should be >= %d for %d members", scaledWorkers, tc.expectedMin, tc.memberCount)
-			assert.True(t, scaledWorkers <= tc.expectedMax,
-				"Workers %d should be <= %d for %d members", scaledWorkers, tc.expectedMax, tc.memberCount)
+			withWorkerCount(t, tc.baseWorkers)
+			assert.Equal(t, tc.expected, getWriteWorkerCount(tc.memberCount))
 		})
 	}
 }

@@ -65,9 +65,10 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Reads resolve by tag_id alone, but an unknown type in the path is still a
-	// bad request rather than something to ignore.
-	if _, err := getTagTypeFromRequest(r); err != nil {
+	// The route type scopes the lookup: a tag stored under another type is not
+	// visible here, the same way the listing filters it out.
+	tagType, err := getTagTypeFromRequest(r)
+	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
@@ -78,6 +79,7 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 	if isPaginatedRequest {
 		audit := newOpAudit(w, OpGetMembersPage)
 		audit.setTag(id)
+		audit.setTagType(tagType)
 
 		params, err := parsePaginationParams(r)
 		if err != nil {
@@ -87,7 +89,7 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 		audit.set("page_limit", params.Limit)
 		audit.set("has_cursor", params.Cursor != "")
 
-		response, stats, err := GetMembersPaginated(id, params.Limit, params.Cursor)
+		response, stats, err := GetMembersPaginated(id, params.Limit, params.Cursor, tagType)
 		audit.setReadStats(stats)
 		if err != nil {
 			xhttp.WriteXconfErrorResponse(w, err)
@@ -107,8 +109,9 @@ func GetTagMembersHandler(w http.ResponseWriter, r *http.Request) {
 		// Non-paginated mode: return plain array (V1 compatible)
 		audit := newOpAudit(w, OpGetMembersFull)
 		audit.setTag(id)
+		audit.setTagType(tagType)
 
-		members, wasTruncated, stats, err := GetMembersNonPaginated(id)
+		members, wasTruncated, stats, err := GetMembersNonPaginated(id, tagType)
 		audit.setReadStats(stats)
 		if err != nil {
 			xhttp.WriteXconfErrorResponse(w, err)
@@ -146,8 +149,10 @@ func AddMembersToTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Only enforced on the create path — existing tags with reserved ids (there
-	// are none in any environment) keep working through the legacy routes.
+	// Enforced when adding members, on the typed and untyped routes alike (this
+	// handler serves both): a tag with a reserved id must never grow. Reads and
+	// deletes skip the check, so if such a tag existed (there are none in any
+	// environment) it could still be drained, just not extended.
 	if err := validateTagId(tagId); err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -219,12 +224,18 @@ func getTagValueFromRequest(r *http.Request) string {
 // what tells the service layer "this came in on an untyped route, stay
 // permissive"; collapsing it to mac would make the strictness of the typed
 // routes leak onto the legacy ones.
+//
+// Every typed handler resolves its type through here, so this is also where the
+// account type is gated on tag_type_column_enabled (see ensureTagTypeSupported).
 func getTagTypeFromRequest(r *http.Request) (string, error) {
 	tagType, found := mux.Vars(r)[common.TagType]
 	if !found {
 		tagType = r.URL.Query().Get(common.TagType)
 	}
 	if err := ValidateTagType(tagType); err != nil {
+		return "", err
+	}
+	if err := ensureTagTypeSupported(tagType); err != nil {
 		return "", err
 	}
 	return tagType, nil
@@ -381,15 +392,18 @@ func GetTagByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := getTagTypeFromRequest(r); err != nil {
+	// Scopes the lookup to the route type — see GetTagMembersHandler.
+	tagType, err := getTagTypeFromRequest(r)
+	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
 
 	audit := newOpAudit(w, OpGetTag)
 	audit.setTag(id)
+	audit.setTagType(tagType)
 
-	members, wasTruncated, stats, err := GetTagById(id)
+	members, wasTruncated, stats, err := GetTagById(id, tagType)
 	audit.setReadStats(stats)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
@@ -462,9 +476,11 @@ func DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	audit.setTagType(storedType)
 
 	// Deleting through a typed route that disagrees with the stored type would
-	// silently delete a different kind of tag than the caller named.
+	// silently delete a different kind of tag than the caller named. Checked
+	// against the type getTagMeta resolved above — not through
+	// ensureTagTypeCompatible, which would re-read the same partition.
 	if requestedType != TagTypeLegacy && tagTypeColumnEnabled() {
-		if err := ensureTagTypeCompatible(id, requestedType); err != nil {
+		if err := checkTagTypeCompatible(id, storedType, requestedType); err != nil {
 			xhttp.WriteXconfErrorResponse(w, err)
 			return
 		}

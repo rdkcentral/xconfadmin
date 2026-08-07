@@ -34,6 +34,11 @@ type WriteStats struct {
 	CassandraFail int
 	Buckets       int
 	FirstError    string
+	// TagType is the type the write actually executed as — for untyped requests
+	// this is the stored type adopted by effectiveWriteTagType, which can differ
+	// from the type the route implied. Logged so account-keyspace traffic on an
+	// untyped route is visible in the request log.
+	TagType string
 }
 
 // ReadStats summarizes the Cassandra cost of a read operation.
@@ -84,6 +89,9 @@ func (a opAudit) setTagType(tagType string) {
 }
 
 func (a opAudit) setWriteStats(s WriteStats) {
+	// Overwrites the requested type the handler recorded earlier; skipped for
+	// legacy, so an error before type resolution keeps the handler's value.
+	a.setTagType(s.TagType)
 	a.set("requested", s.Requested)
 	a.set("xdas_ok", s.XdasOk)
 	a.set("xdas_fail", s.XdasFail)

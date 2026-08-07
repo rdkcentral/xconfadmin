@@ -37,8 +37,8 @@ func withMockXdasSync(t *testing.T, handler http.HandlerFunc) {
 	})
 }
 
-// BUG-4: when XDAS removes only part of a bucket's members, DeleteTag must
-// report an error instead of claiming a completed deletion.
+// When XDAS removes only part of a bucket's members, DeleteTag must report an
+// error instead of claiming a completed deletion.
 func TestDeleteTag_PartialXdasFailureReturnsError(t *testing.T) {
 	setupTestEnvironment()
 	withMockXdasSync(t, func(w http.ResponseWriter, r *http.Request) {
@@ -78,8 +78,8 @@ func TestDeleteTag_PartialXdasFailureReturnsError(t *testing.T) {
 	}
 }
 
-// BUG-5: a second DELETE for a tag whose deletion is already running returns
-// 202 without spawning another background deleter.
+// A second DELETE for a tag whose deletion is already running returns 202
+// without spawning another background deleter.
 func TestDeleteTagHandler_DeduplicatesConcurrentDeletions(t *testing.T) {
 	setupTestEnvironment()
 	withMockDb(t, func(query string, params ...string) ([]map[string]any, error) {
@@ -103,7 +103,7 @@ func TestDeleteTagHandler_DeduplicatesConcurrentDeletions(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "already in progress")
 }
 
-// BUG-5: the guard is released once the background deletion finishes, so a
+// The dedup guard is released once the background deletion finishes, so a
 // later DELETE for the same tag is accepted again.
 func TestDeleteTagHandler_ReleasesGuardAfterCompletion(t *testing.T) {
 	setupTestEnvironment()
@@ -141,8 +141,7 @@ func TestDeleteTagHandler_ReleasesGuardAfterCompletion(t *testing.T) {
 	}
 }
 
-// BUG-6: unknown tag on GET /tags/{tag} is a typed 404, not a string-matched
-// error.
+// Unknown tag on GET /tags/{tag} is a typed 404, not a string-matched error.
 func TestGetTagByIdHandler_UnknownTagReturns404(t *testing.T) {
 	setupTestEnvironment()
 	withMockDb(t, func(query string, params ...string) ([]map[string]any, error) {
@@ -158,7 +157,7 @@ func TestGetTagByIdHandler_UnknownTagReturns404(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "missing-tag tag not found")
 }
 
-// BUG-6: a database failure on GET /tags/{tag} is a 500, not a 404.
+// A database failure on GET /tags/{tag} is a 500, not a 404.
 func TestGetTagByIdHandler_DbErrorReturns500(t *testing.T) {
 	setupTestEnvironment()
 	withMockDb(t, func(query string, params ...string) ([]map[string]any, error) {
