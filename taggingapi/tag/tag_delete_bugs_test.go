@@ -125,9 +125,8 @@ func TestDeleteTagHandler_ReleasesGuardAfterCompletion(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, rec.Code)
 	assert.Contains(t, rec.Body.String(), "queued for processing")
 
-	// Wait for the background deletion to finish and release the guard.
-	// This must complete before the test ends so the mock DB is not restored
-	// under a still-running goroutine.
+	// Wait out the background deletion, so the mock DB is not restored under a
+	// still-running goroutine.
 	deletionKey := "guard-tag"
 	deadline := time.Now().Add(5 * time.Second)
 	for {

@@ -34,10 +34,9 @@ type WriteStats struct {
 	CassandraFail int
 	Buckets       int
 	FirstError    string
-	// TagType is the type the write actually executed as — for untyped requests
-	// this is the stored type adopted by effectiveWriteTagType, which can differ
-	// from the type the route implied. Logged so account-keyspace traffic on an
-	// untyped route is visible in the request log.
+	// TagType is the type the write actually executed as: for untyped requests
+	// the stored type adopted by effectiveWriteTagType, which can differ from the
+	// route's. Logged so account traffic on an untyped route stays visible.
 	TagType string
 }
 
@@ -48,9 +47,8 @@ type ReadStats struct {
 }
 
 // opAudit attaches tagging fields to the framework "request ends" log line via
-// XResponseWriter.SetAuditData. Audit field names are defined here and nowhere
-// else. All methods are safe to call when the writer is not an XResponseWriter
-// (plain recorders in tests): they become no-ops for logging but still update
+// XResponseWriter.SetAuditData; audit field names live here and nowhere else.
+// With a plain recorder (tests) the methods are logging no-ops but still update
 // metrics.
 type opAudit struct {
 	xw *xwhttp.XResponseWriter
@@ -76,12 +74,10 @@ func (a opAudit) setTag(tagId string) {
 	a.set("tag", tagId)
 }
 
-// setTagType records the tag type as a log field only.
-//
-// Deliberately not a Prometheus label: the metric vectors are declared with
-// []string{"op"} and consumed by dashboards keyed on that, so adding a label
-// would reset every existing series, while minting per-type op values would
-// leave panels pinned to the current ones silently under-reporting.
+// setTagType records the tag type as a log field only. Deliberately not a
+// Prometheus label: the vectors are declared []string{"op"}, so adding a label
+// would reset every existing series and per-type op values would leave existing
+// panels silently under-reporting.
 func (a opAudit) setTagType(tagType string) {
 	if tagType != TagTypeLegacy {
 		a.set("tag_type", tagType)
@@ -89,8 +85,8 @@ func (a opAudit) setTagType(tagType string) {
 }
 
 func (a opAudit) setWriteStats(s WriteStats) {
-	// Overwrites the requested type the handler recorded earlier; skipped for
-	// legacy, so an error before type resolution keeps the handler's value.
+	// Overwrites the handler's requested type; skipped for legacy, so an error
+	// before type resolution keeps the handler's value.
 	a.setTagType(s.TagType)
 	a.set("requested", s.Requested)
 	a.set("xdas_ok", s.XdasOk)
@@ -118,10 +114,9 @@ func (a opAudit) setReadStats(s ReadStats) {
 // API error responses.
 const maxFirstErrorLen = 256
 
-// errorAggregator aggregates errors from concurrent operations (per-member
-// XDAS calls, per-bucket Cassandra batches) into a total count plus the first
-// error message as a representative sample. Replaces per-item error log
-// lines, which flooded the logs during outages.
+// errorAggregator collapses errors from concurrent operations (per-member XDAS
+// calls, per-bucket Cassandra batches) into a count plus the first message,
+// replacing per-item log lines that flooded the logs during outages.
 type errorAggregator struct {
 	mu         sync.Mutex
 	total      int
@@ -148,9 +143,9 @@ func (a *errorAggregator) summary() (int, string) {
 	return a.total, a.firstError
 }
 
-// logDivergence marks the stores diverging: XDAS accepted an operation but the
-// Cassandra side failed. These lines are the input for the topic-4
-// reconciliation work — keep the message text stable.
+// logDivergence marks the stores diverging: XDAS accepted an operation but
+// Cassandra failed. Reconciliation tooling consumes these lines — keep the
+// message text stable.
 func logDivergence(op string, tagId string, err error) {
 	divergenceEvents.Inc()
 	log.WithFields(log.Fields{

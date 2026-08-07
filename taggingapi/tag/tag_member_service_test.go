@@ -10,7 +10,6 @@ import (
 )
 
 func TestGetBucketId(t *testing.T) {
-	// Test consistent hashing
 	member := "00:11:22:33:44:55"
 	bucket1 := getBucketId(member)
 	bucket2 := getBucketId(member)
@@ -18,12 +17,10 @@ func TestGetBucketId(t *testing.T) {
 	assert.Equal(t, bucket1, bucket2, "getBucketId should be deterministic")
 	assert.True(t, bucket1 >= 0 && bucket1 < BucketCount, "bucket ID should be within valid range")
 
-	// Test different members get distributed
 	member2 := "AA:BB:CC:DD:EE:FF"
 	bucket3 := getBucketId(member2)
 	assert.True(t, bucket3 >= 0 && bucket3 < BucketCount, "bucket ID should be within valid range")
 
-	// Test distribution (not necessarily different buckets, but valid)
 	members := []string{
 		"00:11:22:33:44:55",
 		"AA:BB:CC:DD:EE:FF",
@@ -38,17 +35,13 @@ func TestGetBucketId(t *testing.T) {
 		buckets[bucket] = true
 	}
 
-	// Should have some distribution (at least 2 different buckets for 4 members)
 	assert.True(t, len(buckets) >= 2, "Members should distribute across buckets")
 }
 
-// The member→bucket mapping is a storage contract: bucket ids are never stored
-// with a member — they are recomputed from the member string on every add,
-// remove and lookup — so any change to the mapping strands existing rows in
-// buckets the code no longer looks in. These golden values pin FNV-1a mod 1000
-// with the modulo in uint32 space, which keeps the ids platform-independent
-// (converting to int before the modulo goes negative for half the hash space
-// on 32-bit platforms).
+// The member→bucket mapping is a storage contract: ids are recomputed from the
+// member string on every add, remove and lookup, so changing it strands existing
+// rows in buckets the code no longer reads. These golden values pin FNV-1a mod
+// 1000 with the modulo in uint32 space, which keeps ids platform-independent.
 func TestGetBucketId_GoldenMapping(t *testing.T) {
 	golden := map[string]int{
 		"AA:BB:CC:DD:EE:01":   228,
@@ -62,13 +55,11 @@ func TestGetBucketId_GoldenMapping(t *testing.T) {
 }
 
 func TestParseBucketedCursor(t *testing.T) {
-	// Test empty cursor
 	cursor, err := parseBucketedCursor("")
 	assert.NoError(t, err)
 	assert.Equal(t, 0, cursor.BucketId)
 	assert.Equal(t, "", cursor.LastMember)
 
-	// Test valid cursor
 	validCursor := generateBucketedCursor(5, "test-member")
 	parsed, err := parseBucketedCursor(validCursor)
 	assert.NoError(t, err)
@@ -91,13 +82,11 @@ func TestGenerateBucketedCursor(t *testing.T) {
 	cursor := generateBucketedCursor(10, "member123")
 	assert.NotEmpty(t, cursor, "Cursor should not be empty")
 
-	// Should be base64 encoded
 	parsed, err := parseBucketedCursor(cursor)
 	assert.NoError(t, err)
 	assert.Equal(t, 10, parsed.BucketId)
 	assert.Equal(t, "member123", parsed.LastMember)
 
-	// Test edge cases
 	cursor2 := generateBucketedCursor(0, "")
 	assert.NotEmpty(t, cursor2, "Cursor should not be empty even with zero values")
 
@@ -108,7 +97,6 @@ func TestGenerateBucketedCursor(t *testing.T) {
 }
 
 func TestBucketDistribution(t *testing.T) {
-	// Test that MAC addresses distribute well across buckets
 	macAddresses := []string{
 		"00:11:22:33:44:55",
 		"01:23:45:67:89:AB",
@@ -128,10 +116,8 @@ func TestBucketDistribution(t *testing.T) {
 		buckets[bucket]++
 	}
 
-	// Should distribute across multiple buckets
 	assert.True(t, len(buckets) >= 5, "Should distribute across at least 5 buckets for 10 MAC addresses")
 
-	// Each bucket should have reasonable distribution
 	for bucket, count := range buckets {
 		assert.True(t, bucket >= 0 && bucket < BucketCount, "Bucket should be in valid range")
 		assert.True(t, count >= 1, "Each bucket should have at least 1 member")
@@ -139,7 +125,6 @@ func TestBucketDistribution(t *testing.T) {
 	}
 }
 func TestBatchSizeValidation(t *testing.T) {
-	// Test empty members list
 	_, _, err := AddMembers("test-tag", []string{}, TagTypeLegacy)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "member list is empty")
@@ -148,7 +133,6 @@ func TestBatchSizeValidation(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "member list is empty")
 
-	// Test oversized batch
 	largeMembers := make([]string, MaxBatchSizeV2+1)
 	for i := range largeMembers {
 		largeMembers[i] = fmt.Sprintf("member-%d", i)
@@ -166,23 +150,18 @@ func TestBatchSizeValidation(t *testing.T) {
 }
 
 func TestPaginationParamsValidation(t *testing.T) {
-	// Test parameter validation logic without database access
-
-	// Test that limit is clamped to MaxPageSizeV2
 	testLimit := MaxPageSizeV2 + 1
 	if testLimit > MaxPageSizeV2 {
 		testLimit = MaxPageSizeV2
 	}
 	assert.Equal(t, MaxPageSizeV2, testLimit, "Limit should be clamped to max")
 
-	// Test default page size assignment
 	testLimit = 0
 	if testLimit <= 0 {
 		testLimit = DefaultPageSizeV2
 	}
 	assert.Equal(t, DefaultPageSizeV2, testLimit, "Should use default when limit is 0")
 
-	// Test negative limit handling
 	testLimit = -1
 	if testLimit <= 0 {
 		testLimit = DefaultPageSizeV2
@@ -194,8 +173,8 @@ func TestPaginationParamsValidation(t *testing.T) {
 }
 
 // Worker scaling for the XDAS write phase. The floor-at-one cases pin a
-// regression: a non-positive tag_update_worker_count used to yield zero
-// workers for batches under 100 members, turning writes into silent no-ops.
+// regression: a non-positive worker count yielded zero workers for small
+// batches, turning writes into silent no-ops.
 func TestGetWriteWorkerCount(t *testing.T) {
 	testCases := []struct {
 		name        string

@@ -24,14 +24,10 @@ func XconfTaggingServiceSetup(server *xhttp.WebconfigServer, r *mux.Router) {
 func routeTaggingServiceApis(r *mux.Router, s *xhttp.WebconfigServer) {
 	paths := []*mux.Router{}
 
-	// Typed routes are registered before the untyped ones because gorilla/mux
-	// matches in registration order. The tag ids "mac", "account" and "members"
-	// are rejected at write time (validateTagId), which is what keeps the two
-	// route sets from ever being ambiguous for a tag that actually exists.
-	//
-	// A request under this prefix that matches no typed route falls through to
-	// the untyped subrouter: mux clears ErrNotFound when a subrouter fails to
-	// match and continues scanning.
+	// Typed routes first: mux matches in registration order, and a request
+	// matching no typed route falls through to the untyped subrouter. The tag ids
+	// "mac", "account" and "members" are rejected at write time (validateTagId),
+	// so the two route sets never collide for a tag that exists.
 	typedTaggingPath := r.PathPrefix("/taggingService/tags/{tagType:mac|account}").Subrouter()
 
 	typedTaggingPath.HandleFunc("", tag.GetAllTagsHandler).Methods("GET").Name("Get-all-tags-typed")
@@ -43,9 +39,8 @@ func routeTaggingServiceApis(r *mux.Router, s *xhttp.WebconfigServer) {
 
 	typedTaggingPath.HandleFunc("/{tag}/members", tag.GetTagMembersHandler).Methods("GET").Name("Get-tag-members-typed")
 
-	// Registered after /{tag}/members so a tag named "members" resolves to the
-	// tag routes. An account member id can never be "members" (numeric only),
-	// so tag-wins is the safer resolution of that overlap.
+	// After /{tag}/members so a tag named "members" wins the overlap; an account
+	// member id is numeric and can never be "members".
 	typedTaggingPath.HandleFunc("/members/{member}", tag.GetTagsByMemberHandler).Methods("GET").Name("Get-tags-by-member-typed")
 	typedTaggingPath.HandleFunc("/members/{member}/values", tag.GetTagsWithValuesByMemberHandler).Methods("GET").Name("Get-tags-with-values-by-member-typed")
 

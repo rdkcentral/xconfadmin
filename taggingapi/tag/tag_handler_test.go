@@ -259,7 +259,6 @@ func TestTagHandlerConstants(t *testing.T) {
 	assert.Contains(t, EmptyListErrorMsg, "list is empty")
 }
 
-// Test GetTagsByMemberHandler success cases
 func TestGetTagsByMemberHandler_WithValidMember(t *testing.T) {
 	setupTestEnvironment()
 	req := httptest.NewRequest("GET", "/tags/by-member/test-member", nil)
@@ -267,7 +266,6 @@ func TestGetTagsByMemberHandler_WithValidMember(t *testing.T) {
 	w := httptest.NewRecorder()
 	GetTagsByMemberHandler(w, req)
 
-	// Should return OK with empty or populated array
 	assert.Equal(t, http.StatusOK, w.Code)
 	var tags []string
 	err := json.Unmarshal(w.Body.Bytes(), &tags)

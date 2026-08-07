@@ -76,14 +76,12 @@ func filterTagEntriesWithValuesByPrefix(entries util.StringMap) map[string]strin
 	return result
 }
 
-// Per-member errors go into the aggregator (count + first message) instead of
-// being logged one line per member — an XDAS outage during a 5000-member
-// batch must not emit 5000 error lines.
+// Per-member errors go to the aggregator rather than one log line each — an
+// XDAS outage during a 5000-member batch must not emit 5000 error lines.
 func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<- string, wg *sync.WaitGroup, tagValue string, tagType string, agg *errorAggregator) {
 	defer wg.Done()
-	// Constructed per worker, not shared across them: proto.Marshal writes to
-	// the message's internal state, so hoisting this to a single instance shared
-	// by all workers would be a data race.
+	// Per worker, not shared: proto.Marshal writes to the message's internal
+	// state, so one shared instance would be a data race.
 	xdasMembers := proto.XdasHashes{
 		Fields: map[string]string{id: tagValue},
 	}
@@ -139,15 +137,11 @@ func removeTagMembersFromXdas(id string, members <-chan string, removedMembers c
 
 // storedMemberForm picks which form of a member is persisted to Cassandra.
 //
-// Account tags store the normalized id, so that Cassandra and XDAS agree and a
-// later delete computes the same FNV bucket. Without this, a member submitted
-// with surrounding whitespace would be stored padded, land in a different
-// bucket than the clean id, and become permanently undeletable.
-//
-// Mac and legacy tags keep storing the raw member. This is not an oversight:
-// GetEcmMacAddress subtracts 2 and is not idempotent, so storing the normalized
-// form would shift every existing member into a different bucket and break every
-// subsequent delete against the 43M rows already written.
+// Account tags store the normalized id so Cassandra and XDAS agree and a later
+// delete computes the same FNV bucket; a padded member would otherwise land in a
+// different bucket and become undeletable. Mac and legacy tags keep the raw
+// member deliberately: GetEcmMacAddress is not idempotent, so normalizing would
+// shift every one of the 43M existing rows into a different bucket.
 func storedMemberForm(raw string, normalized string, tagType string) string {
 	if IsAccountTag(tagType) {
 		return normalized

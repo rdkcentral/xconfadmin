@@ -19,10 +19,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// mockDbClient injects Cassandra query behavior for service-level tests.
-// The embedded interface panics on any method the test does not stub,
-// which flags unexpected database usage. Batch and modify operations succeed
-// by default; set the optional funcs to override.
+// mockDbClient injects Cassandra query behavior for service-level tests. The
+// embedded interface panics on any unstubbed method, flagging unexpected
+// database usage; batch and modify operations succeed by default.
 type mockDbClient struct {
 	db.DatabaseClient
 	queryFunc   func(query string, params ...string) ([]map[string]any, error)
@@ -32,9 +31,8 @@ type mockDbClient struct {
 
 type mockBatch struct {
 	statements []string
-	// args are captured alongside statements so tests can assert on the values
-	// written, not merely that a statement was issued. Without this any
-	// assertion about a column's value passes vacuously.
+	// Captured alongside statements so tests can assert on the values written,
+	// not merely that a statement was issued.
 	args [][]any
 }
 
@@ -108,10 +106,9 @@ func withWorkerCount(t *testing.T, n int) {
 	t.Cleanup(func() { SetTagApiConfig(old) })
 }
 
-// A non-positive tag_update_worker_count must degrade to a serial write,
-// not spawn zero XDAS workers. Zero workers reported XdasOk=0/XdasFail=0,
-// which skips both the all-writes-failed 502 guard and the Cassandra phase —
-// the request became a 202 that stored nothing.
+// A non-positive tag_update_worker_count must degrade to a serial write, not
+// spawn zero XDAS workers: that reported XdasOk=0/XdasFail=0, skipping the 502
+// guard and the Cassandra phase, so the request became a 202 storing nothing.
 func TestAddMembersWithXdas_ZeroWorkerCountStillWrites(t *testing.T) {
 	setupTestEnvironment()
 	withWorkerCount(t, 0)
@@ -149,12 +146,9 @@ func TestRemoveMembersWithXdas_ZeroWorkerCountStillWrites(t *testing.T) {
 	assert.Equal(t, int32(1), xdasRequests.Load(), "the member removal must reach XDAS")
 }
 
-// Removing the last member of a bucket must leave the bucket's metadata row in
-// place. The old count-then-delete cleanup raced a concurrent add (which
-// inserts member + metadata in one batch): the remover could read the pre-add
-// count of 0 and delete the metadata row the adder just wrote, leaving members
-// with no metadata row pointing to them — invisible to reads and to tag
-// deletion, so their XDAS entries would outlive the tag.
+// Removing a bucket's last member must leave its metadata row in place: the old
+// count-then-delete cleanup raced a concurrent add and could delete the row the
+// adder just wrote, orphaning members invisible to reads and to tag deletion.
 func TestRemoveMembers_EmptiedBucketKeepsMetadataRow(t *testing.T) {
 	setupTestEnvironment()
 
@@ -202,10 +196,9 @@ func TestGetTagById_EmptyBucketsReadAsEmptyTag(t *testing.T) {
 	assert.False(t, truncated)
 }
 
-// The non-paginated read must stop fetching buckets once the response is
-// full. Previously every populated bucket was fetched eagerly (each capped only
-// at the full response limit) and the whole tag was buffered before the merge
-// truncated it — gigabytes of heap for a tag spread thinly across many buckets.
+// The non-paginated read must stop fetching once the response is full. Fetching
+// every bucket eagerly buffered the whole tag before the merge truncated it —
+// gigabytes of heap for a tag spread thinly across many buckets.
 func TestFetchMembersFromBuckets_StopsDispatchingWhenFull(t *testing.T) {
 	setupTestEnvironment()
 
@@ -233,8 +226,8 @@ func TestFetchMembersFromBuckets_StopsDispatchingWhenFull(t *testing.T) {
 	assert.Equal(t, int32(2), memberQueries.Load(), "only the first window of buckets should be fetched")
 }
 
-// A read that does not fill the limit still visits every
-// bucket across window boundaries and returns members in bucket order.
+// A read that does not fill the limit still visits every bucket across window
+// boundaries and returns members in bucket order.
 func TestFetchMembersFromBuckets_MultiWindowReturnsAllInOrder(t *testing.T) {
 	setupTestEnvironment()
 
@@ -249,9 +242,8 @@ func TestFetchMembersFromBuckets_MultiWindowReturnsAllInOrder(t *testing.T) {
 	assert.Equal(t, []string{"m1", "m2", "m3", "m4", "m5"}, members)
 }
 
-// A page satisfied by the first buckets must not query the buckets after
-// them. Previously every bucket from the cursor onward was fetched for every
-// page — ~N queries per page over an N-bucket tag.
+// A page satisfied by the first buckets must not query the ones after them:
+// fetching every bucket from the cursor onward cost ~N queries per page.
 func TestGetMembersPaginated_StopsDispatchingWhenPageFull(t *testing.T) {
 	setupTestEnvironment()
 	withWorkerCount(t, 2) // window size = read worker count
@@ -289,8 +281,8 @@ func TestGetMembersPaginated_StopsDispatchingWhenPageFull(t *testing.T) {
 	assert.Equal(t, int32(2), memberQueries.Load(), "only the first window of buckets should be fetched")
 }
 
-// A page that needs more than one window still walks all
-// buckets in order and terminates correctly.
+// A page that needs more than one window still walks all buckets in order and
+// terminates correctly.
 func TestGetMembersPaginated_PageSpansWindows(t *testing.T) {
 	setupTestEnvironment()
 	withWorkerCount(t, 2)

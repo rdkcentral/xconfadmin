@@ -387,7 +387,6 @@ func TestNormalizationService_RemovePrefixFromTags(t *testing.T) {
 }
 
 func TestNormalizationService_SetTagPrefixAndRemoveRoundtrip(t *testing.T) {
-	// Test that adding and removing prefix works correctly together
 	testTags := []string{
 		"simple-tag",
 		"complex-tag-with-dashes",
@@ -398,13 +397,11 @@ func TestNormalizationService_SetTagPrefixAndRemoveRoundtrip(t *testing.T) {
 
 	for _, tag := range testTags {
 		t.Run(fmt.Sprintf("Roundtrip_%s", tag), func(t *testing.T) {
-			// Add prefix then remove it
 			withPrefix := SetTagPrefix(tag)
 			withoutPrefix := RemovePrefixFromTag(withPrefix)
 
 			assert.Equal(t, tag, withoutPrefix, "Roundtrip should preserve original tag")
 
-			// Verify prefix was actually added
 			if tag != "" && !strings.HasPrefix(tag, Prefix) {
 				assert.True(t, strings.HasPrefix(withPrefix, Prefix), "Prefix should be added")
 			}
@@ -413,7 +410,6 @@ func TestNormalizationService_SetTagPrefixAndRemoveRoundtrip(t *testing.T) {
 }
 
 func TestNormalizationService_TemplateUsage(t *testing.T) {
-	// Test that the Template constant is used correctly
 	testTag := "test-tag"
 	expected := fmt.Sprintf(Template, Prefix, testTag)
 	result := SetTagPrefix(testTag)

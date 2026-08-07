@@ -54,7 +54,6 @@ func TestSetTagApiConfig(t *testing.T) {
 	assert.Equal(t, 3000, retrieved.BatchLimit)
 	assert.Equal(t, 10, retrieved.WorkerCount)
 
-	// Restore original config after test
 	setupTestEnvironment()
 }
 
@@ -67,7 +66,6 @@ func TestGetGroupServiceConnector(t *testing.T) {
 
 func TestCheckBatchSizeExceeded(t *testing.T) {
 	setupTestEnvironment() // Reset to BatchLimit: 5000
-	// Explicitly set the config to ensure proper test isolation
 	SetTagApiConfig(&taggingapi_config.TaggingApiConfig{
 		BatchLimit:  5000,
 		WorkerCount: 20,
@@ -129,7 +127,6 @@ func TestFilterTagEntriesByPrefix(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			result := filterTagEntriesByPrefix(tc.input)
 			assert.Equal(t, tc.expected, len(result))
-			// Verify prefix is removed
 			for _, tag := range result {
 				assert.NotContains(t, tag, "t_")
 			}

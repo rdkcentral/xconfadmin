@@ -128,9 +128,8 @@ func TestAddMembers_XdasOutageDoesNotFloodLogs(t *testing.T) {
 	}
 
 	stats, err := AddMembersWithXdas("outage-tag", members, "", TagTypeLegacy)
-	// A total XDAS outage is an error, not a 202 reporting stored=0. Previously
-	// this returned nil and the handler answered 202, so a keyspace that
-	// rejected every write looked like a healthy API storing nothing.
+	// A total XDAS outage is an error, not a 202 reporting stored=0 — that made a
+	// keyspace rejecting every write look like a healthy API storing nothing.
 	assert.Error(t, err)
 	assert.Equal(t, http.StatusBadGateway, xwcommon.GetXconfErrorStatusCode(err))
 	assert.Equal(t, 200, stats.XdasFail)
@@ -181,9 +180,9 @@ func TestDeleteTag_LogsCarryAuditId(t *testing.T) {
 	assert.True(t, completed, "expected a 'tag deletion completed' log line")
 }
 
-// A Cassandra outage during a bulk write must not log one line per bucket:
-// the members below spread over many buckets and every batch fails, but only
-// the aggregate error line (plus the divergence line) may be emitted.
+// A Cassandra outage during a bulk write must not log one line per bucket: the
+// members spread over many buckets and every batch fails, but only the aggregate
+// error line (plus the divergence line) may be emitted.
 func TestAddMembers_CassandraOutageDoesNotFloodLogs(t *testing.T) {
 	setupTestEnvironment()
 	withMockXdasSync(t, func(w http.ResponseWriter, r *http.Request) {
