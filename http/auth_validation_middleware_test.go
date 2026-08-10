@@ -66,6 +66,13 @@ func resetOnboardTenantFunc(t *testing.T) {
 	t.Cleanup(func() { testServer.OnboardTenantFunc = original })
 }
 
+// resetTestOnly saves testServer.testOnly and restores it when the test ends.
+func resetTestOnly(t *testing.T) {
+	t.Helper()
+	original := testServer.testOnly
+	t.Cleanup(func() { testServer.testOnly = original })
+}
+
 // ----------------------------------------------------------------------------
 // tests
 // ----------------------------------------------------------------------------
@@ -125,6 +132,8 @@ func TestAuthMiddleware_TenantNotFound_OnboardFuncNil(t *testing.T) {
 	xcommon.SatOn = false
 	defer func() { xcommon.SatOn = oldSatOn }()
 
+	resetTestOnly(t)
+	testServer.testOnly = true
 	resetOnboardTenantFunc(t)
 	testServer.OnboardTenantFunc = nil
 
@@ -144,6 +153,8 @@ func TestAuthMiddleware_TenantNotFound_OnboardFuncError(t *testing.T) {
 	xcommon.SatOn = false
 	defer func() { xcommon.SatOn = oldSatOn }()
 
+	resetTestOnly(t)
+	testServer.testOnly = true
 	resetOnboardTenantFunc(t)
 	testServer.OnboardTenantFunc = func(id, name string) (*db.Tenant, error) {
 		return nil, errors.New("onboard failed")
@@ -165,6 +176,8 @@ func TestAuthMiddleware_TenantNotFound_OnboardFuncSuccess(t *testing.T) {
 	xcommon.SatOn = false
 	defer func() { xcommon.SatOn = oldSatOn }()
 
+	resetTestOnly(t)
+	testServer.testOnly = true
 	resetOnboardTenantFunc(t)
 	onboardCalled := false
 	testServer.OnboardTenantFunc = func(id, name string) (*db.Tenant, error) {

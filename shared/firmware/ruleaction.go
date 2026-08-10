@@ -19,8 +19,6 @@ import (
 	"math"
 	"sort"
 	"strings"
-
-	core "github.com/rdkcentral/xconfadmin/shared"
 )
 
 type Void struct{}
@@ -35,6 +33,9 @@ const (
 	RULE_TEMPLATE              ApplicableActionType = "RULE_TEMPLATE"
 	DEFINE_PROPERTIES_TEMPLATE ApplicableActionType = "DEFINE_PROPERTIES_TEMPLATE"
 	BLOCKING_FILTER_TEMPLATE   ApplicableActionType = "BLOCKING_FILTER_TEMPLATE"
+
+	FIRMWARE_VERSIONS   = "firmwareVersions"
+	REGULAR_EXPRESSIONS = "regularExpressions"
 )
 
 func IsValidApplicableActionType(t ApplicableActionType) bool {
@@ -155,14 +156,14 @@ func (c *ConfigEntry) CompareTo(configEntry *ConfigEntry) int {
 }
 
 func (d *ApplicableAction) GetFirmwareVersions() []string {
-	if values, ok := d.ActivationFirmwareVersions[core.FIRMWARE_VERSIONS]; ok && len(values) > 0 {
+	if values, ok := d.ActivationFirmwareVersions[FIRMWARE_VERSIONS]; ok && len(values) > 0 {
 		return values
 	}
 	return []string{}
 }
 
 func (d *ApplicableAction) GetFirmwareVersionRegExs() []string {
-	if values, ok := d.ActivationFirmwareVersions[core.REGULAR_EXPRESSIONS]; ok && len(values) > 0 {
+	if values, ok := d.ActivationFirmwareVersions[REGULAR_EXPRESSIONS]; ok && len(values) > 0 {
 		return values
 	}
 	return []string{}

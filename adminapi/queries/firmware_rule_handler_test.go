@@ -27,6 +27,7 @@ import (
 
 	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xfw "github.com/rdkcentral/xconfadmin/shared/firmware"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
@@ -37,7 +38,7 @@ import (
 
 // Helper function to setup firmware rule templates
 func setupFirmwareRuleTemplates() {
-	CreateFirmwareRuleTemplates(db.GetDefaultTenantId())
+	xfw.CreateFirmwareRuleTemplates(db.GetDefaultTenantId())
 
 	// Create the test firmware config that rules reference
 	testConfig := &estbfirmware.FirmwareConfig{

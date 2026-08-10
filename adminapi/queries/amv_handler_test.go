@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
@@ -181,7 +182,7 @@ func TestNotImplementedHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/queries/not-implemented", nil)
 	w := httptest.NewRecorder()
 
-	NotImplementedHandler(w, req)
+	xhttp.NotImplementedHandler(w, req)
 
 	assert.Equal(t, http.StatusNotImplemented, w.Code)
 }

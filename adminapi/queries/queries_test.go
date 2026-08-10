@@ -35,9 +35,9 @@ import (
 	"github.com/rdkcentral/xconfadmin/adminapi/firmware"
 	"github.com/rdkcentral/xconfadmin/adminapi/rfc/feature"
 	"github.com/rdkcentral/xconfadmin/common"
-	oshttp "github.com/rdkcentral/xconfadmin/http"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xfw "github.com/rdkcentral/xconfadmin/shared/firmware"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
-
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -66,7 +66,7 @@ type TableData struct {
 var (
 	testConfigFile string
 	sc             *xwcommon.ServerConfig
-	server         *oshttp.WebconfigServer
+	server         *xhttp.WebconfigServer
 	router         *mux.Router
 	//globAut            *apiUnitTest
 )
@@ -202,7 +202,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	server = oshttp.NewWebconfigServer(sc, true, nil, nil)
+	server = xhttp.NewWebconfigServer(sc, true, nil, nil)
 	defer server.XW_XconfServer.Server.Close()
 	xwhttp.InitSatTokenManager(server.XW_XconfServer)
 
@@ -296,7 +296,7 @@ func ImportTableData(data []interface{}) error {
 }
 
 // WebServerInjection - local implementation to avoid circular dependency
-func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
+func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 	if ws == nil {
 		common.CacheUpdateWindowSize = 60000
 		common.AllowedNumberOfFeatures = 100
@@ -371,11 +371,11 @@ func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 
 // initDB - local implementation to avoid circular dependency
 func initDB() {
-	CreateFirmwareRuleTemplates(db.GetDefaultTenantId()) // Initialize FirmwareRule templates
+	xfw.CreateFirmwareRuleTemplates(db.GetDefaultTenantId()) // Initialize FirmwareRule templates
 	//initAppSettings()             // Initialize Application settings
 }
 
-func queriesSetup(server *oshttp.WebconfigServer, r *mux.Router) {
+func queriesSetup(server *xhttp.WebconfigServer, r *mux.Router) {
 	xc := dataapi.GetXconfConfigs(server.XW_XconfServer.ServerConfig.Config)
 
 	WebServerInjection(server, xc)
@@ -390,7 +390,7 @@ func queriesSetup(server *oshttp.WebconfigServer, r *mux.Router) {
 	db.GetCacheManager() // Initialize cache manager
 }
 
-func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
+func setupRoutes(server *xhttp.WebconfigServer, r *mux.Router) {
 	// Register DCM formula routes
 	paths := []*mux.Router{}
 	//dcmFormulaPath := r.PathPrefix("/xconfAdminService/dcm/formula").Subrouter()
@@ -472,9 +472,9 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	updatePath.HandleFunc("/percentageBean", CreatePercentageBeanHandler).Methods("POST").Name("Updates")
 	updatePath.HandleFunc("/percentageBean", UpdatePercentageBeanHandler).Methods("PUT").Name("Updates")
 	updatePath.HandleFunc("/logFile", CreateLogFile).Methods("POST").Name("Updates")
-	updatePath.HandleFunc("/logUploadSettings/{timezone}/{scheduleTimezone}", NotImplementedHandler).Methods("POST").Name("Updates")
-	updatePath.HandleFunc("/deviceSettings", NotImplementedHandler).Methods("POST").Name("Updates")
-	updatePath.HandleFunc("/deviceSettings/{scheduleTimeZone}", NotImplementedHandler).Methods("POST").Name("Updates")
+	updatePath.HandleFunc("/logUploadSettings/{timezone}/{scheduleTimezone}", xhttp.NotImplementedHandler).Methods("POST").Name("Updates")
+	updatePath.HandleFunc("/deviceSettings", xhttp.NotImplementedHandler).Methods("POST").Name("Updates")
+	updatePath.HandleFunc("/deviceSettings/{scheduleTimeZone}", xhttp.NotImplementedHandler).Methods("POST").Name("Updates")
 	paths = append(paths, updatePath)
 
 	updateFilterPath := r.PathPrefix("/xconfAdminService/updates/filters").Subrouter()
@@ -490,7 +490,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	amvPath.HandleFunc("", GetAmvHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	amvPath.HandleFunc("", CreateAmvHandler).Methods("POST").Name("Firmware-ActivationVersion")
 	amvPath.HandleFunc("", UpdateAmvHandler).Methods("PUT").Name("Firmware-ActivationVersion")
-	amvPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-ActivationVersion")
+	amvPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	amvPath.HandleFunc("/filtered", GetAmvFilteredHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	amvPath.HandleFunc("/importAll", ImportAllAmvHandler).Methods("POST").Name("Firmware-ActivationVersion")
 	amvPath.HandleFunc("/{id}", DeleteAmvByIdHandler).Methods("DELETE").Name("Firmware-ActivationVersion")
@@ -528,7 +528,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	modelPath.HandleFunc("/entities", PostModelEntitiesHandler).Methods("POST").Name("Models")
 	modelPath.HandleFunc("/entities", PutModelEntitiesHandler).Methods("PUT").Name("Models")
 	modelPath.HandleFunc("/filtered", PostModelFilteredHandler).Methods("POST").Name("Models")
-	modelPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Models")
+	modelPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Models")
 	// url with var has to be placed last otherwise, it gets confused with url with defined paths
 	modelPath.HandleFunc("/{id}", DeleteModelHandler).Methods("DELETE").Name("Models")
 	modelPath.HandleFunc("/{id}", GetModelByIdHandler).Methods("GET").Name("Models")
@@ -549,7 +549,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	firmwareRulePath.HandleFunc("/entities", PostFirmwareRuleEntitiesHandler).Methods("POST").Name("Firmware-Rules")
 	firmwareRulePath.HandleFunc("/entities", PutFirmwareRuleEntitiesHandler).Methods("PUT").Name("Firmware-Rules")
 	firmwareRulePath.HandleFunc("/filtered", PostFirmwareRuleFilteredHandler).Methods("POST").Name("Firmware-Rules")
-	firmwareRulePath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-Rules")
 	// url with var has to be placed last otherwise, it gets confused with url with defined paths
 	firmwareRulePath.HandleFunc("/{id}", DeleteFirmwareRuleByIdHandler).Methods("DELETE").Name("Firmware-Rules")
 	firmwareRulePath.HandleFunc("/{id}", GetFirmwareRuleByIdHandler).Methods("GET").Name("Firmware-Rules")
@@ -570,7 +570,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	firmwareRuleTempPath.HandleFunc("/entities", PostFirmwareRuleTemplateEntitiesHandler).Methods("POST").Name("Firmware-Templates")
 	firmwareRuleTempPath.HandleFunc("/entities", PutFirmwareRuleTemplateEntitiesHandler).Methods("PUT").Name("Firmware-Templates")
 	firmwareRuleTempPath.HandleFunc("/filtered", PostFirmwareRuleTemplateFilteredHandler).Methods("POST").Name("Firmware-Templates")
-	firmwareRuleTempPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-Templates")
 	// url with var has to be placed last otherwise, it gets confused with url with defined paths
 	firmwareRuleTempPath.HandleFunc("/{id}", DeleteFirmwareRuleTemplateByIdHandler).Methods("DELETE").Name("Firmware-Templates")
 	firmwareRuleTempPath.HandleFunc("/{id}", GetFirmwareRuleTemplateByIdHandler).Methods("GET").Name("Firmware-Templates")
@@ -586,7 +586,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	percentageBeanPath.HandleFunc("", GetPercentageBeanAllHandler).Methods("GET").Name("Firmware-PercentFilter")
 	percentageBeanPath.HandleFunc("", CreatePercentageBeanHandler).Methods("POST").Name("Firmware-PercentFilter")
 	percentageBeanPath.HandleFunc("", UpdatePercentageBeanHandler).Methods("PUT").Name("Firmware-PercentFilter")
-	percentageBeanPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-PercentFilter")
 	percentageBeanPath.HandleFunc("/filtered", PostPercentageBeanFilteredWithParamsHandler).Methods("POST").Name("Firmware-PercentFilter")
 	percentageBeanPath.HandleFunc("/entities", PostPercentageBeanEntitiesHandler).Methods("POST").Name("Firmware-PercentFilter")
 	percentageBeanPath.HandleFunc("/entities", PutPercentageBeanEntitiesHandler).Methods("PUT").Name("Firmware-PercentFilter")
@@ -626,7 +626,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	environmentPath.HandleFunc("", GetQueriesEnvironments).Methods("GET").Name("Environments")
 	environmentPath.HandleFunc("", CreateEnvironmentHandler).Methods("POST").Name("Environments")
 	environmentPath.HandleFunc("", UpdateEnvironmentHandler).Methods("PUT").Name("Environments")
-	environmentPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Environments")
+	environmentPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Environments")
 	environmentPath.HandleFunc("/filtered", PostEnvironmentFilteredHandler).Methods("POST").Name("Environments")
 	environmentPath.HandleFunc("/entities", PostEnvironmentEntitiesHandler).Methods("POST").Name("Environments")
 	environmentPath.HandleFunc("/entities", PutEnvironmentEntitiesHandler).Methods("PUT").Name("Environments")
@@ -640,7 +640,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	nameSpacedListPath.HandleFunc("", UpdateNamespacedListHandler).Methods("PUT").Name("NameSpaced-Lists")
 	nameSpacedListPath.HandleFunc("/ids", GetNamespacedListIdsHandler).Methods("GET").Name("NameSpaced-Lists")
 	nameSpacedListPath.HandleFunc("/ipAddressGroups", GetIpAddressGroupsHandler).Methods("GET").Name("NameSpaced-Lists")
-	nameSpacedListPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("NameSpaced-Lists")
 	nameSpacedListPath.HandleFunc("/filtered", PostNamespacedListFilteredHandler).Methods("POST").Name("NameSpaced-Lists")
 	nameSpacedListPath.HandleFunc("/entities", PostNamespacedListEntitiesHandler).Methods("POST").Name("NameSpaced-Lists")
 	nameSpacedListPath.HandleFunc("/entities", PutNamespacedListEntitiesHandler).Methods("PUT").Name("NameSpaced-Lists")
@@ -665,7 +665,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	firmwareConfigPath.HandleFunc("/entities", PostFirmwareConfigEntitiesHandler).Methods("POST").Name("Firmware-Configs")
 	firmwareConfigPath.HandleFunc("/entities", PutFirmwareConfigEntitiesHandler).Methods("PUT").Name("Firmware-Configs")
 	firmwareConfigPath.HandleFunc("/filtered", PostFirmwareConfigFilteredHandler).Methods("POST").Name("Firmware-Configs")
-	firmwareConfigPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-Configs")
 	// url with var has to be placed last otherwise, it gets confused with url with defined paths
 	firmwareConfigPath.HandleFunc("/{id}", DeleteFirmwareConfigByIdHandler).Methods("DELETE").Name("Firmware-Configs")
 	firmwareConfigPath.HandleFunc("/{id}", GetFirmwareConfigByIdHandler).Methods("GET").Name("Firmware-Configs")
@@ -676,7 +676,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	actMinVerPath.HandleFunc("", GetAmvHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("", CreateAmvHandler).Methods("POST").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("", UpdateAmvHandler).Methods("PUT").Name("Firmware-ActivationVersion")
-	actMinVerPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-ActivationVersion")
+	actMinVerPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("/filtered", PostAmvFilteredHandler).Methods("POST").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("/entities", PostAmvEntitiesHandler).Methods("POST").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("/entities", PutAmvEntitiesHandler).Methods("PUT").Name("Firmware-ActivationVersion")

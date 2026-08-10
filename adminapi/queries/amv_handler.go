@@ -363,10 +363,6 @@ func PutAmvEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 	xwhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
-func NotImplementedHandler(w http.ResponseWriter, r *http.Request) {
-	xhttp.WriteAdminErrorResponse(w, http.StatusNotImplemented, "")
-}
-
 func GetAmvFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	applicationType, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
 	if err != nil {

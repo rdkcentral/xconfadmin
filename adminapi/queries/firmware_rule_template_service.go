@@ -18,8 +18,6 @@
 package queries
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -32,12 +30,10 @@ import (
 	"github.com/google/uuid"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xshared "github.com/rdkcentral/xconfadmin/shared"
-	xcorefw "github.com/rdkcentral/xconfadmin/shared/firmware"
 	"github.com/rdkcentral/xconfadmin/util"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
-	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	xutil "github.com/rdkcentral/xconfwebconfig/util"
 	log "github.com/sirupsen/logrus"
@@ -434,98 +430,4 @@ func getFirmwareRuleTemplateExportName(all bool) string {
 		return "allFirmwareRuleTemplates"
 	}
 	return "firmwareRuleTemplate_"
-}
-
-func CreateFirmwareRuleTemplates(tenantId string) (e error) {
-	if count, _ := xcorefw.GetFirmwareRuleTemplateCount(tenantId); count > 0 {
-		return
-	}
-
-	log.WithFields(log.Fields{"tenantId": tenantId}).Infof("Creating default FirmwareRuleTemplate...")
-
-	ruleFactory := coreef.NewRuleFactory()
-	templateList := []corefw.FirmwareRuleTemplate{}
-
-	// Rule actions
-	rule := coreef.NewMacRule(coreef.EMPTY_NAME)
-	templateList = append(templateList, *xcorefw.NewFirmwareRuleTemplate(
-		corefw.MAC_RULE, rule, coreef.EMPTY_LIST, 1))
-
-	rule = ruleFactory.NewIpRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME, coreef.EMPTY_NAME)
-	templateList = append(templateList, *xcorefw.NewFirmwareRuleTemplate(
-		corefw.IP_RULE, rule, coreef.EMPTY_LIST, 2))
-
-	rule = ruleFactory.NewIntermediateVersionRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME, coreef.EMPTY_NAME)
-	templateList = append(templateList, *xcorefw.NewFirmwareRuleTemplate(
-		corefw.IV_RULE, rule, []string{corefw.GLOBAL_PERCENT, corefw.TIME_FILTER}, 3))
-
-	rule = ruleFactory.NewMinVersionCheckRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME, coreef.EMPTY_LIST)
-	templateList = append(templateList, *xcorefw.NewFirmwareRuleTemplate(
-		corefw.MIN_CHECK_RULE, rule, []string{corefw.GLOBAL_PERCENT, corefw.TIME_FILTER}, 4))
-
-	rule = ruleFactory.NewEnvModelRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME)
-	templ := *xcorefw.NewFirmwareRuleTemplate(corefw.ENV_MODEL_RULE, rule, []string{}, 5)
-	templ.Editable = false
-	templateList = append(templateList, templ)
-
-	// Blocking filters
-	rule = *ruleFactory.NewGlobalPercentFilterTemplate(coreef.DEFAULT_PERCENT, coreef.EMPTY_NAME)
-	templ = *xcorefw.NewBlockingFilterTemplate(corefw.GLOBAL_PERCENT, rule, 1)
-	templateList = append(templateList, templ)
-
-	rule = *ruleFactory.NewIpFilter(coreef.EMPTY_NAME)
-	templateList = append(templateList, *xcorefw.NewBlockingFilterTemplate(
-		corefw.IP_FILTER, rule, 2))
-
-	rule = *ruleFactory.NewTimeFilterTemplate(true, true, false, coreef.EMPTY_NAME, coreef.EMPTY_NAME, coreef.EMPTY_NAME, "01:00", "02:00")
-	templateList = append(templateList, *xcorefw.NewBlockingFilterTemplate(
-		corefw.TIME_FILTER, rule, 3))
-
-	// Define Properties
-	rule = *ruleFactory.NewDownloadLocationFilter(coreef.EMPTY_NAME, coreef.EMPTY_NAME)
-	properties := map[string]corefw.PropertyValue{
-		coreef.FIRMWARE_DOWNLOAD_PROTOCOL: *corefw.NewPropertyValue("tftp", false, corefw.STRING),
-		coreef.FIRMWARE_LOCATION:          *corefw.NewPropertyValue("", false, corefw.STRING),
-		coreef.IPV6_FIRMWARE_LOCATION:     *corefw.NewPropertyValue("", true, corefw.STRING),
-	}
-	templateList = append(templateList, *xcorefw.NewDefinePropertiesTemplate(
-		corefw.DOWNLOAD_LOCATION_FILTER, rule, properties, coreef.EMPTY_LIST, 3))
-
-	rule = *ruleFactory.NewRiFilterTemplate()
-	properties = map[string]corefw.PropertyValue{
-		coreef.REBOOT_IMMEDIATELY: *corefw.NewPropertyValue("true", false, corefw.BOOLEAN),
-	}
-	templateList = append(templateList, *xcorefw.NewDefinePropertiesTemplate(
-		corefw.REBOOT_IMMEDIATELY_FILTER, rule, properties, coreef.EMPTY_LIST, 1))
-
-	rule = ruleFactory.NewMinVersionCheckRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME, coreef.EMPTY_LIST)
-	properties = map[string]corefw.PropertyValue{
-		coreef.REBOOT_IMMEDIATELY: *corefw.NewPropertyValue("true", true, corefw.BOOLEAN),
-	}
-	templateList = append(templateList, *xcorefw.NewDefinePropertiesTemplate(
-		corefw.MIN_CHECK_RI, rule, properties, []string{corefw.GLOBAL_PERCENT, corefw.TIME_FILTER}, 2))
-
-	rule = ruleFactory.NewActivationVersionRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME)
-	properties = map[string]corefw.PropertyValue{
-		coreef.REBOOT_IMMEDIATELY: *corefw.NewPropertyValue("false", false, corefw.BOOLEAN),
-	}
-	templ = *xcorefw.NewDefinePropertiesTemplate(
-		corefw.ACTIVATION_VERSION, rule, properties, coreef.EMPTY_LIST, 4)
-	templ.Editable = false
-	templateList = append(templateList, templ)
-
-	for _, template := range templateList {
-		if err := template.Validate(); err != nil {
-			e = errors.Join(e, err)
-		}
-		template.Updated = util.GetTimestamp()
-		if jsonData, err := json.Marshal(template); err != nil {
-			e = errors.Join(e, err)
-		} else {
-			if err := db.GetSimpleDao().SetOne(tenantId, db.TABLE_FIRMWARE_RULE_TEMPLATES, template.ID, jsonData, template.Updated); err != nil {
-				e = errors.Join(e, err)
-			}
-		}
-	}
-	return e
 }

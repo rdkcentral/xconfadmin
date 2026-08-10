@@ -15,9 +15,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	"github.com/rdkcentral/xconfadmin/adminapi/change"
-	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
 	"github.com/rdkcentral/xconfadmin/common"
-	oshttp "github.com/rdkcentral/xconfadmin/http"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	admin_change "github.com/rdkcentral/xconfadmin/shared/change"
 	admin_logupload "github.com/rdkcentral/xconfadmin/shared/logupload"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
@@ -37,7 +36,7 @@ var (
 	testConfigFile     string
 	jsonTestConfigFile string
 	sc                 *xwcommon.ServerConfig
-	server             *oshttp.WebconfigServer
+	server             *xhttp.WebconfigServer
 	router             *mux.Router
 	globAut            *apiUnitTest
 )
@@ -125,7 +124,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	server = oshttp.NewWebconfigServer(sc, true, nil, nil)
+	server = xhttp.NewWebconfigServer(sc, true, nil, nil)
 	defer server.XW_XconfServer.Server.Close()
 	xwhttp.InitSatTokenManager(server.XW_XconfServer)
 
@@ -178,7 +177,7 @@ func TestMain(m *testing.M) {
 }
 
 // WebServerInjection - local implementation to avoid circular dependency
-func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
+func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 	if ws == nil {
 		common.CacheUpdateWindowSize = 60000
 		common.AllowedNumberOfFeatures = 100
@@ -250,7 +249,7 @@ func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 		}
 	}
 }
-func telemetrySetup(server *oshttp.WebconfigServer, r *mux.Router) {
+func telemetrySetup(server *xhttp.WebconfigServer, r *mux.Router) {
 
 	xc := dataapi.GetXconfConfigs(server.XW_XconfServer.ServerConfig.Config)
 
@@ -267,7 +266,7 @@ func telemetrySetup(server *oshttp.WebconfigServer, r *mux.Router) {
 	SetupTelemetryRoutes(server, r)
 }
 
-func SetupTelemetryRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
+func SetupTelemetryRoutes(server *xhttp.WebconfigServer, r *mux.Router) {
 	paths := []*mux.Router{}
 	// telemetry
 	telemetryPath := r.PathPrefix("/xconfAdminService/telemetry").Subrouter()
@@ -290,7 +289,7 @@ func SetupTelemetryRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	telemetryProfilePath.HandleFunc("/{id}", change.DeleteTelemetryProfileHandler).Methods("DELETE").Name("Telemetry1-Profiles")
 	telemetryProfilePath.HandleFunc("/change/{id}", change.DeleteTelemetryProfileChangeHandler).Methods("DELETE").Name("Telemetry1-Profiles")
 	telemetryProfilePath.HandleFunc("/{id}", change.GetTelemetryProfileByIdHandler).Methods("GET").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Telemetry1-Profiles")
+	telemetryProfilePath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Telemetry1-Profiles")
 	telemetryProfilePath.HandleFunc("/entities", change.PostTelemetryProfileEntitiesHandler).Methods("POST").Name("Telemetry1-Profiles")
 	telemetryProfilePath.HandleFunc("/entities", change.PutTelemetryProfileEntitiesHandler).Methods("PUT").Name("Telemetry1-Profiles")
 	telemetryProfilePath.HandleFunc("/filtered", change.PostTelemetryProfileFilteredHandler).Methods("POST").Name("Telemetry1-Profiles")
@@ -324,7 +323,7 @@ func SetupTelemetryRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	telemetryV2ProfilePath.HandleFunc("/change", change.UpdateTelemetryTwoProfileChangeHandler).Methods("PUT").Name("Telemetry2-Profiles")
 	telemetryV2ProfilePath.HandleFunc("/change/{id}", change.DeleteTelemetryTwoProfileChangeHandler).Methods("DELETE").Name("Telemetry2-Profiles")
 	telemetryV2ProfilePath.HandleFunc("/{id}", change.GetTelemetryTwoProfileByIdHandler).Methods("GET").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Telemetry2-Profiles")
+	telemetryV2ProfilePath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Telemetry2-Profiles")
 	telemetryV2ProfilePath.HandleFunc("/byIdList", change.PostTelemetryTwoProfilesByIdListHandler).Methods("POST").Name("Telemetry2-Profiles")
 	telemetryV2ProfilePath.HandleFunc("/entities", change.PostTelemetryTwoProfileEntitiesHandler).Methods("POST").Name("Telemetry2-Profiles")
 	telemetryV2ProfilePath.HandleFunc("/entities", change.PutTelemetryTwoProfileEntitiesHandler).Methods("PUT").Name("Telemetry2-Profiles")
@@ -338,7 +337,7 @@ func SetupTelemetryRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	telemetryV2RulePath.HandleFunc("", UpdateTelemetryTwoRuleHandler).Methods("PUT").Name("Telemetry2-Rules")
 	telemetryV2RulePath.HandleFunc("/entities", UpdateTelemetryTwoRulesPackageHandler).Methods("PUT").Name("Telemetry2-Rules")
 	telemetryV2RulePath.HandleFunc("", GetTelemetryTwoRulesAllExport).Methods("GET").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Telemetry2-Rules")
+	telemetryV2RulePath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Telemetry2-Rules")
 	telemetryV2RulePath.HandleFunc("/{id}", GetTelemetryTwoRuleById).Methods("GET").Name("Telemetry2-Rules")
 	telemetryV2RulePath.HandleFunc("/filtered", GetTelemetryTwoRulesFilteredWithPage).Methods("POST").Name("Telemetry2-Rules")
 	telemetryV2RulePath.HandleFunc("/{id}", DeleteOneTelemetryTwoRuleHandler).Methods("DELETE").Name("Telemetry2-Rules")

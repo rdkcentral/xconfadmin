@@ -21,11 +21,9 @@ import (
 	"strings"
 	"time"
 
-	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
 	common "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
-	"github.com/rdkcentral/xconfwebconfig/db"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -109,28 +107,4 @@ func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 		}
 	}
 	Xc = xc
-}
-
-// OnboardTenant onboards a new tenant by creating it in the database,
-// initializing firmware rule templates and application settings.
-func OnboardTenant(id string, name string) (*db.Tenant, error) {
-	tenant, err := db.CreateTenant(id, name)
-	if err != nil {
-		return nil, err
-	}
-
-	// Initialize FirmwareRule templates
-	if err := queries.CreateFirmwareRuleTemplates(tenant.ID); err != nil {
-		return nil, err
-	}
-
-	// Initialize other tenant-specific settings
-	if err := common.InitAppSettings(tenant.ID); err != nil {
-		return nil, err
-	}
-
-	// Initialize tenant data in cache manager
-	db.GetCacheManager().InitTenantCache(tenant.ID)
-
-	return tenant, nil
 }

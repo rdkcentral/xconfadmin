@@ -38,12 +38,10 @@ import (
 	// Don't import adminapi to avoid circular dependency
 	// "github.com/rdkcentral/xconfadmin/adminapi"
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
-	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
 	"github.com/rdkcentral/xconfadmin/common"
-	oshttp "github.com/rdkcentral/xconfadmin/http"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
-
-	// "github.com/rdkcentral/xconfadmin/taggingapi/tag" // No longer needed - tag refactored
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -58,12 +56,11 @@ import (
 )
 
 var (
-	testConfigFile     string
-	jsonTestConfigFile string
-	sc                 *xwcommon.ServerConfig
-	server             *oshttp.WebconfigServer
-	router             *mux.Router
-	globAut            *apiUnitTest
+	testConfigFile string
+	sc             *xwcommon.ServerConfig
+	server         *xhttp.WebconfigServer
+	router         *mux.Router
+	globAut        *apiUnitTest
 )
 
 func Walk(r *mux.Router) {
@@ -304,7 +301,7 @@ const (
 )
 
 // WebServerInjection - local implementation to avoid circular dependency
-func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
+func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 	if ws == nil {
 		common.CacheUpdateWindowSize = 60000
 		common.AllowedNumberOfFeatures = 100
@@ -377,106 +374,6 @@ func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 	}
 }
 
-// initDB - local implementation to avoid circular dependency
-func initDB() {
-	CreateFirmwareRuleTemplates() // Initialize FirmwareRule templates
-	initAppSettings()             // Initialize Application settings
-}
-
-// CreateFirmwareRuleTemplates - local implementation to avoid circular dependency
-func CreateFirmwareRuleTemplates() {
-	if count, _ := GetFirmwareRuleTemplateCount(); count > 0 {
-		return
-	}
-
-	log.Info("Creating templates...")
-
-	ruleFactory := coreef.NewRuleFactory()
-	templateList := []corefw.FirmwareRuleTemplate{}
-
-	// Rule actions
-	rule := coreef.NewMacRule(coreef.EMPTY_NAME)
-	templateList = append(templateList, *NewFirmwareRuleTemplate(
-		corefw.MAC_RULE, rule, coreef.EMPTY_LIST, 1))
-
-	rule = ruleFactory.NewIpRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME, coreef.EMPTY_NAME)
-	templateList = append(templateList, *NewFirmwareRuleTemplate(
-		corefw.IP_RULE, rule, coreef.EMPTY_LIST, 2))
-
-	rule = ruleFactory.NewIntermediateVersionRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME, coreef.EMPTY_NAME)
-	templateList = append(templateList, *NewFirmwareRuleTemplate(
-		corefw.IV_RULE, rule, []string{corefw.GLOBAL_PERCENT, corefw.TIME_FILTER}, 3))
-
-	rule = ruleFactory.NewMinVersionCheckRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME, coreef.EMPTY_LIST)
-	templateList = append(templateList, *NewFirmwareRuleTemplate(
-		corefw.MIN_CHECK_RULE, rule, []string{corefw.GLOBAL_PERCENT, corefw.TIME_FILTER}, 4))
-
-	rule = ruleFactory.NewEnvModelRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME)
-	templ := *NewFirmwareRuleTemplate(corefw.ENV_MODEL_RULE, rule, []string{}, 5)
-	templ.Editable = false
-	templateList = append(templateList, templ)
-
-	// Blocking filters
-	rule = *ruleFactory.NewGlobalPercentFilterTemplate(coreef.DEFAULT_PERCENT, coreef.EMPTY_NAME)
-	templ = *NewBlockingFilterTemplate(corefw.GLOBAL_PERCENT, rule, 1)
-	templateList = append(templateList, templ)
-
-	rule = *ruleFactory.NewIpFilter(coreef.EMPTY_NAME)
-	templateList = append(templateList, *NewBlockingFilterTemplate(
-		corefw.IP_FILTER, rule, 2))
-
-	rule = *ruleFactory.NewTimeFilterTemplate(true, true, false, coreef.EMPTY_NAME, coreef.EMPTY_NAME, coreef.EMPTY_NAME, "01:00", "02:00")
-	templateList = append(templateList, *NewBlockingFilterTemplate(
-		corefw.TIME_FILTER, rule, 3))
-
-	// Define Properties
-	rule = *ruleFactory.NewDownloadLocationFilter(coreef.EMPTY_NAME, coreef.EMPTY_NAME)
-	properties := map[string]corefw.PropertyValue{
-		coreef.FIRMWARE_DOWNLOAD_PROTOCOL: *corefw.NewPropertyValue("tftp", false, corefw.STRING),
-		coreef.FIRMWARE_LOCATION:          *corefw.NewPropertyValue("", false, corefw.STRING),
-		coreef.IPV6_FIRMWARE_LOCATION:     *corefw.NewPropertyValue("", true, corefw.STRING),
-	}
-	templateList = append(templateList, *NewDefinePropertiesTemplate(
-		corefw.DOWNLOAD_LOCATION_FILTER, rule, properties, coreef.EMPTY_LIST, 3))
-
-	rule = *ruleFactory.NewRiFilterTemplate()
-	properties = map[string]corefw.PropertyValue{
-		coreef.REBOOT_IMMEDIATELY: *corefw.NewPropertyValue("true", false, corefw.BOOLEAN),
-	}
-	templateList = append(templateList, *NewDefinePropertiesTemplate(
-		corefw.REBOOT_IMMEDIATELY_FILTER, rule, properties, coreef.EMPTY_LIST, 1))
-
-	rule = ruleFactory.NewMinVersionCheckRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME, coreef.EMPTY_LIST)
-	properties = map[string]corefw.PropertyValue{
-		coreef.REBOOT_IMMEDIATELY: *corefw.NewPropertyValue("true", true, corefw.BOOLEAN),
-	}
-	templateList = append(templateList, *NewDefinePropertiesTemplate(
-		corefw.MIN_CHECK_RI, rule, properties, []string{corefw.GLOBAL_PERCENT, corefw.TIME_FILTER}, 2))
-
-	rule = ruleFactory.NewActivationVersionRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME)
-	properties = map[string]corefw.PropertyValue{
-		coreef.REBOOT_IMMEDIATELY: *corefw.NewPropertyValue("false", false, corefw.BOOLEAN),
-	}
-	templ = *NewDefinePropertiesTemplate(
-		corefw.ACTIVATION_VERSION, rule, properties, coreef.EMPTY_LIST, 4)
-	templ.Editable = false
-	templateList = append(templateList, templ)
-
-	for _, template := range templateList {
-		if err := template.Validate(); err != nil {
-			panic(err)
-		}
-		template.Updated = util.GetTimestamp()
-		if jsonData, err := json.Marshal(template); err != nil {
-			panic(err)
-		} else {
-			if err := db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULE_TEMPLATES, template.ID, jsonData, template.Updated); err != nil {
-				panic(err)
-			}
-		}
-	}
-}
-
 // GetFirmwareRuleTemplateCount - local implementation to avoid circular dependency
 func GetFirmwareRuleTemplateCount() (int, error) {
 	entries, err := db.GetSimpleDao().GetAllAsMapRaw(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULE_TEMPLATES, 0)
@@ -534,24 +431,19 @@ func initAppSettings() {
 	// This is a simplified version for testing purposes
 }
 
-func dcmSetup(server *oshttp.WebconfigServer, r *mux.Router) {
-
+func dcmSetup(server *xhttp.WebconfigServer, r *mux.Router) {
 	xc := dataapi.GetXconfConfigs(server.XW_XconfServer.ServerConfig.Config)
-
 	WebServerInjection(server, xc)
 	db.ConfigInjection(server.XW_XconfServer.ServerConfig.Config)
 	dataapi.WebServerInjection(server.XW_XconfServer, xc)
 	//dao.WebServerInjection(server)
 	auth.WebServerInjection(server)
 	dataapi.RegisterTables()
-
-	// db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf) // Tag refactored - NewTagInf no longer exists
-	initDB()
-	db.GetCacheManager() // Initialize cache manager
+	xshared.OnboardTenant(db.GetDefaultTenantId(), db.GetDefaultTenantId()) // Initialize DB for default tenant
 	SetupDCMRoutes(server, r)
 }
 
-func SetupDCMRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
+func SetupDCMRoutes(server *xhttp.WebconfigServer, r *mux.Router) {
 	paths := []*mux.Router{}
 	//authPaths := []*mux.Router{} // Do not required auth token validation middleware
 	// Register DCM formula routes
@@ -579,7 +471,7 @@ func SetupDCMRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	dcmDeviceSettingsPath.HandleFunc("", GetDeviceSettingsHandler).Methods("GET").Name("DCM-DeviceSettings")
 	dcmDeviceSettingsPath.HandleFunc("", CreateDeviceSettingsHandler).Methods("POST").Name("DCM-DeviceSettings")
 	dcmDeviceSettingsPath.HandleFunc("", UpdateDeviceSettingsHandler).Methods("PUT").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("DCM-DeviceSettings")
+	dcmDeviceSettingsPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("DCM-DeviceSettings")
 	dcmDeviceSettingsPath.HandleFunc("/size", GetDeviceSettingsSizeHandler).Methods("GET").Name("DCM-DeviceSettings")
 	dcmDeviceSettingsPath.HandleFunc("/names", GetDeviceSettingsNamesHandler).Methods("GET").Name("DCM-DeviceSettings")
 	dcmDeviceSettingsPath.HandleFunc("/filtered", PostDeviceSettingsFilteredWithParamsHandler).Methods("POST").Name("DCM-DeviceSettings")
@@ -594,7 +486,7 @@ func SetupDCMRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	dcmVodSettingsPath.HandleFunc("", GetVodSettingsHandler).Methods("GET").Name("DCM-VODSettings")
 	dcmVodSettingsPath.HandleFunc("", CreateVodSettingsHandler).Methods("POST").Name("DCM-VODSettings")
 	dcmVodSettingsPath.HandleFunc("", UpdateVodSettingsHandler).Methods("PUT").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("DCM-VODSettings")
+	dcmVodSettingsPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("DCM-VODSettings")
 	dcmVodSettingsPath.HandleFunc("/size", GetVodSettingsSizeHandler).Methods("GET").Name("DCM-VODSettings")
 	dcmVodSettingsPath.HandleFunc("/names", GetVodSettingsNamesHandler).Methods("GET").Name("DCM-VODSettings")
 	dcmVodSettingsPath.HandleFunc("/filtered", PostVodSettingsFilteredWithParamsHandler).Methods("POST").Name("DCM-VODSettings")
@@ -609,7 +501,7 @@ func SetupDCMRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	dcmUploadRepositoryPath.HandleFunc("", GetLogRepoSettingsHandler).Methods("GET").Name("DCM-UploadRepository")
 	dcmUploadRepositoryPath.HandleFunc("", CreateLogRepoSettingsHandler).Methods("POST").Name("DCM-UploadRepository")
 	dcmUploadRepositoryPath.HandleFunc("", UpdateLogRepoSettingsHandler).Methods("PUT").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("DCM-UploadRepository")
+	dcmUploadRepositoryPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("DCM-UploadRepository")
 	dcmUploadRepositoryPath.HandleFunc("/entities", PostLogRepoSettingsEntitiesHandler).Methods("POST").Name("DCM-UploadRepository")
 	dcmUploadRepositoryPath.HandleFunc("/entities", PutLogRepoSettingsEntitiesHandler).Methods("PUT").Name("DCM-UploadRepository")
 	dcmUploadRepositoryPath.HandleFunc("/size", GetLogRepoSettingsSizeHandler).Methods("GET").Name("DCM-UploadRepository")
@@ -624,7 +516,7 @@ func SetupDCMRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	dcmLogUploadSettingsPath.HandleFunc("", GetLogUploadSettingsHandler).Methods("GET").Name("DCM-LogUploadSettings")
 	dcmLogUploadSettingsPath.HandleFunc("", CreateLogUploadSettingsHandler).Methods("POST").Name("DCM-LogUploadSettings")
 	dcmLogUploadSettingsPath.HandleFunc("", UpdateLogUploadSettingsHandler).Methods("PUT").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("DCM-LogUploadSettings")
+	dcmLogUploadSettingsPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("DCM-LogUploadSettings")
 	dcmLogUploadSettingsPath.HandleFunc("/size", GetLogUploadSettingsSizeHandler).Methods("GET").Name("DCM-LogUploadSettings")
 	dcmLogUploadSettingsPath.HandleFunc("/names", GetLogUploadSettingsNamesHandler).Methods("GET").Name("DCM-LogUploadSettings")
 	dcmLogUploadSettingsPath.HandleFunc("/filtered", PostLogUploadSettingsFilteredWithParamsHandler).Methods("POST").Name("DCM-LogUploadSettings")
@@ -670,7 +562,7 @@ func SetupDCMRoutesForMock(r *mux.Router) {
 	dcmDeviceSettingsPath.HandleFunc("", GetDeviceSettingsHandler).Methods("GET")
 	dcmDeviceSettingsPath.HandleFunc("", CreateDeviceSettingsHandler).Methods("POST")
 	dcmDeviceSettingsPath.HandleFunc("", UpdateDeviceSettingsHandler).Methods("PUT")
-	dcmDeviceSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET")
+	dcmDeviceSettingsPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET")
 	dcmDeviceSettingsPath.HandleFunc("/size", GetDeviceSettingsSizeHandler).Methods("GET")
 	dcmDeviceSettingsPath.HandleFunc("/names", GetDeviceSettingsNamesHandler).Methods("GET")
 	dcmDeviceSettingsPath.HandleFunc("/filtered", PostDeviceSettingsFilteredWithParamsHandler).Methods("POST")
@@ -682,7 +574,7 @@ func SetupDCMRoutesForMock(r *mux.Router) {
 	dcmVodSettingsPath.HandleFunc("", GetVodSettingsHandler).Methods("GET")
 	dcmVodSettingsPath.HandleFunc("", CreateVodSettingsHandler).Methods("POST")
 	dcmVodSettingsPath.HandleFunc("", UpdateVodSettingsHandler).Methods("PUT")
-	dcmVodSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET")
+	dcmVodSettingsPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET")
 	dcmVodSettingsPath.HandleFunc("/size", GetVodSettingsSizeHandler).Methods("GET")
 	dcmVodSettingsPath.HandleFunc("/names", GetVodSettingsNamesHandler).Methods("GET")
 	dcmVodSettingsPath.HandleFunc("/filtered", PostVodSettingsFilteredWithParamsHandler).Methods("POST")
@@ -694,7 +586,7 @@ func SetupDCMRoutesForMock(r *mux.Router) {
 	dcmUploadRepositoryPath.HandleFunc("", GetLogRepoSettingsHandler).Methods("GET")
 	dcmUploadRepositoryPath.HandleFunc("", CreateLogRepoSettingsHandler).Methods("POST")
 	dcmUploadRepositoryPath.HandleFunc("", UpdateLogRepoSettingsHandler).Methods("PUT")
-	dcmUploadRepositoryPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET")
+	dcmUploadRepositoryPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET")
 	dcmUploadRepositoryPath.HandleFunc("/entities", PostLogRepoSettingsEntitiesHandler).Methods("POST")
 	dcmUploadRepositoryPath.HandleFunc("/entities", PutLogRepoSettingsEntitiesHandler).Methods("PUT")
 	dcmUploadRepositoryPath.HandleFunc("/size", GetLogRepoSettingsSizeHandler).Methods("GET")
@@ -708,7 +600,7 @@ func SetupDCMRoutesForMock(r *mux.Router) {
 	dcmLogUploadSettingsPath.HandleFunc("", GetLogUploadSettingsHandler).Methods("GET")
 	dcmLogUploadSettingsPath.HandleFunc("", CreateLogUploadSettingsHandler).Methods("POST")
 	dcmLogUploadSettingsPath.HandleFunc("", UpdateLogUploadSettingsHandler).Methods("PUT")
-	dcmLogUploadSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET")
+	dcmLogUploadSettingsPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET")
 	dcmLogUploadSettingsPath.HandleFunc("/size", GetLogUploadSettingsSizeHandler).Methods("GET")
 	dcmLogUploadSettingsPath.HandleFunc("/names", GetLogUploadSettingsNamesHandler).Methods("GET")
 	dcmLogUploadSettingsPath.HandleFunc("/filtered", PostLogUploadSettingsFilteredWithParamsHandler).Methods("POST")
@@ -765,7 +657,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	server = oshttp.NewWebconfigServer(sc, true, nil, nil)
+	server = xhttp.NewWebconfigServer(sc, true, nil, nil)
 	defer server.XW_XconfServer.Server.Close()
 	xwhttp.InitSatTokenManager(server.XW_XconfServer)
 
@@ -825,7 +717,7 @@ func GetTestConfig() string {
 	return "../../config/sample_xconfadmin.conf"
 }
 
-func GetTestWebConfigServer(testConfigFile string) (*oshttp.WebconfigServer, *mux.Router) {
+func GetTestWebConfigServer(testConfigFile string) (*xhttp.WebconfigServer, *mux.Router) {
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
 		testConfigFile = "../../config/sample_xconfadmin.conf"
 		if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
@@ -840,7 +732,7 @@ func GetTestWebConfigServer(testConfigFile string) (*oshttp.WebconfigServer, *mu
 	if err != nil {
 		panic(err)
 	}
-	server := oshttp.NewWebconfigServer(sc, true, nil, nil)
+	server := xhttp.NewWebconfigServer(sc, true, nil, nil)
 	xwhttp.InitSatTokenManager(server.XW_XconfServer)
 	router := server.XW_XconfServer.GetRouter(true)
 

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 )
 
@@ -26,7 +27,7 @@ func ensureEnvironmentRoutes() {
 		environmentPath.HandleFunc("", GetQueriesEnvironments).Methods(http.MethodGet)
 		environmentPath.HandleFunc("", CreateEnvironmentHandler).Methods(http.MethodPost)
 		environmentPath.HandleFunc("", UpdateEnvironmentHandler).Methods(http.MethodPut)
-		environmentPath.HandleFunc("/page", NotImplementedHandler).Methods(http.MethodGet)
+		environmentPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods(http.MethodGet)
 		environmentPath.HandleFunc("/filtered", PostEnvironmentFilteredHandler).Methods(http.MethodPost)
 		environmentPath.HandleFunc("/entities", PostEnvironmentEntitiesHandler).Methods(http.MethodPost)
 		environmentPath.HandleFunc("/entities", PutEnvironmentEntitiesHandler).Methods(http.MethodPut)

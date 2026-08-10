@@ -275,6 +275,7 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 		ctx := r.Context()
 
 		// Check for SAT token
+		satv2 := false
 		if satToken := getSatTokenFromRequest(r); satToken != "" {
 			if subject, capabilities, allowedPartners, err := getSubjectAndCapabilitiesFromSatToken(satToken, s.VerifyStageHost); err != nil {
 				log.Error(err.Error())
@@ -289,6 +290,7 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 
 				// check if SAT is legacy SAT or SAT v2 based on capabilities and set auth type in context
 				if isSATv2(capabilities) {
+					satv2 = true
 					ctx = context.WithValue(ctx, CTX_KEY_AUTH_TYPE, AUTH_TYPE_SAT_V2)
 				} else {
 					ctx = context.WithValue(ctx, CTX_KEY_AUTH_TYPE, AUTH_TYPE_SAT_LEGACY)
@@ -330,6 +332,11 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 			return
 		}
 		if tenant == nil {
+			if !satv2 && !s.testOnly {
+				log.WithFields(log.Fields{"tenantId": tenantId}).Error("tenant not found")
+				http.Error(w, "tenant not found", http.StatusUnauthorized)
+				return
+			}
 			if s.OnboardTenantFunc == nil {
 				log.WithFields(log.Fields{"tenantId": tenantId}).Error("tenant onboarding function is not set")
 				http.Error(w, "tenant onboarding function is not set", http.StatusInternalServerError)

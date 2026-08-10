@@ -23,18 +23,16 @@ import (
 	"time"
 
 	//"github.com/rdkcentral/xconfwebconfig/common"
-	"github.com/rdkcentral/xconfwebconfig/db"
-	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
-	util "github.com/rdkcentral/xconfwebconfig/util"
-
+	"github.com/gorilla/mux"
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xutil "github.com/rdkcentral/xconfadmin/util"
-
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-
-	"github.com/gorilla/mux"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	util "github.com/rdkcentral/xconfwebconfig/util"
 )
 
 const (
@@ -481,7 +479,7 @@ func CreateTenantHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenant, err := xhttp.WebConfServer.OnboardTenantFunc(newTenant.ID, newTenant.Name)
+	tenant, err := xshared.OnboardTenant(newTenant.ID, newTenant.Name)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
