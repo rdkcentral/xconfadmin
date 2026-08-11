@@ -24,9 +24,9 @@ import (
 	"net/http"
 	"testing"
 
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
-
 	"gotest.tools/assert"
 )
 
@@ -34,15 +34,14 @@ func ImportVodSettingsTableData(data []string, tabletype logupload.VodSettings) 
 	var err error
 	for _, row := range data {
 		err = json.Unmarshal([]byte(row), &tabletype)
-		err = setOneInDao(db.TABLE_VOD_SETTINGS, tabletype.ID, &tabletype)
+		err = xshared.SetOneInDao(db.TABLE_VOD_SETTINGS, tabletype.ID, &tabletype)
 	}
 	return err
 }
 
 func TestAllVodSettingsApis(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test: requires external package data retrieval
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test: requires external package data retrieval
+	xshared.DeleteAllEntities(t)
 
 	//GET ALL VOD SETTINGS
 	var tableData = []string{

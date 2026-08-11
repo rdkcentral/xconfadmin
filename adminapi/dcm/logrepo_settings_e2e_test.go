@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"testing"
 
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
@@ -34,15 +35,14 @@ func ImportLogRepTableData(data []string, tabletype logupload.UploadRepository) 
 	var err error
 	for _, row := range data {
 		err = json.Unmarshal([]byte(row), &tabletype)
-		err = setOneInDao(db.TABLE_UPLOAD_REPOSITORIES, tabletype.ID, &tabletype)
+		err = xshared.SetOneInDao(db.TABLE_UPLOAD_REPOSITORIES, tabletype.ID, &tabletype)
 	}
 	return err
 }
 
 func TestAllLogRepoSettingsAPIs(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test: requires external package data retrieval
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test: requires external package data retrieval
+	xshared.DeleteAllEntities(t)
 
 	//GET ALL LOG REPO SETTINGS
 

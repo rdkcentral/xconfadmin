@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
@@ -34,8 +35,7 @@ import (
 
 // TestGetLogRepoSettings_Nil tests that nil is returned when repository doesn't exist
 func TestGetLogRepoSettings_Nil(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	result := GetLogRepoSettings(db.GetDefaultTenantId(), "nonexistent-id")
 	assert.Assert(t, result == nil, "Expected nil for nonexistent repository")
@@ -43,8 +43,7 @@ func TestGetLogRepoSettings_Nil(t *testing.T) {
 
 // TestGetLogRepoSettings_Success tests successful retrieval
 func TestGetLogRepoSettings_Success(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-repo-1",
@@ -63,9 +62,8 @@ func TestGetLogRepoSettings_Success(t *testing.T) {
 
 // TestGetLogRepoSettingsAll_EmptyList tests when no repositories exist
 func TestGetLogRepoSettingsAll_EmptyList(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	result := GetLogRepoSettingsAll(db.GetDefaultTenantId())
 	assert.Equal(t, 0, len(result))
@@ -73,8 +71,7 @@ func TestGetLogRepoSettingsAll_EmptyList(t *testing.T) {
 
 // TestGetLogRepoSettingsAll_WithRepositories tests retrieval of all repositories
 func TestGetLogRepoSettingsAll_WithRepositories(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repos := []*logupload.UploadRepository{
 		{
@@ -105,8 +102,7 @@ func TestGetLogRepoSettingsAll_WithRepositories(t *testing.T) {
 
 // TestLogRepoSettingsValidate_NilInput tests validation with nil repository
 func TestLogRepoSettingsValidate_NilInput(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), nil)
 
@@ -117,8 +113,7 @@ func TestLogRepoSettingsValidate_NilInput(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyApplicationType tests validation with empty ApplicationType
 func TestLogRepoSettingsValidate_EmptyApplicationType(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -137,8 +132,7 @@ func TestLogRepoSettingsValidate_EmptyApplicationType(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyName tests validation with empty name
 func TestLogRepoSettingsValidate_EmptyName(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -157,8 +151,7 @@ func TestLogRepoSettingsValidate_EmptyName(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyURL tests validation with empty URL
 func TestLogRepoSettingsValidate_EmptyURL(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -177,8 +170,7 @@ func TestLogRepoSettingsValidate_EmptyURL(t *testing.T) {
 
 // TestLogRepoSettingsValidate_InvalidURL tests validation with invalid URL
 func TestLogRepoSettingsValidate_InvalidURL(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -196,8 +188,7 @@ func TestLogRepoSettingsValidate_InvalidURL(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyProtocol tests validation with empty protocol
 func TestLogRepoSettingsValidate_EmptyProtocol(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -216,8 +207,7 @@ func TestLogRepoSettingsValidate_EmptyProtocol(t *testing.T) {
 
 // TestLogRepoSettingsValidate_InvalidProtocol tests validation with invalid protocol
 func TestLogRepoSettingsValidate_InvalidProtocol(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -235,9 +225,8 @@ func TestLogRepoSettingsValidate_InvalidProtocol(t *testing.T) {
 
 // TestLogRepoSettingsValidate_DuplicateName tests validation with duplicate name
 func TestLogRepoSettingsValidate_DuplicateName(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create first repository
 	repo1 := &logupload.UploadRepository{
@@ -266,9 +255,8 @@ func TestLogRepoSettingsValidate_DuplicateName(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyID tests validation generates ID when empty
 func TestLogRepoSettingsValidate_EmptyID(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "", // Empty - should be auto-generated
@@ -287,9 +275,8 @@ func TestLogRepoSettingsValidate_EmptyID(t *testing.T) {
 
 // TestLogRepoSettingsValidate_Success tests successful validation
 func TestLogRepoSettingsValidate_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -309,8 +296,7 @@ func TestLogRepoSettingsValidate_Success(t *testing.T) {
 
 // TestCreateLogRepoSettings_DuplicateID tests creating repository with duplicate ID
 func TestCreateLogRepoSettings_DuplicateID(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "duplicate-id",
@@ -330,8 +316,7 @@ func TestCreateLogRepoSettings_DuplicateID(t *testing.T) {
 
 // TestCreateLogRepoSettings_ApplicationTypeMismatch tests creating with mismatched ApplicationType
 func TestCreateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -350,8 +335,7 @@ func TestCreateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
 
 // TestCreateLogRepoSettings_ValidationError tests creating with validation errors
 func TestCreateLogRepoSettings_ValidationError(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -369,9 +353,8 @@ func TestCreateLogRepoSettings_ValidationError(t *testing.T) {
 
 // TestCreateLogRepoSettings_Success tests successful creation
 func TestCreateLogRepoSettings_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -392,8 +375,7 @@ func TestCreateLogRepoSettings_Success(t *testing.T) {
 
 // TestUpdateLogRepoSettings_EmptyID tests updating with empty ID
 func TestUpdateLogRepoSettings_EmptyID(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "", // Empty
@@ -411,8 +393,7 @@ func TestUpdateLogRepoSettings_EmptyID(t *testing.T) {
 
 // TestUpdateLogRepoSettings_NonExistent tests updating non-existent repository
 func TestUpdateLogRepoSettings_NonExistent(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "nonexistent-id",
@@ -430,9 +411,8 @@ func TestUpdateLogRepoSettings_NonExistent(t *testing.T) {
 
 // TestUpdateLogRepoSettings_ApplicationTypeMismatch tests updating with mismatched ApplicationType
 func TestUpdateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create repository with "stb" type
 	repo := &logupload.UploadRepository{
@@ -462,8 +442,7 @@ func TestUpdateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
 
 // TestUpdateLogRepoSettings_ChangeApplicationType tests that ApplicationType cannot be changed
 func TestUpdateLogRepoSettings_ChangeApplicationType(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create repository
 	repo := &logupload.UploadRepository{
@@ -485,9 +464,8 @@ func TestUpdateLogRepoSettings_ChangeApplicationType(t *testing.T) {
 
 // TestUpdateLogRepoSettings_ValidationError tests updating with validation errors
 func TestUpdateLogRepoSettings_ValidationError(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create repository
 	repo := &logupload.UploadRepository{
@@ -509,9 +487,8 @@ func TestUpdateLogRepoSettings_ValidationError(t *testing.T) {
 
 // TestUpdateLogRepoSettings_Success tests successful update
 func TestUpdateLogRepoSettings_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create repository
 	repo := &logupload.UploadRepository{
@@ -540,8 +517,7 @@ func TestUpdateLogRepoSettings_Success(t *testing.T) {
 
 // TestDeleteLogRepoSettingsbyId_NonExistent tests deleting non-existent repository
 func TestDeleteLogRepoSettingsbyId_NonExistent(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	respEntity := DeleteLogRepoSettingsbyId(db.GetDefaultTenantId(), "nonexistent-id", "stb")
 
@@ -551,8 +527,7 @@ func TestDeleteLogRepoSettingsbyId_NonExistent(t *testing.T) {
 
 // TestDeleteLogRepoSettingsbyId_ApplicationTypeMismatch tests deleting with mismatched ApplicationType
 func TestDeleteLogRepoSettingsbyId_ApplicationTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create repository with "stb" type
 	repo := &logupload.UploadRepository{
@@ -573,8 +548,7 @@ func TestDeleteLogRepoSettingsbyId_ApplicationTypeMismatch(t *testing.T) {
 
 // TestDeleteLogRepoSettingsbyId_InUse tests deleting repository that's in use
 func TestDeleteLogRepoSettingsbyId_InUse(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create repository
 	repo := &logupload.UploadRepository{
@@ -600,9 +574,8 @@ func TestDeleteLogRepoSettingsbyId_InUse(t *testing.T) {
 
 // TestDeleteLogRepoSettingsbyId_Success tests successful deletion
 func TestDeleteLogRepoSettingsbyId_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Use unique ID to avoid test collisions
 	uniqueID := "delete-me-" + uuid.New().String()[:8]
@@ -768,8 +741,7 @@ func TestLogRepoSettingsGeneratePageWithContext_Success(t *testing.T) {
 
 // TestLogRepoSettingsFilterByContext_EmptyContext tests filtering with empty context
 func TestLogRepoSettingsFilterByContext_EmptyContext(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create some repositories
 	repos := []*logupload.UploadRepository{
@@ -804,8 +776,7 @@ func TestLogRepoSettingsFilterByContext_EmptyContext(t *testing.T) {
 
 // TestLogRepoSettingsFilterByContext_FilterByApplicationType tests filtering by application type
 func TestLogRepoSettingsFilterByContext_FilterByApplicationType(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create repositories with different application types
 	repos := []*logupload.UploadRepository{
@@ -850,9 +821,8 @@ func TestLogRepoSettingsFilterByContext_FilterByApplicationType(t *testing.T) {
 
 // TestLogRepoSettingsFilterByContext_FilterByName tests filtering by name
 func TestLogRepoSettingsFilterByContext_FilterByName(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create repositories with different names
 	repos := []*logupload.UploadRepository{
@@ -898,8 +868,7 @@ func TestLogRepoSettingsFilterByContext_FilterByName(t *testing.T) {
 
 // TestLogRepoSettingsFilterByContext_NoMatches tests filtering with no matches
 func TestLogRepoSettingsFilterByContext_NoMatches(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create repository
 	repo := &logupload.UploadRepository{

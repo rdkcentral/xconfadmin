@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
@@ -122,8 +123,8 @@ func TestDcmTestPageHandler_SuccessWithMatchingRules(t *testing.T) {
 	}
 
 	// Store in database - DeviceSettings uses same ID as formula for association
-	_ = setOneInDao(db.TABLE_DCM_RULES, formula.ID, formula)
-	_ = setOneInDao(db.TABLE_DEVICE_SETTINGS, deviceSettings.ID, deviceSettings)
+	_ = xshared.SetOneInDao(db.TABLE_DCM_RULES, formula.ID, formula)
+	_ = xshared.SetOneInDao(db.TABLE_DEVICE_SETTINGS, deviceSettings.ID, deviceSettings)
 
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/dcm/testpage?applicationType=stb", nil)
 	// Provide context that will match our rule
