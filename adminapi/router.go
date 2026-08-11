@@ -424,36 +424,8 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	actMinVerPath.HandleFunc("/{id}", queries.GetAmvByIdHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	paths = append(paths, actMinVerPath)
 
-	// setting/profile
-	settingProfilePath := r.PathPrefix("/xconfAdminService/setting/profile").Subrouter()
-	settingProfilePath.HandleFunc("", setting.CreateSettingProfileHandler).Methods("POST").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("/entities", setting.CreateSettingProfilesPackageHandler).Methods("POST").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("", setting.UpdateSettingProfilesHandler).Methods("PUT").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("/entities", setting.UpdateSettingProfilesPackageHandler).Methods("PUT").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("", setting.GetSettingProfilesAllExport).Methods("GET").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("/{id}", setting.GetSettingProfileOneExport).Methods("GET").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("/filtered", setting.GetSettingProfilesFilteredWithPage).Methods("POST").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("/{id}", setting.DeleteOneSettingProfilesHandler).Methods("DELETE").Name("Settings-Profiles")
-	paths = append(paths, settingProfilePath)
-
-	// setting/rule
-	settingRulePath := r.PathPrefix("/xconfAdminService/setting/rule").Subrouter()
-	settingRulePath.HandleFunc("", setting.CreateSettingRuleHandler).Methods("POST").Name("Settings-Rules")
-	settingRulePath.HandleFunc("/entities", setting.CreateSettingRulesPackageHandler).Methods("POST").Name("Settings-Rules")
-	settingRulePath.HandleFunc("", setting.UpdateSettingRulesHandler).Methods("PUT").Name("Settings-Rules")
-	settingRulePath.HandleFunc("/entities", setting.UpdateSettingRulesPackageHandler).Methods("PUT").Name("Settings-Rules")
-	settingRulePath.HandleFunc("", setting.GetSettingRulesAllExport).Methods("GET").Name("Settings-Rules")
-	settingRulePath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Settings-Rules")
-	settingRulePath.HandleFunc("/{id}", setting.GetSettingRuleOneExport).Methods("GET").Name("Settings-Rules")
-	settingRulePath.HandleFunc("/filtered", setting.GetSettingRulesFilteredWithPage).Methods("POST").Name("Settings-Rules")
-	settingRulePath.HandleFunc("/{id}", setting.DeleteOneSettingRulesHandler).Methods("DELETE").Name("Settings-Rules")
-	paths = append(paths, settingRulePath)
-
-	// settings/testpage
-	settingTestpagePath := r.PathPrefix("/xconfAdminService/settings/testpage").Subrouter()
-	settingTestpagePath.HandleFunc("", setting.SettingTestPageHandler).Methods("POST").Name("Settings-TestPage")
-	paths = append(paths, settingTestpagePath)
+	// setting/profile setting/rule settings/testpage
+	paths = setting.RegisterSettingsRoutes(r, paths)
 
 	// featurerule
 	featureRulePath := r.PathPrefix("/xconfAdminService/featurerule").Subrouter()
