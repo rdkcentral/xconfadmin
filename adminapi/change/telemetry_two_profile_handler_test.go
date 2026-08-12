@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -30,81 +29,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	xadmin_logupload "github.com/rdkcentral/xconfadmin/shared/logupload"
-	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	"github.com/rdkcentral/xconfwebconfig/dataapi"
-	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
-
-	"github.com/rdkcentral/xconfadmin/adminapi/auth"
-	oshttp "github.com/rdkcentral/xconfadmin/http"
-)
-
-var (
-	t2Server *oshttp.WebconfigServer
-	t2Router *mux.Router
 )
 
 // Full valid telemetry two profile JSON (mirrors telemetry package tests) including grep parameter, HTTP and JSONEncoding sections
 const telemetryTwoValidJson = "{\n    \"Description\":\"Test Json Data\",\n    \"Version\":\"0.1\",\n    \"Protocol\":\"HTTP\",\n    \"EncodingType\":\"JSON\",\n    \"ReportingInterval\":43200,\n    \"TimeReference\":\"0001-01-01T00:00:00Z\",\n    \"RootName\":\"root\",\n    \"Parameter\":\n        [\n            { \"type\": \"dataModel\", \"reference\": \"Profile.Name\"}, \n            { \"type\": \"dataModel\", \"reference\": \"Profile.Version\"},\n            { \"type\": \"grep\", \"marker\": \"Marker1\", \"search\":\"restart 'lock to rescue CMTS retry' timer\", \"logFile\":\"cmconsole.log\" }\n        ],\n    \"HTTP\": {\n        \"URL\":\"https://test.net\",\n        \"Compression\":\"None\",\n        \"Method\":\"POST\",\n        \"RequestURIParameter\": [\n            {\"Name\":\"profileName\", \"Reference\":\"Profile.Name\" },\n            {\"Name\":\"reportVersion\", \"Reference\":\"Profile.Version\" }\n        ]\n    },\n    \"JSONEncoding\": {\n        \"ReportFormat\":\"NameValuePair\",\n        \"ReportTimestamp\": \"None\"\n    }\n}"
-
-// Use different name to avoid collision with existing TestMain in change package
-func init() {
-	// Set required environment variables before server initialization
-	os.Setenv("SECURITY_TOKEN_KEY", "testSecurityTokenKey")
-	os.Setenv("XPC_KEY", "testXpcKey")
-	os.Setenv("SAT_CLIENT_ID", "test-sat-client")
-	os.Setenv("SAT_CLIENT_SECRET", "test-sat-secret")
-	os.Setenv("IDP_CLIENT_ID", "test-idp-client")
-	os.Setenv("IDP_CLIENT_SECRET", "test-idp-secret")
-
-	cfgFile := "../config/sample_xconfadmin.conf"
-	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		cfgFile = "../../config/sample_xconfadmin.conf"
-	}
-	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		cfgFile = "../../../config/sample_xconfadmin.conf"
-	}
-	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		return
-	}
-	if t2Server != nil {
-		return
-	}
-	sc, err := xwcommon.NewServerConfig(cfgFile)
-	if err != nil {
-		return
-	}
-	t2Server = oshttp.NewWebconfigServer(sc, true, nil, nil)
-	xwhttp.InitSatTokenManager(t2Server.XW_XconfServer)
-	db.SetDatabaseClient(t2Server.XW_XconfServer.DatabaseClient)
-	t2Router = t2Server.XW_XconfServer.GetRouter(false)
-	dataapi.XconfSetup(t2Server.XW_XconfServer, t2Router)
-	auth.WebServerInjection(t2Server)
-	dataapi.RegisterTables()
-	setupTelemetryTwoRoutes(t2Router)
-	_ = t2Server.XW_XconfServer.SetUp()
-}
-
-func setupTelemetryTwoRoutes(r *mux.Router) {
-	p := r.PathPrefix("/xconfAdminService/telemetry/v2/profile").Subrouter()
-	p.HandleFunc("", GetTelemetryTwoProfilesHandler).Methods("GET")
-	p.HandleFunc("/{id}", GetTelemetryTwoProfileByIdHandler).Methods("GET")
-	p.HandleFunc("", CreateTelemetryTwoProfileHandler).Methods("POST")
-	p.HandleFunc("", UpdateTelemetryTwoProfileHandler).Methods("PUT")
-	p.HandleFunc("/{id}", DeleteTelemetryTwoProfileHandler).Methods("DELETE")
-	// change endpoints
-	p.HandleFunc("/change", CreateTelemetryTwoProfileChangeHandler).Methods("POST")
-	p.HandleFunc("/change", UpdateTelemetryTwoProfileChangeHandler).Methods("PUT")
-	p.HandleFunc("/change/{id}", DeleteTelemetryTwoProfileChangeHandler).Methods("DELETE")
-	// batch + filtered + id list
-	p.HandleFunc("/entities", PostTelemetryTwoProfileEntitiesHandler).Methods("POST")
-	p.HandleFunc("/entities", PutTelemetryTwoProfileEntitiesHandler).Methods("PUT")
-	p.HandleFunc("/filtered", PostTelemetryTwoProfileFilteredHandler).Methods("POST")
-	p.HandleFunc("/byIdList", PostTelemetryTwoProfilesByIdListHandler).Methods("POST")
-	// test page handler
-	r.HandleFunc("/xconfAdminService/telemetry/v2/testpage", TelemetryTwoTestPageHandler).Methods("POST")
-}
 
 // exec helper
 func execTelemetryTwoReq(r *http.Request, body []byte) *httptest.ResponseRecorder {
@@ -113,7 +43,7 @@ func execTelemetryTwoReq(r *http.Request, body []byte) *httptest.ResponseRecorde
 	if body != nil {
 		xw.SetBody(string(body))
 	}
-	t2Router.ServeHTTP(xw, r)
+	chgRouter.ServeHTTP(xw, r)
 	return rr
 }
 

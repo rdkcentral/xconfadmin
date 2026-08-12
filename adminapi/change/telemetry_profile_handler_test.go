@@ -5,28 +5,21 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
-	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	"github.com/rdkcentral/xconfwebconfig/dataapi"
-	"github.com/rdkcentral/xconfwebconfig/db"
-	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
-
-	"github.com/rdkcentral/xconfadmin/adminapi/auth"
-	oshttp "github.com/rdkcentral/xconfadmin/http"
 	xchange "github.com/rdkcentral/xconfadmin/shared/change"
 	xlogupload "github.com/rdkcentral/xconfadmin/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	corelogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
 // --- moved new test functions here ---
 func TestGetTelemetryProfileByIdHandler_MissingId(t *testing.T) {
-	initTelemetryTestEnv()
 	// Call handler directly with request lacking path variable so mux.Vars empty -> 400
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/profile/?applicationType=stb", nil)
 	wr := httptest.NewRecorder()
@@ -37,7 +30,6 @@ func TestGetTelemetryProfileByIdHandler_MissingId(t *testing.T) {
 }
 
 func TestGetTelemetryProfileByIdHandler_NotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/profile/notfoundid?applicationType=stb", nil)
 	rr := execTPReq(r, nil)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
@@ -45,7 +37,6 @@ func TestGetTelemetryProfileByIdHandler_NotFound(t *testing.T) {
 }
 
 func TestGetTelemetryProfileByIdHandler_ExportBranch(t *testing.T) {
-	initTelemetryTestEnv()
 	profile := newSampleProfile("exportProf")
 	b, _ := json.Marshal(profile)
 	// create profile
@@ -62,7 +53,6 @@ func TestGetTelemetryProfileByIdHandler_ExportBranch(t *testing.T) {
 }
 
 func TestGetTelemetryProfilesHandler_ExportBranch(t *testing.T) {
-	initTelemetryTestEnv()
 	// create two profiles
 	p1 := newSampleProfile("expA")
 	p2 := newSampleProfile("expB")
@@ -82,7 +72,6 @@ func TestGetTelemetryProfilesHandler_ExportBranch(t *testing.T) {
 
 // Previously attempted permission error test; dev profile grants permissions so creation succeeds even without applicationType.
 func TestCreateTelemetryProfileChangeHandler_NoApplicationTypeFallback(t *testing.T) {
-	initTelemetryTestEnv()
 	profile := newSampleProfile("noPermFallback")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/change", bytes.NewReader(b))
@@ -92,7 +81,6 @@ func TestCreateTelemetryProfileChangeHandler_NoApplicationTypeFallback(t *testin
 }
 
 func TestUpdateTelemetryProfileChangeHandler_PermissionError(t *testing.T) {
-	initTelemetryTestEnv()
 	profile := newSampleProfile("noPermUpdate")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change", bytes.NewReader(b))
@@ -104,28 +92,24 @@ func TestUpdateTelemetryProfileChangeHandler_PermissionError(t *testing.T) {
 }
 
 func TestBatchPostTelemetryProfileEntitiesHandler_BadJSON(t *testing.T) {
-	initTelemetryTestEnv()
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/entities?applicationType=stb", bytes.NewReader([]byte("notjson")))
 	rr := execTPReq(r, []byte("notjson"))
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestBatchPutTelemetryProfileEntitiesHandler_BadJSON(t *testing.T) {
-	initTelemetryTestEnv()
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entities?applicationType=stb", bytes.NewReader([]byte("notjson")))
 	rr := execTPReq(r, []byte("notjson"))
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestPostTelemetryProfileFilteredHandler_BadJSON(t *testing.T) {
-	initTelemetryTestEnv()
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?applicationType=stb", bytes.NewReader([]byte("notjson")))
 	rr := execTPReq(r, []byte("notjson"))
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestPostTelemetryProfileFilteredHandler_InvalidPageParams(t *testing.T) {
-	initTelemetryTestEnv()
 	// page and pageSize invalid
 	filter := map[string]interface{}{"pageNumber": -1, "pageSize": 0}
 	b, _ := json.Marshal(filter)
@@ -136,97 +120,11 @@ func TestPostTelemetryProfileFilteredHandler_InvalidPageParams(t *testing.T) {
 }
 
 func TestPostTelemetryProfileFilteredHandler_InvalidPageSize(t *testing.T) {
-	initTelemetryTestEnv()
 	// valid pageNumber but invalid pageSize=0 via query params
 	body := []byte(`{"profileName":"abc"}`)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=1&pageSize=0&applicationType=stb", bytes.NewReader(body))
 	rr := execTPReq(r, body)
 	assert.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
-}
-
-// Reuse server initialization similar to change_handler_test.go but include telemetry profile routes
-var (
-	tpServer *oshttp.WebconfigServer
-	tpRouter *mux.Router
-)
-
-// initialization helper (called lazily); cannot have second TestMain
-func initTelemetryTestEnv() {
-	if tpServer != nil { // already initialized
-		return
-	}
-	cfgFile := "../config/sample_xconfadmin.conf"
-	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		cfgFile = "../../config/sample_xconfadmin.conf"
-	}
-	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		cfgFile = "../../../config/sample_xconfadmin.conf"
-	}
-	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		panic(err)
-	}
-	os.Setenv("SECURITY_TOKEN_KEY", "telemetryUTKey")
-	os.Setenv("SAT_CLIENT_ID", "foo")
-	os.Setenv("SAT_CLIENT_SECRET", "bar")
-	os.Setenv("IDP_CLIENT_ID", "foo")
-	os.Setenv("IDP_CLIENT_SECRET", "bar")
-
-	sc, err := xwcommon.NewServerConfig(cfgFile)
-	if err != nil {
-		panic(err)
-	}
-	tpServer = oshttp.NewWebconfigServer(sc, true, nil, nil)
-	xwhttp.InitSatTokenManager(tpServer.XW_XconfServer)
-	db.SetDatabaseClient(tpServer.XW_XconfServer.DatabaseClient)
-	tpRouter = tpServer.XW_XconfServer.GetRouter(false)
-	dataapi.XconfSetup(tpServer.XW_XconfServer, tpRouter)
-	auth.WebServerInjection(tpServer)
-	dataapi.RegisterTables()
-	setupTelemetryProfileRoutes(tpRouter)
-	if err = tpServer.XW_XconfServer.SetUp(); err != nil {
-		panic(err)
-	}
-	if err = tpServer.XW_XconfServer.TearDown(); err != nil {
-		panic(err)
-	}
-}
-
-func setupTelemetryProfileRoutes(r *mux.Router) {
-	telemetryProfilePath := r.PathPrefix("/xconfAdminService/telemetry/profile").Subrouter()
-	telemetryProfilePath.HandleFunc("", GetTelemetryProfilesHandler).Methods("GET")
-	telemetryProfilePath.HandleFunc("", CreateTelemetryProfileHandler).Methods("POST")
-	telemetryProfilePath.HandleFunc("", UpdateTelemetryProfileHandler).Methods("PUT")
-	telemetryProfilePath.HandleFunc("/change", CreateTelemetryProfileChangeHandler).Methods("POST")
-	telemetryProfilePath.HandleFunc("/change", UpdateTelemetryProfileChangeHandler).Methods("PUT")
-	telemetryProfilePath.HandleFunc("/{id}", DeleteTelemetryProfileHandler).Methods("DELETE")
-	telemetryProfilePath.HandleFunc("/change/{id}", DeleteTelemetryProfileChangeHandler).Methods("DELETE")
-	telemetryProfilePath.HandleFunc("/{id}", GetTelemetryProfileByIdHandler).Methods("GET")
-	telemetryProfilePath.HandleFunc("/entities", PostTelemetryProfileEntitiesHandler).Methods("POST")
-	telemetryProfilePath.HandleFunc("/entities", PutTelemetryProfileEntitiesHandler).Methods("PUT")
-	telemetryProfilePath.HandleFunc("/filtered", PostTelemetryProfileFilteredHandler).Methods("POST")
-	telemetryProfilePath.HandleFunc("/migrate/createTelemetryId", CreateTelemetryIdsHandler).Methods("GET")
-	telemetryProfilePath.HandleFunc("/entry/add/{id}", AddTelemetryProfileEntryHandler).Methods("PUT")
-	telemetryProfilePath.HandleFunc("/entry/remove/{id}", RemoveTelemetryProfileEntryHandler).Methods("PUT")
-	telemetryProfilePath.HandleFunc("/change/entry/add/{id}", AddTelemetryProfileEntryChangeHandler).Methods("PUT")
-	telemetryProfilePath.HandleFunc("/change/entry/remove/{id}", RemoveTelemetryProfileEntryChangeHandler).Methods("PUT")
-
-	// telemetry/profile
-	telemetryProfilePath.HandleFunc("", GetTelemetryProfilesHandler).Methods("GET").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("", CreateTelemetryProfileHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("", UpdateTelemetryProfileHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change", CreateTelemetryProfileChangeHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change", UpdateTelemetryProfileChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/{id}", DeleteTelemetryProfileHandler).Methods("DELETE").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change/{id}", DeleteTelemetryProfileChangeHandler).Methods("DELETE").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/{id}", GetTelemetryProfileByIdHandler).Methods("GET").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/entities", PostTelemetryProfileEntitiesHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/entities", PutTelemetryProfileEntitiesHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/filtered", PostTelemetryProfileFilteredHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/migrate/createTelemetryId", CreateTelemetryIdsHandler).Methods("GET").Name("Telemetry1-Profiles") //can be removed
-	telemetryProfilePath.HandleFunc("/entry/add/{id}", AddTelemetryProfileEntryHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/entry/remove/{id}", RemoveTelemetryProfileEntryHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change/entry/add/{id}", AddTelemetryProfileEntryChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change/entry/remove/{id}", RemoveTelemetryProfileEntryChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
 }
 
 // helper exec
@@ -236,7 +134,7 @@ func execTPReq(r *http.Request, body []byte) *httptest.ResponseRecorder {
 	if body != nil {
 		xw.SetBody(string(body))
 	}
-	tpRouter.ServeHTTP(xw, r)
+	chgRouter.ServeHTTP(xw, r)
 	return rr
 }
 
@@ -253,7 +151,6 @@ func newSampleProfile(name string) *corelogupload.PermanentTelemetryProfile {
 }
 
 func TestCreateTelemetryProfileHandlerAndFetchById(t *testing.T) {
-	initTelemetryTestEnv()
 	profile := newSampleProfile("profA")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
@@ -276,7 +173,6 @@ func TestCreateTelemetryProfileHandlerAndFetchById(t *testing.T) {
 }
 
 func TestCreateTelemetryProfileChangeHandler(t *testing.T) {
-	initTelemetryTestEnv()
 	profile := newSampleProfile("changeProf")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/change?applicationType=stb", bytes.NewReader(b))
@@ -288,7 +184,6 @@ func TestCreateTelemetryProfileChangeHandler(t *testing.T) {
 }
 
 func TestUpdateTelemetryProfileHandler(t *testing.T) {
-	initTelemetryTestEnv()
 	// first create
 	profile := newSampleProfile("toUpdate")
 	b, _ := json.Marshal(profile)
@@ -309,7 +204,6 @@ func TestUpdateTelemetryProfileHandler(t *testing.T) {
 }
 
 func TestDeleteTelemetryProfileHandlerValidation(t *testing.T) {
-	initTelemetryTestEnv()
 	// delete non-existing should 404
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/notFound?applicationType=stb", nil)
 	rr := execTPReq(r, nil)
@@ -317,7 +211,6 @@ func TestDeleteTelemetryProfileHandlerValidation(t *testing.T) {
 }
 
 func TestBatchPostTelemetryProfileEntitiesHandler(t *testing.T) {
-	initTelemetryTestEnv()
 	// create two profiles in batch (changes)
 	prof1 := newSampleProfile("batchA")
 	prof2 := newSampleProfile("batchB")
@@ -334,7 +227,6 @@ func TestBatchPostTelemetryProfileEntitiesHandler(t *testing.T) {
 }
 
 func TestBatchPutTelemetryProfileEntitiesHandler(t *testing.T) {
-	initTelemetryTestEnv()
 	// first create a permanent profile
 	profile := newSampleProfile("permForBatchUpdate")
 	b, _ := json.Marshal(profile)
@@ -352,7 +244,6 @@ func TestBatchPutTelemetryProfileEntitiesHandler(t *testing.T) {
 }
 
 func TestPostTelemetryProfileFilteredHandlerPaginationErrors(t *testing.T) {
-	initTelemetryTestEnv()
 	body := []byte("{}")
 	// missing pageNumber
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageSize=5&applicationType=stb", bytes.NewReader(body))
@@ -365,7 +256,6 @@ func TestPostTelemetryProfileFilteredHandlerPaginationErrors(t *testing.T) {
 }
 
 func TestAddAndRemoveTelemetryProfileEntryHandlers(t *testing.T) {
-	initTelemetryTestEnv()
 	// create profile
 	profile := newSampleProfile("entryProf")
 	b, _ := json.Marshal(profile)
@@ -393,7 +283,6 @@ func TestAddAndRemoveTelemetryProfileEntryHandlers(t *testing.T) {
 }
 
 func TestCreateTelemetryIdsHandler(t *testing.T) {
-	initTelemetryTestEnv()
 	// create two profiles first so IDs are normalized and then migrated
 	for _, nm := range []string{"migrate1", "migrate2"} {
 		p := newSampleProfile(nm)
@@ -407,7 +296,6 @@ func TestCreateTelemetryIdsHandler(t *testing.T) {
 }
 
 func TestTelemetryProfilesExportFlag(t *testing.T) {
-	initTelemetryTestEnv()
 	// create profile
 	profile := newSampleProfile("exportable")
 	b, _ := json.Marshal(profile)
@@ -427,7 +315,6 @@ func TestTelemetryProfilesExportFlag(t *testing.T) {
 }
 
 func TestTelemetryProfileHandlerTimeoutSafety(t *testing.T) {
-	initTelemetryTestEnv()
 	for i := 0; i < 3; i++ {
 		r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/profile?applicationType=stb", nil)
 		_ = execTPReq(r, nil)
@@ -439,7 +326,6 @@ func TestTelemetryProfileHandlerTimeoutSafety(t *testing.T) {
 // ========== Tests for DeleteTelemetryProfileChangeHandler ==========
 
 func TestDeleteTelemetryProfileChangeHandler_Success(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile first
 	profile := newSampleProfile("profileToDeleteChange")
 	b, _ := json.Marshal(profile)
@@ -468,7 +354,6 @@ func TestDeleteTelemetryProfileChangeHandler_Success(t *testing.T) {
 }
 
 func TestDeleteTelemetryProfileChangeHandler_MissingId(t *testing.T) {
-	initTelemetryTestEnv()
 	// Request without ID in path
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/change/?applicationType=stb", nil)
 	wr := httptest.NewRecorder()
@@ -479,7 +364,6 @@ func TestDeleteTelemetryProfileChangeHandler_MissingId(t *testing.T) {
 }
 
 func TestDeleteTelemetryProfileChangeHandler_EmptyId(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a dummy request with path variables manually set to blank
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/change/%20?applicationType=stb", nil)
 	// Manually set mux vars to simulate empty ID
@@ -492,7 +376,6 @@ func TestDeleteTelemetryProfileChangeHandler_EmptyId(t *testing.T) {
 }
 
 func TestDeleteTelemetryProfileChangeHandler_ProfileNotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	// Try to delete non-existent profile
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/change/nonexistent-id-123?applicationType=stb", nil)
 	rr := execTPReq(r, nil)
@@ -501,7 +384,6 @@ func TestDeleteTelemetryProfileChangeHandler_ProfileNotFound(t *testing.T) {
 }
 
 func TestDeleteTelemetryProfileChangeHandler_ErrorResponse(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile
 	profile := newSampleProfile("profileErrorTest")
 	b, _ := json.Marshal(profile)
@@ -528,7 +410,6 @@ func TestDeleteTelemetryProfileChangeHandler_ErrorResponse(t *testing.T) {
 // ========== Tests for PostTelemetryProfileFilteredHandler ==========
 
 func TestPostTelemetryProfileFilteredHandler_Success(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create test profiles
 	p1 := newSampleProfile("FilterTest1")
 	p2 := newSampleProfile("FilterTest2")
@@ -572,7 +453,6 @@ func TestPostTelemetryProfileFilteredHandler_Success(t *testing.T) {
 }
 
 func TestPostTelemetryProfileFilteredHandler_MissingPageNumber(t *testing.T) {
-	initTelemetryTestEnv()
 	body := []byte("{}")
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageSize=10&applicationType=stb", bytes.NewReader(body))
 	rr := execTPReq(r, body)
@@ -581,7 +461,6 @@ func TestPostTelemetryProfileFilteredHandler_MissingPageNumber(t *testing.T) {
 }
 
 func TestPostTelemetryProfileFilteredHandler_MissingPageSize(t *testing.T) {
-	initTelemetryTestEnv()
 	body := []byte("{}")
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=1&applicationType=stb", bytes.NewReader(body))
 	rr := execTPReq(r, body)
@@ -590,7 +469,6 @@ func TestPostTelemetryProfileFilteredHandler_MissingPageSize(t *testing.T) {
 }
 
 func TestPostTelemetryProfileFilteredHandler_InvalidPageNumber(t *testing.T) {
-	initTelemetryTestEnv()
 	body := []byte("{}")
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=0&pageSize=10&applicationType=stb", bytes.NewReader(body))
 	rr := execTPReq(r, body)
@@ -599,7 +477,6 @@ func TestPostTelemetryProfileFilteredHandler_InvalidPageNumber(t *testing.T) {
 }
 
 func TestPostTelemetryProfileFilteredHandler_InvalidPageNumberNonNumeric(t *testing.T) {
-	initTelemetryTestEnv()
 	body := []byte("{}")
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=abc&pageSize=10&applicationType=stb", bytes.NewReader(body))
 	rr := execTPReq(r, body)
@@ -608,7 +485,6 @@ func TestPostTelemetryProfileFilteredHandler_InvalidPageNumberNonNumeric(t *test
 }
 
 func TestPostTelemetryProfileFilteredHandler_InvalidPageSizeZero(t *testing.T) {
-	initTelemetryTestEnv()
 	body := []byte("{}")
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=1&pageSize=0&applicationType=stb", bytes.NewReader(body))
 	rr := execTPReq(r, body)
@@ -617,7 +493,6 @@ func TestPostTelemetryProfileFilteredHandler_InvalidPageSizeZero(t *testing.T) {
 }
 
 func TestPostTelemetryProfileFilteredHandler_InvalidJSON(t *testing.T) {
-	initTelemetryTestEnv()
 	body := []byte("invalid json")
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=1&pageSize=10&applicationType=stb", bytes.NewReader(body))
 	rr := execTPReq(r, body)
@@ -625,7 +500,6 @@ func TestPostTelemetryProfileFilteredHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestPostTelemetryProfileFilteredHandler_WithNameFilter(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create profiles with specific names
 	p1 := newSampleProfile("SpecialFilterName")
 	b1, _ := json.Marshal(p1)
@@ -650,7 +524,6 @@ func TestPostTelemetryProfileFilteredHandler_WithNameFilter(t *testing.T) {
 }
 
 func TestPostTelemetryProfileFilteredHandler_EmptyBody(t *testing.T) {
-	initTelemetryTestEnv()
 	// Empty body should work with just query params
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=1&pageSize=5&applicationType=stb", bytes.NewReader([]byte("")))
 	rr := execTPReq(r, []byte(""))
@@ -660,7 +533,6 @@ func TestPostTelemetryProfileFilteredHandler_EmptyBody(t *testing.T) {
 // ========== Tests for AddTelemetryProfileEntryChangeHandler ==========
 
 func TestAddTelemetryProfileEntryChangeHandler_Success(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile first
 	profile := newSampleProfile("addEntryChangeTest")
 	b, _ := json.Marshal(profile)
@@ -696,7 +568,6 @@ func TestAddTelemetryProfileEntryChangeHandler_Success(t *testing.T) {
 }
 
 func TestAddTelemetryProfileEntryChangeHandler_MissingId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/add/?applicationType=stb", bytes.NewReader(eb))
@@ -709,7 +580,6 @@ func TestAddTelemetryProfileEntryChangeHandler_MissingId(t *testing.T) {
 }
 
 func TestAddTelemetryProfileEntryChangeHandler_EmptyId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/add/%20?applicationType=stb", bytes.NewReader(eb))
@@ -723,7 +593,6 @@ func TestAddTelemetryProfileEntryChangeHandler_EmptyId(t *testing.T) {
 }
 
 func TestAddTelemetryProfileEntryChangeHandler_ProfileNotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/add/nonexistent-id?applicationType=stb", bytes.NewReader(eb))
@@ -733,7 +602,6 @@ func TestAddTelemetryProfileEntryChangeHandler_ProfileNotFound(t *testing.T) {
 }
 
 func TestAddTelemetryProfileEntryChangeHandler_InvalidJSON(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile
 	profile := newSampleProfile("invalidJSONAddEntry")
 	b, _ := json.Marshal(profile)
@@ -753,7 +621,6 @@ func TestAddTelemetryProfileEntryChangeHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestAddTelemetryProfileEntryChangeHandler_DuplicateEntry(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile with an entry
 	profile := newSampleProfile("duplicateEntryTest")
 	b, _ := json.Marshal(profile)
@@ -776,7 +643,6 @@ func TestAddTelemetryProfileEntryChangeHandler_DuplicateEntry(t *testing.T) {
 }
 
 func TestAddTelemetryProfileEntryChangeHandler_MultipleEntries(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile
 	profile := newSampleProfile("multipleEntriesTest")
 	b, _ := json.Marshal(profile)
@@ -807,7 +673,6 @@ func TestAddTelemetryProfileEntryChangeHandler_MultipleEntries(t *testing.T) {
 // ========== Tests for RemoveTelemetryProfileEntryHandler ==========
 
 func TestRemoveTelemetryProfileEntryHandler_Success(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile with multiple entries
 	profile := newSampleProfile("removeEntryTest")
 	profile.TelemetryProfile = append(profile.TelemetryProfile, corelogupload.TelemetryElement{
@@ -842,7 +707,6 @@ func TestRemoveTelemetryProfileEntryHandler_Success(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryHandler_MissingId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/remove/?applicationType=stb", bytes.NewReader(eb))
@@ -855,7 +719,6 @@ func TestRemoveTelemetryProfileEntryHandler_MissingId(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryHandler_EmptyId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/remove/%20?applicationType=stb", bytes.NewReader(eb))
@@ -869,7 +732,6 @@ func TestRemoveTelemetryProfileEntryHandler_EmptyId(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryHandler_ProfileNotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/remove/nonexistent-id?applicationType=stb", bytes.NewReader(eb))
@@ -879,7 +741,6 @@ func TestRemoveTelemetryProfileEntryHandler_ProfileNotFound(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryHandler_InvalidJSON(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile
 	profile := newSampleProfile("invalidJSONRemoveEntry")
 	b, _ := json.Marshal(profile)
@@ -899,7 +760,6 @@ func TestRemoveTelemetryProfileEntryHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryHandler_EntryNotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile
 	profile := newSampleProfile("removeNonExistentEntry")
 	b, _ := json.Marshal(profile)
@@ -927,7 +787,6 @@ func TestRemoveTelemetryProfileEntryHandler_EntryNotFound(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryHandler_MultipleEntries(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile with multiple entries
 	profile := newSampleProfile("removeMultipleEntries")
 	profile.TelemetryProfile = append(profile.TelemetryProfile,
@@ -961,7 +820,6 @@ func TestRemoveTelemetryProfileEntryHandler_MultipleEntries(t *testing.T) {
 // ========== Tests for RemoveTelemetryProfileEntryChangeHandler ==========
 
 func TestRemoveTelemetryProfileEntryChangeHandler_Success(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile with multiple entries
 	profile := newSampleProfile("removeEntryChangeTest")
 	profile.TelemetryProfile = append(profile.TelemetryProfile, corelogupload.TelemetryElement{
@@ -1000,7 +858,6 @@ func TestRemoveTelemetryProfileEntryChangeHandler_Success(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryChangeHandler_MissingId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/remove/?applicationType=stb", bytes.NewReader(eb))
@@ -1013,7 +870,6 @@ func TestRemoveTelemetryProfileEntryChangeHandler_MissingId(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryChangeHandler_EmptyId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/remove/%20?applicationType=stb", bytes.NewReader(eb))
@@ -1027,7 +883,6 @@ func TestRemoveTelemetryProfileEntryChangeHandler_EmptyId(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryChangeHandler_ProfileNotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/remove/nonexistent-id?applicationType=stb", bytes.NewReader(eb))
@@ -1037,7 +892,6 @@ func TestRemoveTelemetryProfileEntryChangeHandler_ProfileNotFound(t *testing.T) 
 }
 
 func TestRemoveTelemetryProfileEntryChangeHandler_InvalidJSON(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile
 	profile := newSampleProfile("invalidJSONRemoveEntryChange")
 	b, _ := json.Marshal(profile)
@@ -1057,7 +911,6 @@ func TestRemoveTelemetryProfileEntryChangeHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryChangeHandler_EntryNotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile
 	profile := newSampleProfile("removeNonExistentEntryChange")
 	b, _ := json.Marshal(profile)
@@ -1085,7 +938,6 @@ func TestRemoveTelemetryProfileEntryChangeHandler_EntryNotFound(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryChangeHandler_MultipleEntries(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile with multiple entries
 	profile := newSampleProfile("removeMultipleEntriesChange")
 	profile.TelemetryProfile = append(profile.TelemetryProfile,
@@ -1121,7 +973,6 @@ func TestRemoveTelemetryProfileEntryChangeHandler_MultipleEntries(t *testing.T) 
 // ========== Tests for DeleteTelemetryProfileHandler ==========
 
 func TestDeleteTelemetryProfileHandler_Success(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile first
 	profile := newSampleProfile("profileToDelete")
 	b, _ := json.Marshal(profile)
@@ -1143,7 +994,6 @@ func TestDeleteTelemetryProfileHandler_Success(t *testing.T) {
 }
 
 func TestDeleteTelemetryProfileHandler_MissingId(t *testing.T) {
-	initTelemetryTestEnv()
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/?applicationType=stb", nil)
 	wr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(wr)
@@ -1153,7 +1003,6 @@ func TestDeleteTelemetryProfileHandler_MissingId(t *testing.T) {
 }
 
 func TestDeleteTelemetryProfileHandler_EmptyId(t *testing.T) {
-	initTelemetryTestEnv()
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/%20?applicationType=stb", nil)
 	r = mux.SetURLVars(r, map[string]string{"id": " "})
 	wr := httptest.NewRecorder()
@@ -1164,7 +1013,6 @@ func TestDeleteTelemetryProfileHandler_EmptyId(t *testing.T) {
 }
 
 func TestDeleteTelemetryProfileHandler_NotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/nonexistent-id-999?applicationType=stb", nil)
 	rr := execTPReq(r, nil)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
@@ -1174,7 +1022,6 @@ func TestDeleteTelemetryProfileHandler_NotFound(t *testing.T) {
 // ========== Tests for AddTelemetryProfileEntryHandler ==========
 
 func TestAddTelemetryProfileEntryHandler_Success(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile first
 	profile := newSampleProfile("addEntryTest")
 	b, _ := json.Marshal(profile)
@@ -1207,7 +1054,6 @@ func TestAddTelemetryProfileEntryHandler_Success(t *testing.T) {
 }
 
 func TestAddTelemetryProfileEntryHandler_MissingId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/add/?applicationType=stb", bytes.NewReader(eb))
@@ -1220,7 +1066,6 @@ func TestAddTelemetryProfileEntryHandler_MissingId(t *testing.T) {
 }
 
 func TestAddTelemetryProfileEntryHandler_EmptyId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/add/%20?applicationType=stb", bytes.NewReader(eb))
@@ -1234,7 +1079,6 @@ func TestAddTelemetryProfileEntryHandler_EmptyId(t *testing.T) {
 }
 
 func TestAddTelemetryProfileEntryHandler_ProfileNotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/add/nonexistent-id?applicationType=stb", bytes.NewReader(eb))
@@ -1244,7 +1088,6 @@ func TestAddTelemetryProfileEntryHandler_ProfileNotFound(t *testing.T) {
 }
 
 func TestAddTelemetryProfileEntryHandler_InvalidJSON(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile
 	profile := newSampleProfile("invalidJSONAddEntryHandler")
 	b, _ := json.Marshal(profile)

@@ -483,6 +483,9 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	// dcm/formula
 	paths = dcm.RegisterDCMRoutes(r, paths)
 
+	// telemetry/profile telemetry/v2/profile /change telemetry/change telemetry/v2/change
+	paths = change.RegisterChangeRoutes(r, paths)
+
 	// telemetry
 	telemetryPath := r.PathPrefix("/xconfAdminService/telemetry").Subrouter()
 	telemetryPath.HandleFunc("/create/{contextAttributeName}/{expectedValue}", telemetry.CreateTelemetryEntryFor).Methods("POST").Name("Telemetry1-Uncategorized")
@@ -493,28 +496,6 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	telemetryPath.HandleFunc("/addTo/{ruleId}/{contextAttributeName}/{expectedValue}/{expires}", telemetry.TempAddToPermanentRule).Methods("POST").Name("Telemetry1-Uncategorized")
 	telemetryPath.HandleFunc("/bindToTelemetry/{telemetryId}/{contextAttributeName}/{expectedValue}/{expires}", telemetry.BindToTelemetry).Methods("POST").Name("Telemetry1-Uncategorized")
 	paths = append(paths, telemetryPath)
-
-	// telemetry/profile
-	telemetryProfilePath := r.PathPrefix("/xconfAdminService/telemetry/profile").Subrouter()
-	telemetryProfilePath.HandleFunc("", change.GetTelemetryProfilesHandler).Methods("GET").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("", change.CreateTelemetryProfileHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("", change.UpdateTelemetryProfileHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change", change.CreateTelemetryProfileChangeHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change", change.UpdateTelemetryProfileChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/{id}", change.DeleteTelemetryProfileHandler).Methods("DELETE").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change/{id}", change.DeleteTelemetryProfileChangeHandler).Methods("DELETE").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/{id}", change.GetTelemetryProfileByIdHandler).Methods("GET").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/entities", change.PostTelemetryProfileEntitiesHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/entities", change.PutTelemetryProfileEntitiesHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/filtered", change.PostTelemetryProfileFilteredHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/migrate/createTelemetryId", change.CreateTelemetryIdsHandler).Methods("GET").Name("Telemetry1-Profiles") //can be removed
-	telemetryProfilePath.HandleFunc("/entry/add/{id}", change.AddTelemetryProfileEntryHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/entry/remove/{id}", change.RemoveTelemetryProfileEntryHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change/entry/add/{id}", change.AddTelemetryProfileEntryChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change/entry/remove/{id}", change.RemoveTelemetryProfileEntryChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
-
-	paths = append(paths, telemetryProfilePath)
 
 	// telemetry/rule
 	telemetryRulePath := r.PathPrefix("/xconfAdminService/telemetry/rule").Subrouter()
@@ -528,23 +509,6 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	telemetryRulePath.HandleFunc("/{id}", telemetry.GetTelemetryRuleByIdHandler).Methods("GET").Name("Telemetry1-Rules")
 	paths = append(paths, telemetryRulePath)
 
-	// telemetry/v2/profile
-	telemetryV2ProfilePath := r.PathPrefix("/xconfAdminService/telemetry/v2/profile").Subrouter()
-	telemetryV2ProfilePath.HandleFunc("", change.GetTelemetryTwoProfilesHandler).Methods("GET").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("", change.CreateTelemetryTwoProfileHandler).Methods("POST").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("", change.UpdateTelemetryTwoProfileHandler).Methods("PUT").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/{id}", change.DeleteTelemetryTwoProfileHandler).Methods("DELETE").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/change", change.CreateTelemetryTwoProfileChangeHandler).Methods("POST").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/change", change.UpdateTelemetryTwoProfileChangeHandler).Methods("PUT").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/change/{id}", change.DeleteTelemetryTwoProfileChangeHandler).Methods("DELETE").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/{id}", change.GetTelemetryTwoProfileByIdHandler).Methods("GET").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/byIdList", change.PostTelemetryTwoProfilesByIdListHandler).Methods("POST").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/entities", change.PostTelemetryTwoProfileEntitiesHandler).Methods("POST").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/entities", change.PutTelemetryTwoProfileEntitiesHandler).Methods("PUT").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/filtered", change.PostTelemetryTwoProfileFilteredHandler).Methods("POST").Name("Telemetry2-Profiles")
-	paths = append(paths, telemetryV2ProfilePath)
-
 	// telemetry/v2/rule
 	telemetryV2RulePath := r.PathPrefix("/xconfAdminService/telemetry/v2/rule").Subrouter()
 	telemetryV2RulePath.HandleFunc("", telemetry.CreateTelemetryTwoRuleHandler).Methods("POST").Name("Telemetry2-Rules")
@@ -557,60 +521,6 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	telemetryV2RulePath.HandleFunc("/filtered", telemetry.GetTelemetryTwoRulesFilteredWithPage).Methods("POST").Name("Telemetry2-Rules")
 	telemetryV2RulePath.HandleFunc("/{id}", telemetry.DeleteOneTelemetryTwoRuleHandler).Methods("DELETE").Name("Telemetry2-Rules")
 	paths = append(paths, telemetryV2RulePath)
-
-	// telemetry/v2/testpage
-	teleV2TestpagePath := r.PathPrefix("/xconfAdminService/telemetry/v2/testpage").Subrouter()
-	teleV2TestpagePath.HandleFunc("", change.TelemetryTwoTestPageHandler).Methods("POST").Name("Telemetry2-Uncategorized")
-	paths = append(paths, teleV2TestpagePath)
-
-	// change - these are the same as telemetry/change APIs which are needed
-	// to be compatible w/ Java AS; eventually these will be deprecated.
-	changePath := r.PathPrefix("/xconfAdminService/change").Subrouter()
-	changePath.HandleFunc("/all", change.GetProfileChangesHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approved", change.GetApprovedHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approve/{changeId}", change.ApproveChangeHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/revert/{approveId}", change.RevertChangeHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/cancel/{changeId}", change.CancelChangeHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/changes/grouped/byId", change.GetGroupedChangesHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approved/grouped/byId", change.GetGroupedApprovedChangesHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/entityIds", change.GetChangedEntityIdsHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approveChanges", change.ApproveChangesHandler).Methods("POST").Name("Telemetry1-Changes") //TODO verify usages
-	changePath.HandleFunc("/revertChanges", change.RevertChangesHandler).Methods("POST").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approved/filtered", change.GetApprovedFilteredHandler).Methods("POST").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/changes/filtered", change.GetChangesFilteredHandler).Methods("POST").Name("Telemetry1-Changes")
-	paths = append(paths, changePath)
-
-	// telemetry/change
-	telemetryChangePath := r.PathPrefix("/xconfAdminService/telemetry/change").Subrouter()
-	telemetryChangePath.HandleFunc("/all", change.GetProfileChangesHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/approved", change.GetApprovedHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/approve/{changeId}", change.ApproveChangeHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/revert/{approveId}", change.RevertChangeHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/cancel/{changeId}", change.CancelChangeHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/changes/grouped/byId", change.GetGroupedChangesHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/approved/grouped/byId", change.GetGroupedApprovedChangesHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/entityIds", change.GetChangedEntityIdsHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/approveChanges", change.ApproveChangesHandler).Methods("POST").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/revertChanges", change.RevertChangesHandler).Methods("POST").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/approved/filtered", change.GetApprovedFilteredHandler).Methods("POST").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/changes/filtered", change.GetChangesFilteredHandler).Methods("POST").Name("Telemetry1-Changes")
-	paths = append(paths, telemetryChangePath)
-
-	// telemetry/v2/change
-	telemetryTwoChangePath := r.PathPrefix("/xconfAdminService/telemetry/v2/change").Subrouter()
-	telemetryTwoChangePath.HandleFunc("/all", change.GetTwoProfileChangesHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/approved", change.GetApprovedTwoChangesHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/approve/{changeId}", change.ApproveTwoChangeHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/revert/{approveId}", change.RevertTwoChangeHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/cancel/{changeId}", change.CancelTwoChangeHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/entityIds", change.GetTwoChangeEntityIdsHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/changes/grouped/byId", change.GetGroupedTwoChangesHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/approved/grouped/byId", change.GetGroupedApprovedTwoChangesHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/approveChanges", change.ApproveTwoChangesHandler).Methods("POST").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/revertChanges", change.RevertTwoChangesHandler).Methods("POST").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/approved/filtered", change.GetApprovedTwoChangesFilteredHandler).Methods("POST").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/changes/filtered", change.GetTwoChangesFilteredHandler).Methods("POST").Name("Telemetry2-Changes")
-	paths = append(paths, telemetryTwoChangePath)
 
 	// changelog
 	changelogPath := r.PathPrefix("/xconfAdminService/changelog").Subrouter()
