@@ -29,6 +29,7 @@ import (
 	"github.com/google/uuid"
 	"gotest.tools/assert"
 
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/rdkcentral/xconfwebconfig/util"
@@ -65,7 +66,7 @@ func createPermanentTelemetryProfile(id string) *xwlogupload.PermanentTelemetryP
 		PollingFrequency: "120",
 		Component:        "comp_perm",
 	}}
-	_ = SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, perm.ID, perm)
+	_ = xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, perm.ID, perm)
 	return perm
 }
 
@@ -75,17 +76,17 @@ func createTelemetryRule(boundProfileId string) *xwlogupload.TelemetryRule {
 	r.Name = "telemetry_rule"
 	r.ApplicationType = "stb"
 	r.BoundTelemetryID = boundProfileId
-	_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, r.ID, r)
+	_ = xshared.SetOneInDao(db.TABLE_TELEMETRY_RULES, r.ID, r)
 	return r
 }
 
 func exec(method, url string, body []byte) *httptest.ResponseRecorder {
 	r := httptest.NewRequest(method, url, bytes.NewReader(body))
-	return ExecuteRequest(r, router)
+	return xshared.ExecuteRequest(r, router)
 }
 
 func TestCreateTelemetryEntryForSuccess(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 	profile := buildTelemetryProfile(60000)
 	body, _ := json.Marshal(profile)
 	url := fmt.Sprintf("/xconfAdminService/telemetry/create/estbMacAddress/%s?applicationType=stb", "AA:BB:CC:DD:EE:FF")
@@ -95,7 +96,7 @@ func TestCreateTelemetryEntryForSuccess(t *testing.T) {
 }
 
 func TestCreateTelemetryEntryForFailures(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 	// wrong attribute
 	profile := buildTelemetryProfile(60000)
 	body, _ := json.Marshal(profile)
@@ -111,12 +112,12 @@ func TestCreateTelemetryEntryForFailures(t *testing.T) {
 	// invalid JSON
 	url = fmt.Sprintf("/xconfAdminService/telemetry/create/estbMacAddress/%s?applicationType=stb", "11:22:33:44:55:77")
 	r := httptest.NewRequest("POST", url, bytes.NewReader([]byte("{invalid")))
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 // func TestDropTelemetryEntryForSuccess(t *testing.T) {
-// 	DeleteTelemetryEntities()
+// 	DeleteTelemetryEntities(t)
 // 	_ = createPermanentTelemetryProfile("perm-1")
 // 	p := buildTelemetryProfile(60000)
 // 	body, _ := json.Marshal(p)
@@ -128,7 +129,7 @@ func TestCreateTelemetryEntryForFailures(t *testing.T) {
 // }
 
 func TestGetDescriptorsAndTelemetryDescriptors(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 	url := "/xconfAdminService/telemetry/getAvailableRuleDescriptors?applicationType=stb"
 	rr := exec("GET", url, nil)
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -138,7 +139,7 @@ func TestGetDescriptorsAndTelemetryDescriptors(t *testing.T) {
 }
 
 func TestTempAddToPermanentRule(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 	perm := createPermanentTelemetryProfile("perm-2")
 	rule := createTelemetryRule(perm.ID)
 	expires := (time.Now().UnixNano() / 1_000_000) + 60000
@@ -157,7 +158,7 @@ func TestTempAddToPermanentRule(t *testing.T) {
 }
 
 func TestBindToTelemetry(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 	perm := createPermanentTelemetryProfile("perm-3")
 	expires := (time.Now().UnixNano() / 1_000_000) + 60000
 	// success
@@ -175,7 +176,7 @@ func TestBindToTelemetry(t *testing.T) {
 }
 
 func TestTelemetryTestPageHandler(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 	bodyMap := map[string]interface{}{
 		"estbMacAddress": "AA:BB:CC:DD:EE:FF",
 		"model":          "TESTMODEL",
@@ -186,13 +187,13 @@ func TestTelemetryTestPageHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 	// invalid json
 	r := httptest.NewRequest("POST", url, bytes.NewReader([]byte("{bad")))
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 // TestCreateTelemetryEntryFor_AllErrorCases tests all error paths
 func TestCreateTelemetryEntryFor_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	tests := []struct {
 		name        string
@@ -242,7 +243,7 @@ func TestCreateTelemetryEntryFor_AllErrorCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := httptest.NewRequest("POST", tt.url, bytes.NewReader(tt.body))
-			rr := ExecuteRequest(r, router)
+			rr := xshared.ExecuteRequest(r, router)
 			if tt.expectError {
 				assert.Assert(t, rr.Code >= http.StatusBadRequest, tt.description)
 			} else {
@@ -254,7 +255,7 @@ func TestCreateTelemetryEntryFor_AllErrorCases(t *testing.T) {
 
 // TestDropTelemetryEntryFor_AllErrorCases tests all error paths
 func TestDropTelemetryEntryFor_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	tests := []struct {
 		name        string
@@ -284,7 +285,7 @@ func TestDropTelemetryEntryFor_AllErrorCases(t *testing.T) {
 
 // TestGetDescriptors_AllErrorCases tests GetDescriptors error paths
 func TestGetDescriptors_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	tests := []struct {
 		name               string
@@ -316,7 +317,7 @@ func TestGetDescriptors_AllErrorCases(t *testing.T) {
 
 // TestGetTelemetryDescriptors_AllErrorCases tests GetTelemetryDescriptors error paths
 func TestGetTelemetryDescriptors_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	tests := []struct {
 		name               string
@@ -348,7 +349,7 @@ func TestGetTelemetryDescriptors_AllErrorCases(t *testing.T) {
 
 // TestTempAddToPermanentRule_AllErrorCases tests all error paths
 func TestTempAddToPermanentRule_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 	perm := createPermanentTelemetryProfile("perm-temp-1")
 	rule := createTelemetryRule(perm.ID)
 	expires := (time.Now().UnixNano() / 1_000_000) + 60000
@@ -399,7 +400,7 @@ func TestTempAddToPermanentRule_AllErrorCases(t *testing.T) {
 
 // TestBindToTelemetry_AllErrorCases tests all error paths
 func TestBindToTelemetry_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 	perm := createPermanentTelemetryProfile("perm-bind-1")
 	expires := (time.Now().UnixNano() / 1_000_000) + 60000
 
@@ -449,7 +450,7 @@ func TestBindToTelemetry_AllErrorCases(t *testing.T) {
 
 // TestTelemetryTestPageHandler_AllErrorCases tests all error paths
 func TestTelemetryTestPageHandler_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	tests := []struct {
 		name               string
@@ -493,7 +494,7 @@ func TestTelemetryTestPageHandler_AllErrorCases(t *testing.T) {
 			var rr *httptest.ResponseRecorder
 			if len(tt.body) > 0 {
 				r := httptest.NewRequest("POST", tt.url, bytes.NewReader(tt.body))
-				rr = ExecuteRequest(r, router)
+				rr = xshared.ExecuteRequest(r, router)
 			} else {
 				rr = exec("POST", tt.url, nil)
 			}

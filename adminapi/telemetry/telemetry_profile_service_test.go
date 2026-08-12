@@ -18,6 +18,7 @@
 package telemetry
 
 import (
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"encoding/json"
 	"testing"
 	"time"
@@ -35,12 +36,12 @@ import (
 func storeTelemetryProfile(rule *xwlogupload.TimestampedRule, profile *xwlogupload.TelemetryProfile) {
 	ruleBytes, _ := json.Marshal(rule)
 	// Use helper function that works with both mock and real DAO
-	SetOneInDao(db.TABLE_TELEMETRY_PROFILES, string(ruleBytes), *profile)
+	xshared.SetOneInDao(db.TABLE_TELEMETRY_PROFILES, string(ruleBytes), *profile)
 }
 
 // TestDropTelemetryFor_Success tests successful telemetry profile drop
 func TestDropTelemetryFor_Success(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	// Create a telemetry profile
 	profile := buildTelemetryProfile(60000)
@@ -62,7 +63,7 @@ func TestDropTelemetryFor_Success(t *testing.T) {
 
 // TestDropTelemetryFor_NoMatch tests when no profiles match the context
 func TestDropTelemetryFor_NoMatch(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	// Drop with no matching profiles
 	result := DropTelemetryFor(db.GetDefaultTenantId(), "estbMacAddress", "BB:BB:BB:BB:BB:BB")
@@ -73,7 +74,7 @@ func TestDropTelemetryFor_NoMatch(t *testing.T) {
 
 // TestDropTelemetryFor_MultipleProfiles tests dropping multiple profiles
 func TestDropTelemetryFor_MultipleProfiles(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	// Create multiple profiles with the same context attribute
 	mac := "CC:CC:CC:CC:CC:CC"
@@ -95,7 +96,7 @@ func TestDropTelemetryFor_MultipleProfiles(t *testing.T) {
 
 // TestGetMatchedRules_Success tests successful rule matching
 func TestGetMatchedRules_Success(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	// Create and store a telemetry profile
 	profile := buildTelemetryProfile(60000)
@@ -115,7 +116,7 @@ func TestGetMatchedRules_Success(t *testing.T) {
 
 // TestGetMatchedRules_NoMatch tests when no rules match
 func TestGetMatchedRules_NoMatch(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	// Create a rule with different value
 	profile := buildTelemetryProfile(60000)
@@ -135,7 +136,7 @@ func TestGetMatchedRules_NoMatch(t *testing.T) {
 
 // TestGetMatchedRules_EmptyContext tests with empty context
 func TestGetMatchedRules_EmptyContext(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	context := map[string]string{
 		xwcommon.TENANT_ID: db.GetDefaultTenantId(),
@@ -149,9 +150,9 @@ func TestGetMatchedRules_EmptyContext(t *testing.T) {
 // TestGetMatchedRules_MultipleMatches tests multiple matching rules
 func TestGetMatchedRules_MultipleMatches(t *testing.T) {
 	// Skip - requires complex TABLE_TELEMETRY mocking with JSON-marshaled keys
-	SkipIfMockDatabase(t)
+	xshared.SkipIfMockDatabase(t)
 
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	mac := "11:22:33:44:55:66"
 
@@ -175,7 +176,7 @@ func TestGetMatchedRules_MultipleMatches(t *testing.T) {
 
 // TestGetAvailableDescriptors_Success tests successful descriptor retrieval
 func TestGetAvailableDescriptors_Success(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	// Create telemetry rules
 	rule1 := &xwlogupload.TelemetryRule{
@@ -191,8 +192,8 @@ func TestGetAvailableDescriptors_Success(t *testing.T) {
 		BoundTelemetryID: uuid.New().String(),
 	}
 
-	_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, rule1.ID, rule1)
-	_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, rule2.ID, rule2)
+	_ = xshared.SetOneInDao(db.TABLE_TELEMETRY_RULES, rule1.ID, rule1)
+	_ = xshared.SetOneInDao(db.TABLE_TELEMETRY_RULES, rule2.ID, rule2)
 
 	// Get descriptors
 	descriptors := GetAvailableDescriptors(db.GetDefaultTenantId(), "stb")
@@ -217,7 +218,7 @@ func TestGetAvailableDescriptors_Success(t *testing.T) {
 
 // TestGetAvailableDescriptors_FilterByApplicationType tests filtering by application type
 func TestGetAvailableDescriptors_FilterByApplicationType(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	// Create rules with different application types
 	ruleStb := &xwlogupload.TelemetryRule{
@@ -233,8 +234,8 @@ func TestGetAvailableDescriptors_FilterByApplicationType(t *testing.T) {
 		BoundTelemetryID: uuid.New().String(),
 	}
 
-	_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, ruleStb.ID, ruleStb)
-	_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, ruleXhome.ID, ruleXhome)
+	_ = xshared.SetOneInDao(db.TABLE_TELEMETRY_RULES, ruleStb.ID, ruleStb)
+	_ = xshared.SetOneInDao(db.TABLE_TELEMETRY_RULES, ruleXhome.ID, ruleXhome)
 
 	// Get descriptors for "stb" only
 	descriptors := GetAvailableDescriptors(db.GetDefaultTenantId(), "stb")
@@ -259,7 +260,7 @@ func TestGetAvailableDescriptors_FilterByApplicationType(t *testing.T) {
 
 // TestGetAvailableDescriptors_EmptyApplicationType tests with empty application type
 func TestGetAvailableDescriptors_EmptyApplicationType(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	// Create rules with various application types
 	rule1 := &xwlogupload.TelemetryRule{
@@ -275,8 +276,8 @@ func TestGetAvailableDescriptors_EmptyApplicationType(t *testing.T) {
 		BoundTelemetryID: uuid.New().String(),
 	}
 
-	_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, rule1.ID, rule1)
-	_ = SetOneInDao(db.TABLE_TELEMETRY_RULES, rule2.ID, rule2)
+	_ = xshared.SetOneInDao(db.TABLE_TELEMETRY_RULES, rule1.ID, rule1)
+	_ = xshared.SetOneInDao(db.TABLE_TELEMETRY_RULES, rule2.ID, rule2)
 
 	// Get descriptors with empty application type
 	descriptors := GetAvailableDescriptors(db.GetDefaultTenantId(), "")
@@ -287,7 +288,7 @@ func TestGetAvailableDescriptors_EmptyApplicationType(t *testing.T) {
 
 // TestGetAvailableDescriptors_NoRules tests when no rules exist
 func TestGetAvailableDescriptors_NoRules(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	descriptors := GetAvailableDescriptors(db.GetDefaultTenantId(), "stb")
 
@@ -297,7 +298,7 @@ func TestGetAvailableDescriptors_NoRules(t *testing.T) {
 
 // TestGetAvailableProfileDescriptors_Success tests successful profile descriptor retrieval
 func TestGetAvailableProfileDescriptors_Success(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	// Create permanent telemetry profiles
 	profile1 := &xwlogupload.PermanentTelemetryProfile{
@@ -311,8 +312,8 @@ func TestGetAvailableProfileDescriptors_Success(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	_ = SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profile1.ID, profile1)
-	_ = SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profile2.ID, profile2)
+	_ = xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profile1.ID, profile1)
+	_ = xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profile2.ID, profile2)
 
 	// Get descriptors
 	descriptors := GetAvailableProfileDescriptors(db.GetDefaultTenantId(), "stb")
@@ -337,7 +338,7 @@ func TestGetAvailableProfileDescriptors_Success(t *testing.T) {
 
 // TestGetAvailableProfileDescriptors_FilterByApplicationType tests filtering by application type
 func TestGetAvailableProfileDescriptors_FilterByApplicationType(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	// Create profiles with different application types
 	profileStb := &xwlogupload.PermanentTelemetryProfile{
@@ -351,8 +352,8 @@ func TestGetAvailableProfileDescriptors_FilterByApplicationType(t *testing.T) {
 		ApplicationType: "xhome",
 	}
 
-	_ = SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profileStb.ID, profileStb)
-	_ = SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profileXhome.ID, profileXhome)
+	_ = xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profileStb.ID, profileStb)
+	_ = xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profileXhome.ID, profileXhome)
 
 	// Get descriptors for "stb" only
 	descriptors := GetAvailableProfileDescriptors(db.GetDefaultTenantId(), "stb")
@@ -377,7 +378,7 @@ func TestGetAvailableProfileDescriptors_FilterByApplicationType(t *testing.T) {
 
 // TestGetAvailableProfileDescriptors_EmptyApplicationType tests with empty application type
 func TestGetAvailableProfileDescriptors_EmptyApplicationType(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	// Create profiles with various application types
 	profile1 := &xwlogupload.PermanentTelemetryProfile{
@@ -391,8 +392,8 @@ func TestGetAvailableProfileDescriptors_EmptyApplicationType(t *testing.T) {
 		ApplicationType: "",
 	}
 
-	_ = SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profile1.ID, profile1)
-	_ = SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profile2.ID, profile2)
+	_ = xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profile1.ID, profile1)
+	_ = xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, profile2.ID, profile2)
 
 	// Get descriptors with empty application type
 	descriptors := GetAvailableProfileDescriptors(db.GetDefaultTenantId(), "")
@@ -403,7 +404,7 @@ func TestGetAvailableProfileDescriptors_EmptyApplicationType(t *testing.T) {
 
 // TestGetAvailableProfileDescriptors_NoProfiles tests when no profiles exist
 func TestGetAvailableProfileDescriptors_NoProfiles(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	descriptors := GetAvailableProfileDescriptors(db.GetDefaultTenantId(), "stb")
 
@@ -460,7 +461,7 @@ func TestCreateRuleForAttribute(t *testing.T) {
 
 // TestCreateTelemetryProfile tests profile creation and storage
 func TestCreateTelemetryProfile(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	// Create a telemetry profile
 	profile := buildTelemetryProfile(60000)
@@ -480,8 +481,9 @@ func TestCreateTelemetryProfile(t *testing.T) {
 	// uses SetOneTelemetryProfile which stores as pointer, but GetOneTelemetryProfile expects non-pointer
 	// The functionality is tested in DropTelemetryFor which properly handles this
 } // TestDropTelemetryFor_ComplexConditions tests dropping profiles with complex rule conditions
+
 func TestDropTelemetryFor_ComplexConditions(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	// Create multiple profiles with different attributes
 	profile1 := buildTelemetryProfile(60000)

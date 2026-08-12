@@ -14,9 +14,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
-	"github.com/rdkcentral/xconfadmin/adminapi/change"
+	xchange "github.com/rdkcentral/xconfadmin/adminapi/change"
 	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	admin_change "github.com/rdkcentral/xconfadmin/shared/change"
 	admin_logupload "github.com/rdkcentral/xconfadmin/shared/logupload"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
@@ -24,7 +25,7 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
-	core_change "github.com/rdkcentral/xconfwebconfig/shared/change"
+	"github.com/rdkcentral/xconfwebconfig/shared/change"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/rdkcentral/xconfwebconfig/util"
 	"github.com/rs/cors"
@@ -33,12 +34,11 @@ import (
 )
 
 var (
-	testConfigFile     string
-	jsonTestConfigFile string
-	sc                 *xwcommon.ServerConfig
-	server             *xhttp.WebconfigServer
-	router             *mux.Router
-	globAut            *apiUnitTest
+	testConfigFile string
+	sc             *xwcommon.ServerConfig
+	server         *xhttp.WebconfigServer
+	router         *mux.Router
+	globAut        *apiUnitTest
 )
 
 type apiUnitTest struct {
@@ -70,6 +70,7 @@ func newApiUnitTest(t *testing.T) *apiUnitTest {
 func GetTestConfig() string {
 	return "../../config/sample_xconfadmin.conf"
 }
+
 func TestMain(m *testing.M) {
 	fmt.Printf("in TestMain\n")
 
@@ -141,8 +142,8 @@ func TestMain(m *testing.M) {
 		// Replaces slow Cassandra operations with instant in-memory operations
 		// CRITICAL: Initialize mock database FIRST for ultra-fast testing!
 		// This replaces ALL DB calls with in-memory mock (like telemetry/dcm success)
-		InitMockDatabase()
-		defer DisableMockDatabase()
+		xshared.InitMockDatabase()
+		defer xshared.DisableMockDatabase()
 	}
 
 	// setup router
@@ -162,7 +163,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	// DeleteTelemetryEntities()
+	// DeleteTelemetryEntities(t)
 
 	globAut = newApiUnitTest(nil)
 
@@ -249,8 +250,8 @@ func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 		}
 	}
 }
-func telemetrySetup(server *xhttp.WebconfigServer, r *mux.Router) {
 
+func telemetrySetup(server *xhttp.WebconfigServer, r *mux.Router) {
 	xc := dataapi.GetXconfConfigs(server.XW_XconfServer.ServerConfig.Config)
 
 	WebServerInjection(server, xc)
@@ -260,119 +261,14 @@ func telemetrySetup(server *xhttp.WebconfigServer, r *mux.Router) {
 	auth.WebServerInjection(server)
 	dataapi.RegisterTables()
 
-	// db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf) // Tag refactored - NewTagInf no longer exists
-	//initDB()
 	db.GetCacheManager() // Initialize cache manager
 	SetupTelemetryRoutes(server, r)
 }
 
 func SetupTelemetryRoutes(server *xhttp.WebconfigServer, r *mux.Router) {
 	paths := []*mux.Router{}
-	// telemetry
-	telemetryPath := r.PathPrefix("/xconfAdminService/telemetry").Subrouter()
-	telemetryPath.HandleFunc("/create/{contextAttributeName}/{expectedValue}", CreateTelemetryEntryFor).Methods("POST").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/testpage", TelemetryTestPageHandler).Methods("POST").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/drop/{contextAttributeName}/{expectedValue}", DropTelemetryEntryFor).Methods("POST").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/getAvailableRuleDescriptors", GetDescriptors).Methods("GET").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/getAvailableTelemetryDescriptors", GetTelemetryDescriptors).Methods("GET").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/addTo/{ruleId}/{contextAttributeName}/{expectedValue}/{expires}", TempAddToPermanentRule).Methods("POST").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/bindToTelemetry/{telemetryId}/{contextAttributeName}/{expectedValue}/{expires}", BindToTelemetry).Methods("POST").Name("Telemetry1-Uncategorized")
-	paths = append(paths, telemetryPath)
-
-	// telemetry/profile
-	telemetryProfilePath := r.PathPrefix("/xconfAdminService/telemetry/profile").Subrouter()
-	telemetryProfilePath.HandleFunc("", change.GetTelemetryProfilesHandler).Methods("GET").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("", change.CreateTelemetryProfileHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("", change.UpdateTelemetryProfileHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change", change.CreateTelemetryProfileChangeHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change", change.UpdateTelemetryProfileChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/{id}", change.DeleteTelemetryProfileHandler).Methods("DELETE").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change/{id}", change.DeleteTelemetryProfileChangeHandler).Methods("DELETE").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/{id}", change.GetTelemetryProfileByIdHandler).Methods("GET").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/entities", change.PostTelemetryProfileEntitiesHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/entities", change.PutTelemetryProfileEntitiesHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/filtered", change.PostTelemetryProfileFilteredHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/migrate/createTelemetryId", change.CreateTelemetryIdsHandler).Methods("GET").Name("Telemetry1-Profiles") //can be removed
-	telemetryProfilePath.HandleFunc("/entry/add/{id}", change.AddTelemetryProfileEntryHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/entry/remove/{id}", change.RemoveTelemetryProfileEntryHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change/entry/add/{id}", change.AddTelemetryProfileEntryChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change/entry/remove/{id}", change.RemoveTelemetryProfileEntryChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
-
-	paths = append(paths, telemetryProfilePath)
-
-	// telemetry/rule
-	telemetryRulePath := r.PathPrefix("/xconfAdminService/telemetry/rule").Subrouter()
-	telemetryRulePath.HandleFunc("", GetTelemetryRulesHandler).Methods("GET").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("", CreateTelemetryRuleHandler).Methods("POST").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("", UpdateTelemetryRuleHandler).Methods("PUT").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("/entities", PostTelemtryRuleEntitiesHandler).Methods("POST").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("/entities", PutTelemetryRuleEntitiesHandler).Methods("PUT").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("/filtered", PostTelemetryRuleFilteredWithParamsHandler).Methods("POST").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("/{id}", DeleteTelmetryRuleByIdHandler).Methods("DELETE").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("/{id}", GetTelemetryRuleByIdHandler).Methods("GET").Name("Telemetry1-Rules")
-	paths = append(paths, telemetryRulePath)
-
-	// telemetry/v2/profile
-	telemetryV2ProfilePath := r.PathPrefix("/xconfAdminService/telemetry/v2/profile").Subrouter()
-	telemetryV2ProfilePath.HandleFunc("", change.GetTelemetryTwoProfilesHandler).Methods("GET").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("", change.CreateTelemetryTwoProfileHandler).Methods("POST").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("", change.UpdateTelemetryTwoProfileHandler).Methods("PUT").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/{id}", change.DeleteTelemetryTwoProfileHandler).Methods("DELETE").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/change", change.CreateTelemetryTwoProfileChangeHandler).Methods("POST").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/change", change.UpdateTelemetryTwoProfileChangeHandler).Methods("PUT").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/change/{id}", change.DeleteTelemetryTwoProfileChangeHandler).Methods("DELETE").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/{id}", change.GetTelemetryTwoProfileByIdHandler).Methods("GET").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/byIdList", change.PostTelemetryTwoProfilesByIdListHandler).Methods("POST").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/entities", change.PostTelemetryTwoProfileEntitiesHandler).Methods("POST").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/entities", change.PutTelemetryTwoProfileEntitiesHandler).Methods("PUT").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/filtered", change.PostTelemetryTwoProfileFilteredHandler).Methods("POST").Name("Telemetry2-Profiles")
-	paths = append(paths, telemetryV2ProfilePath)
-
-	// telemetry/v2/rule
-	telemetryV2RulePath := r.PathPrefix("/xconfAdminService/telemetry/v2/rule").Subrouter()
-	telemetryV2RulePath.HandleFunc("", CreateTelemetryTwoRuleHandler).Methods("POST").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/entities", CreateTelemetryTwoRulesPackageHandler).Methods("POST").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("", UpdateTelemetryTwoRuleHandler).Methods("PUT").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/entities", UpdateTelemetryTwoRulesPackageHandler).Methods("PUT").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("", GetTelemetryTwoRulesAllExport).Methods("GET").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/{id}", GetTelemetryTwoRuleById).Methods("GET").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/filtered", GetTelemetryTwoRulesFilteredWithPage).Methods("POST").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/{id}", DeleteOneTelemetryTwoRuleHandler).Methods("DELETE").Name("Telemetry2-Rules")
-	paths = append(paths, telemetryV2RulePath)
-
-	changePath := r.PathPrefix("/xconfAdminService/change").Subrouter()
-	changePath.HandleFunc("/all", change.GetProfileChangesHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approved", change.GetApprovedHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approve/{changeId}", change.ApproveChangeHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/revert/{approveId}", change.RevertChangeHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/cancel/{changeId}", change.CancelChangeHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/changes/grouped/byId", change.GetGroupedChangesHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approved/grouped/byId", change.GetGroupedApprovedChangesHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/entityIds", change.GetChangedEntityIdsHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approveChanges", change.ApproveChangesHandler).Methods("POST").Name("Telemetry1-Changes") //TODO verify usages
-	changePath.HandleFunc("/revertChanges", change.RevertChangesHandler).Methods("POST").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approved/filtered", change.GetApprovedFilteredHandler).Methods("POST").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/changes/filtered", change.GetChangesFilteredHandler).Methods("POST").Name("Telemetry1-Changes")
-	paths = append(paths, changePath)
-
-	// telemetry/v2/change
-	telemetryTwoChangePath := r.PathPrefix("/xconfAdminService/telemetry/v2/change").Subrouter()
-	telemetryTwoChangePath.HandleFunc("/all", change.GetTwoProfileChangesHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/approved", change.GetApprovedTwoChangesHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/approve/{changeId}", change.ApproveTwoChangeHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/revert/{approveId}", change.RevertTwoChangeHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/cancel/{changeId}", change.CancelTwoChangeHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/entityIds", change.GetTwoChangeEntityIdsHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/changes/grouped/byId", change.GetGroupedTwoChangesHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/approved/grouped/byId", change.GetGroupedApprovedTwoChangesHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/approveChanges", change.ApproveTwoChangesHandler).Methods("POST").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/revertChanges", change.RevertTwoChangesHandler).Methods("POST").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/approved/filtered", change.GetApprovedTwoChangesFilteredHandler).Methods("POST").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/changes/filtered", change.GetTwoChangesFilteredHandler).Methods("POST").Name("Telemetry2-Changes")
-	paths = append(paths, telemetryTwoChangePath)
+	paths = RegisterTelemetryRoutes(r, paths)
+	paths = xchange.RegisterChangeRoutes(r, paths)
 
 	c := cors.New(cors.Options{
 		AllowCredentials: true,
@@ -386,18 +282,13 @@ func SetupTelemetryRoutes(server *xhttp.WebconfigServer, r *mux.Router) {
 		p.Use(server.XW_XconfServer.NoAuthMiddleware)
 	}
 }
-func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRecorder { // restored local version
-	recorder := httptest.NewRecorder()
-	handler.ServeHTTP(recorder, r)
-	return recorder
-}
 
 // DeleteTelemetryEntities - Ultra-fast cleanup using in-memory mock
 // Replaces slow Cassandra truncation (60s) with instant mock.Clear() (<1ms)
-func DeleteTelemetryEntities() {
-	if IsMockDatabaseEnabled() {
+func DeleteTelemetryEntities(t *testing.T) {
+	if xshared.IsMockDatabaseEnabled() {
 		// FAST PATH: Clear in-memory mock instantly
-		ClearMockDatabase()
+		xshared.ClearMockDatabase()
 		return
 	}
 
@@ -416,25 +307,16 @@ func DeleteTelemetryEntities() {
 
 	tenantId := db.GetDefaultTenantId()
 	for _, tableName := range telemetryTables {
-		truncateTable(tenantId, tableName)
+		xshared.TruncateTable(t, tenantId, tableName)
 		db.GetCachedSimpleDao().RefreshAll(tenantId, tableName)
 	}
 }
 
-func truncateTable(tenantId string, tableName string) error {
-	dbClient := db.GetDatabaseClient()
-	cassandraClient, ok := dbClient.(*db.CassandraClient)
-	if ok {
-		return cassandraClient.DeleteAllXconfData(tenantId, tableName)
-	}
-	return nil
-}
-
 func TestAddTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
-	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	entry := &logupload.TelemetryElement{
 		ID:               uuid.New().String(),
@@ -452,7 +334,7 @@ func TestAddTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/telemetry/profile/change/entry/add/%v?%v", p.ID, queryParams)
 
 	r := httptest.NewRequest("PUT", url, bytes.NewReader(entryByte))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	change := unmarshalChange(rr.Body.Bytes())
@@ -467,7 +349,7 @@ func TestAddTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/change/approve/%v?%v", change.ID, queryParams)
 
 	r = httptest.NewRequest("GET", url, nil)
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -476,7 +358,7 @@ func TestAddTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 	entry := &logupload.TelemetryElement{
@@ -488,7 +370,7 @@ func TestRemoveTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 		Component:        "",
 	}
 	p.TelemetryProfile = append(p.TelemetryProfile, *entry)
-	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	entriesToRemove := []*logupload.TelemetryElement{entry}
 	entryByte, _ := json.Marshal(entriesToRemove)
@@ -498,7 +380,7 @@ func TestRemoveTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/telemetry/profile/change/entry/remove/%v?%v", p.ID, queryParams)
 
 	r := httptest.NewRequest("PUT", url, bytes.NewReader(entryByte))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	change := unmarshalChange(rr.Body.Bytes())
@@ -513,7 +395,7 @@ func TestRemoveTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/change/approve/%v?%v", change.ID, queryParams)
 
 	r = httptest.NewRequest("GET", url, nil)
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -522,7 +404,7 @@ func TestRemoveTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 }
 
 func TestTelemetryProfileCreate(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 
@@ -533,7 +415,7 @@ func TestTelemetryProfileCreate(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/telemetry/profile?%v", queryParams)
 
 	r := httptest.NewRequest("POST", url, bytes.NewReader(entryByte))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 
 	createdProfile := unmarshalProfile(rr.Body.Bytes())
@@ -548,7 +430,7 @@ func TestTelemetryProfileCreate(t *testing.T) {
 }
 
 func TestTelemetryProfileCreateChangeAndApproveIt(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 
@@ -559,7 +441,7 @@ func TestTelemetryProfileCreateChangeAndApproveIt(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/telemetry/profile/change?%v", queryParams)
 
 	r := httptest.NewRequest("POST", url, bytes.NewReader(entryByte))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 
 	change := unmarshalChange(rr.Body.Bytes())
@@ -573,7 +455,7 @@ func TestTelemetryProfileCreateChangeAndApproveIt(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/change/approve/%v?%v", change.ID, queryParams)
 
 	r = httptest.NewRequest("GET", url, nil)
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -589,10 +471,10 @@ func TestTelemetryProfileCreateChangeAndApproveIt(t *testing.T) {
 }
 
 func TestTelemetryProfileUpdate(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
-	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	entry := logupload.TelemetryElement{
 		ID:               uuid.New().String(),
@@ -611,12 +493,13 @@ func TestTelemetryProfileUpdate(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/telemetry/profile?%v", queryParams)
 
 	r := httptest.NewRequest("PUT", url, bytes.NewReader(entryByte))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	updatedProfile := unmarshalProfile(rr.Body.Bytes())
 
-	updatedProfile.Updated = 0 // ignore updated timestamp for equality check
+	updatedProfile.Updated = 0  // ignore updated timestamp for equality check
+	profileToUpdate.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, profileToUpdate, updatedProfile)
 
 	dbProfile := logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
@@ -630,10 +513,10 @@ func TestTelemetryProfileUpdate(t *testing.T) {
 }
 
 func TestTelemetryProfileUpdateChangeAndApproveIt(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
-	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	entry := logupload.TelemetryElement{
 		ID:               uuid.New().String(),
@@ -652,7 +535,7 @@ func TestTelemetryProfileUpdateChangeAndApproveIt(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/telemetry/profile/change?%v", queryParams)
 
 	r := httptest.NewRequest("PUT", url, bytes.NewReader(profileBytes))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	change := unmarshalChange(rr.Body.Bytes())
@@ -666,12 +549,14 @@ func TestTelemetryProfileUpdateChangeAndApproveIt(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/change/approve/%v?%v", change.ID, queryParams)
 
 	r = httptest.NewRequest("GET", url, nil)
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	dbProfile = logupload.GetOnePermanentTelemetryProfile(db.GetDefaultTenantId(), p.ID)
-	dbProfile.Updated = 0 // ignore updated timestamp for equality check
+	dbProfile.Updated = 0       // ignore updated timestamp for equality check
+	profileToUpdate.Updated = 0 // ignore updated timestamp for equality check
+	p.Updated = 0               // ignore updated timestamp for equality check
 	assert.Equal(t, profileToUpdate, dbProfile, "profile to update should be equal updated profile in database")
 
 	approvedChange := admin_change.GetOneApprovedChange(db.GetDefaultTenantId(), change.ID)
@@ -684,10 +569,10 @@ func TestTelemetryProfileUpdateChangeAndApproveIt(t *testing.T) {
 }
 
 func TestTelemetryProfileDelete(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
-	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
 		{"applicationType", "stb"},
@@ -695,7 +580,7 @@ func TestTelemetryProfileDelete(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/telemetry/profile/%v?%v", p.ID, queryParams)
 
 	r := httptest.NewRequest("DELETE", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 
 	db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), db.TABLE_PERMANENT_TELEMETRY_PROFILES)
@@ -708,10 +593,10 @@ func TestTelemetryProfileDelete(t *testing.T) {
 }
 
 func TestTelemetryProfileDeleteChangeAndApproveIt(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
-	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
 		{"applicationType", "stb"},
@@ -719,7 +604,7 @@ func TestTelemetryProfileDeleteChangeAndApproveIt(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/telemetry/profile/change/%v?%v", p.ID, queryParams)
 
 	r := httptest.NewRequest("DELETE", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	change := unmarshalChange(rr.Body.Bytes())
@@ -733,7 +618,7 @@ func TestTelemetryProfileDeleteChangeAndApproveIt(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/change/approve/%v?%v", change.ID, queryParams)
 
 	r = httptest.NewRequest("GET", url, nil)
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -749,7 +634,7 @@ func TestTelemetryProfileDeleteChangeAndApproveIt(t *testing.T) {
 }
 
 func TestTelemetryProfileCreateChangeThrowsExceptionInCaseIfDuplicatedChange(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 
@@ -760,11 +645,11 @@ func TestTelemetryProfileCreateChangeThrowsExceptionInCaseIfDuplicatedChange(t *
 	url := fmt.Sprintf("/xconfAdminService/telemetry/profile/change?%v", queryParams)
 
 	r := httptest.NewRequest("POST", url, bytes.NewReader(entryByte))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 
 	r = httptest.NewRequest("POST", url, bytes.NewReader(entryByte))
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusConflict, rr.Code)
 
 	xconfError := unmarshalXconfError(rr.Body.Bytes())
@@ -772,10 +657,10 @@ func TestTelemetryProfileCreateChangeThrowsExceptionInCaseIfDuplicatedChange(t *
 }
 
 func TestTelemetryProfileUpdateChangeThrowsExceptionInCaseIfDuplicatedChange(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
-	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	entry := logupload.TelemetryElement{
 		ID:               uuid.New().String(),
@@ -794,11 +679,11 @@ func TestTelemetryProfileUpdateChangeThrowsExceptionInCaseIfDuplicatedChange(t *
 	url := fmt.Sprintf("/xconfAdminService/telemetry/profile/change?%v", queryParams)
 
 	r := httptest.NewRequest("PUT", url, bytes.NewReader(profileBytes))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	r = httptest.NewRequest("PUT", url, bytes.NewReader(profileBytes))
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusConflict, rr.Code)
 
 	xconfError := unmarshalXconfError(rr.Body.Bytes())
@@ -806,10 +691,10 @@ func TestTelemetryProfileUpdateChangeThrowsExceptionInCaseIfDuplicatedChange(t *
 }
 
 func TestTelemetryProfileDeleteChangeThrowsExceptionInCaseIfDuplicatedChange(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
-	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
 		{"applicationType", "stb"},
@@ -817,11 +702,11 @@ func TestTelemetryProfileDeleteChangeThrowsExceptionInCaseIfDuplicatedChange(t *
 	url := fmt.Sprintf("/xconfAdminService/telemetry/profile/change/%v?%v", p.ID, queryParams)
 
 	r := httptest.NewRequest("DELETE", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	r = httptest.NewRequest("DELETE", url, nil)
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusConflict, rr.Code)
 
 	xconfError := unmarshalXconfError(rr.Body.Bytes())
@@ -829,10 +714,10 @@ func TestTelemetryProfileDeleteChangeThrowsExceptionInCaseIfDuplicatedChange(t *
 }
 
 func TestUpdateTelemetyProfileThrowsAnExceptionInCaseOfDuplicatedTelemetryEntries(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
-	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	duplicatedEntry := logupload.TelemetryElement{
 		ID:               p.TelemetryProfile[0].ID,
@@ -859,7 +744,7 @@ func TestUpdateTelemetyProfileThrowsAnExceptionInCaseOfDuplicatedTelemetryEntrie
 
 	for _, testTentity := range testEntities {
 		r := httptest.NewRequest("PUT", testTentity.Endpoint, bytes.NewReader(profileBytes))
-		rr := ExecuteRequest(r, router)
+		rr := xshared.ExecuteRequest(r, router)
 		assert.Equal(t, http.StatusBadRequest, rr.Code)
 
 		xconfError := unmarshalXconfError(rr.Body.Bytes())
@@ -868,10 +753,10 @@ func TestUpdateTelemetyProfileThrowsAnExceptionInCaseOfDuplicatedTelemetryEntrie
 }
 
 func TestAddTelemetryThrowsAnExceptionInCaseOfDuplicate(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
-	SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
 
 	duplicatedEntry := logupload.TelemetryElement{
 		ID:               p.TelemetryProfile[0].ID,
@@ -896,7 +781,7 @@ func TestAddTelemetryThrowsAnExceptionInCaseOfDuplicate(t *testing.T) {
 
 	for _, testTentity := range testEntities {
 		r := httptest.NewRequest("PUT", testTentity.Endpoint, bytes.NewReader(testTentity.RequestBody))
-		rr := ExecuteRequest(r, router)
+		rr := xshared.ExecuteRequest(r, router)
 		assert.Equal(t, http.StatusConflict, rr.Code)
 
 		xconfError := unmarshalXconfError(rr.Body.Bytes())
@@ -905,7 +790,7 @@ func TestAddTelemetryThrowsAnExceptionInCaseOfDuplicate(t *testing.T) {
 }
 
 func IgnoreTestApplicationTypeIsMandatory(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 	profileBytes, _ := json.Marshal(p)
@@ -932,7 +817,7 @@ func IgnoreTestApplicationTypeIsMandatory(t *testing.T) {
 
 	for _, entry := range endpoints {
 		r := httptest.NewRequest(entry.Method, entry.Endpoint, bytes.NewReader(entry.RequestBody))
-		rr := ExecuteRequest(r, router)
+		rr := xshared.ExecuteRequest(r, router)
 		assert.Equal(t, entry.ResponseStatus, rr.Code)
 
 		xconfError := unmarshalXconfError(rr.Body.Bytes())
@@ -959,8 +844,8 @@ func createTelemetryProfile() *logupload.PermanentTelemetryProfile {
 	return p
 }
 
-func unmarshalChange(b []byte) core_change.Change {
-	var change core_change.Change
+func unmarshalChange(b []byte) change.Change {
+	var change change.Change
 	err := json.Unmarshal(b, &change)
 	if err != nil {
 		panic(fmt.Errorf("error unmarshaling telemetry profile change"))

@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xchange "github.com/rdkcentral/xconfadmin/shared/change"
 	xadmin_logupload "github.com/rdkcentral/xconfadmin/shared/logupload"
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -39,8 +40,7 @@ const telemetryJsonConfig = "{\n    \"Description\":\"Test Json Data\",\n    \"V
 const changedTelemetryJsonConfig = "{\n    \"Description\":\"Changed Name Json Data\",\n    \"Version\":\"0.1\",\n    \"Protocol\":\"HTTP\",\n    \"EncodingType\":\"JSON\",\n    \"ReportingInterval\":43200,\n    \"TimeReference\":\"0001-01-01T00:00:00Z\",\n    \"RootName\":\"someNewRootName\",\n    \"Parameter\":\n        [\n            { \"type\": \"dataModel\", \"reference\": \"Profile.Name\"}, \n            { \"type\": \"dataModel\", \"reference\": \"Profile.Version\"},\n            { \"type\": \"grep\", \"marker\": \"Connie_marker1\", \"search\":\"restart 'lock to rescue CMTS retry' timer\", \"logFile\":\"cmconsole.log\" }\n\n        ],\n    \"HTTP\": {\n        \"URL\":\"https://test.net\",\n        \"Compression\":\"None\",\n        \"Method\":\"POST\",\n        \"RequestURIParameter\": [\n            {\"Name\":\"profileName\", \"Reference\":\"Profile.Name\" },\n            {\"Name\":\"reportVersion\", \"Reference\":\"Profile.Version\" }\n        ]\n\n    },\n    \"JSONEncoding\": {\n        \"ReportFormat\":\"NameValuePair\",\n        \"ReportTimestamp\": \"None\"\n    }\n\n}"
 
 func TestTelemetryTwoProfileCreateHandler(t *testing.T) {
-
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryTwoProfile()
 
@@ -51,7 +51,7 @@ func TestTelemetryTwoProfileCreateHandler(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile?%v", queryParams)
 
 	r := httptest.NewRequest("POST", url, bytes.NewReader(entryByte))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 
 	createdProfile := unmarshalTelemetryTwoProfile(rr.Body.Bytes())
@@ -64,7 +64,7 @@ func TestTelemetryTwoProfileCreateHandler(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileCreateChangeHandlerAndApproveIt(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryTwoProfile()
 
@@ -75,7 +75,7 @@ func TestTelemetryTwoProfileCreateChangeHandlerAndApproveIt(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/change?%v", queryParams)
 
 	r := httptest.NewRequest("POST", url, bytes.NewReader(requestStr))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 
 	change := unmarshalChangeTwo(rr.Body.Bytes())
@@ -89,7 +89,7 @@ func TestTelemetryTwoProfileCreateChangeHandlerAndApproveIt(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/telemetry/v2/change/approve/%v?%v", change.ID, queryParams)
 
 	r = httptest.NewRequest("GET", url, nil)
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -105,10 +105,10 @@ func TestTelemetryTwoProfileCreateChangeHandlerAndApproveIt(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileUpdateHandler(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryTwoProfile()
-	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	changedProfile, _ := p.Clone()
 	changedProfile.Jsonconfig = changedTelemetryJsonConfig
@@ -120,11 +120,12 @@ func TestTelemetryTwoProfileUpdateHandler(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile?%v", queryParams)
 
 	r := httptest.NewRequest("PUT", url, bytes.NewReader(requestStr))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	updatedProfile := unmarshalTelemetryTwoProfile(rr.Body.Bytes())
 	updatedProfile.Updated = 0 // ignore updated timestamp for equality check
+	changedProfile.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, *changedProfile, *updatedProfile)
 
 	dbProfile := logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
@@ -133,11 +134,11 @@ func TestTelemetryTwoProfileUpdateHandler(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileUpdateChangeHandler(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test - requires real database for profile updates
-	DeleteTelemetryEntities()
+	xshared.SkipIfMockDatabase(t) // Integration test - requires real database for profile updates
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryTwoProfile()
-	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	changedProfile, _ := p.Clone()
 	changedProfile.Jsonconfig = changedTelemetryJsonConfig
@@ -149,7 +150,7 @@ func TestTelemetryTwoProfileUpdateChangeHandler(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/change?%v", queryParams)
 
 	r := httptest.NewRequest("PUT", url, bytes.NewReader(requestStr))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	change := unmarshalChangeTwo(rr.Body.Bytes())
@@ -163,27 +164,30 @@ func TestTelemetryTwoProfileUpdateChangeHandler(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/telemetry/v2/change/approve/%v?%v", change.ID, queryParams)
 
 	r = httptest.NewRequest("GET", url, nil)
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	dbProfile = logupload.GetOneTelemetryTwoProfile(db.GetDefaultTenantId(), p.ID)
-	dbProfile.Updated = 0 // ignore updated timestamp for equality check
+	dbProfile.Updated = 0      // ignore updated timestamp for equality check
+	changedProfile.Updated = 0 // ignore updated timestamp for equality check
+	p.Updated = 0              // ignore updated timestamp for equality check
 	assert.Equal(t, *changedProfile, *dbProfile, "profile to create should match created profile in database")
 	assert.Equal(t, changedTelemetryJsonConfig, dbProfile.Jsonconfig, "profile to create should match created profile in database")
 
 	approvedChange := xchange.GetOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), change.ID)
 	assert.NotEmpty(t, approvedChange, "approved profile change should be created")
+	approvedChange.OldEntity.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, *p, *approvedChange.OldEntity, "old entity should correspond to the profile before updating it")
 	approvedChange.NewEntity.Updated = 0 // ignore updated timestamp for equality check
 	assert.Equal(t, *changedProfile, *approvedChange.NewEntity, "new entity should correspond to the changed profile")
 }
 
 func TestTelemetryTwoProfileDeleteHandler(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryTwoProfile()
-	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
 		{"applicationType", "stb"},
@@ -191,7 +195,7 @@ func TestTelemetryTwoProfileDeleteHandler(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/%v?%v", p.ID, queryParams)
 
 	r := httptest.NewRequest("DELETE", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 
 	db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES)
@@ -201,10 +205,10 @@ func TestTelemetryTwoProfileDeleteHandler(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileDeleteChangeHandler(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryTwoProfile()
-	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
 		{"applicationType", "stb"},
@@ -212,7 +216,7 @@ func TestTelemetryTwoProfileDeleteChangeHandler(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/change/%v?%v", p.ID, queryParams)
 
 	r := httptest.NewRequest("DELETE", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	change := unmarshalChangeTwo(rr.Body.Bytes())
@@ -226,7 +230,7 @@ func TestTelemetryTwoProfileDeleteChangeHandler(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/telemetry/v2/change/approve/%v?%v", change.ID, queryParams)
 
 	r = httptest.NewRequest("GET", url, nil)
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -271,15 +275,15 @@ func createTelemetryTwoProfile() *logupload.TelemetryTwoProfile {
 // Additional tests to improve coverage for telemetry_two_profile_handler.go without duplicating logic.
 
 func TestTelemetryTwoProfileListExport(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 
 	p := createTelemetryTwoProfile()
-	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}, {"export", "true"}})
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile?%v", queryParams)
 	r := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	// Expect attachment header, filename contains application type
 	cd := rr.Header().Get("Content-Disposition")
@@ -288,48 +292,48 @@ func TestTelemetryTwoProfileListExport(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileGetByIdExport(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 	p := createTelemetryTwoProfile()
-	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
+	xshared.SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p.ID, p)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}, {"export", "true"}})
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/%s?%v", p.ID, queryParams)
 	r := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Header().Get("Content-Disposition"), p.ID)
 }
 
 func TestTelemetryTwoProfileFilteredSuccess(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 	p1 := createTelemetryTwoProfile()
 	p1.Name = "Alpha"
 	p2 := createTelemetryTwoProfile()
 	p2.Name = "Beta"
-	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
-	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
+	xshared.SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
+	xshared.SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}, {"pageNumber", "1"}, {"pageSize", "10"}})
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/filtered?%v", queryParams)
 	body := map[string]string{"Name": "Alpha"}
 	bodyBytes, _ := json.Marshal(body)
 	r := httptest.NewRequest("POST", url, bytes.NewReader(bodyBytes))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestTelemetryTwoProfileByIdListSuccess(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 	p1 := createTelemetryTwoProfile()
 	p2 := createTelemetryTwoProfile()
-	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
-	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
+	xshared.SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
+	xshared.SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}})
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/byIdList?%v", queryParams)
 	idListBytes, _ := json.Marshal([]string{p1.ID, p2.ID})
 	r := httptest.NewRequest("POST", url, bytes.NewReader(idListBytes))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	var profiles []logupload.TelemetryTwoProfile
 	err := json.Unmarshal(rr.Body.Bytes(), &profiles)
@@ -338,7 +342,7 @@ func TestTelemetryTwoProfileByIdListSuccess(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileEntitiesBatchCreate(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 	p1 := createTelemetryTwoProfile()
 	p2 := createTelemetryTwoProfile()
 	// Make second invalid by stripping required JSON (will fail validation)
@@ -348,7 +352,7 @@ func TestTelemetryTwoProfileEntitiesBatchCreate(t *testing.T) {
 	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}})
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/entities?%v", queryParams)
 	r := httptest.NewRequest("POST", url, bytes.NewReader(batchBytes))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	var resp map[string]struct{ Status, Message string }
 	err := json.Unmarshal(rr.Body.Bytes(), &resp)
@@ -358,14 +362,14 @@ func TestTelemetryTwoProfileEntitiesBatchCreate(t *testing.T) {
 }
 
 func TestTelemetryTwoProfileEntitiesBatchUpdate(t *testing.T) {
-	DeleteTelemetryEntities()
+	DeleteTelemetryEntities(t)
 	p1 := createTelemetryTwoProfile()
 	p2 := createTelemetryTwoProfile()
 	// Set applicationType for both and store
 	p1.ApplicationType = "stb"
 	p2.ApplicationType = "stb"
-	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
-	SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
+	xshared.SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p1.ID, p1)
+	xshared.SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, p2.ID, p2)
 	// Update p1 normally
 	p1.Jsonconfig = changedTelemetryJsonConfig
 	// Force failure for p2 by changing applicationType (conflict)
@@ -375,7 +379,7 @@ func TestTelemetryTwoProfileEntitiesBatchUpdate(t *testing.T) {
 	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}})
 	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/profile/entities?%v", queryParams)
 	r := httptest.NewRequest("PUT", url, bytes.NewReader(batchBytes))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	var resp map[string]struct{ Status, Message string }
 	err := json.Unmarshal(rr.Body.Bytes(), &resp)

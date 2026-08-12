@@ -486,41 +486,8 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	// telemetry/profile telemetry/v2/profile /change telemetry/change telemetry/v2/change
 	paths = change.RegisterChangeRoutes(r, paths)
 
-	// telemetry
-	telemetryPath := r.PathPrefix("/xconfAdminService/telemetry").Subrouter()
-	telemetryPath.HandleFunc("/create/{contextAttributeName}/{expectedValue}", telemetry.CreateTelemetryEntryFor).Methods("POST").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/testpage", telemetry.TelemetryTestPageHandler).Methods("POST").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/drop/{contextAttributeName}/{expectedValue}", telemetry.DropTelemetryEntryFor).Methods("POST").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/getAvailableRuleDescriptors", telemetry.GetDescriptors).Methods("GET").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/getAvailableTelemetryDescriptors", telemetry.GetTelemetryDescriptors).Methods("GET").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/addTo/{ruleId}/{contextAttributeName}/{expectedValue}/{expires}", telemetry.TempAddToPermanentRule).Methods("POST").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/bindToTelemetry/{telemetryId}/{contextAttributeName}/{expectedValue}/{expires}", telemetry.BindToTelemetry).Methods("POST").Name("Telemetry1-Uncategorized")
-	paths = append(paths, telemetryPath)
-
-	// telemetry/rule
-	telemetryRulePath := r.PathPrefix("/xconfAdminService/telemetry/rule").Subrouter()
-	telemetryRulePath.HandleFunc("", telemetry.GetTelemetryRulesHandler).Methods("GET").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("", telemetry.CreateTelemetryRuleHandler).Methods("POST").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("", telemetry.UpdateTelemetryRuleHandler).Methods("PUT").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("/entities", telemetry.PostTelemtryRuleEntitiesHandler).Methods("POST").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("/entities", telemetry.PutTelemetryRuleEntitiesHandler).Methods("PUT").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("/filtered", telemetry.PostTelemetryRuleFilteredWithParamsHandler).Methods("POST").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("/{id}", telemetry.DeleteTelmetryRuleByIdHandler).Methods("DELETE").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("/{id}", telemetry.GetTelemetryRuleByIdHandler).Methods("GET").Name("Telemetry1-Rules")
-	paths = append(paths, telemetryRulePath)
-
-	// telemetry/v2/rule
-	telemetryV2RulePath := r.PathPrefix("/xconfAdminService/telemetry/v2/rule").Subrouter()
-	telemetryV2RulePath.HandleFunc("", telemetry.CreateTelemetryTwoRuleHandler).Methods("POST").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/entities", telemetry.CreateTelemetryTwoRulesPackageHandler).Methods("POST").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("", telemetry.UpdateTelemetryTwoRuleHandler).Methods("PUT").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/entities", telemetry.UpdateTelemetryTwoRulesPackageHandler).Methods("PUT").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("", telemetry.GetTelemetryTwoRulesAllExport).Methods("GET").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/{id}", telemetry.GetTelemetryTwoRuleById).Methods("GET").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/filtered", telemetry.GetTelemetryTwoRulesFilteredWithPage).Methods("POST").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/{id}", telemetry.DeleteOneTelemetryTwoRuleHandler).Methods("DELETE").Name("Telemetry2-Rules")
-	paths = append(paths, telemetryV2RulePath)
+	// telemetry telemetry/rule telemetry/v2/rule
+	paths = telemetry.RegisterTelemetryRoutes(r, paths)
 
 	// changelog
 	changelogPath := r.PathPrefix("/xconfAdminService/changelog").Subrouter()
