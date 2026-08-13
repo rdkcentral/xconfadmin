@@ -487,7 +487,7 @@ func TestClassifySATv2DomainTaggingService(t *testing.T) {
 	if !found {
 		t.Fatalf("expected /taggingService/tags to be classified")
 	}
-	if domain != DOMAIN_TAGGING {
+	if domain != owcommon.SATV2DomainTagging {
 		t.Fatalf("expected tagging domain for /taggingService/tags, got: %s", domain)
 	}
 }
@@ -498,7 +498,7 @@ func TestClassifySATv2DomainDcmCore(t *testing.T) {
 	if !found {
 		t.Fatalf("expected /xconfAdminService/dcm to be classified")
 	}
-	if domain != DOMAIN_CORE {
+	if domain != owcommon.SATV2DomainCore {
 		t.Fatalf("expected core domain for /xconfAdminService/dcm, got: %s", domain)
 	}
 }
@@ -509,7 +509,7 @@ func TestClassifySATv2DomainLockdownSystem(t *testing.T) {
 	if !found {
 		t.Fatalf("expected /xconfAdminService/lockdownsettings to be classified")
 	}
-	if domain != DOMAIN_SYSTEM {
+	if domain != owcommon.SATV2DomainSystem {
 		t.Fatalf("expected system domain for /xconfAdminService/lockdownsettings, got: %s", domain)
 	}
 }
@@ -520,7 +520,7 @@ func TestClassifySATv2DomainMetrics(t *testing.T) {
 	if !found {
 		t.Fatalf("expected /metrics to be classified")
 	}
-	if domain != DOMAIN_METRICS {
+	if domain != owcommon.SATV2DomainMetrics {
 		t.Fatalf("expected metrics domain for /metrics, got: %s", domain)
 	}
 }
@@ -531,7 +531,7 @@ func TestClassifySATv2DomainFirstMatchWinsRfcRecooking(t *testing.T) {
 	if !found {
 		t.Fatalf("expected /xconfAdminService/rfc/recooking to be classified")
 	}
-	if domain != DOMAIN_SYSTEM {
+	if domain != owcommon.SATV2DomainSystem {
 		t.Fatalf("expected system domain for /xconfAdminService/rfc/recooking (first-match /rfc/recooking), got: %s", domain)
 	}
 }
@@ -542,7 +542,7 @@ func TestClassifySATv2DomainFirstMatchWinsQueriesFilters(t *testing.T) {
 	if !found {
 		t.Fatalf("expected /xconfAdminService/queries/filters/downloadlocation to be classified")
 	}
-	if domain != DOMAIN_SYSTEM {
+	if domain != owcommon.SATV2DomainSystem {
 		t.Fatalf("expected system domain for /xconfAdminService/queries/filters/downloadlocation (first-match /queries/filters/downloadlocation), got: %s", domain)
 	}
 }
@@ -553,7 +553,7 @@ func TestClassifySATv2DomainCaseInsensitive(t *testing.T) {
 	if !found {
 		t.Fatalf("expected /XconfAdminService/DCM (mixed case) to be classified")
 	}
-	if domain != DOMAIN_CORE {
+	if domain != owcommon.SATV2DomainCore {
 		t.Fatalf("expected core domain for mixed case path, got: %s", domain)
 	}
 }
@@ -564,7 +564,7 @@ func TestClassifySATv2DomainTrailingSlashStripped(t *testing.T) {
 	if !found {
 		t.Fatalf("expected /xconfadminservice/dcm/ (with trailing slash) to be classified")
 	}
-	if domain != DOMAIN_CORE {
+	if domain != owcommon.SATV2DomainCore {
 		t.Fatalf("expected core domain after stripping trailing slash, got: %s", domain)
 	}
 }

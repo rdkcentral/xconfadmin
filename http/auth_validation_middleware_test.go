@@ -66,13 +66,6 @@ func resetOnboardTenantFunc(t *testing.T) {
 	t.Cleanup(func() { testServer.OnboardTenantFunc = original })
 }
 
-// resetTestOnly saves testServer.testOnly and restores it when the test ends.
-func resetTestOnly(t *testing.T) {
-	t.Helper()
-	original := testServer.testOnly
-	t.Cleanup(func() { testServer.testOnly = original })
-}
-
 // ----------------------------------------------------------------------------
 // tests
 // ----------------------------------------------------------------------------
@@ -125,38 +118,43 @@ func TestAuthMiddleware_InvalidLoginToken(t *testing.T) {
 	}
 }
 
-// TestAuthMiddleware_TenantNotFound_OnboardFuncNil verifies that a missing
-// OnboardTenantFunc results in 500 when the tenant does not exist yet.
-func TestAuthMiddleware_TenantNotFound_OnboardFuncNil(t *testing.T) {
+// TestAuthMiddleware_TenantNotFound_NonSATDoesNotOnboard verifies that a
+// non-SAT-v2 request cannot onboard a missing tenant, even in test mode.
+func TestAuthMiddleware_TenantNotFound_NonSATDoesNotOnboard(t *testing.T) {
 	oldSatOn := xcommon.SatOn
 	xcommon.SatOn = false
 	defer func() { xcommon.SatOn = oldSatOn }()
 
-	resetTestOnly(t)
-	testServer.testOnly = true
 	resetOnboardTenantFunc(t)
-	testServer.OnboardTenantFunc = nil
+	onboardCalled := false
+	testServer.OnboardTenantFunc = func(id, name string) (*db.Tenant, error) {
+		onboardCalled = true
+		return nil, nil
+	}
 
 	r := httptest.NewRequest(http.MethodGet, "/test", nil)
 	r.Header.Set("tenantId", uuid.New().String()) // random UUID — not in DB
 	rr := serveWithMiddleware(testServer, okHandler, r)
 
-	if rr.Code != http.StatusInternalServerError {
-		t.Fatalf("expected 500 when OnboardTenantFunc is nil, got %d", rr.Code)
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for non-SAT-v2 missing tenant, got %d", rr.Code)
+	}
+	if onboardCalled {
+		t.Fatalf("expected non-SAT-v2 request not to onboard tenant")
 	}
 }
 
-// TestAuthMiddleware_TenantNotFound_OnboardFuncError verifies that a failure in
-// OnboardTenantFunc results in 500.
-func TestAuthMiddleware_TenantNotFound_OnboardFuncError(t *testing.T) {
+// TestAuthMiddleware_TenantNotFound_LoginTokenDoesNotOnboard verifies that
+// login-token requests cannot onboard a missing tenant.
+func TestAuthMiddleware_TenantNotFound_LoginTokenDoesNotOnboard(t *testing.T) {
 	oldSatOn := xcommon.SatOn
 	xcommon.SatOn = false
 	defer func() { xcommon.SatOn = oldSatOn }()
 
-	resetTestOnly(t)
-	testServer.testOnly = true
 	resetOnboardTenantFunc(t)
+	onboardCalled := false
 	testServer.OnboardTenantFunc = func(id, name string) (*db.Tenant, error) {
+		onboardCalled = true
 		return nil, errors.New("onboard failed")
 	}
 
@@ -164,20 +162,21 @@ func TestAuthMiddleware_TenantNotFound_OnboardFuncError(t *testing.T) {
 	r.Header.Set("tenantId", uuid.New().String())
 	rr := serveWithMiddleware(testServer, okHandler, r)
 
-	if rr.Code != http.StatusInternalServerError {
-		t.Fatalf("expected 500 when OnboardTenantFunc fails, got %d", rr.Code)
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for login-token missing tenant, got %d", rr.Code)
+	}
+	if onboardCalled {
+		t.Fatalf("expected login-token request not to onboard tenant")
 	}
 }
 
-// TestAuthMiddleware_TenantNotFound_OnboardFuncSuccess verifies that a new
-// tenant is onboarded successfully and the request proceeds.
-func TestAuthMiddleware_TenantNotFound_OnboardFuncSuccess(t *testing.T) {
+// TestAuthMiddleware_TenantNotFound_SATLegacyDoesNotOnboard verifies that
+// legacy SAT requests cannot onboard a missing tenant.
+func TestAuthMiddleware_TenantNotFound_SATLegacyDoesNotOnboard(t *testing.T) {
 	oldSatOn := xcommon.SatOn
 	xcommon.SatOn = false
 	defer func() { xcommon.SatOn = oldSatOn }()
 
-	resetTestOnly(t)
-	testServer.testOnly = true
 	resetOnboardTenantFunc(t)
 	onboardCalled := false
 	testServer.OnboardTenantFunc = func(id, name string) (*db.Tenant, error) {
@@ -189,11 +188,11 @@ func TestAuthMiddleware_TenantNotFound_OnboardFuncSuccess(t *testing.T) {
 	r.Header.Set("tenantId", uuid.New().String())
 	rr := serveWithMiddleware(testServer, okHandler, r)
 
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected 200 after successful tenant onboarding, got %d", rr.Code)
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for legacy SAT missing tenant, got %d", rr.Code)
 	}
-	if !onboardCalled {
-		t.Fatalf("expected OnboardTenantFunc to be called")
+	if onboardCalled {
+		t.Fatalf("expected legacy SAT request not to onboard tenant")
 	}
 }
 
@@ -224,8 +223,8 @@ func TestAuthMiddleware_TenantExists_NoOnboard(t *testing.T) {
 	}
 }
 
-// TestAuthMiddleware_TenantIdFromHeader verifies that when a tenantId header
-// is present, it is stored in the request context.
+// TestAuthMiddleware_NonSATTenantHeaderIgnored verifies that unauthenticated
+// requests do not select a tenant from the request header.
 func TestAuthMiddleware_TenantIdFromHeader(t *testing.T) {
 	oldSatOn := xcommon.SatOn
 	xcommon.SatOn = false
@@ -233,6 +232,7 @@ func TestAuthMiddleware_TenantIdFromHeader(t *testing.T) {
 
 	const headerTenantId = "ACME"
 	createTenant(t, headerTenantId)
+	createTenant(t, db.GetDefaultTenantId())
 
 	var capturedTenantId string
 	captureHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -247,8 +247,50 @@ func TestAuthMiddleware_TenantIdFromHeader(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
-	if capturedTenantId != headerTenantId {
-		t.Fatalf("expected tenant ID %q in context, got %q", headerTenantId, capturedTenantId)
+	if capturedTenantId != db.GetDefaultTenantId() {
+		t.Fatalf("expected default tenant ID %q in context, got %q", db.GetDefaultTenantId(), capturedTenantId)
+	}
+}
+
+func TestResolveTenantIDByAuthType(t *testing.T) {
+	const (
+		headerTenant  = "HEADER_TENANT"
+		defaultTenant = "DEFAULT_TENANT"
+	)
+	tests := []struct {
+		name     string
+		authType AuthType
+		enabled  bool
+		header   string
+		expected string
+	}{
+		{name: "SAT v2 uses header", authType: AUTH_TYPE_SAT_V2, header: headerTenant, expected: headerTenant},
+		{name: "SAT v2 falls back", authType: AUTH_TYPE_SAT_V2, expected: defaultTenant},
+		{name: "legacy SAT uses default", authType: AUTH_TYPE_SAT_LEGACY, enabled: true, header: headerTenant, expected: defaultTenant},
+		{name: "login token flag disabled", authType: AUTH_TYPE_LOGIN_TOKEN, header: headerTenant, expected: defaultTenant},
+		{name: "login token flag enabled", authType: AUTH_TYPE_LOGIN_TOKEN, enabled: true, header: headerTenant, expected: headerTenant},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := resolveTenantID(test.authType, test.header, defaultTenant, test.enabled); got != test.expected {
+				t.Fatalf("expected tenant %q, got %q", test.expected, got)
+			}
+		})
+	}
+}
+
+func TestCanAutoCreateTenantRequiresSATV2ReadWrite(t *testing.T) {
+	if !canAutoCreateTenant(AUTH_TYPE_SAT_V2, []string{"xconf:system:readwrite"}) {
+		t.Fatal("expected SAT v2 system readwrite capability to allow onboarding")
+	}
+	if canAutoCreateTenant(AUTH_TYPE_SAT_V2, []string{"xconf:system:readonly"}) {
+		t.Fatal("expected readonly capability to deny onboarding")
+	}
+	if canAutoCreateTenant(AUTH_TYPE_LOGIN_TOKEN, []string{"xconf:system:readwrite"}) {
+		t.Fatal("expected login-token onboarding to be denied")
+	}
+	if canAutoCreateTenant(AUTH_TYPE_SAT_LEGACY, []string{"xconf:system:readwrite"}) {
+		t.Fatal("expected legacy SAT onboarding to be denied")
 	}
 }
 
