@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"runtime/pprof"
 	"strings"
@@ -36,6 +35,7 @@ import (
 	"github.com/rdkcentral/xconfadmin/adminapi/rfc/feature"
 	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xfw "github.com/rdkcentral/xconfadmin/shared/firmware"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
@@ -90,51 +90,6 @@ func startTestWatchdog(pkgName string) func() {
 	return func() { close(done) }
 }
 
-func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRecorder { // restored local version
-	recorder := httptest.NewRecorder()
-	handler.ServeHTTP(recorder, r)
-	return recorder
-}
-
-func DeleteAllEntities() {
-	// For mock database, just clear it - ultra fast!
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
-		return
-	}
-
-	// Real DB cleanup: delete rows individually to avoid TRUNCATE latency on Cassandra 5.x
-	tenantId := db.GetDefaultTenantId()
-	for _, tableInfo := range db.GetAllTableInfo() {
-		if err := truncateTable(tenantId, tableInfo.TableName); err != nil {
-			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
-		}
-		if tableInfo.Cached {
-			db.GetCachedSimpleDao().RefreshAll(tenantId, tableInfo.TableName)
-		}
-	}
-}
-
-func truncateTable(tenantId string, tableName string) error {
-	dbClient := db.GetDatabaseClient()
-	cassandraClient, ok := dbClient.(*db.CassandraClient)
-	if ok {
-		tableInfo, err := db.GetTableInfo(tableName)
-		if err != nil {
-			return err
-		}
-		if tableInfo.Unsharded {
-			if tableName == db.TABLE_LOGS {
-				tableName = cassandraClient.GetTableNameFromLogKeyspace(tableName)
-			}
-			return cassandraClient.Query(fmt.Sprintf(`TRUNCATE table %s`, tableName)).Exec()
-		} else {
-			return cassandraClient.DeleteAllXconfData(tenantId, tableName)
-		}
-	}
-	return nil
-}
-
 func TestMain(m *testing.M) {
 	fmt.Printf("in TestMain\n")
 	stopWatchdog := startTestWatchdog("adminapi/queries")
@@ -147,8 +102,8 @@ func TestMain(m *testing.M) {
 
 		// CRITICAL: Initialize mock database FIRST - this overrides GetCachedSimpleDaoFunc
 		// so all subsequent code uses our in-memory mock
-		mockDaoInstance = InitMockDatabase()
-		defer DisableMockDatabase()
+		xshared.InitMockDatabase()
+		defer xshared.DisableMockDatabase()
 	}
 
 	testConfigFile = "/app/xconfadmin/xconfadmin.conf"
@@ -248,7 +203,7 @@ func ImportTableData(data []interface{}) error {
 		case "TABLE_ENVIRONMENTS":
 			var tabletype = shared.Environment{}
 			err = json.Unmarshal([]byte(row.(TableData).Tablerow), &tabletype)
-			err = SetOneInDao(db.TABLE_ENVIRONMENTS, tabletype.ID, &tabletype)
+			err = xshared.SetOneInDao(db.TABLE_ENVIRONMENTS, tabletype.ID, &tabletype)
 			break
 		case "TABLE_GENERIC_NS_LIST":
 			var humptyStrList = []string{
@@ -267,26 +222,26 @@ func ImportTableData(data []interface{}) error {
 
 			tabletype.TypeName = "IP_LIST"
 			tabletype.Data = ipList
-			err = SetOneInDao(db.TABLE_GENERIC_NS_LIST, tabletype.ID, tabletype)
+			err = xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, tabletype.ID, tabletype)
 			break
 		case "TABLE_FIRMWARE_CONFIGS":
 			var firmwareConfig = coreef.NewEmptyFirmwareConfig()
 			err = json.Unmarshal([]byte(row.(TableData).Tablerow), &firmwareConfig)
-			err = SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, firmwareConfig.ID, firmwareConfig)
+			err = xshared.SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, firmwareConfig.ID, firmwareConfig)
 			break
 
 		case "TABLE_FIRMWARE_RULES":
 			var firmwareRule = corefw.NewEmptyFirmwareRule()
 			var data_str = row.(TableData).Tablerow
 			err = json.Unmarshal([]byte(data_str), &firmwareRule)
-			err = SetOneInDao(db.TABLE_FIRMWARE_RULES, firmwareRule.ID, firmwareRule)
+			err = xshared.SetOneInDao(db.TABLE_FIRMWARE_RULES, firmwareRule.ID, firmwareRule)
 			break
 
 		case "TABLE_SINGLETON_FILTER_VALUES":
 			var data_str = row.(TableData).Tablerow
 			locationRoundRobinFilter := coreef.NewEmptyDownloadLocationRoundRobinFilterValue()
 			err = json.Unmarshal([]byte(data_str), &locationRoundRobinFilter)
-			err = SetOneInDao(db.TABLE_SINGLETON_FILTER_VALUES, locationRoundRobinFilter.ID, locationRoundRobinFilter)
+			err = xshared.SetOneInDao(db.TABLE_SINGLETON_FILTER_VALUES, locationRoundRobinFilter.ID, locationRoundRobinFilter)
 			break
 		}
 
@@ -699,9 +654,9 @@ func setupRoutes(server *xhttp.WebconfigServer, r *mux.Router) {
 }
 
 func TestAllQueriesApis(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
+	xshared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
 	//server, _ := SetupTestEnvironment()
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	table_data := []interface{}{
 		TableData{Tablename: "TABLE_ENVIRONMENTS", Tablerow: `{"id":"AX061AEI","updated":1591604177484,"description":"RT1319"}`},
@@ -725,7 +680,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -736,7 +691,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -747,7 +702,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -758,7 +713,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -769,7 +724,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -780,7 +735,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -792,7 +747,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 
@@ -805,7 +760,7 @@ func TestAllQueriesApis(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -820,7 +775,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err := ioutil.ReadAll(res.Body)
@@ -836,7 +791,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -852,7 +807,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -868,7 +823,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -884,7 +839,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -900,7 +855,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -920,7 +875,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -936,7 +891,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -952,7 +907,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -968,7 +923,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -984,7 +939,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -1000,7 +955,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -1016,7 +971,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -1032,7 +987,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -1048,7 +1003,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -1067,7 +1022,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
 	body, err = ioutil.ReadAll(res.Body)
@@ -1090,7 +1045,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)

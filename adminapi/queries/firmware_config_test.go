@@ -31,6 +31,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rdkcentral/xconfadmin/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+
 	"github.com/google/uuid"
 
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -78,7 +81,7 @@ func newFirmwareConfigApiUnitTest(t *testing.T) *apiUnitTest {
 }
 func SavePercentageBeanPB(percentageBean *coreef.PercentageBean) error {
 	firmwareRule := coreef.ConvertPercentageBeanToFirmwareRule(*percentageBean)
-	return SetOneInDao(db.TABLE_FIRMWARE_RULES, firmwareRule.ID, firmwareRule)
+	return xshared.SetOneInDao(db.TABLE_FIRMWARE_RULES, firmwareRule.ID, firmwareRule)
 }
 func PreCreatePercentageBean() (*coreef.PercentageBean, error) {
 
@@ -99,8 +102,8 @@ func PreCreatePercentageBean() (*coreef.PercentageBean, error) {
 }
 
 func TestValidateUsageBeforeRemoving(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	//DeleteAllEntities()
+	shared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	//shared.DeleteAllEntities(t)
 	percentageBean, err := PreCreatePercentageBean()
 	assert.NilError(t, err)
 	firmwareConfig, _ := coreef.GetFirmwareConfigOneDB(db.GetDefaultTenantId(), percentageBean.LastKnownGood)
@@ -108,13 +111,13 @@ func TestValidateUsageBeforeRemoving(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/delete/firmwares/%v?&applicationType=stb", percentageBean.LastKnownGood)
 
 	r := httptest.NewRequest("DELETE", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusConflict, rr.Code)
 
 	xconfError := unmarshalXconfError(rr.Body.Bytes())
 
 	assert.Equal(t, fmt.Sprintf("FirmwareConfig %v is used by %v rule", firmwareConfig.Description, percentageBean.Name), xconfError.Message)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 }
 
 func (aut *apiUnitTest) setupFirmwareConfigApi() {

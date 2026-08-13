@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
@@ -1293,8 +1294,8 @@ func TestCheckFixedArgValue_InListOperationOnIPAddress_MissingIPList(t *testing.
 }
 
 func TestCheckFixedArgValue_InListOperationOnIPAddress_ValidIPList(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.DeleteAllEntities(t)
 
 	// Create a valid IP list using the package-level helper and service function
 	ipList := makeGenericList("TEST_IP_LIST", shared.IP_LIST, []string{"192.168.1.0/24"})
@@ -1308,8 +1309,6 @@ func TestCheckFixedArgValue_InListOperationOnIPAddress_ValidIPList(t *testing.T)
 
 	err := checkFixedArgValue(db.GetDefaultTenantId(), condition, isNotBlank)
 	assert.NoError(t, err)
-
-	DeleteAllEntities()
 }
 
 func TestCheckFixedArgValue_InListOperationOnEstbIp_MissingIPList(t *testing.T) {
@@ -1352,8 +1351,8 @@ func TestCheckFixedArgValue_IsOperationOnModel_MissingModel(t *testing.T) {
 }
 
 func TestCheckFixedArgValue_IsOperationOnModel_ValidModel(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.DeleteAllEntities(t)
 
 	// Create a valid model using the service function
 	model := &shared.Model{
@@ -1370,8 +1369,6 @@ func TestCheckFixedArgValue_IsOperationOnModel_ValidModel(t *testing.T) {
 
 	err := checkFixedArgValue(db.GetDefaultTenantId(), condition, isNotBlank)
 	assert.NoError(t, err)
-
-	DeleteAllEntities()
 }
 
 func TestCheckFixedArgValue_IsOperationOnLoguploadModel_MissingModel(t *testing.T) {

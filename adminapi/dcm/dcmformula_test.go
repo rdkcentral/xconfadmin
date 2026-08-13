@@ -590,29 +590,6 @@ func GetTestWebConfigServer(testConfigFile string) (*xhttp.WebconfigServer, *mux
 	return server, router
 }
 
-func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRecorder { // restored local version
-	recorder := httptest.NewRecorder()
-
-	// Wrap the response writer with XResponseWriter to match production behavior
-	xw := xwhttp.NewXResponseWriter(recorder, r)
-
-	// Read and set the request body on XResponseWriter (mimics middleware behavior)
-	if r.Method == "POST" || r.Method == "PUT" {
-		if r.Body != nil {
-			if rbytes, err := ioutil.ReadAll(r.Body); err == nil {
-				xw.SetBody(string(rbytes))
-				// Reset the body so the handler can read it again
-				r.Body = ioutil.NopCloser(bytes.NewReader(rbytes))
-			}
-		} else {
-			xw.SetBody("")
-		}
-	}
-
-	handler.ServeHTTP(xw, r)
-	return recorder
-}
-
 func CreateAndSaveModel(id string) *core.Model {
 	model := core.NewModel(id, "ModelDescription")
 	err := xshared.SetOneInDao(db.TABLE_MODELS, model.ID, model)
@@ -652,7 +629,7 @@ func TestDfAllApi(t *testing.T) {
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsondfPostCreateData))
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.NilError(t, err)
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
@@ -663,7 +640,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -674,7 +651,7 @@ func TestDfAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -692,7 +669,7 @@ func TestDfAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -712,7 +689,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	defer res.Body.Close()
@@ -729,7 +706,7 @@ func TestDfAllApi(t *testing.T) {
 	// assert.NilError(t, err)
 	// req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	// req.Header.Set("Accept", "application/json")
-	// res = ExecuteRequest(req, router).Result()
+	// res = xshared.ExecuteRequest(req, router).Result()
 	// defer res.Body.Close()
 	// assert.Equal(t, res.StatusCode, http.StatusOK)
 	// defer res.Body.Close()
@@ -743,7 +720,7 @@ func TestDfAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -758,7 +735,7 @@ func TestDfAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	defer res.Body.Close()
@@ -777,7 +754,7 @@ func TestDfAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -793,7 +770,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	assert.NilError(t, err)
@@ -809,7 +786,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -825,7 +802,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -841,7 +818,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -856,7 +833,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	//assert.Equal(t, res.StatusCode, http.StatusConflict)
 
@@ -865,7 +842,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	//assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -874,7 +851,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	//assert.Equal(t, res.StatusCode, http.StatusConflict)
 
@@ -883,7 +860,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	//assert.Equal(t, res.StatusCode, http.StatusNoContent)
 
@@ -892,7 +869,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	//assert.Equal(t, res.StatusCode, http.StatusNotFound)
 }
@@ -917,7 +894,7 @@ func TestDfAllApi(t *testing.T) {
 
 // 	formulaJson, _ := json.Marshal(formulaToUpdate)
 // 	r := httptest.NewRequest("PUT", url, bytes.NewReader(formulaJson))
-// 	rr := ExecuteRequest(r, router)
+// 	rr := xshared.ExecuteRequest(r, router)
 // 	assert.Equal(t, http.StatusOK, rr.Code)
 
 // 	receivedFormula := unmarshalFormula(rr.Body.Bytes())
@@ -926,7 +903,7 @@ func TestDfAllApi(t *testing.T) {
 
 // 	url = fmt.Sprintf("/xconfAdminService/dcm/formula/%s?%v", receivedFormula.ID, queryParams)
 // 	r = httptest.NewRequest("GET", url, nil)
-// 	rr = ExecuteRequest(r, router)
+// 	rr = xshared.ExecuteRequest(r, router)
 // 	assert.Equal(t, http.StatusOK, rr.Code)
 
 // 	receivedFormula = unmarshalFormula(rr.Body.Bytes())
@@ -936,7 +913,7 @@ func TestDfAllApi(t *testing.T) {
 
 // 	url = fmt.Sprintf("/xconfAdminService/dcm/formula?%v", queryParams)
 // 	r = httptest.NewRequest("GET", url, nil)
-// 	rr = ExecuteRequest(r, router)
+// 	rr = xshared.ExecuteRequest(r, router)
 // 	assert.Equal(t, http.StatusOK, rr.Code)
 
 // 	// receivedFormulas := unmarshalFormulas(rr.Body.Bytes())
@@ -963,7 +940,7 @@ func TestChangeFormulaPriorityWithNotValidValue_ExceptionIsThrown(t *testing.T) 
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s/priority/%v?%v", formula.ID, newPriority, queryParams)
 
 	r := httptest.NewRequest("POST", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 
 	xconfError := unmarshalXconfError(rr.Body.Bytes())
@@ -1001,7 +978,7 @@ func saveFormula(formula *logupload.DCMGenericRule, t *testing.T) {
 
 	formulaJson, _ := json.Marshal(formula)
 	r := httptest.NewRequest("POST", url, bytes.NewReader(formulaJson))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	if rr.Code != http.StatusCreated {
 		t.Logf("saveFormula failed with status %d, body: %s", rr.Code, rr.Body.String())
 	}
@@ -1023,7 +1000,7 @@ func TestImportDcmFormulasHandler_AuthError(t *testing.T) {
 	url := "/xconfAdminService/dcm/formula/import/all"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
 	// No applicationType cookie - auth will fail
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code >= http.StatusOK) // Auth allows default applicationType
 }
 
@@ -1032,7 +1009,7 @@ func TestImportDcmFormulasHandler_InvalidJSON(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
@@ -1048,7 +1025,7 @@ func TestImportDcmFormulasHandler_Success(t *testing.T) {
 	formulaJson, _ := json.Marshal(formulaList)
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(formulaJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	// Accept either OK (success) or BadRequest (import validation error) - we're testing handler doesn't crash
 	assert.Assert(t, rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest)
 }
@@ -1059,7 +1036,7 @@ func TestPostDcmFormulaListHandler_AuthError(t *testing.T) {
 	url := "/xconfAdminService/dcm/formula/entities"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
 	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code >= http.StatusOK)
 }
 
@@ -1068,7 +1045,7 @@ func TestPostDcmFormulaListHandler_InvalidJSON(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
@@ -1084,7 +1061,7 @@ func TestPostDcmFormulaListHandler_Success(t *testing.T) {
 	formulaJson, _ := json.Marshal(formulaList)
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(formulaJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -1094,7 +1071,7 @@ func TestPutDcmFormulaListHandler_AuthError(t *testing.T) {
 	url := "/xconfAdminService/dcm/formula/entities"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`[]`)))
 	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code >= http.StatusOK)
 }
 
@@ -1103,7 +1080,7 @@ func TestPutDcmFormulaListHandler_InvalidJSON(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
@@ -1123,7 +1100,7 @@ func TestPutDcmFormulaListHandler_Success(t *testing.T) {
 	formulaJson, _ := json.Marshal(formulaList)
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(formulaJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -1133,7 +1110,7 @@ func TestGetDcmFormulaHandler_AuthError(t *testing.T) {
 	url := "/xconfAdminService/dcm/formula"
 	req := httptest.NewRequest("GET", url, nil)
 	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code >= http.StatusOK)
 }
 
@@ -1146,7 +1123,7 @@ func TestGetDcmFormulaHandler_Success(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula?applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	formulas := unmarshalFormulas(rr.Body.Bytes())
@@ -1162,7 +1139,7 @@ func TestGetDcmFormulaHandler_ExportMode(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula?export&applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify Content-Disposition header is set
@@ -1179,7 +1156,7 @@ func TestGetDcmFormulaByIdHandler_MissingID(t *testing.T) {
 	// So this test should verify that behavior works
 	url := "/xconfAdminService/dcm/formula?applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -1188,7 +1165,7 @@ func TestGetDcmFormulaByIdHandler_NotFound(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/non-existent-id?applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
@@ -1201,7 +1178,7 @@ func TestCreateDcmFormulaHandler_AuthError(t *testing.T) {
 	url := "/xconfAdminService/dcm/formula"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(formulaJson))
 	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code >= http.StatusOK)
 }
 
@@ -1210,7 +1187,7 @@ func TestCreateDcmFormulaHandler_InvalidJSON(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
@@ -1223,7 +1200,7 @@ func TestUpdateDcmFormulaHandler_AuthError(t *testing.T) {
 	url := "/xconfAdminService/dcm/formula"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(formulaJson))
 	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code >= http.StatusOK)
 }
 
@@ -1232,7 +1209,7 @@ func TestUpdateDcmFormulaHandler_InvalidJSON(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
@@ -1242,7 +1219,7 @@ func TestDeleteDcmFormulaByIdHandler_AuthError(t *testing.T) {
 	url := "/xconfAdminService/dcm/formula/some-id"
 	req := httptest.NewRequest("DELETE", url, nil)
 	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code >= http.StatusOK || rr.Code == http.StatusNotFound)
 }
 
@@ -1252,7 +1229,7 @@ func TestDcmFormulaSettingsAvailabilitygHandler_AuthError(t *testing.T) {
 	url := "/xconfAdminService/dcm/formula/settingsAvailability"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
 	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code >= http.StatusOK)
 }
 
@@ -1261,7 +1238,7 @@ func TestDcmFormulaSettingsAvailabilitygHandler_InvalidJSON(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/settingsAvailability?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
@@ -1271,7 +1248,7 @@ func TestDcmFormulasAvailabilitygHandler_AuthError(t *testing.T) {
 	url := "/xconfAdminService/dcm/formula/formulasAvailability"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
 	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code >= http.StatusOK)
 }
 
@@ -1280,7 +1257,7 @@ func TestDcmFormulasAvailabilitygHandler_InvalidJSON(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/formulasAvailability?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
@@ -1290,7 +1267,7 @@ func TestPostDcmFormulaFilteredWithParamsHandler_AuthError(t *testing.T) {
 	url := "/xconfAdminService/dcm/formula/filtered"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`{}`)))
 	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code >= http.StatusOK)
 }
 
@@ -1299,7 +1276,7 @@ func TestPostDcmFormulaFilteredWithParamsHandler_InvalidJSON(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/filtered?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
@@ -1309,7 +1286,7 @@ func TestDcmFormulaChangePriorityHandler_AuthError(t *testing.T) {
 	url := "/xconfAdminService/dcm/formula/some-id/priority/1"
 	req := httptest.NewRequest("POST", url, nil)
 	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code >= http.StatusOK || rr.Code == http.StatusBadRequest)
 }
 
@@ -1318,7 +1295,7 @@ func TestDcmFormulaChangePriorityHandler_MissingFormula(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/non-existent-id/priority/1?applicationType=stb"
 	req := httptest.NewRequest("POST", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
@@ -1332,7 +1309,7 @@ func TestImportDcmFormulaWithOverwriteHandler_AuthError(t *testing.T) {
 	url := "/xconfAdminService/dcm/formula/import/false"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
 	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code >= http.StatusOK || rr.Code == http.StatusBadRequest || rr.Code == http.StatusConflict)
 }
 
@@ -1341,7 +1318,7 @@ func TestImportDcmFormulaWithOverwriteHandler_InvalidJSON(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/import/false?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
@@ -1354,7 +1331,7 @@ func TestGetDcmFormulaByIdHandler_AppTypeMismatch(t *testing.T) {
 
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s?applicationType=xhome", formula.ID)
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
@@ -1367,7 +1344,7 @@ func TestGetDcmFormulaByIdHandler_ExportWithSettings(t *testing.T) {
 
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s?export&applicationType=stb", formula.ID)
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify Content-Disposition header
@@ -1381,7 +1358,7 @@ func TestDeleteDcmFormulaByIdHandler_MissingID(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/"
 	req := httptest.NewRequest("DELETE", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	// Router should not match this route, or return method not allowed
 	assert.Assert(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusMethodNotAllowed)
 }
@@ -1395,7 +1372,7 @@ func TestCreateDcmFormulaHandler_Success(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(formulaJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code == http.StatusCreated || rr.Code == http.StatusOK)
 }
 
@@ -1412,7 +1389,7 @@ func TestUpdateDcmFormulaHandler_Success(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(formulaJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -1422,7 +1399,7 @@ func TestGetDcmFormulaNamesHandler_EmptyList(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/names?applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var names []string
@@ -1441,7 +1418,7 @@ func TestGetDcmFormulaSizeHandler_MultipleFormulas(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/size?applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var sizeStr string
@@ -1462,7 +1439,7 @@ func TestDcmFormulaSettingsAvailabilitygHandler_Success(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/settingsAvailability?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(idListJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var result map[string]map[string]bool
@@ -1482,7 +1459,7 @@ func TestDcmFormulasAvailabilitygHandler_Success(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/formulasAvailability?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(idListJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var result map[string]bool
@@ -1501,7 +1478,7 @@ func TestPostDcmFormulaFilteredWithParamsHandler_EmptyContext(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/filtered?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte("{}")))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	formulas := unmarshalFormulas(rr.Body.Bytes())
@@ -1519,7 +1496,7 @@ func TestPostDcmFormulaFilteredWithParamsHandler_WithPagination(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/filtered?pageNumber=1&pageSize=5&applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte("{}")))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	formulas := unmarshalFormulas(rr.Body.Bytes())
@@ -1542,7 +1519,7 @@ func TestDcmFormulaChangePriorityHandler_AppTypeMismatch(t *testing.T) {
 	// Save formula using xhome application type
 	createUrl := "/xconfAdminService/dcm/formula?applicationType=xhome"
 	createReq := httptest.NewRequest("POST", createUrl, bytes.NewReader(formulaJson))
-	createRr := ExecuteRequest(createReq, router)
+	createRr := xshared.ExecuteRequest(createReq, router)
 	if createRr.Code != http.StatusCreated {
 		t.Skipf("Could not create formula: %d - %s", createRr.Code, createRr.Body.String())
 	}
@@ -1550,7 +1527,7 @@ func TestDcmFormulaChangePriorityHandler_AppTypeMismatch(t *testing.T) {
 	// Now try to change priority with mismatched applicationType=stb
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s/priority/2?applicationType=stb", formula.ID)
 	req := httptest.NewRequest("POST", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
@@ -1563,7 +1540,7 @@ func TestDcmFormulaChangePriorityHandler_Success(t *testing.T) {
 	newPriority := 4
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s/priority/%d?applicationType=stb", formulas[0].ID, newPriority)
 	req := httptest.NewRequest("POST", url, nil)
-	ExecuteRequest(req, router)
+	xshared.ExecuteRequest(req, router)
 	//assert.Equal(t, http.StatusOK, rr.Code)
 
 	//reorganizedFormulas := unmarshalFormulas(rr.Body.Bytes())
@@ -1584,7 +1561,7 @@ func TestImportDcmFormulaWithOverwriteHandler_OverwriteTrue(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/import/true?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest)
 }
 
@@ -1603,7 +1580,7 @@ func TestImportDcmFormulaWithOverwriteHandler_OverwriteTrue(t *testing.T) {
 
 // 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 // 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-// 	rr := ExecuteRequest(req, router)
+// 	rr := xshared.ExecuteRequest(req, router)
 // 	assert.Equal(t, http.StatusOK, rr.Code)
 
 // 	var result map[string][]string
@@ -1627,7 +1604,7 @@ func TestPostDcmFormulaListHandler_MultipleFormulas(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -1652,7 +1629,7 @@ func TestPutDcmFormulaListHandler_MultipleFormulas(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -1667,7 +1644,7 @@ func TestGetDcmFormulaHandler_ExportMultiple(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula?export&applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify Content-Disposition header
@@ -1686,7 +1663,7 @@ func TestDcmFormulaChangePriorityHandler_NegativePriority(t *testing.T) {
 
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s/priority/-1?applicationType=stb", formula.ID)
 	req := httptest.NewRequest("POST", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
@@ -1699,7 +1676,7 @@ func TestDcmFormulaChangePriorityHandler_InvalidPriorityFormat(t *testing.T) {
 
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s/priority/abc?applicationType=stb", formula.ID)
 	req := httptest.NewRequest("POST", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
@@ -1722,7 +1699,7 @@ func TestImportDcmFormulasHandler_SortByPriority(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	// Accept either OK or BadRequest - we're testing the handler processes the sorted list
 	assert.Assert(t, rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest)
 }
@@ -1742,7 +1719,7 @@ func TestImportDcmFormulasHandler_PartialFailure(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	// Accept either status - testing the handler doesn't crash on mixed valid/invalid
 	assert.Assert(t, rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest)
 }
@@ -1755,7 +1732,7 @@ func TestImportDcmFormulasHandler_EmptyList(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	// Empty list should process successfully
 	assert.Assert(t, rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest)
 }
@@ -1805,7 +1782,7 @@ func TestImportDcmFormulasHandler_WithSettings(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	// Accept either OK or BadRequest - testing handler processes settings
 	assert.Assert(t, rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest)
 }
@@ -1820,7 +1797,7 @@ func TestImportDcmFormulasHandler_LockError(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	// Lock should succeed in test environment
 	assert.Assert(t, rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest)
 }
@@ -1869,7 +1846,7 @@ func TestPostDcmFormulaListHandler_WithAllSettings(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify response contains result map
@@ -1885,7 +1862,7 @@ func TestPostDcmFormulaListHandler_EmptyList(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -1901,7 +1878,7 @@ func TestPostDcmFormulaListHandler_DuplicateFormula(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Should have failure in result
@@ -1924,7 +1901,7 @@ func TestPostDcmFormulaListHandler_MixedResults(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -1937,7 +1914,7 @@ func TestPostDcmFormulaListHandler_InvalidFormula(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -1991,7 +1968,7 @@ func TestPutDcmFormulaListHandler_UpdateWithAllSettings(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify response
@@ -2009,7 +1986,7 @@ func TestPutDcmFormulaListHandler_NonExistentFormula(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Should have failure in result
@@ -2025,7 +2002,7 @@ func TestPutDcmFormulaListHandler_EmptyList(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -2046,7 +2023,7 @@ func TestPutDcmFormulaListHandler_MixedResults(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -2064,7 +2041,7 @@ func TestPutDcmFormulaListHandler_UpdatePriority(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -2093,7 +2070,7 @@ func TestPutDcmFormulaListHandler_PartialSettings(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -2106,7 +2083,7 @@ func TestPutDcmFormulaListHandler_InvalidFormula(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -2118,7 +2095,7 @@ func TestImportDcmFormulasHandler_CastError(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code >= http.StatusOK) // Should succeed with middleware
 }
 
@@ -2127,7 +2104,7 @@ func TestPostDcmFormulaListHandler_CastError(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code >= http.StatusOK)
 }
 
@@ -2136,7 +2113,7 @@ func TestPutDcmFormulaListHandler_CastError(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`[]`)))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code >= http.StatusOK)
 }
 

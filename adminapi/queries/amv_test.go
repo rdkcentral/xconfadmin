@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
@@ -147,7 +148,7 @@ func TestAmvAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 
 	// with Model good case
@@ -160,7 +161,7 @@ func TestAmvAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
 
@@ -170,7 +171,7 @@ func TestAmvAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -180,7 +181,7 @@ func TestAmvAllApi(t *testing.T) {
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	defer res.Body.Close()
@@ -200,7 +201,7 @@ func TestAmvAllApi(t *testing.T) {
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -210,7 +211,7 @@ func TestAmvAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -225,7 +226,7 @@ func TestAmvAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -240,7 +241,7 @@ func TestAmvAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -256,7 +257,7 @@ func TestAmvAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
 
@@ -265,7 +266,7 @@ func TestAmvAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -281,7 +282,7 @@ func TestAmvAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -290,7 +291,7 @@ func TestAmvAllApi(t *testing.T) {
 	// req.Header.Set("Content-Type", "application/json")
 	// req.Header.Set("Accept", "application/json")
 	// assert.NilError(t, err)
-	// res = ExecuteRequest(req, router).Result()
+	// res =xshared.ExecuteRequest(req, router).Result()
 	// defer res.Body.Close()
 	// assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 
@@ -299,7 +300,7 @@ func TestAmvAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusNoContent)
 
@@ -309,7 +310,7 @@ func TestAmvAllApi(t *testing.T) {
 	// req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	// req.Header.Set("Accept", "application/json")
 	// assert.NilError(t, err)
-	// res = ExecuteRequest(req, router).Result()
+	// res =xshared.ExecuteRequest(req, router).Result()
 	// defer res.Body.Close()
 	// assert.Equal(t, res.StatusCode, http.StatusNotFound)
 }
@@ -322,7 +323,7 @@ func TestAmv_GetById_NotFound(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 }
@@ -338,7 +339,7 @@ func TestAmv_GetById_Export(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
 
@@ -349,7 +350,7 @@ func TestAmv_GetById_Export(t *testing.T) {
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	assert.Assert(t, res.Header.Get("Content-Disposition") != "")
@@ -366,7 +367,7 @@ func TestAmv_GetAll_ExportAll(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
 
@@ -375,7 +376,7 @@ func TestAmv_GetAll_ExportAll(t *testing.T) {
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	assert.Assert(t, res.Header.Get("Content-Disposition") != "")
@@ -394,7 +395,7 @@ func TestAmv_Create_ApplicationTypeMismatch(t *testing.T) {
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 	assert.NilError(t, err)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
 }
@@ -406,7 +407,7 @@ func TestAmv_Update_NotFound(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	// model UNKNOWN not set; validation will fail with model does not exist -> BadRequest OR NotFound due to missing in DB after validation path differences
 	assert.Assert(t, res.StatusCode == http.StatusBadRequest || res.StatusCode == http.StatusNotFound)
@@ -419,7 +420,7 @@ func TestAmv_Filtered_Post_InvalidJSON(t *testing.T) {
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 	assert.NilError(t, err)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 }
@@ -431,7 +432,7 @@ func TestAmv_Filtered_Post_PaginationErrors(t *testing.T) {
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 	assert.NilError(t, err)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 	// pageSize=0
@@ -440,7 +441,7 @@ func TestAmv_Filtered_Post_PaginationErrors(t *testing.T) {
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 }
@@ -458,7 +459,7 @@ func TestAmv_BatchCreateAndUpdate(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	// expect OK after batch create
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -469,7 +470,7 @@ func TestAmv_BatchCreateAndUpdate(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 }
@@ -485,7 +486,7 @@ func TestAmv_ImportAll_MixingApplicationTypes(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	assert.NilError(t, err)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	// observed status is 409 due to validation of applicationType wrong
 	assert.Equal(t, res.StatusCode, http.StatusConflict)

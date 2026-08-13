@@ -6,6 +6,7 @@ import (
 	"github.com/rdkcentral/xconfadmin/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	shared "github.com/rdkcentral/xconfwebconfig/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,7 +20,7 @@ func newLocationFilter(name string) *coreef.DownloadLocationFilter {
 func seedEnv(id string) { CreateAndSaveEnvironment(id) }
 
 func TestUpdateLocationFilter_ValidationFailures(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	lfBlank := &coreef.DownloadLocationFilter{}
 	assert.Equal(t, 400, UpdateLocationFilter(db.GetDefaultTenantId(), "stb", lfBlank).Status)
 
@@ -28,7 +29,7 @@ func TestUpdateLocationFilter_ValidationFailures(t *testing.T) {
 }
 
 func TestUpdateLocationFilter_MissingConditionsBranches(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	// no envs/models/ipgroup -> Condition required
 	lf := newLocationFilter("LFCOND")
 	assert.Equal(t, 400, UpdateLocationFilter(db.GetDefaultTenantId(), "stb", lf).Status)
@@ -43,7 +44,7 @@ func TestUpdateLocationFilter_MissingConditionsBranches(t *testing.T) {
 }
 
 func TestUpdateLocationFilter_ModelEnvExistenceChecks(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	lf := newLocationFilter("LFME")
 	lf.Models = []string{"modelx"}
 	lf.Environments = []string{"envx"}
@@ -59,7 +60,7 @@ func TestUpdateLocationFilter_ModelEnvExistenceChecks(t *testing.T) {
 }
 
 func TestUpdateLocationFilter_LocationValidation(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedModel("M1")
 	seedEnv("E1")
 	lf := newLocationFilter("LFL")
@@ -79,8 +80,8 @@ func TestUpdateLocationFilter_LocationValidation(t *testing.T) {
 }
 
 func TestUpdateLocationFilter_SuccessAndDelete(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 
 	// Pre-cleanup: remove any models/environments from other tests
 	common.DeleteOneModel(db.GetDefaultTenantId(), "M2")
@@ -113,14 +114,14 @@ func TestUpdateLocationFilter_SuccessAndDelete(t *testing.T) {
 }
 
 func TestUpdateDownloadLocationRoundRobinFilter(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	// invalid app type
 	rr := &coreef.DownloadLocationRoundRobinFilterValue{}
 	assert.Equal(t, 400, UpdateDownloadLocationRoundRobinFilter(db.GetDefaultTenantId(), "", rr).Status)
 }
 
 func TestUpdateLocationFilter_IpGroupMismatch(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedModel("MM1")
 	seedEnv("EE1")
 	lf := newLocationFilter("LFIPGRP")
@@ -133,7 +134,7 @@ func TestUpdateLocationFilter_IpGroupMismatch(t *testing.T) {
 }
 
 func TestUpdateLocationFilter_FirmwareLocationInvalidVariants(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedModel("M3")
 	seedEnv("E3")
 	// FirmwareLocation IsIpv6 path -> expect Version is invalid
@@ -154,7 +155,7 @@ func TestUpdateLocationFilter_FirmwareLocationInvalidVariants(t *testing.T) {
 }
 
 func TestUpdateLocationFilter_Ipv6FirmwareLocationInvalidVariants(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedModel("M4")
 	seedEnv("E4")
 	// Ipv6FirmwareLocation IsIpv6 path -> Version is invalid

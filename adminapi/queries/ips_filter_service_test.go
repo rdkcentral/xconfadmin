@@ -23,6 +23,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/stretchr/testify/assert"
 )
@@ -32,7 +33,7 @@ func newValidIpFilter(name string) *coreef.IpFilter {
 	ipGroup := shared.NewIpAddressGroupWithAddrStrings(name+"_group", name+"_group", []string{"10.0.0.1"})
 	ipGroup.RawIpAddresses = []string{"10.0.0.1"}
 	nl := shared.ConvertFromIpAddressGroup(ipGroup)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 
 	return &coreef.IpFilter{
 		Id:             "",
@@ -42,11 +43,11 @@ func newValidIpFilter(name string) *coreef.IpFilter {
 }
 
 func TestUpdateIpFilter_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Service function uses ds.GetCachedSimpleDao() directly
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
+	xshared.SkipIfMockDatabase(t) // Service function uses ds.GetCachedSimpleDao() directly
+	if xshared.IsMockDatabaseEnabled() {
+		xshared.ClearMockDatabase()
 	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	ipFilter := newValidIpFilter("TestIPFilter")
@@ -64,11 +65,11 @@ func TestUpdateIpFilter_Success(t *testing.T) {
 }
 
 func TestUpdateIpFilter_WithExistingId(t *testing.T) {
-	SkipIfMockDatabase(t) // Service function uses ds.GetCachedSimpleDao() directly
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
+	xshared.SkipIfMockDatabase(t) // Service function uses ds.GetCachedSimpleDao() directly
+	if xshared.IsMockDatabaseEnabled() {
+		xshared.ClearMockDatabase()
 	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	existingId := uuid.New().String()
@@ -82,18 +83,18 @@ func TestUpdateIpFilter_WithExistingId(t *testing.T) {
 }
 
 func TestUpdateIpFilter_BlankName(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	if xshared.IsMockDatabaseEnabled() {
+		xshared.ClearMockDatabase()
 	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create IP filter with blank name but valid IP group
 	ipGroup := shared.NewIpAddressGroupWithAddrStrings("blank_group", "blank_group", []string{"10.0.0.1"})
 	ipGroup.RawIpAddresses = []string{"10.0.0.1"}
 	nl := shared.ConvertFromIpAddressGroup(ipGroup)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 
 	ipFilter := &coreef.IpFilter{
 		Name:           "", // Blank name
@@ -113,11 +114,11 @@ func TestUpdateIpFilter_BlankName(t *testing.T) {
 }
 
 func TestUpdateIpFilter_InvalidApplicationType(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	if xshared.IsMockDatabaseEnabled() {
+		xshared.ClearMockDatabase()
 	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	ipFilter := newValidIpFilter("TestIPFilter")
@@ -130,11 +131,11 @@ func TestUpdateIpFilter_InvalidApplicationType(t *testing.T) {
 }
 
 func TestUpdateIpFilter_DuplicateName(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	if xshared.IsMockDatabaseEnabled() {
+		xshared.ClearMockDatabase()
 	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create first filter
@@ -151,18 +152,18 @@ func TestUpdateIpFilter_DuplicateName(t *testing.T) {
 }
 
 func TestUpdateIpFilter_WithValidIpAddressGroup(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	if xshared.IsMockDatabaseEnabled() {
+		xshared.ClearMockDatabase()
 	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create and save IP address group
 	ipGroup := shared.NewIpAddressGroupWithAddrStrings("TestGroup", "TestGroup", []string{"10.0.0.1", "10.0.0.2"})
 	ipGroup.RawIpAddresses = []string{"10.0.0.1", "10.0.0.2"}
 	nl := shared.ConvertFromIpAddressGroup(ipGroup)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 
 	ipFilter := newValidIpFilter("TestWithIPGroup")
 	ipFilter.IpAddressGroup = ipGroup
@@ -174,11 +175,11 @@ func TestUpdateIpFilter_WithValidIpAddressGroup(t *testing.T) {
 }
 
 func TestUpdateIpFilter_WithChangedIpAddressGroup(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	if xshared.IsMockDatabaseEnabled() {
+		xshared.ClearMockDatabase()
 	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create IP address group but don't save it (or save with different content)
@@ -195,18 +196,18 @@ func TestUpdateIpFilter_WithChangedIpAddressGroup(t *testing.T) {
 }
 
 func TestUpdateIpFilter_WithModifiedIpAddressGroup(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	if xshared.IsMockDatabaseEnabled() {
+		xshared.ClearMockDatabase()
 	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Save IP address group with certain IPs
 	ipGroup := shared.NewIpAddressGroupWithAddrStrings("ModifiedGroup", "ModifiedGroup", []string{"10.0.0.1"})
 	ipGroup.RawIpAddresses = []string{"10.0.0.1"}
 	nl := shared.ConvertFromIpAddressGroup(ipGroup)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 
 	// Modify the group (different IPs than stored)
 	ipGroup.RawIpAddresses = []string{"10.0.0.2"}
@@ -222,11 +223,11 @@ func TestUpdateIpFilter_WithModifiedIpAddressGroup(t *testing.T) {
 }
 
 func TestDeleteIpsFilter_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	if xshared.IsMockDatabaseEnabled() {
+		xshared.ClearMockDatabase()
 	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create an IP filter first
@@ -242,11 +243,11 @@ func TestDeleteIpsFilter_Success(t *testing.T) {
 }
 
 func TestDeleteIpsFilter_NotFound(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	if xshared.IsMockDatabaseEnabled() {
+		xshared.ClearMockDatabase()
 	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Try to delete non-existent filter
@@ -256,7 +257,7 @@ func TestDeleteIpsFilter_NotFound(t *testing.T) {
 }
 
 func TestDeleteIpsFilter_EmptyName(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 
 	// Try to delete with empty name
 	resp := DeleteIpsFilter(db.GetDefaultTenantId(), "", "stb")
@@ -265,11 +266,11 @@ func TestDeleteIpsFilter_EmptyName(t *testing.T) {
 }
 
 func TestDeleteIpsFilter_WithApplicationType(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	if xshared.IsMockDatabaseEnabled() {
+		xshared.ClearMockDatabase()
 	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create IP filter with rdkcloud app type
@@ -283,11 +284,11 @@ func TestDeleteIpsFilter_WithApplicationType(t *testing.T) {
 }
 
 func TestUpdateIpFilter_UpdateExisting(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	if xshared.IsMockDatabaseEnabled() {
+		xshared.ClearMockDatabase()
 	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create initial filter
@@ -305,7 +306,7 @@ func TestUpdateIpFilter_UpdateExisting(t *testing.T) {
 }
 
 func TestUpdateIpFilter_MultipleApplicationTypes(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	testCases := []struct {
 		name    string
 		appType string
@@ -318,10 +319,10 @@ func TestUpdateIpFilter_MultipleApplicationTypes(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if IsMockDatabaseEnabled() {
-				ClearMockDatabase()
+			if xshared.IsMockDatabaseEnabled() {
+				xshared.ClearMockDatabase()
 			} else {
-				truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+				xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 			}
 
 			ipFilter := newValidIpFilter("Test_" + tc.appType)
@@ -332,11 +333,11 @@ func TestUpdateIpFilter_MultipleApplicationTypes(t *testing.T) {
 }
 
 func TestDeleteIpsFilter_AfterUpdate(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	if xshared.IsMockDatabaseEnabled() {
+		xshared.ClearMockDatabase()
 	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create filter
@@ -358,11 +359,11 @@ func TestDeleteIpsFilter_AfterUpdate(t *testing.T) {
 }
 
 func TestUpdateIpFilter_RuleNameValidation(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	if xshared.IsMockDatabaseEnabled() {
+		xshared.ClearMockDatabase()
 	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	}
 
 	// Create first filter

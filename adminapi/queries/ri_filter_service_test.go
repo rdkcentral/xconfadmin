@@ -5,15 +5,16 @@ import (
 
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/stretchr/testify/assert"
 )
 
 // helper to reset firmware rule table between tests
-func resetFirmwareRules() {
+func resetFirmwareRules(t *testing.T) {
 	// reuse truncate helper from this package tests if present; otherwise delete directly
 	// Firmware rules table name constant resides in ds
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 }
 
 func seedModel(id string) {
@@ -27,7 +28,7 @@ func seedEnvironment(id string) {
 func seedIpGroup(name string, ips []string) {
 	grp := shared.NewIpAddressGroupWithAddrStrings(name, name, ips)
 	nl := shared.ConvertFromIpAddressGroup(grp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 }
 
 // create minimal valid filter (criteria: one model)
@@ -42,8 +43,8 @@ func newValidFilter(name string) *coreef.RebootImmediatelyFilter {
 }
 
 func TestUpdateRebootImmediatelyFilter_CreateAndUpdatePaths(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
-	resetFirmwareRules()
+	xshared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
+	resetFirmwareRules(t)
 	seedModel("MODEL1")
 	seedEnvironment("ENV1")
 
@@ -62,7 +63,7 @@ func TestUpdateRebootImmediatelyFilter_CreateAndUpdatePaths(t *testing.T) {
 }
 
 func TestUpdateRebootImmediatelyFilter_ValidationFailures(t *testing.T) {
-	resetFirmwareRules()
+	resetFirmwareRules(t)
 	seedModel("MODEL1")
 	seedEnvironment("ENV1")
 
@@ -91,7 +92,7 @@ func TestUpdateRebootImmediatelyFilter_ValidationFailures(t *testing.T) {
 }
 
 func TestUpdateRebootImmediatelyFilter_IpGroupChanged(t *testing.T) {
-	resetFirmwareRules()
+	resetFirmwareRules(t)
 	seedModel("MODEL1")
 	seedEnvironment("ENV1")
 	seedIpGroup("GROUP1", []string{"10.0.0.1"})
@@ -104,8 +105,8 @@ func TestUpdateRebootImmediatelyFilter_IpGroupChanged(t *testing.T) {
 }
 
 func TestDeleteRebootImmediatelyFilter_Paths(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
-	resetFirmwareRules()
+	xshared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
+	resetFirmwareRules(t)
 	seedModel("MODEL1")
 	seedEnvironment("ENV1")
 	// create first
@@ -135,7 +136,7 @@ func TestSaveRebootImmediatelyFilter_ErrorPaths(t *testing.T) {
 
 // Additional safety: ensure SaveRebootImmediatelyFilter assigns applicationType
 func TestSaveRebootImmediatelyFilter_AssignsAppType(t *testing.T) {
-	resetFirmwareRules()
+	resetFirmwareRules(t)
 	seedModel("MODEL1")
 	seedEnvironment("ENV1")
 	f := newValidFilter("APPTYPE")

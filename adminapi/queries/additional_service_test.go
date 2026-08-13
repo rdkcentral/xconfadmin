@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"testing"
 
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
@@ -409,9 +410,9 @@ func TestHandlerWithInvalidJSON(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "/xconfAdminService/queries/models", bytes.NewBuffer(invalidJSON))
 	req.Header.Set("Content-Type", "application/json")
-	res := ExecuteRequest(req, router)
+	res := xshared.ExecuteRequest(req, router).Result()
 	assert.NotNil(t, res)
-	assert.NotEqual(t, http.StatusOK, res.Code)
+	assert.NotEqual(t, http.StatusOK, res.StatusCode)
 }
 
 func TestHandlerWithEmptyBody(t *testing.T) {
@@ -425,7 +426,7 @@ func TestHandlerWithEmptyBody(t *testing.T) {
 	for _, endpoint := range endpoints {
 		req, _ := http.NewRequest("POST", endpoint, bytes.NewBuffer([]byte{}))
 		req.Header.Set("Content-Type", "application/json")
-		res := ExecuteRequest(req, router)
+		res := xshared.ExecuteRequest(req, router).Result()
 		assert.NotNil(t, res)
 	}
 }

@@ -29,12 +29,13 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 )
 
 // Test GetPercentageBeanFilterFieldValues - Success case
 func TestGetPercentageBeanFilterFieldValues_Success(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create test percentage bean
 	_, _ = PreCreatePercentageBean()
@@ -49,7 +50,7 @@ func TestGetPercentageBeanFilterFieldValues_Success(t *testing.T) {
 
 // Test GetPercentageBeanFilterFieldValues - Error case
 func TestGetPercentageBeanFilterFieldValues_Error(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Test with empty database - should still work but return empty result
 	result, err := GetPercentageBeanFilterFieldValues(db.GetDefaultTenantId(), "name", "stb")
@@ -60,8 +61,8 @@ func TestGetPercentageBeanFilterFieldValues_Error(t *testing.T) {
 
 // Test getGlobalPercentageFields
 func TestGetGlobalPercentageFields(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.DeleteAllEntities(t)
 
 	// Test with a valid field name
 	result := getGlobalPercentageFields(db.GetDefaultTenantId(), "percentage", "stb")
@@ -74,7 +75,7 @@ func TestGetGlobalPercentageFields(t *testing.T) {
 
 // Test getPercentageBeanFieldValues
 func TestGetPercentageBeanFieldValues(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create test percentage bean
 	_, _ = PreCreatePercentageBean()
@@ -88,7 +89,7 @@ func TestGetPercentageBeanFieldValues(t *testing.T) {
 
 // Test getPercentageBeanFieldValues - Error case
 func TestGetPercentageBeanFieldValues_Error(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Test with empty database
 	result, err := getPercentageBeanFieldValues(db.GetDefaultTenantId(), "name", "stb")
@@ -99,7 +100,7 @@ func TestGetPercentageBeanFieldValues_Error(t *testing.T) {
 
 // Test getPartnerOptionalCondition - Success case
 func TestGetPartnerOptionalCondition_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	// Create a basic percentage bean without optional conditions
 	bean := &coreef.PercentageBean{
 		Name:   "testBean",
@@ -116,7 +117,7 @@ func TestGetPartnerOptionalCondition_Success(t *testing.T) {
 
 // Test getPartnerOptionalCondition - Error case
 func TestGetPartnerOptionalCondition_InvalidPartner(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	// This test verifies the function handles beans without partner conditions
 	bean := &coreef.PercentageBean{
 		Name:   "testBean",
@@ -132,7 +133,7 @@ func TestGetPartnerOptionalCondition_InvalidPartner(t *testing.T) {
 
 // Test createCanaries
 func TestCreateCanaries(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create test percentage bean
 	pb, _ := PreCreatePercentageBean()
@@ -150,7 +151,7 @@ func TestCreateCanaries(t *testing.T) {
 
 // Test CreateWakeupPoolList - Success case
 func TestCreateWakeupPoolList_Success(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fields := log.Fields{
 		"test": "wakeupPool",
@@ -165,7 +166,7 @@ func TestCreateWakeupPoolList_Success(t *testing.T) {
 
 // Test CreateWakeupPoolList - Error case
 func TestCreateWakeupPoolList_Error(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fields := log.Fields{
 		"test": "wakeupPoolError",
@@ -182,9 +183,9 @@ func TestCreateWakeupPoolList_Error(t *testing.T) {
 
 // Test getGlobalPercentageFields - Multiple field types
 func TestGetGlobalPercentageFields_DifferentFields(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.DeleteAllEntities(t)
 
 	// Test with percentage field (should have default 100)
 	result := getGlobalPercentageFields(db.GetDefaultTenantId(), PERCENTAGE_FIELD_NAME, "stb")
@@ -203,7 +204,7 @@ func TestGetGlobalPercentageFields_DifferentFields(t *testing.T) {
 
 // Test getPercentageBeanFieldValues - Distributions field
 func TestGetPercentageBeanFieldValues_Distributions(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create test percentage bean with distributions
 	pb, _ := PreCreatePercentageBean()
@@ -217,7 +218,7 @@ func TestGetPercentageBeanFieldValues_Distributions(t *testing.T) {
 
 // Test getPercentageBeanFieldValues - Different field types
 func TestGetPercentageBeanFieldValues_VariousFields(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create test percentage bean
 	pb, _ := PreCreatePercentageBean()
@@ -359,7 +360,7 @@ func TestGetStructFieldValues_NonExistentField(t *testing.T) {
 
 // Test getPartnerOptionalCondition - With valid partner in optional conditions
 func TestGetPartnerOptionalCondition_WithValidPartner(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	// Create bean with optional conditions containing valid partnerId
 	// This is a complex scenario requiring proper Rule structure setup
 	bean := &coreef.PercentageBean{
@@ -375,7 +376,7 @@ func TestGetPartnerOptionalCondition_WithValidPartner(t *testing.T) {
 
 // Test getPartnerOptionalCondition - Nil optional conditions
 func TestGetPartnerOptionalCondition_NilOptionalConditions(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	bean := &coreef.PercentageBean{
 		Name:               "testBean",
 		Active:             true,
@@ -389,7 +390,7 @@ func TestGetPartnerOptionalCondition_NilOptionalConditions(t *testing.T) {
 
 // Test createCanaries - With old rule (update scenario)
 func TestCreateCanaries_WithOldRule(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	pb, _ := PreCreatePercentageBean()
 	assert.NotNil(t, pb)
@@ -409,7 +410,7 @@ func TestCreateCanaries_WithOldRule(t *testing.T) {
 
 // Test createCanaries - With disabled canary creation
 func TestCreateCanaries_CanaryCreationDisabled(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	pb, _ := PreCreatePercentageBean()
 	fields := log.Fields{
@@ -424,8 +425,8 @@ func TestCreateCanaries_CanaryCreationDisabled(t *testing.T) {
 
 // Test ResponseEntity error paths - Conflict
 func TestCreatePercentageBean_ResponseEntity_Conflict(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.DeleteAllEntities(t)
 
 	// Create first bean
 	pb, _ := PreCreatePercentageBean()
@@ -442,7 +443,7 @@ func TestCreatePercentageBean_ResponseEntity_Conflict(t *testing.T) {
 
 // Test ResponseEntity error paths - Application type mismatch
 func TestCreatePercentageBean_ResponseEntity_AppTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	pb := &coreef.PercentageBean{
 		ID:              "test-bean-123",
@@ -465,7 +466,7 @@ func TestCreatePercentageBean_ResponseEntity_AppTypeMismatch(t *testing.T) {
 
 // Test ResponseEntity error paths - Validation error
 func TestCreatePercentageBean_ResponseEntity_ValidationError(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create bean with invalid data (empty name)
 	pb := &coreef.PercentageBean{
@@ -485,7 +486,7 @@ func TestCreatePercentageBean_ResponseEntity_ValidationError(t *testing.T) {
 
 // Test UpdatePercentageBean - Empty ID error
 func TestUpdatePercentageBean_ResponseEntity_EmptyID(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	pb := &coreef.PercentageBean{
 		ID:              "",
@@ -504,7 +505,7 @@ func TestUpdatePercentageBean_ResponseEntity_EmptyID(t *testing.T) {
 
 // Test UpdatePercentageBean - Entity not found
 func TestUpdatePercentageBean_ResponseEntity_NotFound(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	pb := &coreef.PercentageBean{
 		ID:              "non-existent-id",
@@ -523,7 +524,7 @@ func TestUpdatePercentageBean_ResponseEntity_NotFound(t *testing.T) {
 
 // Test DeletePercentageBean - Not found error
 func TestDeletePercentageBean_ResponseEntity_NotFound(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	response := DeletePercentageBean(db.GetDefaultTenantId(), "non-existent-id", "stb")
 	assert.NotNil(t, response)
@@ -533,7 +534,7 @@ func TestDeletePercentageBean_ResponseEntity_NotFound(t *testing.T) {
 
 // Test DeletePercentageBean - Application type mismatch
 func TestDeletePercentageBean_ResponseEntity_AppTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	pb, _ := PreCreatePercentageBean()
 	assert.NotNil(t, pb)
@@ -548,7 +549,7 @@ func TestDeletePercentageBean_ResponseEntity_AppTypeMismatch(t *testing.T) {
 // Tests for validatePercentageBeanReferences
 
 func TestValidatePercentageBeanReferences_InvalidModel(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	bean := &coreef.PercentageBean{
 		ID:              "test-bean-id",
@@ -564,8 +565,8 @@ func TestValidatePercentageBeanReferences_InvalidModel(t *testing.T) {
 }
 
 func TestValidatePercentageBeanReferences_ValidModel(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.DeleteAllEntities(t)
 
 	// Create a valid model first
 	model := &shared.Model{
@@ -584,12 +585,12 @@ func TestValidatePercentageBeanReferences_ValidModel(t *testing.T) {
 	err := validatePercentageBeanReferences(db.GetDefaultTenantId(), bean)
 	assert.NoError(t, err)
 
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 }
 
 func TestValidatePercentageBeanReferences_InvalidIPList(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.DeleteAllEntities(t)
 
 	// Create a valid model first
 	model := &shared.Model{
@@ -611,12 +612,12 @@ func TestValidatePercentageBeanReferences_InvalidIPList(t *testing.T) {
 	assert.Contains(t, err.Error(), "IP address list")
 	assert.Contains(t, err.Error(), "does not exist")
 
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 }
 
 func TestValidatePercentageBeanReferences_ValidIPList(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.DeleteAllEntities(t)
 
 	// Create a valid model
 	model := &shared.Model{
@@ -640,12 +641,12 @@ func TestValidatePercentageBeanReferences_ValidIPList(t *testing.T) {
 	err := validatePercentageBeanReferences(db.GetDefaultTenantId(), bean)
 	assert.NoError(t, err)
 
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 }
 
 func TestValidatePercentageBeanReferences_BlankWhitelist(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.DeleteAllEntities(t)
 
 	// Create a valid model
 	model := &shared.Model{
@@ -665,12 +666,12 @@ func TestValidatePercentageBeanReferences_BlankWhitelist(t *testing.T) {
 	err := validatePercentageBeanReferences(db.GetDefaultTenantId(), bean)
 	assert.NoError(t, err)
 
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 }
 
 func TestValidatePercentageBeanReferences_InvalidOptionalConditions(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.DeleteAllEntities(t)
 
 	// Create a valid model
 	model := &shared.Model{
@@ -700,5 +701,5 @@ func TestValidatePercentageBeanReferences_InvalidOptionalConditions(t *testing.T
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Model does not exist")
 
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 }

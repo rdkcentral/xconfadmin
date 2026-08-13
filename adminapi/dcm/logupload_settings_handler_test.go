@@ -41,7 +41,7 @@ func TestGetLogUploadSettingsByIdHandler_MissingID(t *testing.T) {
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	// Should return 404 as the route doesn't match
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
@@ -54,7 +54,7 @@ func TestGetLogUploadSettingsByIdHandler_NilResult(t *testing.T) {
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/nonexistent-id", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
@@ -85,7 +85,7 @@ func TestGetLogUploadSettingsByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/"+formula.ID, nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
@@ -116,7 +116,7 @@ func TestGetLogUploadSettingsByIdHandler_Success(t *testing.T) {
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/"+formula.ID, nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -136,7 +136,7 @@ func TestGetLogUploadSettingsHandler_EmptyList(t *testing.T) {
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -170,7 +170,7 @@ func TestGetLogUploadSettingsHandler_FilterByApplicationType(t *testing.T) {
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -193,7 +193,7 @@ func TestGetLogUploadSettingsSizeHandler_ZeroCount(t *testing.T) {
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/size", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -229,7 +229,7 @@ func TestGetLogUploadSettingsSizeHandler_NonZeroCount(t *testing.T) {
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/size", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -248,7 +248,7 @@ func TestGetLogUploadSettingsNamesHandler_EmptyList(t *testing.T) {
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/names", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -285,7 +285,7 @@ func TestGetLogUploadSettingsNamesHandler_WithNames(t *testing.T) {
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/names", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -303,7 +303,7 @@ func TestDeleteLogUploadSettingsByIdHandler_MissingID(t *testing.T) {
 	req := httptest.NewRequest("DELETE", "/xconfAdminService/dcm/logUploadSettings/", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	// Should return 404 as the route doesn't match
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
@@ -316,7 +316,7 @@ func TestDeleteLogUploadSettingsByIdHandler_NonExistent(t *testing.T) {
 	req := httptest.NewRequest("DELETE", "/xconfAdminService/dcm/logUploadSettings/nonexistent-id", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
@@ -346,7 +346,7 @@ func TestDeleteLogUploadSettingsByIdHandler_Success(t *testing.T) {
 	req := httptest.NewRequest("DELETE", "/xconfAdminService/dcm/logUploadSettings/"+formula.ID, nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 
@@ -370,7 +370,7 @@ func TestCreateLogUploadSettingsHandler_InvalidJSON(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
@@ -383,7 +383,7 @@ func TestCreateLogUploadSettingsHandler_EmptyBody(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	// Should return error for missing required fields
 	assert.Assert(t, res.StatusCode >= http.StatusBadRequest)
@@ -417,7 +417,7 @@ func TestCreateLogUploadSettingsHandler_DuplicateID(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Assert(t, res.StatusCode >= http.StatusBadRequest)
 }
@@ -447,7 +447,7 @@ func TestCreateLogUploadSettingsHandler_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusCreated, res.StatusCode)
 }
@@ -464,7 +464,7 @@ func TestUpdateLogUploadSettingsHandler_InvalidJSON(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
@@ -490,7 +490,7 @@ func TestUpdateLogUploadSettingsHandler_NonExistent(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Assert(t, res.StatusCode >= http.StatusBadRequest)
 }
@@ -525,7 +525,7 @@ func TestUpdateLogUploadSettingsHandler_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -545,7 +545,7 @@ func TestPostLogUploadSettingsFilteredWithParamsHandler_EmptyBody(t *testing.T) 
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -564,7 +564,7 @@ func TestPostLogUploadSettingsFilteredWithParamsHandler_InvalidJSON(t *testing.T
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
@@ -597,7 +597,7 @@ func TestPostLogUploadSettingsFilteredWithParamsHandler_WithContext(t *testing.T
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -620,7 +620,7 @@ func TestPostLogUploadSettingsFilteredWithParamsHandler_InvalidPagination(t *tes
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }

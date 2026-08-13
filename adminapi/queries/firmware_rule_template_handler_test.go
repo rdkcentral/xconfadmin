@@ -26,6 +26,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rdkcentral/xconfadmin/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+
 	"github.com/google/uuid"
 
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -158,7 +161,7 @@ func (aut *apiUnitTest) firmwareRuleTemplateResponseValidator(tcase apiUnitTestC
 }
 
 func TestGetFirmwareRuleTemplateFromQueryParams(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	testCases := []apiUnitTestCase{
 		// Invalid Param ignored
@@ -171,7 +174,7 @@ func TestGetFirmwareRuleTemplateFromQueryParams(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateFilteredFromQueryParams(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	testCases := []apiUnitTestCase{
 		// Happy path
@@ -226,7 +229,7 @@ func TestGetFirmwareRuleTemplateFilteredFromQueryParams(t *testing.T) {
 }
 
 func TestPostFirmwareRuleTemplateFilteredFromQueryParams(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	testCases := []apiUnitTestCase{
 		// invalid parameters are ignored
@@ -265,7 +268,7 @@ func TestPostFirmwareRuleTemplateFilteredFromQueryParams(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateIdsWithParam(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId1 := uuid.New().String()
 	sysGenId2 := uuid.New().String()
@@ -288,7 +291,7 @@ func TestGetFirmwareRuleTemplateIdsWithParam(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateById(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -304,7 +307,7 @@ func TestGetFirmwareRuleTemplateById(t *testing.T) {
 	aut.run(testCases)
 }
 func TestFirmwareRuleTemplateCRUD(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	sysGenId := uuid.New().String()
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	testCases := []apiUnitTestCase{
@@ -325,7 +328,7 @@ func TestFirmwareRuleTemplateCRUD(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateByIdWithParam(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -342,7 +345,7 @@ func TestGetFirmwareRuleTemplateByIdWithParam(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateExportWithParam(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -361,7 +364,7 @@ func TestGetFirmwareRuleTemplateExportWithParam(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateAllByType(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -380,7 +383,7 @@ func TestGetFirmwareRuleTemplateAllByType(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateByTypeByEditable(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -454,7 +457,7 @@ func TestGetFirmwareRuleTemplateByTypeByEditable(t *testing.T) {
 // }
 
 func TestGetFirmwareRuleTemplateWithParam(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId := uuid.New().String()
 
@@ -473,9 +476,9 @@ func TestGetFirmwareRuleTemplateWithParam(t *testing.T) {
 }
 
 func TestFirmwareRuleTemplateEndPoints(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	// Clean up any existing "stb" firmware rule templates before test
-	//DeleteAllEntities()
+	//shared.DeleteAllEntities(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	sysGenId := uuid.New().String()
 	sysGenId2 := uuid.New().String()
@@ -546,7 +549,7 @@ func TestFirmwareRuleTemplateEndPoints(t *testing.T) {
 }
 
 func TestPostFirmwareRuleTemplateImportAllFromBodyParams(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	aut := newFirmwareRuleTemplateApiUnitTest(t)
 	testCases := []apiUnitTestCase{
 		{FRT_API, "[simple_duplicate]", NO_PRETERMS, nil, "POST", "/importAll", http.StatusOK, "imported=0&not_imported=1", aut.apiImportValidator},
@@ -573,10 +576,9 @@ func TestPostFirmwareRuleTemplateImportAllFromBodyParams(t *testing.T) {
 // Additional comprehensive tests for uncovered code paths
 
 func TestPostFirmwareRuleTemplateFilteredHandler_ErrorPaths(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.SkipIfMockDatabase(t)
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Test with invalid JSON body
 	req, err := http.NewRequest("POST", "/xconfAdminService/firmwareruletemplate/filtered", bytes.NewBufferString("{invalid json"))
@@ -584,7 +586,7 @@ func TestPostFirmwareRuleTemplateFilteredHandler_ErrorPaths(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 
@@ -595,7 +597,7 @@ func TestPostFirmwareRuleTemplateFilteredHandler_ErrorPaths(t *testing.T) {
 	req2.Header.Set("Content-Type", "application/json")
 	req2.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res2 := ExecuteRequest(req2, router).Result()
+	res2 := xshared.ExecuteRequest(req2, router).Result()
 	defer res2.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res2.StatusCode)
 
@@ -605,31 +607,30 @@ func TestPostFirmwareRuleTemplateFilteredHandler_ErrorPaths(t *testing.T) {
 	req3.Header.Set("Content-Type", "application/json")
 	req3.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res3 := ExecuteRequest(req3, router).Result()
+	res3 := xshared.ExecuteRequest(req3, router).Result()
 	defer res3.Body.Close()
 	assert.Equal(t, http.StatusOK, res3.StatusCode)
 }
 
 func TestPostFirmwareRuleTemplateImportHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	t.Skip("Import handler route not registered - test skipped")
 }
 
 func TestPostFirmwareRuleTemplateImportHandler_Overwrite(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	t.Skip("Import handler route not registered - test skipped")
 }
 
 func TestPostFirmwareRuleTemplateImportHandler_ErrorPaths(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	t.Skip("Import handler route not registered - test skipped")
 }
 
 func TestPostChangePriorityHandler_ErrorPaths(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.SkipIfMockDatabase(t)
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Create a template first
 	templateJSON := `{
@@ -654,7 +655,7 @@ func TestPostChangePriorityHandler_ErrorPaths(t *testing.T) {
 	}`
 	var frt corefw.FirmwareRuleTemplate
 	json.Unmarshal([]byte(templateJSON), &frt)
-	SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, frt.ID, &frt)
+	xshared.SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, frt.ID, &frt)
 
 	// Test with invalid priority (0)
 	req, err := http.NewRequest("POST", "/xconfAdminService/firmwareruletemplate/PRIORITY_TEST/priority/0", nil)
@@ -662,7 +663,7 @@ func TestPostChangePriorityHandler_ErrorPaths(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 
@@ -672,7 +673,7 @@ func TestPostChangePriorityHandler_ErrorPaths(t *testing.T) {
 	req2.Header.Set("Content-Type", "application/json")
 	req2.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res2 := ExecuteRequest(req2, router).Result()
+	res2 := xshared.ExecuteRequest(req2, router).Result()
 	defer res2.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res2.StatusCode)
 
@@ -682,7 +683,7 @@ func TestPostChangePriorityHandler_ErrorPaths(t *testing.T) {
 	req3.Header.Set("Content-Type", "application/json")
 	req3.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res3 := ExecuteRequest(req3, router).Result()
+	res3 := xshared.ExecuteRequest(req3, router).Result()
 	defer res3.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res3.StatusCode)
 
@@ -692,16 +693,15 @@ func TestPostChangePriorityHandler_ErrorPaths(t *testing.T) {
 	req4.Header.Set("Content-Type", "application/json")
 	req4.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res4 := ExecuteRequest(req4, router).Result()
+	res4 := xshared.ExecuteRequest(req4, router).Result()
 	defer res4.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res4.StatusCode)
 }
 
 func TestPostChangePriorityHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.SkipIfMockDatabase(t)
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Create multiple templates using JSON
 	for i := 1; i <= 3; i++ {
@@ -727,7 +727,7 @@ func TestPostChangePriorityHandler_Success(t *testing.T) {
 		}`
 		var frt corefw.FirmwareRuleTemplate
 		json.Unmarshal([]byte(templateJSON), &frt)
-		SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, frt.ID, &frt)
+		xshared.SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, frt.ID, &frt)
 	}
 
 	// Change priority
@@ -736,16 +736,15 @@ func TestPostChangePriorityHandler_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
 func TestPostFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.SkipIfMockDatabase(t)
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Test with invalid JSON
 	req, err := http.NewRequest("POST", "/xconfAdminService/firmwareruletemplate", bytes.NewBufferString("{invalid}"))
@@ -753,7 +752,7 @@ func TestPostFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 
@@ -783,7 +782,7 @@ func TestPostFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
 	req2.Header.Set("Content-Type", "application/json")
 	req2.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res2 := ExecuteRequest(req2, router).Result()
+	res2 := xshared.ExecuteRequest(req2, router).Result()
 	defer res2.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res2.StatusCode)
 
@@ -810,7 +809,7 @@ func TestPostFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
 	}`
 	var frt corefw.FirmwareRuleTemplate
 	json.Unmarshal([]byte(templateJSON), &frt)
-	SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, frt.ID, &frt)
+	xshared.SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, frt.ID, &frt)
 
 	templateData2 := `{
 		"id": "DUPLICATE_ID",
@@ -838,16 +837,15 @@ func TestPostFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
 	req3.Header.Set("Content-Type", "application/json")
 	req3.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res3 := ExecuteRequest(req3, router).Result()
+	res3 := xshared.ExecuteRequest(req3, router).Result()
 	defer res3.Body.Close()
 	assert.Equal(t, http.StatusConflict, res3.StatusCode)
 }
 
 func TestDeleteFirmwareRuleTemplateByIdHandler_ErrorPaths(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.SkipIfMockDatabase(t)
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Test delete non-existent template
 	req, err := http.NewRequest("DELETE", "/xconfAdminService/firmwareruletemplate/NONEXISTENT", nil)
@@ -855,7 +853,7 @@ func TestDeleteFirmwareRuleTemplateByIdHandler_ErrorPaths(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 
@@ -864,10 +862,9 @@ func TestDeleteFirmwareRuleTemplateByIdHandler_ErrorPaths(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateByIdHandler_ErrorPaths(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.SkipIfMockDatabase(t)
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Test get non-existent template
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareruletemplate/NONEXISTENT", nil)
@@ -875,26 +872,25 @@ func TestGetFirmwareRuleTemplateByIdHandler_ErrorPaths(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
 func TestObsoleteGetFirmwareRuleTemplatePageHandler_ErrorPaths(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	t.Skip("Obsolete handler returns 501 NotImplemented - test skipped")
 }
 
 func TestObsoleteGetFirmwareRuleTemplatePageHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.SkipIfMockDatabase(t)
 	t.Skip("Obsolete handler returns 501 NotImplemented - test skipped")
 }
 
 func TestPutFirmwareRuleTemplateEntitiesHandler_ErrorPaths(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.SkipIfMockDatabase(t)
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Test with invalid JSON
 	req, err := http.NewRequest("PUT", "/xconfAdminService/firmwareruletemplate/entities", bytes.NewBufferString("{invalid}"))
@@ -902,7 +898,7 @@ func TestPutFirmwareRuleTemplateEntitiesHandler_ErrorPaths(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 
@@ -933,7 +929,7 @@ func TestPutFirmwareRuleTemplateEntitiesHandler_ErrorPaths(t *testing.T) {
 	req2.Header.Set("Content-Type", "application/json")
 	req2.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res2 := ExecuteRequest(req2, router).Result()
+	res2 := xshared.ExecuteRequest(req2, router).Result()
 	defer res2.Body.Close()
 	assert.Equal(t, http.StatusOK, res2.StatusCode)
 
@@ -944,10 +940,9 @@ func TestPutFirmwareRuleTemplateEntitiesHandler_ErrorPaths(t *testing.T) {
 }
 
 func TestPutFirmwareRuleTemplateEntitiesHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.SkipIfMockDatabase(t)
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Create entity first using JSON
 	templateJSON := `{
@@ -972,7 +967,7 @@ func TestPutFirmwareRuleTemplateEntitiesHandler_Success(t *testing.T) {
 	}`
 	var frt corefw.FirmwareRuleTemplate
 	json.Unmarshal([]byte(templateJSON), &frt)
-	SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, frt.ID, &frt)
+	xshared.SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, frt.ID, &frt)
 
 	// Update it
 	updateData := `[{
@@ -1001,7 +996,7 @@ func TestPutFirmwareRuleTemplateEntitiesHandler_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -1011,10 +1006,9 @@ func TestPutFirmwareRuleTemplateEntitiesHandler_Success(t *testing.T) {
 }
 
 func TestGetFirmwareRuleTemplateIdsHandler_ErrorPaths(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.SkipIfMockDatabase(t)
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Test without type parameter
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareruletemplate/ids", nil)
@@ -1022,16 +1016,15 @@ func TestGetFirmwareRuleTemplateIdsHandler_ErrorPaths(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
 func TestGetFirmwareRuleTemplateExportHandler_ErrorPaths(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.SkipIfMockDatabase(t)
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Test without type parameter
 	req, err := http.NewRequest("GET", "/xconfAdminService/firmwareruletemplate/export", nil)
@@ -1039,16 +1032,15 @@ func TestGetFirmwareRuleTemplateExportHandler_ErrorPaths(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
 func TestPutFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.SkipIfMockDatabase(t)
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Test with invalid JSON
 	req, err := http.NewRequest("PUT", "/xconfAdminService/firmwareruletemplate", bytes.NewBufferString("{invalid}"))
@@ -1056,7 +1048,7 @@ func TestPutFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 
@@ -1087,16 +1079,15 @@ func TestPutFirmwareRuleTemplateHandler_ErrorPaths(t *testing.T) {
 	req2.Header.Set("Content-Type", "application/json")
 	req2.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res2 := ExecuteRequest(req2, router).Result()
+	res2 := xshared.ExecuteRequest(req2, router).Result()
 	defer res2.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res2.StatusCode)
 }
 
 func TestPostFirmwareRuleTemplateEntitiesHandler_ErrorPaths(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.SkipIfMockDatabase(t)
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Test with invalid JSON
 	req, err := http.NewRequest("POST", "/xconfAdminService/firmwareruletemplate/entities", bytes.NewBufferString("{invalid}"))
@@ -1104,7 +1095,7 @@ func TestPostFirmwareRuleTemplateEntitiesHandler_ErrorPaths(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }

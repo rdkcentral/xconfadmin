@@ -170,6 +170,9 @@ func DeleteAllEntities(t *testing.T) {
 }
 
 func TruncateTable(t *testing.T, tenantId string, tableName string) error {
+	// ensure t is genuinely from an active test (not fabricated); it will panic if t is nil, and is a no-op otherwise
+	t.Helper()
+
 	dbClient := db.GetDatabaseClient()
 	cassandraClient, ok := dbClient.(*db.CassandraClient)
 	if ok {
@@ -187,6 +190,35 @@ func TruncateTable(t *testing.T, tenantId string, tableName string) error {
 		}
 	}
 	return nil
+}
+
+// DeleteTelemetryEntities - Ultra-fast cleanup using in-memory mock
+// Replaces slow Cassandra truncation (60s) with instant mock.Clear() (<1ms)
+func DeleteTelemetryEntities(t *testing.T) {
+	// For mock database, just clear it - ultra fast!
+	if IsMockDatabaseEnabled() {
+		ClearMockDatabase()
+		return
+	}
+
+	// SLOW PATH: Only used for real database integration tests
+	telemetryTables := []string{
+		db.TABLE_TELEMETRY_PROFILES,
+		db.TABLE_TELEMETRY_RULES,
+		db.TABLE_TELEMETRY_TWO_PROFILES,
+		db.TABLE_TELEMETRY_TWO_RULES,
+		db.TABLE_PERMANENT_TELEMETRY_PROFILES,
+		db.TABLE_TELEMETRY_CHANGES,
+		db.TABLE_TELEMETRY_APPROVED_CHANGES,
+		db.TABLE_TELEMETRY_TWO_CHANGES,
+		db.TABLE_TELEMETRY_APPROVED_TWO_CHANGES,
+	}
+
+	tenantId := db.GetDefaultTenantId()
+	for _, tableName := range telemetryTables {
+		TruncateTable(t, tenantId, tableName)
+		db.GetCachedSimpleDao().RefreshAll(tenantId, tableName)
+	}
 }
 
 func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRecorder { // restored local version

@@ -8,6 +8,7 @@ import (
 	admincoreef "github.com/rdkcentral/xconfadmin/shared/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	ru "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
@@ -27,7 +28,7 @@ func seedEnvModelRule(modelId, envId, appType string) *coreef.EnvModelRuleBean {
 	fwRule.Type = corefw.ENV_MODEL_RULE
 	fwRule.Rule = envModelRule
 	fwRule.ApplicationType = appType
-	SetOneInDao(db.TABLE_FIRMWARE_RULES, fwRule.ID, fwRule)
+	xshared.SetOneInDao(db.TABLE_FIRMWARE_RULES, fwRule.ID, fwRule)
 	return &coreef.EnvModelRuleBean{Id: fwRule.ID, ModelId: modelId, EnvironmentId: envId, Name: fwRule.Name}
 }
 
@@ -42,12 +43,12 @@ func newValidTimeFilter(name string) *coreef.TimeFilter {
 }
 
 // func TestUpdateTimeFilter_SuccessCreatesAndSetsId(t *testing.T) {
-// 	truncateTable(db.TABLE_FIRMWARE_RULES)
+// 	xshared.TruncateTable(t, db.TABLE_FIRMWARE_RULES)
 // 	seedEnvModelRule("M1", "E1", "stb")
 // 	// seed IP whitelist group so IsChangedIpAddressGroup returns false
 // 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_OK", "G_OK", []string{"10.0.0.1"})
 // 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-// 	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+// 	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 // 	// need RawIpAddresses populated to mirror stored list
 // 	ipGrp.RawIpAddresses = []string{"10.0.0.1"}
 // 	tf := newValidTimeFilter("TF1")
@@ -60,7 +61,7 @@ func newValidTimeFilter(name string) *coreef.TimeFilter {
 // }
 
 func TestUpdateTimeFilter_ValidationFailures(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M1", "E1", "stb")
 	cases := []struct {
 		name string
@@ -79,7 +80,7 @@ func TestUpdateTimeFilter_ValidationFailures(t *testing.T) {
 }
 
 func TestUpdateTimeFilter_BadTimes(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M1", "E1", "stb")
 	tf := newValidTimeFilter("BADTIME")
 	tf.Start = "25:00" // invalid hour
@@ -90,7 +91,7 @@ func TestUpdateTimeFilter_BadTimes(t *testing.T) {
 }
 
 func TestUpdateTimeFilter_InvalidIpGroup(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M1", "E1", "stb")
 	grp := shared.NewIpAddressGroupWithAddrStrings("G1", "G1", []string{"10.0.0.1"})
 	tf := newValidTimeFilter("TFIP")
@@ -99,11 +100,11 @@ func TestUpdateTimeFilter_InvalidIpGroup(t *testing.T) {
 }
 
 func TestUpdateTimeFilter_EnvModelMissing(t *testing.T) {
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
+	if xshared.IsMockDatabaseEnabled() {
+		xshared.ClearMockDatabase()
 	} else {
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
-		truncateTable(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST)
 	}
 	// no seed for env-model
 	tf := newValidTimeFilter("TFMISS")
@@ -114,7 +115,7 @@ func TestUpdateTimeFilter_EnvModelMissing(t *testing.T) {
 	// add a valid stored IP group to bypass IsChangedIpAddressGroup and avoid nil deref chain
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_TMP", "G_TMP", []string{"10.1.1.1"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.1.1.1"}
 	tf.IpWhiteList = ipGrp
 	status := UpdateTimeFilter(db.GetDefaultTenantId(), "stb", tf)
@@ -122,12 +123,12 @@ func TestUpdateTimeFilter_EnvModelMissing(t *testing.T) {
 }
 
 func TestDeleteTimeFilter_Paths(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M1", "E1", "stb")
 	tf := newValidTimeFilter("DELTF")
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_OK2", "G_OK2", []string{"10.0.0.2"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.2"}
 	tf.IpWhiteList = ipGrp
 	// directly persist a TIME_FILTER firmware rule to exercise delete paths without relying on UpdateTimeFilter validations
@@ -137,7 +138,7 @@ func TestDeleteTimeFilter_Paths(t *testing.T) {
 		fr.ID = uuid.New().String()
 		tf.Id = fr.ID
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_RULES, fr.ID, fr)
+	xshared.SetOneInDao(db.TABLE_FIRMWARE_RULES, fr.ID, fr)
 	// delete existing
 	assert.Equal(t, 204, DeleteTimeFilter(db.GetDefaultTenantId(), "DELTF", "stb").Status)
 	// delete non-existing
@@ -147,13 +148,13 @@ func TestDeleteTimeFilter_Paths(t *testing.T) {
 // TestUpdateTimeFilter_ApplicationTypeValidation tests the ValidateApplicationType error path
 // Tests line 86-88: xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 func TestUpdateTimeFilter_ApplicationTypeValidation(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M1", "E1", "stb")
 
 	// Setup valid IP group to bypass earlier checks
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_VAL", "G_VAL", []string{"10.0.0.5"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.5"}
 
 	tf := newValidTimeFilter("TFAPP")
@@ -171,13 +172,13 @@ func TestUpdateTimeFilter_ApplicationTypeValidation(t *testing.T) {
 // TestUpdateTimeFilter_CreateFirmwareRuleError tests the CreateFirmwareRuleOneDB error path
 // Tests line 90-92: xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 func TestUpdateTimeFilter_CreateFirmwareRuleError(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M1", "E1", "stb")
 
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_CRT", "G_CRT", []string{"10.0.0.6"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.6"}
 
 	tf := newValidTimeFilter("TFCREATE")
@@ -195,13 +196,13 @@ func TestUpdateTimeFilter_CreateFirmwareRuleError(t *testing.T) {
 // TestUpdateTimeFilter_IdAssignment tests the ID assignment logic
 // Tests line 94-96: if timeFilter.Id == "" { timeFilter.Id = firmwareRule.ID }
 func TestUpdateTimeFilter_IdAssignment(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M1", "E1", "stb")
 
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_ID", "G_ID", []string{"10.0.0.7"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.7"}
 
 	tf := newValidTimeFilter("TFID")
@@ -219,13 +220,13 @@ func TestUpdateTimeFilter_IdAssignment(t *testing.T) {
 // TestUpdateTimeFilter_UppercaseConversion tests the strings.ToUpper conversion
 // Tests line 77-78: EnvironmentId and ModelId conversion to uppercase
 func TestUpdateTimeFilter_UppercaseConversion(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("M2", "E2", "stb")
 
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_UP", "G_UP", []string{"10.0.0.8"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.8"}
 
 	tf := newValidTimeFilter("TFUPPER")
@@ -262,13 +263,13 @@ func TestUpdateTimeFilter_UppercaseConversion(t *testing.T) {
 
 // TestUpdateTimeFilter_UppercaseConversion_MixedCase tests mixed case conversion
 func TestUpdateTimeFilter_UppercaseConversion_MixedCase(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("MIXEDMODEL", "MIXEDENV", "stb")
 
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_MIXED", "G_MIXED", []string{"10.0.0.15"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.15"}
 
 	tf := newValidTimeFilter("TFMIXED")
@@ -299,13 +300,13 @@ func TestUpdateTimeFilter_UppercaseConversion_MixedCase(t *testing.T) {
 // TestUpdateTimeFilter_ConvertTimeFilterToFirmwareRule tests the conversion step
 // Tests line 80: firmwareRule := coreef.ConvertTimeFilterToFirmwareRule(timeFilter)
 func TestUpdateTimeFilter_ConvertTimeFilterToFirmwareRule(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("CONVERT1", "CONVERT1", "stb")
 
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_CONVERT", "G_CONVERT", []string{"10.0.0.20"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.20"}
 
 	tf := newValidTimeFilter("TFCONVERT")
@@ -343,13 +344,13 @@ func TestUpdateTimeFilter_ConvertTimeFilterToFirmwareRule(t *testing.T) {
 // TestUpdateTimeFilter_ApplicationTypeAssignment tests application type assignment
 // Tests line 82-84: if !util.IsBlank(applicationType) { firmwareRule.ApplicationType = applicationType }
 func TestUpdateTimeFilter_ApplicationTypeAssignment_NonBlank(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("APPTYPE1", "APPTYPE1", "stb")
 
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_APPTYPE", "G_APPTYPE", []string{"10.0.0.21"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.21"}
 
 	tf := newValidTimeFilter("TFAPPTYPE")
@@ -369,13 +370,13 @@ func TestUpdateTimeFilter_ApplicationTypeAssignment_NonBlank(t *testing.T) {
 // TestUpdateTimeFilter_SecondValidateApplicationType tests the second ValidateApplicationType call
 // Tests line 86-88: if err := xshared.ValidateApplicationType(firmwareRule.ApplicationType); err != nil
 func TestUpdateTimeFilter_SecondValidateApplicationType_Error(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("VAL2", "VAL2", "stb")
 
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_VAL2", "G_VAL2", []string{"10.0.0.22"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.22"}
 
 	tf := newValidTimeFilter("TFVAL2")
@@ -398,13 +399,13 @@ func TestUpdateTimeFilter_SecondValidateApplicationType_Error(t *testing.T) {
 // TestUpdateTimeFilter_CreateFirmwareRuleOneDB_Success tests successful creation
 // Tests line 90-92: err := corefw.CreateFirmwareRuleOneDB(firmwareRule)
 func TestUpdateTimeFilter_CreateFirmwareRuleOneDB_Success(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("CREATE2", "CREATE2", "stb")
 
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_CREATE2", "G_CREATE2", []string{"10.0.0.23"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.23"}
 
 	tf := newValidTimeFilter("TFCREATE2")
@@ -429,13 +430,13 @@ func TestUpdateTimeFilter_CreateFirmwareRuleOneDB_Success(t *testing.T) {
 // TestUpdateTimeFilter_IdAssignment_EmptyId tests ID assignment when empty
 // Tests line 94-96: if timeFilter.Id == "" { timeFilter.Id = firmwareRule.ID }
 func TestUpdateTimeFilter_IdAssignment_EmptyId(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("IDASSIGN", "IDASSIGN", "stb")
 
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_IDASSIGN", "G_IDASSIGN", []string{"10.0.0.24"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.24"}
 
 	tf := newValidTimeFilter("TFIDASSIGN")
@@ -460,13 +461,13 @@ func TestUpdateTimeFilter_IdAssignment_EmptyId(t *testing.T) {
 // TestUpdateTimeFilter_IdAssignment_NonEmptyId tests ID assignment when already set
 // Tests line 94-96: if timeFilter.Id == "" { timeFilter.Id = firmwareRule.ID }
 func TestUpdateTimeFilter_IdAssignment_NonEmptyId(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("IDEXIST", "IDEXIST", "stb")
 
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_IDEXIST", "G_IDEXIST", []string{"10.0.0.25"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.25"}
 
 	tf := newValidTimeFilter("TFIDEXIST")
@@ -492,13 +493,13 @@ func TestUpdateTimeFilter_IdAssignment_NonEmptyId(t *testing.T) {
 // TestUpdateTimeFilter_SuccessReturn tests the final success return
 // Tests line 98: return xwhttp.NewResponseEntity(http.StatusOK, nil, timeFilter)
 func TestUpdateTimeFilter_SuccessReturn(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("SUCCESS2", "SUCCESS2", "stb")
 
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_SUCCESS2", "G_SUCCESS2", []string{"10.0.0.26"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.26"}
 
 	tf := newValidTimeFilter("TFSUCCESS2")
@@ -529,14 +530,14 @@ func TestUpdateTimeFilter_SuccessReturn(t *testing.T) {
 // TestUpdateTimeFilter_ComprehensiveCoverage specifically tests all the requested code lines
 // This test documents that we have achieved coverage of the specific lines requested
 func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 
 	// Test 1: Verify we reach the uppercase conversion lines (77-78)
 	t.Run("UppercaseConversion", func(t *testing.T) {
 		emBean := seedEnvModelRule("UPPER", "UPPER", "stb")
 		ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_UPPER", "G_UPPER", []string{"10.0.0.100"})
 		nl := shared.ConvertFromIpAddressGroup(ipGrp)
-		SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+		xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 		ipGrp.RawIpAddresses = []string{"10.0.0.100"}
 
 		tf := newValidTimeFilter("TFUPPER")
@@ -560,7 +561,7 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 		emBean := seedEnvModelRule("CONVERT", "CONVERT", "stb")
 		ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_CONVERT", "G_CONVERT", []string{"10.0.0.101"})
 		nl := shared.ConvertFromIpAddressGroup(ipGrp)
-		SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+		xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 		ipGrp.RawIpAddresses = []string{"10.0.0.101"}
 
 		tf := newValidTimeFilter("TFCONVERT")
@@ -582,7 +583,7 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 		emBean := seedEnvModelRule("APPTYPE", "APPTYPE", "stb")
 		ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_APPTYPE", "G_APPTYPE", []string{"10.0.0.102"})
 		nl := shared.ConvertFromIpAddressGroup(ipGrp)
-		SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+		xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 		ipGrp.RawIpAddresses = []string{"10.0.0.102"}
 
 		tf := newValidTimeFilter("TFAPPTYPE")
@@ -604,7 +605,7 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 		emBean := seedEnvModelRule("VALIDATE", "VALIDATE", "stb")
 		ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_VALIDATE", "G_VALIDATE", []string{"10.0.0.103"})
 		nl := shared.ConvertFromIpAddressGroup(ipGrp)
-		SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+		xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 		ipGrp.RawIpAddresses = []string{"10.0.0.103"}
 
 		tf := newValidTimeFilter("TFVALIDATE")
@@ -626,7 +627,7 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 		emBean := seedEnvModelRule("CREATE", "CREATE", "stb")
 		ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_CREATE", "G_CREATE", []string{"10.0.0.104"})
 		nl := shared.ConvertFromIpAddressGroup(ipGrp)
-		SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+		xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 		ipGrp.RawIpAddresses = []string{"10.0.0.104"}
 
 		tf := newValidTimeFilter("TFCREATE")
@@ -648,7 +649,7 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 		emBean := seedEnvModelRule("IDASSIGN", "IDASSIGN", "stb")
 		ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_IDASSIGN", "G_IDASSIGN", []string{"10.0.0.105"})
 		nl := shared.ConvertFromIpAddressGroup(ipGrp)
-		SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+		xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 		ipGrp.RawIpAddresses = []string{"10.0.0.105"}
 
 		tf := newValidTimeFilter("TFIDASSIGN")
@@ -671,7 +672,7 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 		emBean := seedEnvModelRule("SUCCESS", "SUCCESS", "stb")
 		ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_SUCCESS", "G_SUCCESS", []string{"10.0.0.106"})
 		nl := shared.ConvertFromIpAddressGroup(ipGrp)
-		SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+		xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 		ipGrp.RawIpAddresses = []string{"10.0.0.106"}
 
 		tf := newValidTimeFilter("TFSUCCESS")
@@ -694,13 +695,13 @@ func TestUpdateTimeFilter_ComprehensiveCoverage(t *testing.T) {
 } // TestUpdateTimeFilter_BlankApplicationType tests blank application type handling
 // Tests line 83-85: if !util.IsBlank(applicationType) { firmwareRule.ApplicationType = applicationType }
 func TestUpdateTimeFilter_BlankApplicationType(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M4", "E4", "stb")
 
 	// Setup valid IP group
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_BLANK", "G_BLANK", []string{"10.0.0.10"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.10"}
 
 	tf := newValidTimeFilter("TFBLANK")
@@ -719,7 +720,7 @@ func TestUpdateTimeFilter_BlankApplicationType(t *testing.T) {
 // TestDeleteTimeFilter_TimeFilterByNameError tests error handling in delete
 // Tests line 103-105: xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 func TestDeleteTimeFilter_TimeFilterByNameError(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 
 	// Attempt to delete from empty database may cause TimeFilterByName to error
 	resp := DeleteTimeFilter(db.GetDefaultTenantId(), "NONEXISTENT", "stb")
@@ -732,14 +733,14 @@ func TestDeleteTimeFilter_TimeFilterByNameError(t *testing.T) {
 // TestDeleteTimeFilter_DeleteOneFirmwareRuleError tests delete operation error
 // Tests line 109-111: xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 func TestDeleteTimeFilter_DeleteOneFirmwareRuleError(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	seedEnvModelRule("M5", "E5", "stb")
 
 	// Create and persist a time filter
 	tf := newValidTimeFilter("TFDELERR")
 	ipGrp := shared.NewIpAddressGroupWithAddrStrings("G_DEL", "G_DEL", []string{"10.0.0.11"})
 	nl := shared.ConvertFromIpAddressGroup(ipGrp)
-	SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, nl.ID, nl)
 	ipGrp.RawIpAddresses = []string{"10.0.0.11"}
 	tf.IpWhiteList = ipGrp
 	tf.EnvModelRuleBean.ModelId = "M5"
@@ -749,7 +750,7 @@ func TestDeleteTimeFilter_DeleteOneFirmwareRuleError(t *testing.T) {
 	fr.ApplicationType = "stb"
 	fr.ID = uuid.New().String()
 	tf.Id = fr.ID
-	SetOneInDao(db.TABLE_FIRMWARE_RULES, fr.ID, fr)
+	xshared.SetOneInDao(db.TABLE_FIRMWARE_RULES, fr.ID, fr)
 
 	resp := DeleteTimeFilter(db.GetDefaultTenantId(), "TFDELERR", "stb")
 
@@ -761,7 +762,7 @@ func TestDeleteTimeFilter_DeleteOneFirmwareRuleError(t *testing.T) {
 // TestDeleteTimeFilter_NilTimeFilter tests when TimeFilterByName returns nil
 // Tests line 107-112: if timeFilter != nil { ... } path
 func TestDeleteTimeFilter_NilTimeFilter(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 
 	// Delete non-existent time filter
 	resp := DeleteTimeFilter(db.GetDefaultTenantId(), "DOESNOTEXIST", "stb")
@@ -772,7 +773,7 @@ func TestDeleteTimeFilter_NilTimeFilter(t *testing.T) {
 
 // TestIsExistEnvModelRule_WithId tests the existence check logic
 func TestIsExistEnvModelRule_WithId(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("M6", "E6", "stb")
 
 	envModelRule := coreef.EnvModelRuleBean{
@@ -812,7 +813,7 @@ func TestIsExistEnvModelRule_NoModelId(t *testing.T) {
 
 // TestGetOneByEnvModel_Found tests successful lookup
 func TestGetOneByEnvModel_Found(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	emBean := seedEnvModelRule("M9", "E9", "stb")
 
 	bean := GetOneByEnvModel(db.GetDefaultTenantId(), emBean.ModelId, emBean.EnvironmentId, "stb")
@@ -826,7 +827,7 @@ func TestGetOneByEnvModel_Found(t *testing.T) {
 
 // TestGetOneByEnvModel_NotFound tests when no matching rule exists
 func TestGetOneByEnvModel_NotFound(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 
 	bean := GetOneByEnvModel(db.GetDefaultTenantId(), "NONEXIST", "NONEXIST", "stb")
 	assert.Nil(t, bean, "Should return nil when no matching rule found")
@@ -834,7 +835,7 @@ func TestGetOneByEnvModel_NotFound(t *testing.T) {
 
 // TestGetOneByEnvModel_CaseInsensitive tests case-insensitive matching
 func TestGetOneByEnvModel_CaseInsensitive(t *testing.T) {
-	truncateTable(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	_ = seedEnvModelRule("M10", "E10", "stb")
 
 	// Test with different case

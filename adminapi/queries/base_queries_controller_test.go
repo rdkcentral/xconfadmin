@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/rdkcentral/xconfadmin/common"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 
 	estb "github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -101,7 +102,7 @@ func CreateRuleKeyValue(key string, value string) *re.Rule {
 func CreateAndSaveFirmwareRule(id string, templateId string, applicationType string, action *corefw.ApplicableAction, rule *re.Rule) *corefw.FirmwareRule {
 	firmwareRule := CreateFirmwareRule(id, templateId, applicationType, action, rule)
 	// Use helper instead of service function to work with mock
-	SetOneInDao(db.TABLE_FIRMWARE_RULES, firmwareRule.ID, firmwareRule)
+	xshared.SetOneInDao(db.TABLE_FIRMWARE_RULES, firmwareRule.ID, firmwareRule)
 	return firmwareRule
 }
 
@@ -210,7 +211,7 @@ func CreateAndSaveModel(id string) *shared.Model {
 	model := shared.NewModel(id, "ModelDescription")
 	//jsonData, _ := json.Marshal(model)
 
-	err := SetOneInDao(db.TABLE_MODELS, model.ID, model)
+	err := xshared.SetOneInDao(db.TABLE_MODELS, model.ID, model)
 	if err != nil {
 		return nil
 	}
@@ -222,7 +223,7 @@ func CreateAndSaveEnvironment(id string) *shared.Environment {
 	env := shared.NewEnvironment(id, "ENV_MODEL_RULE_ENVIRONMENT_ID")
 	//jsonData, _ := json.Marshal(env)
 
-	err := SetOneInDao(db.TABLE_ENVIRONMENTS, env.ID, env)
+	err := xshared.SetOneInDao(db.TABLE_ENVIRONMENTS, env.ID, env)
 	if err != nil {
 		return nil
 	}
@@ -234,7 +235,7 @@ func CreateAndSaveGenericNamespacedList(name string, ttype string, data string) 
 	namespacedList := CreateGenericNamespacedList(name, ttype, data)
 	//jsonData, _ := json.Marshal(namespacedList)
 
-	err := SetOneInDao(db.TABLE_GENERIC_NS_LIST, namespacedList.ID, namespacedList)
+	err := xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, namespacedList.ID, namespacedList)
 	if err != nil {
 		return nil
 	}
@@ -267,7 +268,7 @@ func CreateAndSaveFirmwareConfig(firmwareVersion string, modelId string, firmwar
 
 func SetFirmwareConfig(firmwareConfig *coreef.FirmwareConfig) error {
 	// Use helper instead of service function to work with mock
-	err := SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, firmwareConfig.ID, firmwareConfig)
+	err := xshared.SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, firmwareConfig.ID, firmwareConfig)
 	if err != nil {
 		return err
 	}
@@ -301,7 +302,7 @@ func CreatePercentageBeanPB(name string, envId string, modelId string, whitelist
 func CreateAndSaveFirmwareRuleTemplate(id string, rule *re.Rule, applicableAction *corefw.TemplateApplicableAction) *corefw.FirmwareRuleTemplate {
 	template := CreateFirmwareRuleTemplate(id, rule, applicableAction)
 	// Use helper instead of service function to work with mock
-	if err := SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, template.ID, template); err != nil {
+	if err := xshared.SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, template.ID, template); err != nil {
 		panic(err)
 	}
 	return template
@@ -324,7 +325,7 @@ func CreateAndSaveEnvModelFirmwareRule(name string, firmwareConfigId string, env
 	envModelRule.Type = "ENV_MODEL_RULE"
 	envModelRule.Rule = *CreateEnvModelRule(envId, modelId, macListId)
 	//jsonData, _ := json.Marshal(envModelRule)
-	err := SetOneInDao(db.TABLE_FIRMWARE_RULES, envModelRule.ID, envModelRule)
+	err := xshared.SetOneInDao(db.TABLE_FIRMWARE_RULES, envModelRule.ID, envModelRule)
 	if err != nil {
 		return nil
 	}
@@ -401,6 +402,6 @@ func unmarshalXconfError(b []byte) *common.XconfError {
 func SendRequest(url string, method string, entity interface{}) *httptest.ResponseRecorder {
 	entityJson, _ := json.Marshal(entity)
 	r := httptest.NewRequest(method, url, bytes.NewReader(entityJson))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	return rr
 }

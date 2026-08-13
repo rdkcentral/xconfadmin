@@ -65,7 +65,7 @@ func TestAllDeviceSettingsApis(t *testing.T) {
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 	assert.NilError(t, err)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	defer res.Body.Close()
@@ -87,7 +87,7 @@ func TestAllDeviceSettingsApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
 
@@ -97,7 +97,7 @@ func TestAllDeviceSettingsApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
 
@@ -109,7 +109,7 @@ func TestAllDeviceSettingsApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -121,7 +121,7 @@ func TestAllDeviceSettingsApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
 
@@ -139,7 +139,7 @@ func TestAllDeviceSettingsApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -151,7 +151,7 @@ func TestAllDeviceSettingsApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -169,7 +169,7 @@ func TestAllDeviceSettingsApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -187,7 +187,7 @@ func TestAllDeviceSettingsApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusNoContent)
 
@@ -198,7 +198,7 @@ func TestAllDeviceSettingsApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 
@@ -209,7 +209,7 @@ func TestAllDeviceSettingsApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -230,7 +230,7 @@ func performRequest(t *testing.T, router *mux.Router, url string, method string,
 	if method == "POST" || method == "PUT" {
 		req.Header.Add("Content-Type", "application/json")
 	}
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, expectedStatus)
 	defer res.Body.Close()
 	respBody, err := ioutil.ReadAll(res.Body)
@@ -299,7 +299,7 @@ func TestGetDeviceSettingsExportHandler_Success(t *testing.T) {
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	// Assertions
@@ -327,7 +327,7 @@ func TestGetDeviceSettingsExportHandler_EmptyResult(t *testing.T) {
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	// Assertions
@@ -401,7 +401,7 @@ func TestGetDeviceSettingsExportHandler_FilterByApplicationType(t *testing.T) {
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	// Assertions
@@ -441,7 +441,7 @@ func TestGetDeviceSettingsExportHandler_MissingDeviceSettings(t *testing.T) {
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	// Assertions
@@ -477,7 +477,7 @@ func TestGetDeviceSettingsExportHandler_VerifyContentDisposition(t *testing.T) {
 		assert.NilError(t, err)
 		req.AddCookie(&http.Cookie{Name: "applicationType", Value: tc.appType})
 
-		res := ExecuteRequest(req, router).Result()
+		res := xshared.ExecuteRequest(req, router).Result()
 		defer res.Body.Close()
 
 		assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -496,7 +496,7 @@ func TestGetDeviceSettingsExportHandler_AuthError(t *testing.T) {
 	assert.NilError(t, err)
 	// Don't add applicationType cookie to test default behavior
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	// In test environment, auth might pass with default "stb" or fail
@@ -549,7 +549,7 @@ func TestGetDeviceSettingsExportHandler_MultipleFormulasWithSomeMatching(t *test
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	// Assertions
@@ -612,7 +612,7 @@ func TestGetDeviceSettingsExportHandler_JSONResponseFormat(t *testing.T) {
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	// Assertions
@@ -661,7 +661,7 @@ func TestGetDeviceSettingsByIdHandler_Success(t *testing.T) {
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -684,7 +684,7 @@ func TestGetDeviceSettingsByIdHandler_NotFound(t *testing.T) {
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
@@ -700,7 +700,7 @@ func TestGetDeviceSettingsByIdHandler_EmptyID(t *testing.T) {
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	// Empty ID results in 404 as it's looking for empty string ID
@@ -735,7 +735,7 @@ func TestDeleteDeviceSettingsByIdHandler_Success(t *testing.T) {
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusNoContent)
@@ -746,7 +746,7 @@ func TestDeleteDeviceSettingsByIdHandler_Success(t *testing.T) {
 	// Verify it's actually deleted
 	req2, _ := http.NewRequest("GET", url, nil)
 	req2.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res2 := ExecuteRequest(req2, router).Result()
+	res2 := xshared.ExecuteRequest(req2, router).Result()
 	defer res2.Body.Close()
 	assert.Equal(t, res2.StatusCode, http.StatusNotFound)
 }
@@ -760,7 +760,7 @@ func TestDeleteDeviceSettingsByIdHandler_NotFound(t *testing.T) {
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
@@ -776,7 +776,7 @@ func TestCreateDeviceSettingsHandler_InvalidJSON(t *testing.T) {
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
@@ -823,7 +823,7 @@ func TestUpdateDeviceSettingsHandler_Success(t *testing.T) {
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -831,7 +831,7 @@ func TestUpdateDeviceSettingsHandler_Success(t *testing.T) {
 	// Verify the update
 	getReq, _ := http.NewRequest("GET", "/xconfAdminService/dcm/deviceSettings/test-update-id", nil)
 	getReq.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	getRes := ExecuteRequest(getReq, router).Result()
+	getRes := xshared.ExecuteRequest(getReq, router).Result()
 	defer getRes.Body.Close()
 
 	body, _ := ioutil.ReadAll(getRes.Body)
@@ -859,7 +859,7 @@ func TestUpdateDeviceSettingsHandler_NotExisting(t *testing.T) {
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
@@ -907,7 +907,7 @@ func TestPostDeviceSettingsFilteredWithParamsHandler_WithFilters(t *testing.T) {
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -929,7 +929,7 @@ func TestPostDeviceSettingsFilteredWithParamsHandler_InvalidPagination(t *testin
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
@@ -989,7 +989,7 @@ func TestGetDeviceSettingsExportHandler_MultipleApplicationTypes(t *testing.T) {
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)

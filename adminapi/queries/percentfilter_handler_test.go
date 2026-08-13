@@ -23,6 +23,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 
 	"github.com/rdkcentral/xconfadmin/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -170,7 +171,7 @@ func TestUpdatePercentFilterGlobal(t *testing.T) {
 		globalPercentage.ApplicationType = applicationType
 
 		existingRule := createMockGlobalPercentageRule(applicationType)
-		SetOneInDao(db.TABLE_FIRMWARE_RULES, existingRule.ID, existingRule)
+		xshared.SetOneInDao(db.TABLE_FIRMWARE_RULES, existingRule.ID, existingRule)
 
 		respEntity := UpdatePercentFilterGlobal(db.GetDefaultTenantId(), applicationType, globalPercentage)
 
@@ -225,7 +226,7 @@ func TestGetPercentFilterGlobal(t *testing.T) {
 
 	t.Run("Get existing global percentage", func(t *testing.T) {
 		rule := createMockGlobalPercentageRule(applicationType)
-		SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
+		xshared.SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 
 		result, err := GetPercentFilterGlobal(db.GetDefaultTenantId(), applicationType)
 
@@ -273,7 +274,7 @@ func TestGetGlobalPercentFilter(t *testing.T) {
 
 	t.Run("Get global percent filter VO with existing rule", func(t *testing.T) {
 		rule := createMockGlobalPercentageRule(applicationType)
-		SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
+		xshared.SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 
 		result, err := GetGlobalPercentFilter(db.GetDefaultTenantId(), applicationType)
 
@@ -324,7 +325,7 @@ func TestGetGlobalPercentFilterAsRule(t *testing.T) {
 
 	t.Run("Get existing rule", func(t *testing.T) {
 		rule := createMockGlobalPercentageRule(applicationType)
-		SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
+		xshared.SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 
 		result, err := GetGlobalPercentFilterAsRule(db.GetDefaultTenantId(), applicationType)
 
@@ -334,7 +335,7 @@ func TestGetGlobalPercentFilterAsRule(t *testing.T) {
 	})
 
 	t.Run("Get non-existing rule", func(t *testing.T) {
-		ClearMockDatabase()
+		xshared.ClearMockDatabase()
 
 		result, err := GetGlobalPercentFilterAsRule(db.GetDefaultTenantId(), "xhome")
 
@@ -348,7 +349,7 @@ func TestGetGlobalPercentFilterAsRuleHandler(t *testing.T) {
 
 	t.Run("Get rule without export - existing rule", func(t *testing.T) {
 		rule := createMockGlobalPercentageRule(applicationType)
-		SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
+		xshared.SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 
 		req := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/globalPercentAsRule?applicationType="+applicationType, nil)
 		rr := httptest.NewRecorder()
@@ -366,7 +367,7 @@ func TestGetGlobalPercentFilterAsRuleHandler(t *testing.T) {
 	})
 
 	t.Run("Get rule with export - non-existing rule", func(t *testing.T) {
-		ClearMockDatabase()
+		xshared.ClearMockDatabase()
 
 		req := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/globalPercentAsRule?applicationType=xhome&export=true", nil)
 		rr := httptest.NewRecorder()
@@ -383,7 +384,7 @@ func TestGetGlobalPercentFilterAsRuleHandler(t *testing.T) {
 	})
 
 	t.Run("Get rule without export - non-existing rule", func(t *testing.T) {
-		ClearMockDatabase()
+		xshared.ClearMockDatabase()
 
 		req := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/globalPercentAsRule?applicationType=sky", nil)
 		rr := httptest.NewRecorder()

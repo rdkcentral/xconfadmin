@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"strconv"
 	"testing"
+	"github.com/rdkcentral/xconfadmin/shared"
 
 	"github.com/google/uuid"
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -343,9 +344,8 @@ func TestAddNewFirmwareRTAndReorganize(t *testing.T) {
 
 // Test createFirmwareRT
 func TestCreateFirmwareRT_Success(t *testing.T) {
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	template := createTestFirmwareRuleTemplateService(uuid.New().String(), "TestCreate", 1, "RULE_TEMPLATE")
 
@@ -356,9 +356,8 @@ func TestCreateFirmwareRT_Success(t *testing.T) {
 }
 
 func TestCreateFirmwareRT_ValidationError(t *testing.T) {
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Template with missing ApplicableAction
 	template := firmware.FirmwareRuleTemplate{
@@ -373,9 +372,8 @@ func TestCreateFirmwareRT_ValidationError(t *testing.T) {
 }
 
 func TestCreateFirmwareRT_ModelReferenceDoesNotExist(t *testing.T) {
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	templateJSON := `{
 		"id": "` + uuid.New().String() + `",
@@ -410,9 +408,8 @@ func TestCreateFirmwareRT_ModelReferenceDoesNotExist(t *testing.T) {
 }
 
 func TestCreateFirmwareRT_IPListReferenceDoesNotExist(t *testing.T) {
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	templateJSON := `{
 		"id": "` + uuid.New().String() + `",
@@ -447,13 +444,12 @@ func TestCreateFirmwareRT_IPListReferenceDoesNotExist(t *testing.T) {
 }
 
 func TestCreateFirmwareRT_DuplicateName(t *testing.T) {
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Create first template
 	template1 := createTestFirmwareRuleTemplateService(uuid.New().String(), "DuplicateTest", 1, "RULE_TEMPLATE")
-	SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, template1.ID, template1)
+	shared.SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, template1.ID, template1)
 
 	// Try to create second template with same name but different rule
 	// The function checks for duplicate names, so this should fail
@@ -506,10 +502,9 @@ func TestGetFirmwareRuleTemplateExportName(t *testing.T) {
 
 // Test importOrUpdateAllFirmwareRTs
 func TestImportOrUpdateAllFirmwareRTs_CreateNew(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	shared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	template := createTestFirmwareRuleTemplateService(uuid.New().String(), "ImportTest1", 1, "RULE_TEMPLATE")
 	entities := []firmware.FirmwareRuleTemplate{*template}
@@ -521,9 +516,8 @@ func TestImportOrUpdateAllFirmwareRTs_CreateNew(t *testing.T) {
 }
 
 func TestImportOrUpdateAllFirmwareRTs_EmptyName(t *testing.T) {
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	entities := []firmware.FirmwareRuleTemplate{
 		{
@@ -542,9 +536,8 @@ func TestImportOrUpdateAllFirmwareRTs_EmptyName(t *testing.T) {
 }
 
 func TestImportOrUpdateAllFirmwareRTs_GenerateID(t *testing.T) {
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	template := createTestFirmwareRuleTemplateService("", "AutoIDTest", 1, "RULE_TEMPLATE")
 	template.ID = "" // Clear the ID

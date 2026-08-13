@@ -19,6 +19,7 @@ package queries
 
 import (
 	"testing"
+	"github.com/rdkcentral/xconfadmin/shared"
 	"time"
 
 	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
@@ -31,8 +32,8 @@ import (
 )
 
 func TestFeatureGetPostPutDeleteImport(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test - feature service uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	shared.SkipIfMockDatabase(t) // Integration test - feature service uses db.GetCachedSimpleDao() directly
+	shared.DeleteAllEntities(t)
 
 	// test GET ALL
 	featureList := GetAllFeatureEntity(db.GetDefaultTenantId())
@@ -128,7 +129,7 @@ func TestFeatureGetPostPutDeleteImport(t *testing.T) {
 }
 
 func TestDoesFeatureExist(t *testing.T) {
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 
 	doesFeatureExist := xrfc.DoesFeatureExist(db.GetDefaultTenantId(), "")
 	assert.Equal(t, doesFeatureExist, false)
@@ -143,8 +144,8 @@ func TestDoesFeatureExist(t *testing.T) {
 }
 
 func TestDoesFeatureInstanceExist(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test - feature service uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	shared.SkipIfMockDatabase(t) // Integration test - feature service uses db.GetCachedSimpleDao() directly
+	shared.DeleteAllEntities(t)
 	applicationType := "stb"
 	id1 := uuid.New().String()
 	feature1 := &rfc.Feature{

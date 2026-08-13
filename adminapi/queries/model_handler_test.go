@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"testing"
 
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"gotest.tools/assert"
@@ -33,9 +34,8 @@ import (
 // ========== Tests for PostModelEntitiesHandler ==========
 
 func TestPostModelEntitiesHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	models := []shared.Model{
 		{
@@ -56,7 +56,7 @@ func TestPostModelEntitiesHandler_Success(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -86,9 +86,8 @@ func TestPostModelEntitiesHandler_Success(t *testing.T) {
 }
 
 func TestPostModelEntitiesHandler_InvalidJSON(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	invalidBody := []byte(`{"invalid json}`)
 
@@ -97,16 +96,15 @@ func TestPostModelEntitiesHandler_InvalidJSON(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 }
 
 func TestPostModelEntitiesHandler_DuplicateModel(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create first model
 	model1 := &shared.Model{
@@ -131,7 +129,7 @@ func TestPostModelEntitiesHandler_DuplicateModel(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -147,9 +145,8 @@ func TestPostModelEntitiesHandler_DuplicateModel(t *testing.T) {
 }
 
 func TestPostModelEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create one model first
 	existingModel := &shared.Model{
@@ -178,7 +175,7 @@ func TestPostModelEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -200,8 +197,8 @@ func TestPostModelEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 // ========== Tests for PutModelEntitiesHandler ==========
 
 // func TestPutModelEntitiesHandler_Success(t *testing.T) {
-// 	DeleteAllEntities()
-// 	defer DeleteAllEntities()
+// 	xshared.DeleteAllEntities(t)
+// 	defer xshared.DeleteAllEntities(t)
 
 // 	// Create models first
 // 	model1 := &shared.Model{
@@ -235,7 +232,7 @@ func TestPostModelEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 // 	assert.NilError(t, err)
 // 	req.Header.Set("Content-Type", "application/json")
 
-// 	res := ExecuteRequest(req, router).Result()
+// 	res := xshared.ExecuteRequest(req, router).Result()
 // 	defer res.Body.Close()
 
 // 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -251,9 +248,8 @@ func TestPostModelEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 // }
 
 func TestPutModelEntitiesHandler_InvalidJSON(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	invalidBody := []byte(`{"bad": json}`)
 
@@ -262,16 +258,15 @@ func TestPutModelEntitiesHandler_InvalidJSON(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 }
 
 func TestPutModelEntitiesHandler_NonExistentModel(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	models := []shared.Model{
 		{
@@ -288,7 +283,7 @@ func TestPutModelEntitiesHandler_NonExistentModel(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -306,9 +301,8 @@ func TestPutModelEntitiesHandler_NonExistentModel(t *testing.T) {
 // ========== Tests for ObsoleteGetModelPageHandler ==========
 
 func TestObsoleteGetModelPageHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create test models
 	for i := 1; i <= 5; i++ {
@@ -323,7 +317,7 @@ func TestObsoleteGetModelPageHandler_Success(t *testing.T) {
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	// Note: This handler is defined but may not be routed
@@ -341,15 +335,14 @@ func TestObsoleteGetModelPageHandler_Success(t *testing.T) {
 }
 
 func TestObsoleteGetModelPageHandler_InvalidPageNumber(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	url := "/xconfAdminService/model/page?pageNumber=invalid&pageSize=3"
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	// Should return 400 Bad Request for invalid pageNumber
@@ -360,15 +353,14 @@ func TestObsoleteGetModelPageHandler_InvalidPageNumber(t *testing.T) {
 }
 
 func TestObsoleteGetModelPageHandler_InvalidPageSize(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	url := "/xconfAdminService/model/page?pageNumber=1&pageSize=invalid"
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	// Should return 400 Bad Request for invalid pageSize
@@ -379,9 +371,8 @@ func TestObsoleteGetModelPageHandler_InvalidPageSize(t *testing.T) {
 }
 
 func TestObsoleteGetModelPageHandler_Pagination(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create 10 models
 	for i := 1; i <= 10; i++ {
@@ -397,7 +388,7 @@ func TestObsoleteGetModelPageHandler_Pagination(t *testing.T) {
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusOK {
@@ -409,15 +400,14 @@ func TestObsoleteGetModelPageHandler_Pagination(t *testing.T) {
 }
 
 func TestObsoleteGetModelPageHandler_EmptyResult(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	url := "/xconfAdminService/model/page?pageNumber=1&pageSize=10"
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusOK {
@@ -432,9 +422,8 @@ func TestObsoleteGetModelPageHandler_EmptyResult(t *testing.T) {
 // ========== Tests for PostModelFilteredHandler ==========
 
 func TestPostModelFilteredHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create test models
 	model1 := &shared.Model{
@@ -457,7 +446,7 @@ func TestPostModelFilteredHandler_Success(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -470,9 +459,8 @@ func TestPostModelFilteredHandler_Success(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_WithEmptyBody(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create test model
 	model := &shared.Model{
@@ -486,16 +474,15 @@ func TestPostModelFilteredHandler_WithEmptyBody(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 }
 
 func TestPostModelFilteredHandler_InvalidJSON(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	invalidBody := []byte(`{invalid}`)
 
@@ -504,16 +491,15 @@ func TestPostModelFilteredHandler_InvalidJSON(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 }
 
 func TestPostModelFilteredHandler_InvalidPageNumber(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	filterContext := map[string]string{}
 	body, err := json.Marshal(filterContext)
@@ -524,16 +510,15 @@ func TestPostModelFilteredHandler_InvalidPageNumber(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 }
 
 func TestPostModelFilteredHandler_Pagination(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create 5 models
 	for i := 1; i <= 5; i++ {
@@ -554,7 +539,7 @@ func TestPostModelFilteredHandler_Pagination(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -568,9 +553,8 @@ func TestPostModelFilteredHandler_Pagination(t *testing.T) {
 // ========== Tests for GetModelByIdHandler ==========
 
 func TestGetModelByIdHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create test model
 	model := &shared.Model{
@@ -583,7 +567,7 @@ func TestGetModelByIdHandler_Success(t *testing.T) {
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -597,24 +581,22 @@ func TestGetModelByIdHandler_Success(t *testing.T) {
 }
 
 func TestGetModelByIdHandler_NotFound(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	url := "/xconfAdminService/model/NONEXISTENT"
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 }
 
 func TestGetModelByIdHandler_WithExport(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create test model
 	model := &shared.Model{
@@ -627,7 +609,7 @@ func TestGetModelByIdHandler_WithExport(t *testing.T) {
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -646,9 +628,8 @@ func TestGetModelByIdHandler_WithExport(t *testing.T) {
 }
 
 func TestGetModelByIdHandler_CaseInsensitive(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create test model with lowercase ID
 	model := &shared.Model{
@@ -662,7 +643,7 @@ func TestGetModelByIdHandler_CaseInsensitive(t *testing.T) {
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -671,9 +652,8 @@ func TestGetModelByIdHandler_CaseInsensitive(t *testing.T) {
 // ========== Tests for GetModelHandler ==========
 
 func TestGetModelHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create test models
 	model1 := &shared.Model{
@@ -691,7 +671,7 @@ func TestGetModelHandler_Success(t *testing.T) {
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -703,15 +683,14 @@ func TestGetModelHandler_Success(t *testing.T) {
 }
 
 func TestGetModelHandler_EmptyResult(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	url := "/xconfAdminService/model"
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -726,9 +705,8 @@ func TestGetModelHandler_EmptyResult(t *testing.T) {
 }
 
 func TestGetModelHandler_WithExport(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create test models
 	model := &shared.Model{
@@ -741,7 +719,7 @@ func TestGetModelHandler_WithExport(t *testing.T) {
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -752,9 +730,8 @@ func TestGetModelHandler_WithExport(t *testing.T) {
 }
 
 func TestGetModelHandler_SortedAlphabetically(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create models in non-alphabetical order
 	modelZ := &shared.Model{
@@ -777,7 +754,7 @@ func TestGetModelHandler_SortedAlphabetically(t *testing.T) {
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -798,12 +775,11 @@ func TestGetModelHandler_SortedAlphabetically(t *testing.T) {
 // ========== Additional Error Path Tests for WriteAdminErrorResponse ==========
 
 func TestPostModelEntitiesHandler_UnableToExtractBody(t *testing.T) {
-	SkipIfMockDatabase(t)
+	xshared.SkipIfMockDatabase(t)
 	// This test verifies the error path when response writer is not XResponseWriter
 	// In practice, this is hard to trigger in the test harness as ExecuteRequest
 	// always wraps with XResponseWriter, but we can document the behavior
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	models := []shared.Model{
 		{
@@ -820,7 +796,7 @@ func TestPostModelEntitiesHandler_UnableToExtractBody(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	// Normal path should succeed
@@ -828,9 +804,8 @@ func TestPostModelEntitiesHandler_UnableToExtractBody(t *testing.T) {
 }
 
 func TestPutModelEntitiesHandler_EmptyID(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Try to update model with empty ID
 	models := []shared.Model{
@@ -848,7 +823,7 @@ func TestPutModelEntitiesHandler_EmptyID(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -866,9 +841,8 @@ func TestPutModelEntitiesHandler_EmptyID(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_FilterContextError(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create test model
 	model := &shared.Model{
@@ -885,7 +859,7 @@ func TestPostModelFilteredHandler_FilterContextError(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
@@ -895,9 +869,9 @@ func TestPostModelFilteredHandler_FilterContextError(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_NegativePageNumber(t *testing.T) {
-	SkipIfMockDatabase(t)
-	//	DeleteAllEntities()
-	//defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	//	xshared.DeleteAllEntities(t)
+	//defer xshared.DeleteAllEntities(t)
 
 	filterContext := map[string]string{}
 	body, err := json.Marshal(filterContext)
@@ -908,7 +882,7 @@ func TestPostModelFilteredHandler_NegativePageNumber(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	// Should return 400 for negative page number
@@ -916,9 +890,9 @@ func TestPostModelFilteredHandler_NegativePageNumber(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_ZeroPageSize(t *testing.T) {
-	SkipIfMockDatabase(t)
-	//DeleteAllEntities()
-	//defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	//xshared.DeleteAllEntities(t)
+	//defer xshared.DeleteAllEntities(t)
 
 	filterContext := map[string]string{}
 	body, err := json.Marshal(filterContext)
@@ -929,7 +903,7 @@ func TestPostModelFilteredHandler_ZeroPageSize(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	// Should return 400 for zero page size
@@ -937,9 +911,8 @@ func TestPostModelFilteredHandler_ZeroPageSize(t *testing.T) {
 }
 
 func TestGetModelByIdHandler_EmptyID(t *testing.T) {
-	SkipIfMockDatabase(t)
-	//DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	//xshared.DeleteAllEntities(t)
 
 	// Try to get model with empty ID - this will fail at routing level
 	// but test the handler behavior
@@ -947,7 +920,7 @@ func TestGetModelByIdHandler_EmptyID(t *testing.T) {
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	// Router will not match this path, so it will return 404 or redirect
@@ -955,9 +928,8 @@ func TestGetModelByIdHandler_EmptyID(t *testing.T) {
 }
 
 func TestPostModelEntitiesHandler_ValidationError(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create model with invalid data
 	models := []shared.Model{
@@ -975,7 +947,7 @@ func TestPostModelEntitiesHandler_ValidationError(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -992,9 +964,8 @@ func TestPostModelEntitiesHandler_ValidationError(t *testing.T) {
 }
 
 func TestObsoleteGetModelPageHandler_PageOutOfBounds(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create 3 models
 	for i := 1; i <= 3; i++ {
@@ -1010,7 +981,7 @@ func TestObsoleteGetModelPageHandler_PageOutOfBounds(t *testing.T) {
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusOK {
@@ -1023,9 +994,8 @@ func TestObsoleteGetModelPageHandler_PageOutOfBounds(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_LargePageSize(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create a few models
 	for i := 1; i <= 5; i++ {
@@ -1046,7 +1016,7 @@ func TestPostModelFilteredHandler_LargePageSize(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusOK)

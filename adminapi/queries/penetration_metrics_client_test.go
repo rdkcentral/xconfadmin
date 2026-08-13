@@ -24,13 +24,15 @@ import (
 	"testing"
 	"time"
 
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"gotest.tools/assert"
 )
 
 func TestGetPenetrationMetrics(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	truncateTable("", "PenetrationMetrics")
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.TruncateTable(t, "", "PenetrationMetrics")
 	err := createPenetrationSampleData()
 	if err != nil {
 		t.Skipf("Skipping TestGetPenetrationMetrics: penetration_data schema may not support tenant_id column: %v", err)
@@ -40,7 +42,7 @@ func TestGetPenetrationMetrics(t *testing.T) {
 	url := "/xconfAdminService/penetrationdata/11:22:33:44:65:66"
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 	body, err := ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -50,7 +52,7 @@ func TestGetPenetrationMetrics(t *testing.T) {
 	url = "/xconfAdminService/penetrationdata/AA:BB:CC:DD:ee"
 	req, err = http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -61,13 +63,13 @@ func TestGetPenetrationMetrics(t *testing.T) {
 	url = "/xconfAdminService/penetrationdata/AA:10:AA:31:AA:35"
 	req, err = http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
 	url = "/xconfAdminService/penetrationdata/aa10aa31aa35"
 	req, err = http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 }
 

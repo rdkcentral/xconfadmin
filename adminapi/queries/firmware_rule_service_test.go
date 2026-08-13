@@ -24,6 +24,7 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	log "github.com/sirupsen/logrus"
@@ -61,8 +62,7 @@ func TestPutSizesOfFirmwareRulesByTypeIntoHeaders_EmptyList(t *testing.T) {
 }
 
 func TestPutSizesOfFirmwareRulesByTypeIntoHeaders_WithRules(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create editable template
 	template := createTestFirmwareRule("template-1", "Template", "stb")
@@ -70,7 +70,7 @@ func TestPutSizesOfFirmwareRulesByTypeIntoHeaders_WithRules(t *testing.T) {
 		ID:       template.GetTemplateId(),
 		Editable: true,
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, templateEntity.ID, templateEntity)
+	xshared.SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, templateEntity.ID, templateEntity)
 
 	// Create rules of different types
 	rule1 := createTestFirmwareRule("rule-1", "Rule 1", "stb")
@@ -86,10 +86,9 @@ func TestPutSizesOfFirmwareRulesByTypeIntoHeaders_WithRules(t *testing.T) {
 
 // Test checkRuleTypeAndCreate
 func TestCheckRuleTypeAndCreate_MAC_RULE(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.DeleteAllEntities(t)
 	setupFirmwareRuleTemplates()
-	defer DeleteAllEntities()
 
 	rule := createTestFirmwareRule("", "Test MAC Rule", "stb")
 	rule.Type = corefw.MAC_RULE
@@ -100,8 +99,7 @@ func TestCheckRuleTypeAndCreate_MAC_RULE(t *testing.T) {
 }
 
 func TestCheckRuleTypeAndCreate_ENV_MODEL_RULE(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	rule := createTestFirmwareRule("", "ENV Model Rule", "stb")
 	rule.Type = corefw.ENV_MODEL_RULE
@@ -114,8 +112,7 @@ func TestCheckRuleTypeAndCreate_ENV_MODEL_RULE(t *testing.T) {
 
 // Test checkRuleTypeAndUpdate
 func TestCheckRuleTypeAndUpdate_AppTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	entityOnDb := createTestFirmwareRule("rule-1", "Existing Rule", "stb")
 	rule := *createTestFirmwareRule("rule-1", "Updated Rule", "xhome")
@@ -196,8 +193,7 @@ func TestValidateRuleAction_EmptyConfigId(t *testing.T) {
 }
 
 func TestValidateRuleAction_InvalidConfigId(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	rule := corefw.FirmwareRule{
 		Name:            "Test",
@@ -213,9 +209,8 @@ func TestValidateRuleAction_InvalidConfigId(t *testing.T) {
 }
 
 func TestValidateRuleAction_DuplicateConfigEntries(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
+	xshared.DeleteAllEntities(t)
 
 	// Create a firmware config
 	config := &coreef.FirmwareConfig{
@@ -223,7 +218,7 @@ func TestValidateRuleAction_DuplicateConfigEntries(t *testing.T) {
 		Description:     "Test Config",
 		ApplicationType: "stb",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, config.ID, config)
+	xshared.SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, config.ID, config)
 
 	rule := corefw.FirmwareRule{
 		Name:            "Test",
@@ -250,8 +245,7 @@ func TestValidateDefinePropertiesApplicableAction_EmptyType(t *testing.T) {
 }
 
 func TestValidateDefinePropertiesApplicableAction_WithProperties(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	action := corefw.ApplicableAction{
 		Properties: map[string]string{

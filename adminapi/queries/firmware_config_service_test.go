@@ -20,6 +20,7 @@ package queries
 import (
 	"encoding/json"
 	"testing"
+	"github.com/rdkcentral/xconfadmin/shared"
 
 	"gotest.tools/assert"
 
@@ -40,7 +41,7 @@ func createTestFirmwareConfigForService(id string, version string, modelIds []st
 		FirmwareFilename:         "test.bin",
 		FirmwareLocation:         "http://test.com/test.bin",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
+	shared.SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 	return fc
 }
 
@@ -80,14 +81,13 @@ func createEnvModelFirmwareRule(id string, name string, model string, configId s
 
 	var rule corefw.FirmwareRule
 	json.Unmarshal([]byte(ruleJSON), &rule)
-	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, &rule)
+	shared.SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, &rule)
 	return &rule
 }
 
 func TestIsValidFirmwareConfigByModelIdList(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	shared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
+	shared.DeleteAllEntities(t)
 
 	// Create test firmware configs
 	modelIds1 := []string{"MODEL1", "MODEL2"}
@@ -123,9 +123,8 @@ func TestIsValidFirmwareConfigByModelIdList(t *testing.T) {
 }
 
 func TestIsValidFirmwareConfigByModelIds(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	shared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
+	shared.DeleteAllEntities(t)
 
 	// Create test firmware configs
 	modelIds := []string{"TESTMODEL1", "TESTMODEL2"}
@@ -170,8 +169,7 @@ func TestIsValidFirmwareConfigByModelIds(t *testing.T) {
 
 // Additional edge case tests
 func TestIsValidFirmwareConfigByModelIdList_EdgeCases(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 
 	// Create test data
 	fc := createTestFirmwareConfigForService("edge-fc", "1.0.0", []string{"EDGEMODEL"}, "stb")
@@ -189,8 +187,7 @@ func TestIsValidFirmwareConfigByModelIdList_EdgeCases(t *testing.T) {
 }
 
 func TestGetFirmwareConfigsByModelIdAndApplicationType_EmptyDatabase(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 
 	// Test with empty database
 	result := GetFirmwareConfigsByModelIdAndApplicationType(db.GetDefaultTenantId(), "ANYMODEL", "stb")
@@ -198,8 +195,7 @@ func TestGetFirmwareConfigsByModelIdAndApplicationType_EmptyDatabase(t *testing.
 }
 
 func TestGetSupportedConfigsByEnvModelRuleName_NoMatchingModel(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 
 	// Create config and rule with non-matching model
 	fc := createTestFirmwareConfigForService("nomatch-fc", "1.0.0", []string{"MODEL_A"}, "stb")
@@ -237,7 +233,7 @@ func TestGetSupportedConfigsByEnvModelRuleName_NoMatchingModel(t *testing.T) {
 
 	var rule corefw.FirmwareRule
 	json.Unmarshal([]byte(ruleJSON), &rule)
-	SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, &rule)
+	shared.SetOneInDao(db.TABLE_FIRMWARE_RULES, rule.ID, &rule)
 
 	// Test - should not find config because model doesn't match
 	result := getSupportedConfigsByEnvModelRuleName(db.GetDefaultTenantId(), "NoMatchRule", "stb")

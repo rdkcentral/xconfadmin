@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"testing"
 
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xrfc "github.com/rdkcentral/xconfadmin/shared/rfc"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
@@ -54,7 +55,7 @@ func TestQueriesHandlerGETEndpoints(t *testing.T) {
 
 	for _, endpoint := range endpoints {
 		req, _ := http.NewRequest("GET", endpoint, nil)
-		res := ExecuteRequest(req, router)
+		res := xshared.ExecuteRequest(req, router)
 		assert.NotNil(t, res)
 	}
 }
@@ -69,12 +70,12 @@ func TestModelHandlersCRUD(t *testing.T) {
 	body, _ := json.Marshal(model)
 	req, _ := http.NewRequest("POST", "/xconfAdminService/queries/models", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	res := ExecuteRequest(req, router)
+	res := xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 
 	// Test GET model by ID
 	req, _ = http.NewRequest("GET", "/xconfAdminService/queries/models/TEST_MODEL_COV", nil)
-	res = ExecuteRequest(req, router)
+	res = xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 
 	// Test PUT model
@@ -82,12 +83,12 @@ func TestModelHandlersCRUD(t *testing.T) {
 	body, _ = json.Marshal(model)
 	req, _ = http.NewRequest("PUT", "/xconfAdminService/queries/models", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	res = ExecuteRequest(req, router)
+	res = xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 
 	// Test DELETE model
 	req, _ = http.NewRequest("DELETE", "/xconfAdminService/queries/models/TEST_MODEL_COV", nil)
-	res = ExecuteRequest(req, router)
+	res = xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 }
 
@@ -101,17 +102,17 @@ func TestEnvironmentHandlersCRUD(t *testing.T) {
 	body, _ := json.Marshal(env)
 	req, _ := http.NewRequest("POST", "/xconfAdminService/queries/environments", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	res := ExecuteRequest(req, router)
+	res := xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 
 	// Test GET environment by ID
 	req, _ = http.NewRequest("GET", "/xconfAdminService/queries/environments/TEST_ENV_COV", nil)
-	res = ExecuteRequest(req, router)
+	res = xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 
 	// Test DELETE environment
 	req, _ = http.NewRequest("DELETE", "/xconfAdminService/queries/environments/TEST_ENV_COV", nil)
-	res = ExecuteRequest(req, router)
+	res = xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 }
 
@@ -127,12 +128,12 @@ func TestFirmwareConfigHandlersCRUD(t *testing.T) {
 	body, _ := json.Marshal(config)
 	req, _ := http.NewRequest("POST", "/xconfAdminService/queries/firmwareconfigs", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	res := ExecuteRequest(req, router)
+	res := xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 
 	// Test GET firmware config by ID
 	req, _ = http.NewRequest("GET", "/xconfAdminService/queries/firmwareconfigs/TEST_FW_COV", nil)
-	res = ExecuteRequest(req, router)
+	res = xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 
 	// Test PUT firmware config
@@ -140,12 +141,12 @@ func TestFirmwareConfigHandlersCRUD(t *testing.T) {
 	body, _ = json.Marshal(config)
 	req, _ = http.NewRequest("PUT", "/xconfAdminService/queries/firmwareconfigs", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	res = ExecuteRequest(req, router)
+	res = xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 
 	// Test DELETE firmware config
 	req, _ = http.NewRequest("DELETE", "/xconfAdminService/queries/firmwareconfigs/TEST_FW_COV", nil)
-	res = ExecuteRequest(req, router)
+	res = xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 }
 
@@ -153,17 +154,17 @@ func TestFirmwareConfigHandlersCRUD(t *testing.T) {
 func TestPercentageBeanHandlersCRUD(t *testing.T) {
 	// Test GET all percentage beans
 	req, _ := http.NewRequest("GET", "/xconfAdminService/queries/percentagebean", nil)
-	res := ExecuteRequest(req, router)
+	res := xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 
 	// Test GET percentage bean by ID (nonexistent)
 	req, _ = http.NewRequest("GET", "/xconfAdminService/queries/percentagebean/NONEXISTENT", nil)
-	res = ExecuteRequest(req, router)
+	res = xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 
 	// Test DELETE percentage bean (nonexistent)
 	req, _ = http.NewRequest("DELETE", "/xconfAdminService/queries/percentagebean/NONEXISTENT", nil)
-	res = ExecuteRequest(req, router)
+	res = xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 }
 
@@ -178,7 +179,7 @@ func TestFilterHandlersGetByName(t *testing.T) {
 
 	for _, endpoint := range endpoints {
 		req, _ := http.NewRequest("GET", endpoint, nil)
-		res := ExecuteRequest(req, router)
+		res := xshared.ExecuteRequest(req, router)
 		assert.NotNil(t, res)
 	}
 }
@@ -195,7 +196,7 @@ func TestFilterHandlersDelete(t *testing.T) {
 
 	for _, endpoint := range endpoints {
 		req, _ := http.NewRequest("DELETE", endpoint, nil)
-		res := ExecuteRequest(req, router)
+		res := xshared.ExecuteRequest(req, router)
 		assert.NotNil(t, res)
 	}
 }
@@ -204,17 +205,17 @@ func TestFilterHandlersDelete(t *testing.T) {
 func TestRuleHandlersByID(t *testing.T) {
 	// Test IP rule by ID
 	req, _ := http.NewRequest("GET", "/xconfAdminService/queries/rules/ips/TEST_IP_RULE", nil)
-	res := ExecuteRequest(req, router)
+	res := xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 
 	// Test MAC rule by name
 	req, _ = http.NewRequest("GET", "/xconfAdminService/queries/rules/macs/TEST_MAC_RULE", nil)
-	res = ExecuteRequest(req, router)
+	res = xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 
 	// Test ENV model rule by name
 	req, _ = http.NewRequest("GET", "/xconfAdminService/queries/rules/envModels/TEST_ENV_MODEL", nil)
-	res = ExecuteRequest(req, router)
+	res = xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 }
 
@@ -222,17 +223,17 @@ func TestRuleHandlersByID(t *testing.T) {
 func TestAdditionalQueryEndpoints(t *testing.T) {
 	// Test migration info
 	req, _ := http.NewRequest("GET", "/xconfAdminService/queries/migrationInfo", nil)
-	res := ExecuteRequest(req, router)
+	res := xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 
 	// Test round robin filter
 	req, _ = http.NewRequest("GET", "/xconfAdminService/queries/filters/roundrobinfilter", nil)
-	res = ExecuteRequest(req, router)
+	res = xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 
 	// Test firmware configs by model ID
 	req, _ = http.NewRequest("GET", "/xconfAdminService/queries/firmwareconfigs/model/TEST_MODEL", nil)
-	res = ExecuteRequest(req, router)
+	res = xshared.ExecuteRequest(req, router)
 	assert.NotNil(t, res)
 }
 
