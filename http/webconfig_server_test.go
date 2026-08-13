@@ -70,6 +70,9 @@ func TestNewWebconfigServer_Defaults(t *testing.T) {
 	if !ws.metricsEnabled {
 		t.Fatalf("metrics should be enabled by default")
 	}
+	if ws.EnableTenantHeaderForLoginToken {
+		t.Fatalf("login-token tenant header support should be disabled by default")
+	}
 }
 
 func TestTestingMiddlewareCapturesBody(t *testing.T) {

@@ -90,69 +90,6 @@ const (
 	TELEMETRY_ENTITY string = "TelemetryEntity"
 )
 
-type SATv2Domain string
-
-const (
-	DOMAIN_CORE    SATv2Domain = "core"
-	DOMAIN_TAGGING SATv2Domain = "tagging"
-	DOMAIN_SYSTEM  SATv2Domain = "system"
-	DOMAIN_METRICS SATv2Domain = "metrics"
-)
-
-type RouteDomainMapping struct {
-	Prefix string
-	Domain SATv2Domain
-}
-
-var satV2RouteMappings = []RouteDomainMapping{
-	// tagging (own top-level router, must appear before xconfAdminService stripping)
-	{Prefix: "/taggingservice", Domain: DOMAIN_TAGGING},
-
-	// metrics
-	{Prefix: "/metrics", Domain: DOMAIN_METRICS},
-
-	// system
-	{Prefix: "/queries/filters/downloadlocation", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/updates/filters/downloadlocation", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/roundrobinfilter", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/rfc/recooking", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/rfc/preprocess", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/appsettings", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/canarysettings", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/lockdownsettings", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/wakeuppool", Domain: DOMAIN_SYSTEM},
-
-	// core
-	{Prefix: "/dataservice", Domain: DOMAIN_CORE},
-	{Prefix: "/estbfirmware", Domain: DOMAIN_CORE},
-	{Prefix: "/queries", Domain: DOMAIN_CORE},
-	{Prefix: "/updates", Domain: DOMAIN_CORE},
-	{Prefix: "/delete", Domain: DOMAIN_CORE},
-	{Prefix: "/model", Domain: DOMAIN_CORE},
-	{Prefix: "/environment", Domain: DOMAIN_CORE},
-	{Prefix: "/genericnamespacedlist", Domain: DOMAIN_CORE},
-	{Prefix: "/firmwarerule", Domain: DOMAIN_CORE},
-	{Prefix: "/firmwareruletemplate", Domain: DOMAIN_CORE},
-	{Prefix: "/firmwareconfig", Domain: DOMAIN_CORE},
-	{Prefix: "/percentfilter", Domain: DOMAIN_CORE},
-	{Prefix: "/amv", Domain: DOMAIN_CORE},
-	{Prefix: "/activationminimumversion", Domain: DOMAIN_CORE},
-	{Prefix: "/settings", Domain: DOMAIN_CORE},
-	{Prefix: "/setting", Domain: DOMAIN_CORE},
-	{Prefix: "/featurerule", Domain: DOMAIN_CORE},
-	{Prefix: "/feature", Domain: DOMAIN_CORE},
-	{Prefix: "/rfc", Domain: DOMAIN_CORE},
-	{Prefix: "/changelog", Domain: DOMAIN_CORE},
-	{Prefix: "/log", Domain: DOMAIN_CORE},
-	{Prefix: "/reportpage", Domain: DOMAIN_CORE},
-	{Prefix: "/stats", Domain: DOMAIN_CORE},
-	{Prefix: "/migration", Domain: DOMAIN_CORE},
-	{Prefix: "/dcm", Domain: DOMAIN_CORE},
-	{Prefix: "/telemetry", Domain: DOMAIN_CORE},
-	{Prefix: "/change", Domain: DOMAIN_CORE},
-	{Prefix: "/penetrationdata", Domain: DOMAIN_CORE},
-}
-
 type EntityPermission struct {
 	ReadAll  string `json:"readAll,omitempty"`
 	Read     string `json:"read,omitempty"`
@@ -250,26 +187,25 @@ func getCurrentModule(r *http.Request, entityType string) string {
 	return ""
 }
 
-func hasSATv2ReadCapability(capabilities []string, domain SATv2Domain) bool {
-	readCap := "xconf:" + string(domain) + ":readonly"
+func hasSATv2ReadCapability(capabilities []string, domain common.SATV2Domain) bool {
+	readCap := common.BuildSATV2Capability(string(domain), common.SATV2AccessReadOnly)
 
 	// metrics has no readwrite capability; only xconf:metrics:readonly is valid
-	if domain == DOMAIN_METRICS {
+	if domain == common.SATV2DomainMetrics {
 		return util.Contains(capabilities, readCap)
 	}
 
-	writeCap := "xconf:" + string(domain) + ":readwrite"
+	writeCap := common.BuildSATV2Capability(string(domain), common.SATV2AccessReadWrite)
 	return util.Contains(capabilities, readCap) || util.Contains(capabilities, writeCap)
 }
 
-func hasSATv2WriteCapability(capabilities []string, domain SATv2Domain) bool {
+func hasSATv2WriteCapability(capabilities []string, domain common.SATV2Domain) bool {
 	// metrics has no write capability
-	if domain == DOMAIN_METRICS {
+	if domain == common.SATV2DomainMetrics {
 		return false
 	}
 
-	writeCap := "xconf:" + string(domain) + ":readwrite"
-	return util.Contains(capabilities, writeCap)
+	return common.HasSATV2Capability(capabilities, string(domain), common.SATV2AccessReadWrite)
 }
 
 func authorizeSATv2TenantScope(r *http.Request) error {
@@ -313,7 +249,7 @@ func CanWriteSatV2(r *http.Request, capabilities []string, applicationType strin
 	}
 
 	if !hasSATv2WriteCapability(capabilities, domain) {
-		requiredCap := "xconf:" + string(domain) + ":readwrite"
+		requiredCap := common.BuildSATV2Capability(string(domain), common.SATV2AccessReadWrite)
 		return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, fmt.Sprintf("SAT v2 token is missing required capability: %s", requiredCap))
 	}
 	if err := authorizeSATv2TenantScope(r); err != nil {
@@ -483,11 +419,11 @@ func CanRead(r *http.Request, entityType string, vargs ...string) (applicationTy
 	return applicationType, nil
 }
 
-func classifySATv2Domain(path string) (SATv2Domain, bool) {
+func classifySATv2Domain(path string) (common.SATV2Domain, bool) {
 	path = strings.ToLower(strings.TrimSuffix(path, "/"))
 
 	// tagging paths are not under xconfAdminService; check registry before stripping prefix
-	for _, m := range satV2RouteMappings {
+	for _, m := range common.SATV2RouteMappings {
 		if strings.HasPrefix(path, m.Prefix) {
 			return m.Domain, true
 		}
@@ -500,7 +436,7 @@ func classifySATv2Domain(path string) (SATv2Domain, bool) {
 		return "", false
 	}
 
-	for _, m := range satV2RouteMappings {
+	for _, m := range common.SATV2RouteMappings {
 		if strings.HasPrefix(adminPath, m.Prefix) {
 			return m.Domain, true
 		}
