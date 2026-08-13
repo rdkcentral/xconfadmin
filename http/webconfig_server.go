@@ -337,7 +337,7 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 			capabilities, _ := ctx.Value(CTX_KEY_CAPABILITIES).([]string)
 			if authType != AUTH_TYPE_SAT_V2 {
 				log.WithFields(log.Fields{"tenantId": tenantId}).Error("tenant not found")
-				http.Error(w, "tenant not found", http.StatusUnauthorized)
+				http.Error(w, "tenant not found", http.StatusForbidden)
 				return
 			}
 			if !canAutoCreateTenant(authType, capabilities) {

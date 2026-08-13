@@ -118,35 +118,46 @@ func TestAuthMiddleware_InvalidLoginToken(t *testing.T) {
 	}
 }
 
-// TestAuthMiddleware_TenantNotFound_NonSATDoesNotOnboard verifies that a
-// non-SAT-v2 request cannot onboard a missing tenant, even in test mode.
-func TestAuthMiddleware_TenantNotFound_NonSATDoesNotOnboard(t *testing.T) {
+// TestAuthMiddleware_TenantNotFound_SatOffDoesNotOnboard verifies that a
+// request allowed through the SAT-off bypass cannot onboard a missing tenant.
+func TestAuthMiddleware_TenantNotFound_SatOffDoesNotOnboard(t *testing.T) {
 	oldSatOn := xcommon.SatOn
 	xcommon.SatOn = false
 	defer func() { xcommon.SatOn = oldSatOn }()
+	oldTestOnly := testServer.testOnly
+	testServer.testOnly = true
+	defer func() { testServer.testOnly = oldTestOnly }()
 
 	resetOnboardTenantFunc(t)
 	onboardCalled := false
+	handlerCalled := false
 	testServer.OnboardTenantFunc = func(id, name string) (*db.Tenant, error) {
 		onboardCalled = true
 		return nil, nil
 	}
 
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handlerCalled = true
+		w.WriteHeader(http.StatusOK)
+	})
 	r := httptest.NewRequest(http.MethodGet, "/test", nil)
 	r.Header.Set("tenantId", uuid.New().String()) // random UUID — not in DB
-	rr := serveWithMiddleware(testServer, okHandler, r)
+	rr := serveWithMiddleware(testServer, handler, r)
 
-	if rr.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401 for non-SAT-v2 missing tenant, got %d", rr.Code)
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for non-SAT-v2 missing tenant, got %d", rr.Code)
 	}
 	if onboardCalled {
 		t.Fatalf("expected non-SAT-v2 request not to onboard tenant")
 	}
+	if handlerCalled {
+		t.Fatalf("expected downstream handler not to execute after tenant validation failure")
+	}
 }
 
-// TestAuthMiddleware_TenantNotFound_LoginTokenDoesNotOnboard verifies that
-// login-token requests cannot onboard a missing tenant.
-func TestAuthMiddleware_TenantNotFound_LoginTokenDoesNotOnboard(t *testing.T) {
+// TestAuthMiddleware_TenantNotFound_SatOffDoesNotCallFailingOnboardFunc verifies
+// that the SAT-off bypass does not call the configured onboarding function.
+func TestAuthMiddleware_TenantNotFound_SatOffDoesNotCallFailingOnboardFunc(t *testing.T) {
 	oldSatOn := xcommon.SatOn
 	xcommon.SatOn = false
 	defer func() { xcommon.SatOn = oldSatOn }()
@@ -162,17 +173,17 @@ func TestAuthMiddleware_TenantNotFound_LoginTokenDoesNotOnboard(t *testing.T) {
 	r.Header.Set("tenantId", uuid.New().String())
 	rr := serveWithMiddleware(testServer, okHandler, r)
 
-	if rr.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401 for login-token missing tenant, got %d", rr.Code)
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for login-token missing tenant, got %d", rr.Code)
 	}
 	if onboardCalled {
 		t.Fatalf("expected login-token request not to onboard tenant")
 	}
 }
 
-// TestAuthMiddleware_TenantNotFound_SATLegacyDoesNotOnboard verifies that
-// legacy SAT requests cannot onboard a missing tenant.
-func TestAuthMiddleware_TenantNotFound_SATLegacyDoesNotOnboard(t *testing.T) {
+// TestAuthMiddleware_TenantNotFound_SatOffDoesNotCallOnboardFunc verifies that
+// the SAT-off bypass does not call the onboarding function.
+func TestAuthMiddleware_TenantNotFound_SatOffDoesNotCallOnboardFunc(t *testing.T) {
 	oldSatOn := xcommon.SatOn
 	xcommon.SatOn = false
 	defer func() { xcommon.SatOn = oldSatOn }()
@@ -188,8 +199,8 @@ func TestAuthMiddleware_TenantNotFound_SATLegacyDoesNotOnboard(t *testing.T) {
 	r.Header.Set("tenantId", uuid.New().String())
 	rr := serveWithMiddleware(testServer, okHandler, r)
 
-	if rr.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401 for legacy SAT missing tenant, got %d", rr.Code)
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for legacy SAT missing tenant, got %d", rr.Code)
 	}
 	if onboardCalled {
 		t.Fatalf("expected legacy SAT request not to onboard tenant")
@@ -223,9 +234,9 @@ func TestAuthMiddleware_TenantExists_NoOnboard(t *testing.T) {
 	}
 }
 
-// TestAuthMiddleware_NonSATTenantHeaderIgnored verifies that unauthenticated
-// requests do not select a tenant from the request header.
-func TestAuthMiddleware_TenantIdFromHeader(t *testing.T) {
+// TestAuthMiddleware_SatOffTenantHeaderIgnored verifies that requests allowed
+// through the SAT-off bypass do not select a tenant from the request header.
+func TestAuthMiddleware_SatOffTenantHeaderIgnored(t *testing.T) {
 	oldSatOn := xcommon.SatOn
 	xcommon.SatOn = false
 	defer func() { xcommon.SatOn = oldSatOn }()
@@ -269,6 +280,7 @@ func TestResolveTenantIDByAuthType(t *testing.T) {
 		{name: "legacy SAT uses default", authType: AUTH_TYPE_SAT_LEGACY, enabled: true, header: headerTenant, expected: defaultTenant},
 		{name: "login token flag disabled", authType: AUTH_TYPE_LOGIN_TOKEN, header: headerTenant, expected: defaultTenant},
 		{name: "login token flag enabled", authType: AUTH_TYPE_LOGIN_TOKEN, enabled: true, header: headerTenant, expected: headerTenant},
+		{name: "login token flag enabled without header", authType: AUTH_TYPE_LOGIN_TOKEN, enabled: true, expected: defaultTenant},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
