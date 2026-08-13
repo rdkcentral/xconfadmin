@@ -156,11 +156,52 @@ Tenant resolution SHALL be path-specific in this phase:
 	- Login-token/Xerxes authorization semantics remain unchanged.
 	- Token validation SHALL NOT enforce tenant or partner claims.
 	- Request processing SHALL continue to support multi-tenancy.
-	- In this phase, request processing SHALL resolve `tenantId`
-		to the default tenant.
+	- By default, request processing SHALL resolve `tenantId` to the
+		default tenant.
+	- Request processing MAY resolve `tenantId` from the request header
+		only when `xconfwebconfig.xconf.enable_tenant_header_for_login_token`
+		is enabled.
+	- If the feature flag is enabled but the header is missing or blank,
+		request processing SHALL resolve `tenantId` to the default tenant.
+	- The feature flag SHALL default to disabled when absent from config
+		and SHALL be disabled in production deployments.
+
+After auth-path-specific resolution, the resolved `tenantId` SHALL be
+stored in request context. Downstream authorization and handlers SHALL
+use the context value rather than independently resolving the tenant
+from the request header.
 
 In this phase, multi-tenant authorization guarantees apply only to
 SAT RBAC v2 requests.
+
+### Tenant Auto-Creation
+
+The system SHALL verify that the resolved tenant exists before invoking
+downstream authorization or handlers.
+
+Tenant auto-creation SHALL follow these rules:
+
+- SAT RBAC v2 requests MAY auto-create a missing tenant only when the
+	SAT capabilities include `xconf:system:readwrite`.
+- Legacy SAT requests SHALL NOT auto-create tenants.
+- Login-token/Xerxes requests SHALL NOT auto-create tenants, regardless
+	of the login-token tenant-header feature flag.
+- The login-token tenant-header feature flag SHALL control tenant
+	resolution only; it SHALL NOT grant tenant-provisioning permission.
+- `testOnly` SHALL NOT grant tenant auto-creation permission. Tests that
+	require tenants MAY create them directly through the database or DAO
+	layer.
+
+If tenant validation or the onboarding authorization check fails, the
+system SHALL return immediately. No downstream authorization, handler
+logic, or post-failure side effect SHALL execute.
+
+For an authenticated request whose tenant cannot be used:
+
+- The system SHALL return `403 Forbidden` when onboarding is not
+	permitted or the required SAT capability is absent.
+- The response body SHOULD identify whether the tenant was not found or
+	whether tenant onboarding was not authorized.
 
 ### SAT RBAC v2 Deny-By-Default
 

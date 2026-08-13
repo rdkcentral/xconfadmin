@@ -26,7 +26,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rdkcentral/xconfadmin/common"
-	owcommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	core "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfadmin/util"
@@ -89,69 +88,6 @@ const (
 	FIRMWARE_ENTITY  string = "FirmwareEntity"
 	TELEMETRY_ENTITY string = "TelemetryEntity"
 )
-
-type SATv2Domain string
-
-const (
-	DOMAIN_CORE    SATv2Domain = "core"
-	DOMAIN_TAGGING SATv2Domain = "tagging"
-	DOMAIN_SYSTEM  SATv2Domain = "system"
-	DOMAIN_METRICS SATv2Domain = "metrics"
-)
-
-type RouteDomainMapping struct {
-	Prefix string
-	Domain SATv2Domain
-}
-
-var satV2RouteMappings = []RouteDomainMapping{
-	// tagging (own top-level router, must appear before xconfAdminService stripping)
-	{Prefix: "/taggingservice", Domain: DOMAIN_TAGGING},
-
-	// metrics
-	{Prefix: "/metrics", Domain: DOMAIN_METRICS},
-
-	// system
-	{Prefix: "/queries/filters/downloadlocation", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/updates/filters/downloadlocation", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/roundrobinfilter", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/rfc/recooking", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/rfc/preprocess", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/appsettings", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/canarysettings", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/lockdownsettings", Domain: DOMAIN_SYSTEM},
-	{Prefix: "/wakeuppool", Domain: DOMAIN_SYSTEM},
-
-	// core
-	{Prefix: "/dataservice", Domain: DOMAIN_CORE},
-	{Prefix: "/estbfirmware", Domain: DOMAIN_CORE},
-	{Prefix: "/queries", Domain: DOMAIN_CORE},
-	{Prefix: "/updates", Domain: DOMAIN_CORE},
-	{Prefix: "/delete", Domain: DOMAIN_CORE},
-	{Prefix: "/model", Domain: DOMAIN_CORE},
-	{Prefix: "/environment", Domain: DOMAIN_CORE},
-	{Prefix: "/genericnamespacedlist", Domain: DOMAIN_CORE},
-	{Prefix: "/firmwarerule", Domain: DOMAIN_CORE},
-	{Prefix: "/firmwareruletemplate", Domain: DOMAIN_CORE},
-	{Prefix: "/firmwareconfig", Domain: DOMAIN_CORE},
-	{Prefix: "/percentfilter", Domain: DOMAIN_CORE},
-	{Prefix: "/amv", Domain: DOMAIN_CORE},
-	{Prefix: "/activationminimumversion", Domain: DOMAIN_CORE},
-	{Prefix: "/settings", Domain: DOMAIN_CORE},
-	{Prefix: "/setting", Domain: DOMAIN_CORE},
-	{Prefix: "/featurerule", Domain: DOMAIN_CORE},
-	{Prefix: "/feature", Domain: DOMAIN_CORE},
-	{Prefix: "/rfc", Domain: DOMAIN_CORE},
-	{Prefix: "/changelog", Domain: DOMAIN_CORE},
-	{Prefix: "/log", Domain: DOMAIN_CORE},
-	{Prefix: "/reportpage", Domain: DOMAIN_CORE},
-	{Prefix: "/stats", Domain: DOMAIN_CORE},
-	{Prefix: "/migration", Domain: DOMAIN_CORE},
-	{Prefix: "/dcm", Domain: DOMAIN_CORE},
-	{Prefix: "/telemetry", Domain: DOMAIN_CORE},
-	{Prefix: "/change", Domain: DOMAIN_CORE},
-	{Prefix: "/penetrationdata", Domain: DOMAIN_CORE},
-}
 
 type EntityPermission struct {
 	ReadAll  string `json:"readAll,omitempty"`
@@ -250,26 +186,25 @@ func getCurrentModule(r *http.Request, entityType string) string {
 	return ""
 }
 
-func hasSATv2ReadCapability(capabilities []string, domain SATv2Domain) bool {
-	readCap := "xconf:" + string(domain) + ":readonly"
+func hasSATv2ReadCapability(capabilities []string, domain common.SATV2Domain) bool {
+	readCap := common.BuildSATV2Capability(string(domain), common.SATV2AccessReadOnly)
 
 	// metrics has no readwrite capability; only xconf:metrics:readonly is valid
-	if domain == DOMAIN_METRICS {
+	if domain == common.SATV2DomainMetrics {
 		return util.Contains(capabilities, readCap)
 	}
 
-	writeCap := "xconf:" + string(domain) + ":readwrite"
+	writeCap := common.BuildSATV2Capability(string(domain), common.SATV2AccessReadWrite)
 	return util.Contains(capabilities, readCap) || util.Contains(capabilities, writeCap)
 }
 
-func hasSATv2WriteCapability(capabilities []string, domain SATv2Domain) bool {
+func hasSATv2WriteCapability(capabilities []string, domain common.SATV2Domain) bool {
 	// metrics has no write capability
-	if domain == DOMAIN_METRICS {
+	if domain == common.SATV2DomainMetrics {
 		return false
 	}
 
-	writeCap := "xconf:" + string(domain) + ":readwrite"
-	return util.Contains(capabilities, writeCap)
+	return common.HasSATV2Capability(capabilities, string(domain), common.SATV2AccessReadWrite)
 }
 
 func authorizeSATv2TenantScope(r *http.Request) error {
@@ -313,7 +248,7 @@ func CanWriteSatV2(r *http.Request, capabilities []string, applicationType strin
 	}
 
 	if !hasSATv2WriteCapability(capabilities, domain) {
-		requiredCap := "xconf:" + string(domain) + ":readwrite"
+		requiredCap := common.BuildSATV2Capability(string(domain), common.SATV2AccessReadWrite)
 		return "", xwcommon.NewRemoteErrorAS(http.StatusForbidden, fmt.Sprintf("SAT v2 token is missing required capability: %s", requiredCap))
 	}
 	if err := authorizeSATv2TenantScope(r); err != nil {
@@ -353,7 +288,7 @@ func resolveApplicationType(r *http.Request, entityType string, vargs ...string)
 }
 
 func authorizeWrite(r *http.Request, entityType string, applicationType string, authType interface{}) error {
-	if !(owcommon.SatOn) {
+	if !(common.SatOn) {
 		return nil
 	}
 
@@ -395,7 +330,7 @@ func authorizeWrite(r *http.Request, entityType string, applicationType string, 
 }
 
 func authorizeRead(r *http.Request, entityType string, applicationType string, authType interface{}) error {
-	if !(owcommon.SatOn) {
+	if !(common.SatOn) {
 		return nil
 	}
 
@@ -483,11 +418,11 @@ func CanRead(r *http.Request, entityType string, vargs ...string) (applicationTy
 	return applicationType, nil
 }
 
-func classifySATv2Domain(path string) (SATv2Domain, bool) {
+func classifySATv2Domain(path string) (common.SATV2Domain, bool) {
 	path = strings.ToLower(strings.TrimSuffix(path, "/"))
 
 	// tagging paths are not under xconfAdminService; check registry before stripping prefix
-	for _, m := range satV2RouteMappings {
+	for _, m := range common.SATV2RouteMappings {
 		if strings.HasPrefix(path, m.Prefix) {
 			return m.Domain, true
 		}
@@ -500,7 +435,7 @@ func classifySATv2Domain(path string) (SATv2Domain, bool) {
 		return "", false
 	}
 
-	for _, m := range satV2RouteMappings {
+	for _, m := range common.SATV2RouteMappings {
 		if strings.HasPrefix(adminPath, m.Prefix) {
 			return m.Domain, true
 		}
@@ -527,11 +462,11 @@ func getPermissions(r *http.Request) (permissions []string) {
 }
 
 func IsDevProfile() bool {
-	activeProfiles := strings.Split(strings.TrimSpace(owcommon.ActiveAuthProfiles), ",")
+	activeProfiles := strings.Split(strings.TrimSpace(common.ActiveAuthProfiles), ",")
 	if len(activeProfiles) > 0 {
 		return DEV_PROFILE == activeProfiles[0]
 	}
-	defaultProfiles := strings.Split(strings.TrimSpace(owcommon.DefaultAuthProfiles), ",")
+	defaultProfiles := strings.Split(strings.TrimSpace(common.DefaultAuthProfiles), ",")
 	return DEV_PROFILE == defaultProfiles[0]
 }
 
@@ -566,31 +501,31 @@ func ValidateWrite(r *http.Request, entityApplicationType string, entityType str
 }
 
 func isLockdownMode(tenantId string) bool {
-	if owcommon.GetBooleanAppSetting(tenantId, owcommon.PROP_LOCKDOWN_ENABLED, false) {
-		startTime := owcommon.GetStringAppSetting(tenantId, owcommon.PROP_LOCKDOWN_STARTTIME)
-		endTime := owcommon.GetStringAppSetting(tenantId, owcommon.PROP_LOCKDOWN_ENDTIME)
+	if common.GetBooleanAppSetting(tenantId, common.PROP_LOCKDOWN_ENABLED, false) {
+		startTime := common.GetStringAppSetting(tenantId, common.PROP_LOCKDOWN_STARTTIME)
+		endTime := common.GetStringAppSetting(tenantId, common.PROP_LOCKDOWN_ENDTIME)
 
-		timezone, err := time.LoadLocation(owcommon.DefaultLockdownTimezone)
+		timezone, err := time.LoadLocation(common.DefaultLockdownTimezone)
 		if err != nil {
-			log.Errorf("Error loading timezone: %s", owcommon.DefaultLockdownTimezone)
+			log.Errorf("Error loading timezone: %s", common.DefaultLockdownTimezone)
 			return false
 		}
 
-		t := time.Now().In(timezone).Format(owcommon.DefaultTimeDateFormatLayout)
-		CurrentDate := time.Now().In(timezone).Format(owcommon.DefaultDateFormatLayout)
+		t := time.Now().In(timezone).Format(common.DefaultTimeDateFormatLayout)
+		CurrentDate := time.Now().In(timezone).Format(common.DefaultDateFormatLayout)
 
-		Currenttime, err := time.Parse(owcommon.DefaultTimeDateFormatLayout, t)
+		Currenttime, err := time.Parse(common.DefaultTimeDateFormatLayout, t)
 
 		if err != nil {
 			log.Errorf("Unable to Parse currenttime: %s", Currenttime)
 			return false
 		}
-		LockdownStartTime, err := time.Parse(owcommon.DefaultTimeDateFormatLayout, CurrentDate+" "+startTime)
+		LockdownStartTime, err := time.Parse(common.DefaultTimeDateFormatLayout, CurrentDate+" "+startTime)
 		if err != nil {
 			log.Errorf("Unable to Parse LockdownStartTime: %s", LockdownStartTime)
 			return false
 		}
-		LockdownEndTime, err := time.Parse(owcommon.DefaultTimeDateFormatLayout, CurrentDate+" "+endTime)
+		LockdownEndTime, err := time.Parse(common.DefaultTimeDateFormatLayout, CurrentDate+" "+endTime)
 		if err != nil {
 			log.Errorf("Unable to Parse LockdownEndTime: %s", LockdownEndTime)
 			return false
@@ -626,7 +561,7 @@ func GetDistributedLockOwner(r *http.Request) (owner string) {
 	return
 }
 
-func ExtractBodyAndCheckPermissions(obj owcommon.ApplicationTypeAware, w http.ResponseWriter, r *http.Request, entityType string) (applicationType string, err error) {
+func ExtractBodyAndCheckPermissions(obj common.ApplicationTypeAware, w http.ResponseWriter, r *http.Request, entityType string) (applicationType string, err error) {
 	applicationType, err = CanWrite(r, entityType, obj.GetApplicationType())
 	if err != nil {
 		return "", err
@@ -650,5 +585,5 @@ func ExtractBodyAndCheckPermissions(obj owcommon.ApplicationTypeAware, w http.Re
 }
 
 func isReadonlyMode(tenantId string) bool {
-	return owcommon.GetBooleanAppSetting(tenantId, owcommon.READONLY_MODE, false)
+	return common.GetBooleanAppSetting(tenantId, common.READONLY_MODE, false)
 }

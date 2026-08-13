@@ -55,20 +55,21 @@ type WebconfigServer struct {
 	*GroupServiceSyncConnector
 	*taggingapi_config.TaggingApiConfig
 	*tracing.XpcTracer
-	tlsConfig             *tls.Config
-	DistributedLockConfig *DistributedLockConfig
-	notLoggedHeaders      []string
-	metricsEnabled        bool
-	testOnly              bool
-	AppName               string
-	ServerOriginId        string
-	IdpLoginPath          string
-	IdpLogoutPath         string
-	IdpLogoutAfterPath    string
-	IdpCodePath           string
-	IdpUrlPath            string
-	VerifyStageHost       bool
-	OnboardTenantFunc     func(id, name string) (*db.Tenant, error)
+	tlsConfig                       *tls.Config
+	DistributedLockConfig           *DistributedLockConfig
+	notLoggedHeaders                []string
+	metricsEnabled                  bool
+	testOnly                        bool
+	AppName                         string
+	ServerOriginId                  string
+	IdpLoginPath                    string
+	IdpLogoutPath                   string
+	IdpLogoutAfterPath              string
+	IdpCodePath                     string
+	IdpUrlPath                      string
+	VerifyStageHost                 bool
+	EnableTenantHeaderForLoginToken bool
+	OnboardTenantFunc               func(id, name string) (*db.Tenant, error)
 }
 
 type DistributedLockConfig struct {
@@ -168,6 +169,7 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 	idpCodePath := conf.GetString(fmt.Sprintf("xconfwebconfig.%v.idp_code_path", idpAuthServer), idpAuthProvider+"/code")
 	idpLogoutAfterPath := conf.GetString(fmt.Sprintf("xconfwebconfig.%v.idp_logout_after_path", idpAuthServer), idpAuthProvider+"/logout/after")
 	verifyStageHost := conf.GetBoolean("xconfwebconfig.sat_consumer.verify_stage_host", false)
+	enableTenantHeaderForLoginToken := conf.GetBoolean("xconfwebconfig.xconf.enable_tenant_header_for_login_token", false)
 
 	// tlsConfig for http clients
 	tlsConfig, err := NewTlsConfig(conf)
@@ -184,27 +186,28 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 	xpcTracer := tracing.NewXpcTracer(sc.Config)
 
 	WebConfServer = &WebconfigServer{
-		tlsConfig:                 tlsConfig,
-		notLoggedHeaders:          notLoggedHeaders,
-		metricsEnabled:            metricsEnabled,
-		testOnly:                  testOnly,
-		AppName:                   appName,
-		CanaryMgrConnector:        NewCanaryMgrConnector(conf, tlsConfig),
-		XcrpConnector:             NewXcrpConnector(conf, tlsConfig),
-		IdpServiceConnector:       idpSvc,
-		GroupServiceConnector:     NewGroupServiceConnector(conf, tlsConfig),
-		GroupServiceSyncConnector: NewGroupServiceSyncConnector(conf, tlsConfig),
-		TaggingApiConfig:          taggingapi_config.NewTaggingApiConfig(conf),
-		DistributedLockConfig:     NewDistributedLockConfig(conf),
-		XconfConnector:            NewXconfConnector(conf, "xconf", tlsConfig),
-		XW_XconfServer:            xhttp.NewXconfServer(sc, testOnly, ec.xw_ect),
-		IdpLoginPath:              idpLoginPath,
-		IdpLogoutPath:             idpLogoutPath,
-		IdpLogoutAfterPath:        idpLogoutAfterPath,
-		IdpCodePath:               idpCodePath,
-		IdpUrlPath:                idpUrlPath,
-		XpcTracer:                 xpcTracer,
-		VerifyStageHost:           verifyStageHost,
+		tlsConfig:                       tlsConfig,
+		notLoggedHeaders:                notLoggedHeaders,
+		metricsEnabled:                  metricsEnabled,
+		testOnly:                        testOnly,
+		AppName:                         appName,
+		CanaryMgrConnector:              NewCanaryMgrConnector(conf, tlsConfig),
+		XcrpConnector:                   NewXcrpConnector(conf, tlsConfig),
+		IdpServiceConnector:             idpSvc,
+		GroupServiceConnector:           NewGroupServiceConnector(conf, tlsConfig),
+		GroupServiceSyncConnector:       NewGroupServiceSyncConnector(conf, tlsConfig),
+		TaggingApiConfig:                taggingapi_config.NewTaggingApiConfig(conf),
+		DistributedLockConfig:           NewDistributedLockConfig(conf),
+		XconfConnector:                  NewXconfConnector(conf, "xconf", tlsConfig),
+		XW_XconfServer:                  xhttp.NewXconfServer(sc, testOnly, ec.xw_ect),
+		IdpLoginPath:                    idpLoginPath,
+		IdpLogoutPath:                   idpLogoutPath,
+		IdpLogoutAfterPath:              idpLogoutAfterPath,
+		IdpCodePath:                     idpCodePath,
+		IdpUrlPath:                      idpUrlPath,
+		XpcTracer:                       xpcTracer,
+		VerifyStageHost:                 verifyStageHost,
+		EnableTenantHeaderForLoginToken: enableTenantHeaderForLoginToken,
 	}
 
 	if testOnly {
@@ -275,7 +278,7 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 		ctx := r.Context()
 
 		// Check for SAT token
-		satv2 := false
+		authType := AuthType("")
 		if satToken := getSatTokenFromRequest(r); satToken != "" {
 			if subject, capabilities, allowedPartners, err := getSubjectAndCapabilitiesFromSatToken(satToken, s.VerifyStageHost); err != nil {
 				log.Error(err.Error())
@@ -290,10 +293,11 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 
 				// check if SAT is legacy SAT or SAT v2 based on capabilities and set auth type in context
 				if isSATv2(capabilities) {
-					satv2 = true
-					ctx = context.WithValue(ctx, CTX_KEY_AUTH_TYPE, AUTH_TYPE_SAT_V2)
+					authType = AUTH_TYPE_SAT_V2
+					ctx = context.WithValue(ctx, CTX_KEY_AUTH_TYPE, authType)
 				} else {
-					ctx = context.WithValue(ctx, CTX_KEY_AUTH_TYPE, AUTH_TYPE_SAT_LEGACY)
+					authType = AUTH_TYPE_SAT_LEGACY
+					ctx = context.WithValue(ctx, CTX_KEY_AUTH_TYPE, authType)
 				}
 			}
 		} else if authToken := getLoginTokenFromRequest(r); authToken != "" {
@@ -309,7 +313,8 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 				ctx = context.WithValue(ctx, CTX_KEY_TOKEN, LoginToken)
 				permissions := getPermissionsFromLoginToken(LoginToken)
 				ctx = context.WithValue(ctx, CTX_KEY_PERMISSIONS, permissions)
-				ctx = context.WithValue(ctx, CTX_KEY_AUTH_TYPE, AUTH_TYPE_LOGIN_TOKEN)
+				authType = AUTH_TYPE_LOGIN_TOKEN
+				ctx = context.WithValue(ctx, CTX_KEY_AUTH_TYPE, authType)
 			}
 		} else if r.Header.Get(RequestID) != "adminui" && !xcommon.SatOn {
 			//allowing api request without sat_token if sat is off
@@ -319,10 +324,7 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 			return
 		}
 
-		tenantId := GetTenantIdFromHeader(r)
-		if tenantId == "" {
-			tenantId = db.GetDefaultTenantId()
-		}
+		tenantId := resolveTenantID(authType, GetTenantIdFromHeader(r), db.GetDefaultTenantId(), s.EnableTenantHeaderForLoginToken)
 		ctx = context.WithValue(ctx, CTX_KEY_TENANT_ID, tenantId)
 
 		// Check if tenant exists; onboard if it does not
@@ -332,9 +334,15 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 			return
 		}
 		if tenant == nil {
-			if !satv2 && !s.testOnly {
+			capabilities, _ := ctx.Value(CTX_KEY_CAPABILITIES).([]string)
+			if authType != AUTH_TYPE_SAT_V2 {
 				log.WithFields(log.Fields{"tenantId": tenantId}).Error("tenant not found")
-				http.Error(w, "tenant not found", http.StatusUnauthorized)
+				http.Error(w, "tenant not found", http.StatusForbidden)
+				return
+			}
+			if !canAutoCreateTenant(authType, capabilities) {
+				log.WithFields(log.Fields{"tenantId": tenantId}).Error("tenant onboarding requires xconf:system:readwrite capability")
+				http.Error(w, "tenant onboarding is not authorized", http.StatusForbidden)
 				return
 			}
 			if s.OnboardTenantFunc == nil {
@@ -357,6 +365,19 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 		next.ServeHTTP(xw, newReq)
 	}
 	return http.HandlerFunc(fn)
+}
+
+func resolveTenantID(authType AuthType, headerTenantID string, defaultTenantID string, enableTenantHeaderForLoginToken bool) string {
+	if authType == AUTH_TYPE_SAT_V2 || (authType == AUTH_TYPE_LOGIN_TOKEN && enableTenantHeaderForLoginToken) {
+		if headerTenantID != "" {
+			return headerTenantID
+		}
+	}
+	return defaultTenantID
+}
+
+func canAutoCreateTenant(authType AuthType, capabilities []string) bool {
+	return authType == AUTH_TYPE_SAT_V2 && xcommon.HasSATV2Capability(capabilities, string(xcommon.SATV2DomainSystem), xcommon.SATV2AccessReadWrite)
 }
 
 func (s *WebconfigServer) MetricsEnabled() bool {

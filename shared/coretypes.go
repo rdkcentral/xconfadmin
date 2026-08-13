@@ -341,6 +341,9 @@ func OnboardTenant(id string, name string) (*db.Tenant, error) {
 		return nil, err
 	}
 
+	// Initialize the tenant cache before cache-backed tenant setup writes.
+	db.GetCacheManager().InitTenantCache(tenant.ID)
+
 	// Initialize FirmwareRule templates
 	if err := xfw.CreateFirmwareRuleTemplates(tenant.ID); err != nil {
 		return nil, err
@@ -350,9 +353,6 @@ func OnboardTenant(id string, name string) (*db.Tenant, error) {
 	if err := common.InitAppSettings(tenant.ID); err != nil {
 		return nil, err
 	}
-
-	// Initialize tenant data in cache manager
-	db.GetCacheManager().InitTenantCache(tenant.ID)
 
 	return tenant, nil
 }
