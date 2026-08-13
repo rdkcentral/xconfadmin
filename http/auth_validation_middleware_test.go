@@ -174,36 +174,10 @@ func TestAuthMiddleware_TenantNotFound_SatOffDoesNotCallFailingOnboardFunc(t *te
 	rr := serveWithMiddleware(testServer, okHandler, r)
 
 	if rr.Code != http.StatusForbidden {
-		t.Fatalf("expected 403 for login-token missing tenant, got %d", rr.Code)
+		t.Fatalf("expected 403 for SAT-off missing tenant, got %d", rr.Code)
 	}
 	if onboardCalled {
-		t.Fatalf("expected login-token request not to onboard tenant")
-	}
-}
-
-// TestAuthMiddleware_TenantNotFound_SatOffDoesNotCallOnboardFunc verifies that
-// the SAT-off bypass does not call the onboarding function.
-func TestAuthMiddleware_TenantNotFound_SatOffDoesNotCallOnboardFunc(t *testing.T) {
-	oldSatOn := xcommon.SatOn
-	xcommon.SatOn = false
-	defer func() { xcommon.SatOn = oldSatOn }()
-
-	resetOnboardTenantFunc(t)
-	onboardCalled := false
-	testServer.OnboardTenantFunc = func(id, name string) (*db.Tenant, error) {
-		onboardCalled = true
-		return nil, nil
-	}
-
-	r := httptest.NewRequest(http.MethodGet, "/test", nil)
-	r.Header.Set("tenantId", uuid.New().String())
-	rr := serveWithMiddleware(testServer, okHandler, r)
-
-	if rr.Code != http.StatusForbidden {
-		t.Fatalf("expected 403 for legacy SAT missing tenant, got %d", rr.Code)
-	}
-	if onboardCalled {
-		t.Fatalf("expected legacy SAT request not to onboard tenant")
+		t.Fatalf("expected SAT-off request not to onboard tenant")
 	}
 }
 

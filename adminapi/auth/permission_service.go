@@ -26,7 +26,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rdkcentral/xconfadmin/common"
-	owcommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	core "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfadmin/util"
@@ -289,7 +288,7 @@ func resolveApplicationType(r *http.Request, entityType string, vargs ...string)
 }
 
 func authorizeWrite(r *http.Request, entityType string, applicationType string, authType interface{}) error {
-	if !(owcommon.SatOn) {
+	if !(common.SatOn) {
 		return nil
 	}
 
@@ -331,7 +330,7 @@ func authorizeWrite(r *http.Request, entityType string, applicationType string, 
 }
 
 func authorizeRead(r *http.Request, entityType string, applicationType string, authType interface{}) error {
-	if !(owcommon.SatOn) {
+	if !(common.SatOn) {
 		return nil
 	}
 
@@ -463,11 +462,11 @@ func getPermissions(r *http.Request) (permissions []string) {
 }
 
 func IsDevProfile() bool {
-	activeProfiles := strings.Split(strings.TrimSpace(owcommon.ActiveAuthProfiles), ",")
+	activeProfiles := strings.Split(strings.TrimSpace(common.ActiveAuthProfiles), ",")
 	if len(activeProfiles) > 0 {
 		return DEV_PROFILE == activeProfiles[0]
 	}
-	defaultProfiles := strings.Split(strings.TrimSpace(owcommon.DefaultAuthProfiles), ",")
+	defaultProfiles := strings.Split(strings.TrimSpace(common.DefaultAuthProfiles), ",")
 	return DEV_PROFILE == defaultProfiles[0]
 }
 
@@ -502,31 +501,31 @@ func ValidateWrite(r *http.Request, entityApplicationType string, entityType str
 }
 
 func isLockdownMode(tenantId string) bool {
-	if owcommon.GetBooleanAppSetting(tenantId, owcommon.PROP_LOCKDOWN_ENABLED, false) {
-		startTime := owcommon.GetStringAppSetting(tenantId, owcommon.PROP_LOCKDOWN_STARTTIME)
-		endTime := owcommon.GetStringAppSetting(tenantId, owcommon.PROP_LOCKDOWN_ENDTIME)
+	if common.GetBooleanAppSetting(tenantId, common.PROP_LOCKDOWN_ENABLED, false) {
+		startTime := common.GetStringAppSetting(tenantId, common.PROP_LOCKDOWN_STARTTIME)
+		endTime := common.GetStringAppSetting(tenantId, common.PROP_LOCKDOWN_ENDTIME)
 
-		timezone, err := time.LoadLocation(owcommon.DefaultLockdownTimezone)
+		timezone, err := time.LoadLocation(common.DefaultLockdownTimezone)
 		if err != nil {
-			log.Errorf("Error loading timezone: %s", owcommon.DefaultLockdownTimezone)
+			log.Errorf("Error loading timezone: %s", common.DefaultLockdownTimezone)
 			return false
 		}
 
-		t := time.Now().In(timezone).Format(owcommon.DefaultTimeDateFormatLayout)
-		CurrentDate := time.Now().In(timezone).Format(owcommon.DefaultDateFormatLayout)
+		t := time.Now().In(timezone).Format(common.DefaultTimeDateFormatLayout)
+		CurrentDate := time.Now().In(timezone).Format(common.DefaultDateFormatLayout)
 
-		Currenttime, err := time.Parse(owcommon.DefaultTimeDateFormatLayout, t)
+		Currenttime, err := time.Parse(common.DefaultTimeDateFormatLayout, t)
 
 		if err != nil {
 			log.Errorf("Unable to Parse currenttime: %s", Currenttime)
 			return false
 		}
-		LockdownStartTime, err := time.Parse(owcommon.DefaultTimeDateFormatLayout, CurrentDate+" "+startTime)
+		LockdownStartTime, err := time.Parse(common.DefaultTimeDateFormatLayout, CurrentDate+" "+startTime)
 		if err != nil {
 			log.Errorf("Unable to Parse LockdownStartTime: %s", LockdownStartTime)
 			return false
 		}
-		LockdownEndTime, err := time.Parse(owcommon.DefaultTimeDateFormatLayout, CurrentDate+" "+endTime)
+		LockdownEndTime, err := time.Parse(common.DefaultTimeDateFormatLayout, CurrentDate+" "+endTime)
 		if err != nil {
 			log.Errorf("Unable to Parse LockdownEndTime: %s", LockdownEndTime)
 			return false
@@ -562,7 +561,7 @@ func GetDistributedLockOwner(r *http.Request) (owner string) {
 	return
 }
 
-func ExtractBodyAndCheckPermissions(obj owcommon.ApplicationTypeAware, w http.ResponseWriter, r *http.Request, entityType string) (applicationType string, err error) {
+func ExtractBodyAndCheckPermissions(obj common.ApplicationTypeAware, w http.ResponseWriter, r *http.Request, entityType string) (applicationType string, err error) {
 	applicationType, err = CanWrite(r, entityType, obj.GetApplicationType())
 	if err != nil {
 		return "", err
@@ -586,5 +585,5 @@ func ExtractBodyAndCheckPermissions(obj owcommon.ApplicationTypeAware, w http.Re
 }
 
 func isReadonlyMode(tenantId string) bool {
-	return owcommon.GetBooleanAppSetting(tenantId, owcommon.READONLY_MODE, false)
+	return common.GetBooleanAppSetting(tenantId, common.READONLY_MODE, false)
 }
