@@ -18,8 +18,9 @@
 package telemetry
 
 import (
-	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"testing"
+
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	"github.com/rdkcentral/xconfadmin/shared/logupload"
@@ -78,7 +79,7 @@ func createTestTelemetryTwoProfile(name, appType string) *xwlogupload.TelemetryT
 }
 
 func TestFindByContext_NameFilter(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create test rules
 	rule1 := createTestTelemetryTwoRule("TestRule1", "stb", []string{})
@@ -135,7 +136,7 @@ func TestFindByContext_NameFilter(t *testing.T) {
 }
 
 func TestFindByContext_ProfileFilter(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create test profiles
 	profile1 := createTestTelemetryTwoProfile("Profile1", "stb")
@@ -195,7 +196,7 @@ func TestFindByContext_ProfileFilter(t *testing.T) {
 }
 
 func TestFindByContext_FreeArgFilter(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create rules with different free args
 	rule1 := createTestTelemetryTwoRule("Rule1", "stb", []string{})
@@ -240,7 +241,7 @@ func TestFindByContext_FreeArgFilter(t *testing.T) {
 }
 
 func TestFindByContext_FixedArgFilter_CollectionValue(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create rule with collection fixed arg
 	rule1 := createTestTelemetryTwoRuleWithCollectionFixedArg("Rule1", "stb")
@@ -277,7 +278,7 @@ func TestFindByContext_FixedArgFilter_CollectionValue(t *testing.T) {
 }
 
 func TestFindByContext_FixedArgFilter_StringValue(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create rule with string fixed arg
 	rule1 := createTestTelemetryTwoRule("Rule1", "stb", []string{})
@@ -324,7 +325,7 @@ func TestFindByContext_FixedArgFilter_StringValue(t *testing.T) {
 }
 
 func TestFindByContext_FixedArgFilter_ExistsOperation(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create rule with EXISTS operation (should be skipped for string value check)
 	rule1 := createTestTelemetryTwoRule("Rule1", "stb", []string{})
@@ -344,7 +345,7 @@ func TestFindByContext_FixedArgFilter_ExistsOperation(t *testing.T) {
 }
 
 func TestFindByContext_ApplicationTypeFilter(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	rule1 := createTestTelemetryTwoRule("Rule1", "stb", []string{})
 	rule2 := createTestTelemetryTwoRule("Rule2", "xhome", []string{})
@@ -382,7 +383,7 @@ func TestFindByContext_ApplicationTypeFilter(t *testing.T) {
 }
 
 func TestFindByContext_CombinedFilters(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	profile1 := createTestTelemetryTwoProfile("TestProfile", "stb")
 	xshared.SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, profile1.ID, profile1)
@@ -432,7 +433,7 @@ func TestFindByContext_CombinedFilters(t *testing.T) {
 }
 
 func TestGetOne_ErrorCondition(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	t.Run("GetOne_NotFound_ReturnsRemoteError", func(t *testing.T) {
 		nonExistentID := uuid.New().String()
@@ -456,7 +457,7 @@ func TestGetOne_ErrorCondition(t *testing.T) {
 }
 
 func TestDelete_ErrorCondition(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	t.Run("Delete_NotFound_ReturnsRemoteError", func(t *testing.T) {
 		nonExistentID := uuid.New().String()

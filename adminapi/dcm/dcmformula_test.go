@@ -463,18 +463,6 @@ type apiUnitTest struct {
 func TestMain(m *testing.M) {
 	fmt.Printf("in TestMain\n")
 
-	// Check if we should use mock database (set via environment variable or default to true for speed)
-	useMock := os.Getenv("USE_MOCK_DB")
-	if useMock == "true" || useMock == "1" {
-		fmt.Printf("Using MOCK database for fast unit tests\n")
-
-		// CRITICAL: Initialize mock database FIRST - this overrides GetCachedSimpleDaoFunc
-		// so all subsequent code uses our in-memory mock
-		xshared.InitMockDatabase()
-		defer xshared.DisableMockDatabase()
-	}
-
-	// Both mock and real modes use the same server setup
 	testConfigFile = "/app/xconfadmin/xconfadmin.conf"
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
 		testConfigFile = "../../config/sample_xconfadmin.conf"
@@ -615,7 +603,6 @@ func unmarshalXconfError(b []byte) *common.XconfError {
 }
 
 func TestDfAllApi(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	//t.Skip("TODO: cpatel550 - need to move this test under adminapi")
 	//config := GetTestConfig()
 	//_, router := GetTestWebConfigServer(config)
@@ -929,7 +916,6 @@ func TestDfAllApi(t *testing.T) {
 // }
 
 func TestChangeFormulaPriorityWithNotValidValue_ExceptionIsThrown(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_ID", 0)
 	saveFormula(formula, t)
@@ -972,7 +958,6 @@ func createFormula(modelId string, testIndex int) *logupload.DCMGenericRule {
 }
 
 func saveFormula(formula *logupload.DCMGenericRule, t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	queryParams, _ := util.GetURLQueryParameterString([][]string{{"applicationType", "stb"}})
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula?%v", queryParams)
 
@@ -1086,7 +1071,6 @@ func TestPutDcmFormulaListHandler_InvalidJSON(t *testing.T) {
 
 // Test PutDcmFormulaListHandler - Success
 func TestPutDcmFormulaListHandler_Success(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_PUT_LIST", 0)
 	saveFormula(formula, t)
@@ -1116,7 +1100,6 @@ func TestGetDcmFormulaHandler_AuthError(t *testing.T) {
 
 // Test GetDcmFormulaHandler - ReturnJsonResponse Error (simulated by marshaling)
 func TestGetDcmFormulaHandler_Success(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_GET", 0)
 	saveFormula(formula, t)
@@ -1132,7 +1115,6 @@ func TestGetDcmFormulaHandler_Success(t *testing.T) {
 
 // Test GetDcmFormulaHandler - Export mode with headers
 func TestGetDcmFormulaHandler_ExportMode(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_EXPORT", 0)
 	saveFormula(formula, t)
@@ -1324,7 +1306,6 @@ func TestImportDcmFormulaWithOverwriteHandler_InvalidJSON(t *testing.T) {
 
 // Test GetDcmFormulaByIdHandler - Application Type Mismatch
 func TestGetDcmFormulaByIdHandler_AppTypeMismatch(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_APP_MISMATCH", 0)
 	saveFormula(formula, t)
@@ -1337,7 +1318,6 @@ func TestGetDcmFormulaByIdHandler_AppTypeMismatch(t *testing.T) {
 
 // Test GetDcmFormulaByIdHandler - Export with settings
 func TestGetDcmFormulaByIdHandler_ExportWithSettings(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_EXPORT_SETTINGS", 0)
 	saveFormula(formula, t)
@@ -1365,7 +1345,6 @@ func TestDeleteDcmFormulaByIdHandler_MissingID(t *testing.T) {
 
 // Test CreateDcmFormulaHandler - XResponseWriter cast error simulation
 func TestCreateDcmFormulaHandler_Success(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_CREATE_SUCCESS", 100)
 	formulaJson, _ := json.Marshal(formula)
@@ -1378,7 +1357,6 @@ func TestCreateDcmFormulaHandler_Success(t *testing.T) {
 
 // Test UpdateDcmFormulaHandler - Success case
 func TestUpdateDcmFormulaHandler_Success(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_UPDATE_SUCCESS", 0)
 	saveFormula(formula, t)
@@ -1395,7 +1373,6 @@ func TestUpdateDcmFormulaHandler_Success(t *testing.T) {
 
 // Test GetDcmFormulaNamesHandler - Empty list
 func TestGetDcmFormulaNamesHandler_EmptyList(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/names?applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
@@ -1409,7 +1386,6 @@ func TestGetDcmFormulaNamesHandler_EmptyList(t *testing.T) {
 
 // Test GetDcmFormulaSizeHandler - Multiple formulas
 func TestGetDcmFormulaSizeHandler_MultipleFormulas(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 	for i := 0; i < 5; i++ {
 		formula := createFormula(fmt.Sprintf("MODEL_SIZE_%d", i), i)
@@ -1429,7 +1405,6 @@ func TestGetDcmFormulaSizeHandler_MultipleFormulas(t *testing.T) {
 
 // Test DcmFormulaSettingsAvailabilitygHandler - Success with multiple IDs
 func TestDcmFormulaSettingsAvailabilitygHandler_Success(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 	formula1 := createFormula("MODEL_SETTINGS_1", 0)
 	saveFormula(formula1, t)
@@ -1449,7 +1424,6 @@ func TestDcmFormulaSettingsAvailabilitygHandler_Success(t *testing.T) {
 
 // Test DcmFormulasAvailabilitygHandler - Success with multiple IDs
 func TestDcmFormulasAvailabilitygHandler_Success(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 	formula1 := createFormula("MODEL_AVAIL_1", 0)
 	saveFormula(formula1, t)
@@ -1471,7 +1445,6 @@ func TestDcmFormulasAvailabilitygHandler_Success(t *testing.T) {
 
 // Test PostDcmFormulaFilteredWithParamsHandler - Success with empty context
 func TestPostDcmFormulaFilteredWithParamsHandler_EmptyContext(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_FILTERED", 0)
 	saveFormula(formula, t)
@@ -1487,7 +1460,6 @@ func TestPostDcmFormulaFilteredWithParamsHandler_EmptyContext(t *testing.T) {
 
 // Test PostDcmFormulaFilteredWithParamsHandler - With pagination
 func TestPostDcmFormulaFilteredWithParamsHandler_WithPagination(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 	for i := 0; i < 10; i++ {
 		formula := createFormula(fmt.Sprintf("MODEL_PAGE_%d", i), i)
@@ -1508,7 +1480,6 @@ func TestPostDcmFormulaFilteredWithParamsHandler_WithPagination(t *testing.T) {
 
 // Test DcmFormulaChangePriorityHandler - Application type mismatch
 func TestDcmFormulaChangePriorityHandler_AppTypeMismatch(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - requires real database and model validation
 	xshared.DeleteAllEntities(t)
 
 	// Create formula via API with applicationType=xhome
@@ -1533,7 +1504,6 @@ func TestDcmFormulaChangePriorityHandler_AppTypeMismatch(t *testing.T) {
 
 // Test DcmFormulaChangePriorityHandler - Success with priority reorganization
 func TestDcmFormulaChangePriorityHandler_Success(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 	formulas := preCreateFormulas(5, "MODEL_PRIO_TEST", t)
 
@@ -1549,7 +1519,6 @@ func TestDcmFormulaChangePriorityHandler_Success(t *testing.T) {
 
 // Test ImportDcmFormulaWithOverwriteHandler - Success with overwrite=true
 func TestImportDcmFormulaWithOverwriteHandler_OverwriteTrue(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_OVERWRITE", 0)
 	saveFormula(formula, t)
@@ -1610,7 +1579,6 @@ func TestPostDcmFormulaListHandler_MultipleFormulas(t *testing.T) {
 
 // Test PutDcmFormulaListHandler - Multiple formulas update
 func TestPutDcmFormulaListHandler_MultipleFormulas(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 	formula1 := createFormula("MODEL_PUT_M1", 0)
 	formula2 := createFormula("MODEL_PUT_M2", 1)
@@ -1635,7 +1603,6 @@ func TestPutDcmFormulaListHandler_MultipleFormulas(t *testing.T) {
 
 // Test GetDcmFormulaHandler - Export mode with multiple formulas
 func TestGetDcmFormulaHandler_ExportMultiple(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 	for i := 0; i < 3; i++ {
 		formula := createFormula(fmt.Sprintf("MODEL_EXP_M_%d", i), i)
@@ -1656,7 +1623,6 @@ func TestGetDcmFormulaHandler_ExportMultiple(t *testing.T) {
 
 // Test DcmFormulaChangePriorityHandler - Invalid priority (negative)
 func TestDcmFormulaChangePriorityHandler_NegativePriority(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_NEG_PRIO", 0)
 	saveFormula(formula, t)
@@ -1669,7 +1635,6 @@ func TestDcmFormulaChangePriorityHandler_NegativePriority(t *testing.T) {
 
 // Test DcmFormulaChangePriorityHandler - Invalid priority (not a number)
 func TestDcmFormulaChangePriorityHandler_InvalidPriorityFormat(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_INV_PRIO", 0)
 	saveFormula(formula, t)
@@ -1683,7 +1648,6 @@ func TestDcmFormulaChangePriorityHandler_InvalidPriorityFormat(t *testing.T) {
 // ========== Comprehensive Coverage Tests for ImportDcmFormulasHandler ==========
 
 func TestImportDcmFormulasHandler_SortByPriority(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 	// Create formulas with priorities out of order to test sorting
 	formula1 := createFormula("MODEL_IMPORT_SORT_3", 3)
@@ -1705,7 +1669,6 @@ func TestImportDcmFormulasHandler_SortByPriority(t *testing.T) {
 }
 
 func TestImportDcmFormulasHandler_PartialFailure(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 	// Create one valid and one invalid formula
 	validFormula := createFormula("MODEL_IMPORT_VALID", 1)
@@ -1725,7 +1688,6 @@ func TestImportDcmFormulasHandler_PartialFailure(t *testing.T) {
 }
 
 func TestImportDcmFormulasHandler_EmptyList(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 	fwsList := []logupload.FormulaWithSettings{}
 	fwsJson, _ := json.Marshal(fwsList)
@@ -1921,7 +1883,6 @@ func TestPostDcmFormulaListHandler_InvalidFormula(t *testing.T) {
 // ========== Comprehensive Coverage Tests for PutDcmFormulaListHandler ==========
 
 func TestPutDcmFormulaListHandler_UpdateWithAllSettings(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_PUT_ALL_SETTINGS", 1)
 	saveFormula(formula, t)
@@ -2028,7 +1989,6 @@ func TestPutDcmFormulaListHandler_MixedResults(t *testing.T) {
 }
 
 func TestPutDcmFormulaListHandler_UpdatePriority(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_PUT_PRIORITY", 1)
 	saveFormula(formula, t)
@@ -2046,7 +2006,6 @@ func TestPutDcmFormulaListHandler_UpdatePriority(t *testing.T) {
 }
 
 func TestPutDcmFormulaListHandler_PartialSettings(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_PUT_PARTIAL", 1)
 	saveFormula(formula, t)
@@ -2182,7 +2141,6 @@ func createTestFormulaWithSettings(formulaID string, appType string, includeDevi
 
 // TestImportFormula_Success tests successful import with all settings
 func TestImportFormula_Success(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_SUCCESS_1", core.STB, true, true, true)
@@ -2261,7 +2219,6 @@ func TestImportFormula_VodSettingsApplicationTypeMismatch(t *testing.T) {
 
 // TestImportFormula_EmptyApplicationType tests that empty ApplicationType uses appType parameter
 func TestImportFormula_EmptyApplicationType(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_EMPTY_APP_1", core.STB, true, false, false)
@@ -2337,7 +2294,6 @@ func TestImportFormula_VodSettingsValidationError(t *testing.T) {
 
 // TestImportFormula_UpdateDcmRuleError tests error path when updating DcmRule fails
 func TestImportFormula_UpdateDcmRuleError(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	// First create the formula
@@ -2369,7 +2325,6 @@ func TestImportFormula_CreateDcmRuleError(t *testing.T) {
 
 // TestImportFormula_OnlyDeviceSettings tests import with only DeviceSettings
 func TestImportFormula_OnlyDeviceSettings(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_DEVICE_ONLY_1", core.STB, true, false, false)
@@ -2382,7 +2337,6 @@ func TestImportFormula_OnlyDeviceSettings(t *testing.T) {
 
 // TestImportFormula_OnlyLogUploadSettings tests import with only LogUploadSettings
 func TestImportFormula_OnlyLogUploadSettings(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_LOG_ONLY_1", core.STB, false, true, false)
@@ -2395,7 +2349,6 @@ func TestImportFormula_OnlyLogUploadSettings(t *testing.T) {
 
 // TestImportFormula_OnlyVodSettings tests import with only VodSettings
 func TestImportFormula_OnlyVodSettings(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_VOD_ONLY_1", core.STB, false, false, true)
@@ -2408,7 +2361,6 @@ func TestImportFormula_OnlyVodSettings(t *testing.T) {
 
 // TestImportFormula_NoSettings tests import with no settings (formula only)
 func TestImportFormula_NoSettings(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_NO_SETTINGS_1", core.STB, false, false, false)
@@ -2423,7 +2375,6 @@ func TestImportFormula_NoSettings(t *testing.T) {
 
 // TestImportFormulas_Success tests successful import of multiple formulas
 func TestImportFormulas_Success(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	fwsList := []*logupload.FormulaWithSettings{
@@ -2442,7 +2393,6 @@ func TestImportFormulas_Success(t *testing.T) {
 
 // TestImportFormulas_SortByPriority tests that formulas are sorted by priority before import
 func TestImportFormulas_SortByPriority(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 
 	// Create formulas with different priorities (out of order)
@@ -2472,7 +2422,6 @@ func TestImportFormulas_SortByPriority(t *testing.T) {
 
 // TestImportFormulas_MixedSuccessAndFailure tests handling of both successful and failed imports
 func TestImportFormulas_MixedSuccessAndFailure(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	// Create one valid formula and one with ApplicationType mismatch
@@ -2504,7 +2453,6 @@ func TestImportFormulas_EmptyList(t *testing.T) {
 
 // TestImportFormulas_Overwrite tests overwrite functionality
 func TestImportFormulas_Overwrite(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test
 	xshared.DeleteAllEntities(t)
 
 	// Create formula with settings once
@@ -2562,7 +2510,6 @@ func TestImportFormulas_AllValidationErrors(t *testing.T) {
 
 // TestImportFormulas_DifferentApplicationTypes tests formulas with different settings types
 func TestImportFormulas_DifferentApplicationTypes(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - model validation uses db.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	fwsList := []*logupload.FormulaWithSettings{

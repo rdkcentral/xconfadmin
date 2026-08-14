@@ -43,7 +43,6 @@ func newValidFilter(name string) *coreef.RebootImmediatelyFilter {
 }
 
 func TestUpdateRebootImmediatelyFilter_CreateAndUpdatePaths(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
 	resetFirmwareRules(t)
 	seedModel("MODEL1")
 	seedEnvironment("ENV1")
@@ -105,7 +104,6 @@ func TestUpdateRebootImmediatelyFilter_IpGroupChanged(t *testing.T) {
 }
 
 func TestDeleteRebootImmediatelyFilter_Paths(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
 	resetFirmwareRules(t)
 	seedModel("MODEL1")
 	seedEnvironment("ENV1")

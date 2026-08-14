@@ -86,7 +86,6 @@ func TestPutSizesOfFirmwareRulesByTypeIntoHeaders_WithRules(t *testing.T) {
 
 // Test checkRuleTypeAndCreate
 func TestCheckRuleTypeAndCreate_MAC_RULE(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 	setupFirmwareRuleTemplates()
 
@@ -209,7 +208,6 @@ func TestValidateRuleAction_InvalidConfigId(t *testing.T) {
 }
 
 func TestValidateRuleAction_DuplicateConfigEntries(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	// Create a firmware config

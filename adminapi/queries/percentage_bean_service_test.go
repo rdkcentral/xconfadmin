@@ -61,7 +61,6 @@ func TestGetPercentageBeanFilterFieldValues_Error(t *testing.T) {
 
 // Test getGlobalPercentageFields
 func TestGetGlobalPercentageFields(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	// Test with a valid field name
@@ -100,7 +99,6 @@ func TestGetPercentageBeanFieldValues_Error(t *testing.T) {
 
 // Test getPartnerOptionalCondition - Success case
 func TestGetPartnerOptionalCondition_Success(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	// Create a basic percentage bean without optional conditions
 	bean := &coreef.PercentageBean{
 		Name:   "testBean",
@@ -117,7 +115,6 @@ func TestGetPartnerOptionalCondition_Success(t *testing.T) {
 
 // Test getPartnerOptionalCondition - Error case
 func TestGetPartnerOptionalCondition_InvalidPartner(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	// This test verifies the function handles beans without partner conditions
 	bean := &coreef.PercentageBean{
 		Name:   "testBean",
@@ -183,8 +180,6 @@ func TestCreateWakeupPoolList_Error(t *testing.T) {
 
 // Test getGlobalPercentageFields - Multiple field types
 func TestGetGlobalPercentageFields_DifferentFields(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	// Test with percentage field (should have default 100)
@@ -360,7 +355,6 @@ func TestGetStructFieldValues_NonExistentField(t *testing.T) {
 
 // Test getPartnerOptionalCondition - With valid partner in optional conditions
 func TestGetPartnerOptionalCondition_WithValidPartner(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	// Create bean with optional conditions containing valid partnerId
 	// This is a complex scenario requiring proper Rule structure setup
 	bean := &coreef.PercentageBean{
@@ -376,7 +370,6 @@ func TestGetPartnerOptionalCondition_WithValidPartner(t *testing.T) {
 
 // Test getPartnerOptionalCondition - Nil optional conditions
 func TestGetPartnerOptionalCondition_NilOptionalConditions(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	bean := &coreef.PercentageBean{
 		Name:               "testBean",
 		Active:             true,
@@ -425,7 +418,6 @@ func TestCreateCanaries_CanaryCreationDisabled(t *testing.T) {
 
 // Test ResponseEntity error paths - Conflict
 func TestCreatePercentageBean_ResponseEntity_Conflict(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	// Create first bean
@@ -565,7 +557,6 @@ func TestValidatePercentageBeanReferences_InvalidModel(t *testing.T) {
 }
 
 func TestValidatePercentageBeanReferences_ValidModel(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	// Create a valid model first
@@ -589,7 +580,6 @@ func TestValidatePercentageBeanReferences_ValidModel(t *testing.T) {
 }
 
 func TestValidatePercentageBeanReferences_InvalidIPList(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	// Create a valid model first
@@ -616,7 +606,6 @@ func TestValidatePercentageBeanReferences_InvalidIPList(t *testing.T) {
 }
 
 func TestValidatePercentageBeanReferences_ValidIPList(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	// Create a valid model
@@ -645,7 +634,6 @@ func TestValidatePercentageBeanReferences_ValidIPList(t *testing.T) {
 }
 
 func TestValidatePercentageBeanReferences_BlankWhitelist(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	// Create a valid model
@@ -670,7 +658,6 @@ func TestValidatePercentageBeanReferences_BlankWhitelist(t *testing.T) {
 }
 
 func TestValidatePercentageBeanReferences_InvalidOptionalConditions(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	// Create a valid model

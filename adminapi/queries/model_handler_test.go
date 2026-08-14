@@ -34,7 +34,6 @@ import (
 // ========== Tests for PostModelEntitiesHandler ==========
 
 func TestPostModelEntitiesHandler_Success(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	models := []shared.Model{
@@ -86,7 +85,6 @@ func TestPostModelEntitiesHandler_Success(t *testing.T) {
 }
 
 func TestPostModelEntitiesHandler_InvalidJSON(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	invalidBody := []byte(`{"invalid json}`)
@@ -103,7 +101,6 @@ func TestPostModelEntitiesHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestPostModelEntitiesHandler_DuplicateModel(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create first model
@@ -145,7 +142,6 @@ func TestPostModelEntitiesHandler_DuplicateModel(t *testing.T) {
 }
 
 func TestPostModelEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create one model first
@@ -248,7 +244,6 @@ func TestPostModelEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 // }
 
 func TestPutModelEntitiesHandler_InvalidJSON(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	invalidBody := []byte(`{"bad": json}`)
@@ -265,7 +260,6 @@ func TestPutModelEntitiesHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestPutModelEntitiesHandler_NonExistentModel(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	models := []shared.Model{
@@ -301,7 +295,6 @@ func TestPutModelEntitiesHandler_NonExistentModel(t *testing.T) {
 // ========== Tests for ObsoleteGetModelPageHandler ==========
 
 func TestObsoleteGetModelPageHandler_Success(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create test models
@@ -335,7 +328,6 @@ func TestObsoleteGetModelPageHandler_Success(t *testing.T) {
 }
 
 func TestObsoleteGetModelPageHandler_InvalidPageNumber(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	url := "/xconfAdminService/model/page?pageNumber=invalid&pageSize=3"
@@ -353,7 +345,6 @@ func TestObsoleteGetModelPageHandler_InvalidPageNumber(t *testing.T) {
 }
 
 func TestObsoleteGetModelPageHandler_InvalidPageSize(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	url := "/xconfAdminService/model/page?pageNumber=1&pageSize=invalid"
@@ -371,7 +362,6 @@ func TestObsoleteGetModelPageHandler_InvalidPageSize(t *testing.T) {
 }
 
 func TestObsoleteGetModelPageHandler_Pagination(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create 10 models
@@ -400,7 +390,6 @@ func TestObsoleteGetModelPageHandler_Pagination(t *testing.T) {
 }
 
 func TestObsoleteGetModelPageHandler_EmptyResult(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	url := "/xconfAdminService/model/page?pageNumber=1&pageSize=10"
@@ -422,7 +411,6 @@ func TestObsoleteGetModelPageHandler_EmptyResult(t *testing.T) {
 // ========== Tests for PostModelFilteredHandler ==========
 
 func TestPostModelFilteredHandler_Success(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create test models
@@ -459,7 +447,6 @@ func TestPostModelFilteredHandler_Success(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_WithEmptyBody(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create test model
@@ -481,7 +468,6 @@ func TestPostModelFilteredHandler_WithEmptyBody(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_InvalidJSON(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	invalidBody := []byte(`{invalid}`)
@@ -498,7 +484,6 @@ func TestPostModelFilteredHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_InvalidPageNumber(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	filterContext := map[string]string{}
@@ -517,7 +502,6 @@ func TestPostModelFilteredHandler_InvalidPageNumber(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_Pagination(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create 5 models
@@ -553,7 +537,6 @@ func TestPostModelFilteredHandler_Pagination(t *testing.T) {
 // ========== Tests for GetModelByIdHandler ==========
 
 func TestGetModelByIdHandler_Success(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create test model
@@ -581,7 +564,6 @@ func TestGetModelByIdHandler_Success(t *testing.T) {
 }
 
 func TestGetModelByIdHandler_NotFound(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	url := "/xconfAdminService/model/NONEXISTENT"
@@ -595,7 +577,6 @@ func TestGetModelByIdHandler_NotFound(t *testing.T) {
 }
 
 func TestGetModelByIdHandler_WithExport(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create test model
@@ -628,7 +609,6 @@ func TestGetModelByIdHandler_WithExport(t *testing.T) {
 }
 
 func TestGetModelByIdHandler_CaseInsensitive(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create test model with lowercase ID
@@ -652,7 +632,6 @@ func TestGetModelByIdHandler_CaseInsensitive(t *testing.T) {
 // ========== Tests for GetModelHandler ==========
 
 func TestGetModelHandler_Success(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create test models
@@ -683,7 +662,6 @@ func TestGetModelHandler_Success(t *testing.T) {
 }
 
 func TestGetModelHandler_EmptyResult(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	url := "/xconfAdminService/model"
@@ -705,7 +683,6 @@ func TestGetModelHandler_EmptyResult(t *testing.T) {
 }
 
 func TestGetModelHandler_WithExport(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create test models
@@ -730,7 +707,6 @@ func TestGetModelHandler_WithExport(t *testing.T) {
 }
 
 func TestGetModelHandler_SortedAlphabetically(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create models in non-alphabetical order
@@ -775,7 +751,6 @@ func TestGetModelHandler_SortedAlphabetically(t *testing.T) {
 // ========== Additional Error Path Tests for WriteAdminErrorResponse ==========
 
 func TestPostModelEntitiesHandler_UnableToExtractBody(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	// This test verifies the error path when response writer is not XResponseWriter
 	// In practice, this is hard to trigger in the test harness as ExecuteRequest
 	// always wraps with XResponseWriter, but we can document the behavior
@@ -804,7 +779,6 @@ func TestPostModelEntitiesHandler_UnableToExtractBody(t *testing.T) {
 }
 
 func TestPutModelEntitiesHandler_EmptyID(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Try to update model with empty ID
@@ -841,7 +815,6 @@ func TestPutModelEntitiesHandler_EmptyID(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_FilterContextError(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create test model
@@ -869,7 +842,6 @@ func TestPostModelFilteredHandler_FilterContextError(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_NegativePageNumber(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	//	xshared.DeleteAllEntities(t)
 	//defer xshared.DeleteAllEntities(t)
 
@@ -890,7 +862,6 @@ func TestPostModelFilteredHandler_NegativePageNumber(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_ZeroPageSize(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	//xshared.DeleteAllEntities(t)
 	//defer xshared.DeleteAllEntities(t)
 
@@ -911,7 +882,6 @@ func TestPostModelFilteredHandler_ZeroPageSize(t *testing.T) {
 }
 
 func TestGetModelByIdHandler_EmptyID(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	//xshared.DeleteAllEntities(t)
 
 	// Try to get model with empty ID - this will fail at routing level
@@ -928,7 +898,6 @@ func TestGetModelByIdHandler_EmptyID(t *testing.T) {
 }
 
 func TestPostModelEntitiesHandler_ValidationError(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create model with invalid data
@@ -964,7 +933,6 @@ func TestPostModelEntitiesHandler_ValidationError(t *testing.T) {
 }
 
 func TestObsoleteGetModelPageHandler_PageOutOfBounds(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create 3 models
@@ -994,7 +962,6 @@ func TestObsoleteGetModelPageHandler_PageOutOfBounds(t *testing.T) {
 }
 
 func TestPostModelFilteredHandler_LargePageSize(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	// Create a few models

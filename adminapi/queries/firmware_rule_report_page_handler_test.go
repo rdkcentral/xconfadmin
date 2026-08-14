@@ -26,7 +26,6 @@ func makeFirmwareReportXW(obj any) (*httptest.ResponseRecorder, *xwhttp.XRespons
 }
 
 func TestPostFirmwareRuleReportPageHandler_ResponseWriterCastError(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	r := httptest.NewRequest(http.MethodPost, "/firmware/report", nil)
 	rr := httptest.NewRecorder()
 	PostFirmwareRuleReportPageHandler(rr, r)
@@ -34,7 +33,6 @@ func TestPostFirmwareRuleReportPageHandler_ResponseWriterCastError(t *testing.T)
 }
 
 func TestPostFirmwareRuleReportPageHandler_BadJSON(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	r := httptest.NewRequest(http.MethodPost, "/firmware/report", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -44,7 +42,6 @@ func TestPostFirmwareRuleReportPageHandler_BadJSON(t *testing.T) {
 }
 
 func TestGetMacAddresses(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	listId := "macList1"
 	macA := "AA:BB:CC:DD:EE:01"
 	macB := "AA:BB:CC:DD:EE:02"
@@ -84,7 +81,6 @@ func TestGetMacAddresses(t *testing.T) {
 }
 
 func TestPostFirmwareRuleReportPageHandler_SuccessEmptyRules(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	// empty list -> should still 200 with headers after writing empty report
 	rr, xw := makeFirmwareReportXW([]string{})
 	r := httptest.NewRequest(http.MethodPost, "/firmware/report", nil)

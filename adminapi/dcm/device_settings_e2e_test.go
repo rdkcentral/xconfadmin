@@ -43,7 +43,6 @@ func ImportDeviceSettingsTableData(data []string, tabletype logupload.DeviceSett
 	return err
 }
 func TestAllDeviceSettingsApis(t *testing.T) {
-	xshared.DeleteAllEntities(t) // Integration test: requires external package data retrieval
 	xshared.DeleteAllEntities(t)
 
 	// GET ALL DEVICE SETTINGS API

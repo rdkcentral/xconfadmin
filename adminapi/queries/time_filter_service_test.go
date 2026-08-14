@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	admincoreef "github.com/rdkcentral/xconfadmin/shared/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
-	xshared "github.com/rdkcentral/xconfadmin/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	ru "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
@@ -100,12 +100,9 @@ func TestUpdateTimeFilter_InvalidIpGroup(t *testing.T) {
 }
 
 func TestUpdateTimeFilter_EnvModelMissing(t *testing.T) {
-	if xshared.IsMockDatabaseEnabled() {
-		xshared.ClearMockDatabase()
-	} else {
-		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
-		xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST)
-	}
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
+	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST)
+
 	// no seed for env-model
 	tf := newValidTimeFilter("TFMISS")
 	// use ids that are not seeded anywhere else to avoid cross-test collisions

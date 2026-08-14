@@ -40,7 +40,6 @@ import (
 )
 
 func TestGetMacRuleBeansWithoutVersionParam(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	macList := createAndSaveMacList()
@@ -64,7 +63,6 @@ func TestGetMacRuleBeansWithoutVersionParam(t *testing.T) {
 }
 
 func TestGetMacRuleBeansWithVersionParams(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 
 	macList := createAndSaveMacList()

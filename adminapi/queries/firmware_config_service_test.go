@@ -86,7 +86,6 @@ func createEnvModelFirmwareRule(id string, name string, model string, configId s
 }
 
 func TestIsValidFirmwareConfigByModelIdList(t *testing.T) {
-	shared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
 	shared.DeleteAllEntities(t)
 
 	// Create test firmware configs
@@ -123,7 +122,6 @@ func TestIsValidFirmwareConfigByModelIdList(t *testing.T) {
 }
 
 func TestIsValidFirmwareConfigByModelIds(t *testing.T) {
-	shared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
 	shared.DeleteAllEntities(t)
 
 	// Create test firmware configs

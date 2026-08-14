@@ -179,9 +179,6 @@ func TestTelemetryTwoHandlerSampleData(t *testing.T) {
 }
 
 func TestTelemetryTwoHandlerMac(t *testing.T) {
-	// Skip this integration test in mock mode - tests external library behavior
-	xshared.SkipIfMockDatabase(t)
-
 	// setup env
 	log.SetLevel(log.WarnLevel)
 
@@ -297,9 +294,6 @@ func TestTelemetryTwoHandlerMac(t *testing.T) {
 }
 
 func TestTelemetryTwoHandlerIpRange(t *testing.T) {
-	// Skip this integration test in mock mode - tests external library behavior
-	xshared.SkipIfMockDatabase(t)
-
 	// setup env
 	log.SetLevel(log.WarnLevel)
 

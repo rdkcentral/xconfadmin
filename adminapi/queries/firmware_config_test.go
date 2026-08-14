@@ -102,7 +102,6 @@ func PreCreatePercentageBean() (*coreef.PercentageBean, error) {
 }
 
 func TestValidateUsageBeforeRemoving(t *testing.T) {
-	shared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	//shared.DeleteAllEntities(t)
 	percentageBean, err := PreCreatePercentageBean()
 	assert.NilError(t, err)

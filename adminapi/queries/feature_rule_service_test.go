@@ -276,7 +276,6 @@ func TestAddNewFeatureRuleAndReorganize(t *testing.T) {
 
 // Test FindFeatureRuleByContext
 func TestFindFeatureRuleByContext(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
 	cleanupServiceTest()
 
 	f1 := makeFeatureForService("SearchFeature1", "stb")
@@ -418,7 +417,6 @@ func TestFindFeatureRuleByContext(t *testing.T) {
 
 // Test ValidateFeatureRule
 func TestValidateFeatureRule(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Requires DB validation via rfc.GetOneFeature
 	cleanupServiceTest()
 
 	f := makeFeatureForService("ValidateFeature", "stb")
@@ -692,7 +690,6 @@ func TestParsePercentRange(t *testing.T) {
 
 // Test validateAllFeatureRule
 func TestValidateAllFeatureRule(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Requires DB validation via rfc.GetFeatureRuleListForAS
 	cleanupServiceTest()
 
 	f := makeFeatureForService("Feature1", "stb")
@@ -833,7 +830,6 @@ func TestGetPercentRanges(t *testing.T) {
 
 // Test UpdateFeatureRule
 func TestUpdateFeatureRule(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Requires DB validation
 	cleanupServiceTest()
 
 	f := makeFeatureForService("UpdateFeature", "stb")
@@ -1033,7 +1029,6 @@ func TestUpdateFeatureRuleByPriorityAndReorganize(t *testing.T) {
 
 // Test importOrUpdateAllFeatureRule
 func TestImportOrUpdateAllFeatureRule(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
 	cleanupServiceTest()
 
 	f := makeFeatureForService("ImportFeature", "stb")
@@ -1154,7 +1149,6 @@ func TestImportOrUpdateAllFeatureRule(t *testing.T) {
 
 // Test ChangeFeatureRulePriorities
 func TestChangeFeatureRulePriorities(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
 	cleanupServiceTest()
 
 	f := makeFeatureForService("PriorityFeature", "stb")

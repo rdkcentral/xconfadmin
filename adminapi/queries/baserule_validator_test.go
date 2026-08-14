@@ -1294,7 +1294,6 @@ func TestCheckFixedArgValue_InListOperationOnIPAddress_MissingIPList(t *testing.
 }
 
 func TestCheckFixedArgValue_InListOperationOnIPAddress_ValidIPList(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	// Create a valid IP list using the package-level helper and service function
@@ -1351,7 +1350,6 @@ func TestCheckFixedArgValue_IsOperationOnModel_MissingModel(t *testing.T) {
 }
 
 func TestCheckFixedArgValue_IsOperationOnModel_ValidModel(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	xshared.DeleteAllEntities(t)
 
 	// Create a valid model using the service function

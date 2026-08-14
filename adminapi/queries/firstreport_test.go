@@ -20,7 +20,6 @@ package queries
 import (
 	"bytes"
 	"testing"
-	"github.com/rdkcentral/xconfadmin/shared"
 	"time"
 
 	"github.com/360EntSecGroup-Skylar/excelize"
@@ -345,7 +344,6 @@ func TestDoReport_WithCompleteInput(t *testing.T) {
 }
 
 func TestDoReport_WithChangeLogInput(t *testing.T) {
-	shared.SkipIfMockDatabase(t) // Integration test - requires real database for change logs
 	macAddress := "BB:CC:DD:EE:FF:22"
 	testTime := time.Now()
 

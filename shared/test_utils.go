@@ -25,93 +25,20 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/rdkcentral/xconfadmin/adminapi/dcm/mocks"
 	xutil "github.com/rdkcentral/xconfadmin/util"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
-	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
-
-// mockDaoInstance holds the global mock DAO for testing
-var mockDaoInstance *mocks.MockCachedSimpleDao
-
-// useMockDatabase determines if we're using mock or real database
-var useMockDatabase = false
-
-// originalGetCachedSimpleDaoFunc stores the original function to restore later
-var originalGetCachedSimpleDaoFunc func() db.CachedSimpleDao
-
-// InitMockDatabase initializes the mock database for testing
-// Call this in TestMain to enable mock mode for <15s test execution
-// This GLOBALLY replaces the DAO so all service calls use the mock!
-func InitMockDatabase() *mocks.MockCachedSimpleDao {
-	mockDaoInstance = mocks.NewMockCachedSimpleDao()
-	useMockDatabase = true
-
-	// CRITICAL: Override the global GetCachedSimpleDaoFunc so ALL code uses our mock
-	// This includes handlers, services, and shared/logupload functions
-	originalGetCachedSimpleDaoFunc = xwlogupload.GetCachedSimpleDaoFunc
-	xwlogupload.GetCachedSimpleDaoFunc = func() db.CachedSimpleDao {
-		return mockDaoInstance
-	}
-
-	return mockDaoInstance
-}
-
-// RestoreRealDatabase restores the real DAO (call in cleanup/teardown)
-func RestoreRealDatabase() {
-	if originalGetCachedSimpleDaoFunc != nil {
-		xwlogupload.GetCachedSimpleDaoFunc = originalGetCachedSimpleDaoFunc
-	}
-	useMockDatabase = false
-	mockDaoInstance = nil
-}
-
-// GetMockDaoForTesting returns the mock DAO instance for test assertions
-func GetMockDaoForTesting() *mocks.MockCachedSimpleDao {
-	return mockDaoInstance
-}
-
-// ClearMockDatabase clears all mock data - ultra fast cleanup
-func ClearMockDatabase() {
-	if useMockDatabase && mockDaoInstance != nil {
-		mockDaoInstance.Clear()
-	}
-}
-
-// DisableMockDatabase disables mock mode (for real integration tests)
-func DisableMockDatabase() {
-	RestoreRealDatabase()
-}
-
-// IsMockDatabaseEnabled returns true if mock database is enabled
-func IsMockDatabaseEnabled() bool {
-	return useMockDatabase
-}
-
-// SkipIfMockDatabase marks integration tests to skip in mock mode
-// Use this for integration tests that require real database operations
-func SkipIfMockDatabase(t *testing.T) {
-	if useMockDatabase {
-		t.Skip("Skipping integration test in mock mode (requires real database)")
-	}
-}
 
 // Helper functions to abstract DAO operations for mock/real database
 
 // GetOneFromDao retrieves a single entity - works with both mock and real DAO
 func GetOneFromDao(tableName string, rowKey string) (any, error) {
-	if useMockDatabase && mockDaoInstance != nil {
-		return mockDaoInstance.GetOne(db.GetDefaultTenantId(), tableName, rowKey)
-	}
 	return db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), tableName, rowKey)
 }
 
 // SetOneInDao stores a single entity - works with both mock and real DAO
 func SetOneInDao(tableName string, rowKey string, entity any) error {
-	if useMockDatabase && mockDaoInstance != nil {
-		return mockDaoInstance.SetOne(db.GetDefaultTenantId(), tableName, rowKey, entity)
-	}
 	if obj, ok := entity.(db.Updatable); ok {
 		obj.SetUpdated(xutil.GetTimestamp())
 	}
@@ -120,44 +47,25 @@ func SetOneInDao(tableName string, rowKey string, entity any) error {
 
 // DeleteOneFromDao removes a single entity - works with both mock and real DAO
 func DeleteOneFromDao(tableName string, rowKey string) error {
-	if useMockDatabase && mockDaoInstance != nil {
-		return mockDaoInstance.DeleteOne(db.GetDefaultTenantId(), tableName, rowKey)
-	}
 	return db.GetCachedSimpleDao().DeleteOne(db.GetDefaultTenantId(), tableName, rowKey)
 }
 
 // GetAllAsListFromDao retrieves all entities as a list - works with both mock and real DAO
 func GetAllAsListFromDao(tableName string, maxResults int) ([]interface{}, error) {
-	if useMockDatabase && mockDaoInstance != nil {
-		return mockDaoInstance.GetAllAsList(db.GetDefaultTenantId(), tableName, maxResults)
-	}
 	return db.GetCachedSimpleDao().GetAllAsList(db.GetDefaultTenantId(), tableName, maxResults)
 }
 
 // GetAllAsMapFromDao retrieves all entities as a map - works with both mock and real DAO
 func GetAllAsMapFromDao(tableName string) (map[interface{}]interface{}, error) {
-	if useMockDatabase && mockDaoInstance != nil {
-		return mockDaoInstance.GetAllAsMap(db.GetDefaultTenantId(), tableName)
-	}
 	return db.GetCachedSimpleDao().GetAllAsMap(db.GetDefaultTenantId(), tableName)
 }
 
 // RefreshAllInDao refreshes cache for a table - no-op for mock
 func RefreshAllInDao(tableName string) error {
-	if useMockDatabase && mockDaoInstance != nil {
-		return mockDaoInstance.RefreshAll(db.GetDefaultTenantId(), tableName)
-	}
 	return db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), tableName)
 }
 
 func DeleteAllEntities(t *testing.T) {
-	// For mock database, just clear it - ultra fast!
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
-		return
-	}
-
-	// Real DB cleanup: delete rows individually to avoid TRUNCATE latency on Cassandra 5.x
 	tenantId := db.GetDefaultTenantId()
 	for _, tableInfo := range db.GetAllTableInfo() {
 		if err := TruncateTable(t, tenantId, tableInfo.TableName); err != nil {
@@ -195,13 +103,6 @@ func TruncateTable(t *testing.T, tenantId string, tableName string) error {
 // DeleteTelemetryEntities - Ultra-fast cleanup using in-memory mock
 // Replaces slow Cassandra truncation (60s) with instant mock.Clear() (<1ms)
 func DeleteTelemetryEntities(t *testing.T) {
-	// For mock database, just clear it - ultra fast!
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
-		return
-	}
-
-	// SLOW PATH: Only used for real database integration tests
 	telemetryTables := []string{
 		db.TABLE_TELEMETRY_PROFILES,
 		db.TABLE_TELEMETRY_RULES,

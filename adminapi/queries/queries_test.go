@@ -95,17 +95,6 @@ func TestMain(m *testing.M) {
 	stopWatchdog := startTestWatchdog("adminapi/queries")
 	defer stopWatchdog()
 
-	// Check if we should use mock database (set via environment variable or default to true for speed)
-	useMock := os.Getenv("USE_MOCK_DB")
-	if useMock == "true" || useMock == "1" {
-		fmt.Printf("Using MOCK database for fast unit tests\n")
-
-		// CRITICAL: Initialize mock database FIRST - this overrides GetCachedSimpleDaoFunc
-		// so all subsequent code uses our in-memory mock
-		xshared.InitMockDatabase()
-		defer xshared.DisableMockDatabase()
-	}
-
 	testConfigFile = "/app/xconfadmin/xconfadmin.conf"
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
 		testConfigFile = "../../config/sample_xconfadmin.conf"
@@ -654,7 +643,6 @@ func setupRoutes(server *xhttp.WebconfigServer, r *mux.Router) {
 }
 
 func TestAllQueriesApis(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
 	//server, _ := SetupTestEnvironment()
 	xshared.DeleteAllEntities(t)
 

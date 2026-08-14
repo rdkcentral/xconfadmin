@@ -50,7 +50,7 @@ func buildPermanentTelemetryProfile() *xwlogupload.PermanentTelemetryProfile {
 }
 
 func TestGetTelemetryRulesHandler_Empty(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	url := "/xconfAdminService/telemetry/rule?applicationType=stb"
 	r := httptest.NewRequest(http.MethodGet, url, nil)
 	rr := xshared.ExecuteRequest(r, router)
@@ -59,8 +59,7 @@ func TestGetTelemetryRulesHandler_Empty(t *testing.T) {
 }
 
 func TestCreateTelemetryRuleHandler_SuccessAndConflict(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Integration test - telemetry service uses db.GetCachedSimpleDao() directly
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	perm := buildPermanentTelemetryProfile()
 	newModel := shared.Model{ID: "TESTMODEL"}
 	err := xshared.SetOneInDao(db.TABLE_MODELS, newModel.ID, newModel)
@@ -81,7 +80,7 @@ func TestCreateTelemetryRuleHandler_SuccessAndConflict(t *testing.T) {
 }
 
 func TestCreateTelemetryRuleHandler_InvalidJSON(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	url := "/xconfAdminService/telemetry/rule?applicationType=stb"
 	r := httptest.NewRequest(http.MethodPost, url, bytes.NewReader([]byte("{bad")))
 	rr := xshared.ExecuteRequest(r, router)
@@ -89,7 +88,7 @@ func TestCreateTelemetryRuleHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestGetTelemetryRuleByIdHandler_SuccessAndNotFound(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	perm := buildPermanentTelemetryProfile()
 	rule := buildTelemetryRule("ruleB", "stb", perm.ID)
 	_ = xshared.SetOneInDao(db.TABLE_TELEMETRY_RULES, rule.ID, rule)
@@ -105,10 +104,7 @@ func TestGetTelemetryRuleByIdHandler_SuccessAndNotFound(t *testing.T) {
 }
 
 func TestUpdateTelemetryRuleHandler_SuccessAndConflict(t *testing.T) {
-	// Skip this test - it requires complex db.GetCachedSimpleDao() mocking beyond GetCachedSimpleDaoFunc
-	xshared.SkipIfMockDatabase(t)
-
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	perm := buildPermanentTelemetryProfile()
 	_ = xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, perm.ID, perm)
 	rule := buildTelemetryRule("ruleC", "stb", perm.ID)
@@ -129,7 +125,7 @@ func TestUpdateTelemetryRuleHandler_SuccessAndConflict(t *testing.T) {
 }
 
 func TestDeleteTelemetryRuleHandler_SuccessAndNotFound(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	perm := buildPermanentTelemetryProfile()
 	rule := buildTelemetryRule("ruleD", "stb", perm.ID)
 	_ = xshared.SetOneInDao(db.TABLE_TELEMETRY_RULES, rule.ID, rule)
@@ -145,7 +141,7 @@ func TestDeleteTelemetryRuleHandler_SuccessAndNotFound(t *testing.T) {
 }
 
 func TestPostTelemetryRuleEntitiesHandler_MixedResults(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	perm := buildPermanentTelemetryProfile()
 	valid := buildTelemetryRule("ruleE", "stb", perm.ID)
 	conflict := buildTelemetryRule("ruleE", "stb", perm.ID) // same name allowed? uniqueness by ID; make conflict by pre-inserting then re-post
@@ -160,7 +156,7 @@ func TestPostTelemetryRuleEntitiesHandler_MixedResults(t *testing.T) {
 }
 
 func TestPutTelemetryRuleEntitiesHandler_MixedResults(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	perm := buildPermanentTelemetryProfile()
 	// existing
 	existing := buildTelemetryRule("ruleF", "stb", perm.ID)
@@ -181,7 +177,7 @@ func TestPutTelemetryRuleEntitiesHandler_MixedResults(t *testing.T) {
 }
 
 func TestPostTelemetryRuleFilteredWithParamsHandler_PagingAndFilters(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	perm := buildPermanentTelemetryProfile()
 	// create several rules
 	for i := 0; i < 15; i++ {
@@ -212,7 +208,7 @@ func TestPostTelemetryRuleFilteredWithParamsHandler_PagingAndFilters(t *testing.
 // ===== Error Condition Tests for All Handlers =====
 
 func TestGetTelemetryRuleByIdHandler_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	t.Run("MissingRuleID_WriteAdminErrorResponse", func(t *testing.T) {
 		// Empty ruleId in path triggers 404 from router
@@ -246,7 +242,7 @@ func TestGetTelemetryRuleByIdHandler_AllErrorCases(t *testing.T) {
 }
 
 func TestDeleteTelemetryRuleByIdHandler_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	t.Run("MissingRuleID_WriteAdminErrorResponse_404", func(t *testing.T) {
 		url := "/xconfAdminService/telemetry/rule/?applicationType=stb"
@@ -266,7 +262,7 @@ func TestDeleteTelemetryRuleByIdHandler_AllErrorCases(t *testing.T) {
 }
 
 func TestCreateTelemetryRuleHandler_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	t.Run("InvalidJSON_WriteAdminErrorResponse_400", func(t *testing.T) {
 		url := "/xconfAdminService/telemetry/rule?applicationType=stb"
@@ -305,7 +301,7 @@ func TestCreateTelemetryRuleHandler_AllErrorCases(t *testing.T) {
 }
 
 func TestUpdateTelemetryRuleHandler_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	t.Run("InvalidJSON_WriteAdminErrorResponse_400", func(t *testing.T) {
 		url := "/xconfAdminService/telemetry/rule?applicationType=stb"
@@ -344,7 +340,7 @@ func TestUpdateTelemetryRuleHandler_AllErrorCases(t *testing.T) {
 }
 
 func TestPostTelemetryRuleEntitiesHandler_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	t.Run("InvalidJSON_WriteAdminErrorResponse_400", func(t *testing.T) {
 		url := "/xconfAdminService/telemetry/rule/entities?applicationType=stb"
@@ -383,7 +379,7 @@ func TestPostTelemetryRuleEntitiesHandler_AllErrorCases(t *testing.T) {
 }
 
 func TestPutTelemetryRuleEntitiesHandler_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	t.Run("InvalidJSON_WriteAdminErrorResponse_400", func(t *testing.T) {
 		url := "/xconfAdminService/telemetry/rule/entities?applicationType=stb"
@@ -427,7 +423,7 @@ func TestPutTelemetryRuleEntitiesHandler_AllErrorCases(t *testing.T) {
 }
 
 func TestPostTelemetryRuleFilteredWithParamsHandler_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	t.Run("InvalidJSON_WriteAdminErrorResponse_400", func(t *testing.T) {
 		url := "/xconfAdminService/telemetry/rule/filtered?applicationType=stb"

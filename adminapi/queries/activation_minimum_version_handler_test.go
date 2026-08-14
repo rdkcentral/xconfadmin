@@ -45,7 +45,6 @@ const (
 )
 
 func TestGetAllAmvs(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	amv := perCreateActivationVersion(strings.ToUpper(TEST_MODEL_ID), TEST_FIRMWARE_VERSION, TEST_REGEX)
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
@@ -66,7 +65,6 @@ func TestGetAllAmvs(t *testing.T) {
 }
 
 func TestGetFilteredAmvHasEmptyRegExFieldIfNoValuesSet(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	amv := perCreateActivationVersion(strings.ToUpper(TEST_MODEL_ID), TEST_FIRMWARE_VERSION, "")
 
@@ -88,7 +86,6 @@ func TestGetFilteredAmvHasEmptyRegExFieldIfNoValuesSet(t *testing.T) {
 }
 
 func TestGetFilteredAmvHasEmptyFirmwareVersionsFieldIfNoValuesSet(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	amv := perCreateActivationVersion(strings.ToUpper(TEST_MODEL_ID), "", "test regex")
 

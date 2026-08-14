@@ -502,7 +502,6 @@ func TestGetFirmwareRuleTemplateExportName(t *testing.T) {
 
 // Test importOrUpdateAllFirmwareRTs
 func TestImportOrUpdateAllFirmwareRTs_CreateNew(t *testing.T) {
-	shared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
 	shared.DeleteAllEntities(t)
 	setupTestModels()
 

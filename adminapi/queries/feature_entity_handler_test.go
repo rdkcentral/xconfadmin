@@ -36,7 +36,6 @@ import (
 )
 
 func TestImportFeatureSecondTimeWithDiffAppType(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 
 	featureDiffAppType := &rfc.FeatureEntity{
@@ -62,7 +61,6 @@ func TestImportFeatureSecondTimeWithDiffAppType(t *testing.T) {
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
 }
 func TestAllFeatureHandlers(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 
 	featureEntity1 := &rfc.FeatureEntity{

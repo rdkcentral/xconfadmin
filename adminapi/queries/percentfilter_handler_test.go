@@ -23,6 +23,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
 	xshared "github.com/rdkcentral/xconfadmin/shared"
 
 	"github.com/rdkcentral/xconfadmin/common"
@@ -335,8 +336,6 @@ func TestGetGlobalPercentFilterAsRule(t *testing.T) {
 	})
 
 	t.Run("Get non-existing rule", func(t *testing.T) {
-		xshared.ClearMockDatabase()
-
 		result, err := GetGlobalPercentFilterAsRule(db.GetDefaultTenantId(), "xhome")
 
 		assert.Error(t, err)
@@ -367,8 +366,6 @@ func TestGetGlobalPercentFilterAsRuleHandler(t *testing.T) {
 	})
 
 	t.Run("Get rule with export - non-existing rule", func(t *testing.T) {
-		xshared.ClearMockDatabase()
-
 		req := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/globalPercentAsRule?applicationType=xhome&export=true", nil)
 		rr := httptest.NewRecorder()
 		xw := xwhttp.NewXResponseWriter(rr)
@@ -384,8 +381,6 @@ func TestGetGlobalPercentFilterAsRuleHandler(t *testing.T) {
 	})
 
 	t.Run("Get rule without export - non-existing rule", func(t *testing.T) {
-		xshared.ClearMockDatabase()
-
 		req := httptest.NewRequest(http.MethodGet, "/xconfAdminService/percentfilter/globalPercentAsRule?applicationType=sky", nil)
 		rr := httptest.NewRecorder()
 		xw := xwhttp.NewXResponseWriter(rr)

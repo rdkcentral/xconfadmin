@@ -31,7 +31,6 @@ import (
 )
 
 func TestGetPenetrationMetrics(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	xshared.TruncateTable(t, "", "PenetrationMetrics")
 	err := createPenetrationSampleData()
 	if err != nil {

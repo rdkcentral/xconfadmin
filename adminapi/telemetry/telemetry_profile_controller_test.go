@@ -86,7 +86,7 @@ func exec(method, url string, body []byte) *httptest.ResponseRecorder {
 }
 
 func TestCreateTelemetryEntryForSuccess(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	profile := buildTelemetryProfile(60000)
 	body, _ := json.Marshal(profile)
 	url := fmt.Sprintf("/xconfAdminService/telemetry/create/estbMacAddress/%s?applicationType=stb", "AA:BB:CC:DD:EE:FF")
@@ -96,7 +96,7 @@ func TestCreateTelemetryEntryForSuccess(t *testing.T) {
 }
 
 func TestCreateTelemetryEntryForFailures(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	// wrong attribute
 	profile := buildTelemetryProfile(60000)
 	body, _ := json.Marshal(profile)
@@ -129,7 +129,7 @@ func TestCreateTelemetryEntryForFailures(t *testing.T) {
 // }
 
 func TestGetDescriptorsAndTelemetryDescriptors(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	url := "/xconfAdminService/telemetry/getAvailableRuleDescriptors?applicationType=stb"
 	rr := exec("GET", url, nil)
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -139,7 +139,7 @@ func TestGetDescriptorsAndTelemetryDescriptors(t *testing.T) {
 }
 
 func TestTempAddToPermanentRule(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	perm := createPermanentTelemetryProfile("perm-2")
 	rule := createTelemetryRule(perm.ID)
 	expires := (time.Now().UnixNano() / 1_000_000) + 60000
@@ -158,7 +158,7 @@ func TestTempAddToPermanentRule(t *testing.T) {
 }
 
 func TestBindToTelemetry(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	perm := createPermanentTelemetryProfile("perm-3")
 	expires := (time.Now().UnixNano() / 1_000_000) + 60000
 	// success
@@ -176,7 +176,7 @@ func TestBindToTelemetry(t *testing.T) {
 }
 
 func TestTelemetryTestPageHandler(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	bodyMap := map[string]interface{}{
 		"estbMacAddress": "AA:BB:CC:DD:EE:FF",
 		"model":          "TESTMODEL",
@@ -193,7 +193,7 @@ func TestTelemetryTestPageHandler(t *testing.T) {
 
 // TestCreateTelemetryEntryFor_AllErrorCases tests all error paths
 func TestCreateTelemetryEntryFor_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	tests := []struct {
 		name        string
@@ -255,7 +255,7 @@ func TestCreateTelemetryEntryFor_AllErrorCases(t *testing.T) {
 
 // TestDropTelemetryEntryFor_AllErrorCases tests all error paths
 func TestDropTelemetryEntryFor_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	tests := []struct {
 		name        string
@@ -285,7 +285,7 @@ func TestDropTelemetryEntryFor_AllErrorCases(t *testing.T) {
 
 // TestGetDescriptors_AllErrorCases tests GetDescriptors error paths
 func TestGetDescriptors_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	tests := []struct {
 		name               string
@@ -317,7 +317,7 @@ func TestGetDescriptors_AllErrorCases(t *testing.T) {
 
 // TestGetTelemetryDescriptors_AllErrorCases tests GetTelemetryDescriptors error paths
 func TestGetTelemetryDescriptors_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	tests := []struct {
 		name               string
@@ -349,7 +349,7 @@ func TestGetTelemetryDescriptors_AllErrorCases(t *testing.T) {
 
 // TestTempAddToPermanentRule_AllErrorCases tests all error paths
 func TestTempAddToPermanentRule_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	perm := createPermanentTelemetryProfile("perm-temp-1")
 	rule := createTelemetryRule(perm.ID)
 	expires := (time.Now().UnixNano() / 1_000_000) + 60000
@@ -400,7 +400,7 @@ func TestTempAddToPermanentRule_AllErrorCases(t *testing.T) {
 
 // TestBindToTelemetry_AllErrorCases tests all error paths
 func TestBindToTelemetry_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 	perm := createPermanentTelemetryProfile("perm-bind-1")
 	expires := (time.Now().UnixNano() / 1_000_000) + 60000
 
@@ -450,7 +450,7 @@ func TestBindToTelemetry_AllErrorCases(t *testing.T) {
 
 // TestTelemetryTestPageHandler_AllErrorCases tests all error paths
 func TestTelemetryTestPageHandler_AllErrorCases(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	tests := []struct {
 		name               string

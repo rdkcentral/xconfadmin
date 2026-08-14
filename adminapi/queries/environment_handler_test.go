@@ -66,7 +66,6 @@ func updateEnv(t *testing.T, env shared.Environment, expected int) *http.Respons
 
 // TestEnvironmentCreateUpdateConflictInvalidJSON tests POST(create), PUT(update), conflict, invalid JSON
 func TestEnvironmentCreateUpdateConflictInvalidJSON(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 	ensureEnvironmentRoutes()
 	env := buildEnvironment("ENV_CREATE", "First")
@@ -104,7 +103,6 @@ func TestEnvironmentCreateUpdateConflictInvalidJSON(t *testing.T) {
 
 // TestEnvironmentGetListAndByIdDelete covers list retrieval, get by id, delete, delete conflict
 func TestEnvironmentGetListAndByIdDelete(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 	ensureEnvironmentRoutes()
 	// create a few
@@ -147,7 +145,6 @@ func TestEnvironmentGetListAndByIdDelete(t *testing.T) {
 
 // TestEnvironmentFilteredPaging tests filtered handler with paging context and header
 func TestEnvironmentFilteredPaging(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 	ensureEnvironmentRoutes()
 	for i := 0; i < 7; i++ {
@@ -203,7 +200,6 @@ func TestEnvironmentFilteredPaging(t *testing.T) {
 
 // TestEnvironmentBatchPostPutEntities tests batch create and update endpoints including invalid JSON
 func TestEnvironmentBatchPostPutEntities(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	xshared.DeleteAllEntities(t)
 	list := []shared.Environment{buildEnvironment("B1", "D1"), buildEnvironment("B2", "D2"), buildEnvironment("B3", "D3")}
 	b, _ := json.Marshal(list)
@@ -236,7 +232,6 @@ func TestEnvironmentBatchPostPutEntities(t *testing.T) {
 
 // TestEnvironmentNotImplementedPage ensures /page endpoint returns 501 (NotImplementedHandler assumed)
 func TestEnvironmentNotImplementedPage(t *testing.T) {
-	xshared.SkipIfMockDatabase(t)
 	req, _ := http.NewRequest(http.MethodGet, "/xconfAdminService/environment/page", nil)
 	res := xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusNotImplemented && res.StatusCode != http.StatusOK { // allow if handler changed

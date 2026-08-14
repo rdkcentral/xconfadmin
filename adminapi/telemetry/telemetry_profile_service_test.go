@@ -18,10 +18,11 @@
 package telemetry
 
 import (
-	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"encoding/json"
 	"testing"
 	"time"
+
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 
 	"github.com/google/uuid"
 	"gotest.tools/assert"
@@ -41,7 +42,7 @@ func storeTelemetryProfile(rule *xwlogupload.TimestampedRule, profile *xwloguplo
 
 // TestDropTelemetryFor_Success tests successful telemetry profile drop
 func TestDropTelemetryFor_Success(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create a telemetry profile
 	profile := buildTelemetryProfile(60000)
@@ -63,7 +64,7 @@ func TestDropTelemetryFor_Success(t *testing.T) {
 
 // TestDropTelemetryFor_NoMatch tests when no profiles match the context
 func TestDropTelemetryFor_NoMatch(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Drop with no matching profiles
 	result := DropTelemetryFor(db.GetDefaultTenantId(), "estbMacAddress", "BB:BB:BB:BB:BB:BB")
@@ -74,7 +75,7 @@ func TestDropTelemetryFor_NoMatch(t *testing.T) {
 
 // TestDropTelemetryFor_MultipleProfiles tests dropping multiple profiles
 func TestDropTelemetryFor_MultipleProfiles(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create multiple profiles with the same context attribute
 	mac := "CC:CC:CC:CC:CC:CC"
@@ -96,7 +97,7 @@ func TestDropTelemetryFor_MultipleProfiles(t *testing.T) {
 
 // TestGetMatchedRules_Success tests successful rule matching
 func TestGetMatchedRules_Success(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create and store a telemetry profile
 	profile := buildTelemetryProfile(60000)
@@ -116,7 +117,7 @@ func TestGetMatchedRules_Success(t *testing.T) {
 
 // TestGetMatchedRules_NoMatch tests when no rules match
 func TestGetMatchedRules_NoMatch(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create a rule with different value
 	profile := buildTelemetryProfile(60000)
@@ -136,7 +137,7 @@ func TestGetMatchedRules_NoMatch(t *testing.T) {
 
 // TestGetMatchedRules_EmptyContext tests with empty context
 func TestGetMatchedRules_EmptyContext(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	context := map[string]string{
 		xwcommon.TENANT_ID: db.GetDefaultTenantId(),
@@ -149,10 +150,7 @@ func TestGetMatchedRules_EmptyContext(t *testing.T) {
 
 // TestGetMatchedRules_MultipleMatches tests multiple matching rules
 func TestGetMatchedRules_MultipleMatches(t *testing.T) {
-	// Skip - requires complex TABLE_TELEMETRY mocking with JSON-marshaled keys
-	xshared.SkipIfMockDatabase(t)
-
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	mac := "11:22:33:44:55:66"
 
@@ -176,7 +174,7 @@ func TestGetMatchedRules_MultipleMatches(t *testing.T) {
 
 // TestGetAvailableDescriptors_Success tests successful descriptor retrieval
 func TestGetAvailableDescriptors_Success(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create telemetry rules
 	rule1 := &xwlogupload.TelemetryRule{
@@ -218,7 +216,7 @@ func TestGetAvailableDescriptors_Success(t *testing.T) {
 
 // TestGetAvailableDescriptors_FilterByApplicationType tests filtering by application type
 func TestGetAvailableDescriptors_FilterByApplicationType(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create rules with different application types
 	ruleStb := &xwlogupload.TelemetryRule{
@@ -260,7 +258,7 @@ func TestGetAvailableDescriptors_FilterByApplicationType(t *testing.T) {
 
 // TestGetAvailableDescriptors_EmptyApplicationType tests with empty application type
 func TestGetAvailableDescriptors_EmptyApplicationType(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create rules with various application types
 	rule1 := &xwlogupload.TelemetryRule{
@@ -288,7 +286,7 @@ func TestGetAvailableDescriptors_EmptyApplicationType(t *testing.T) {
 
 // TestGetAvailableDescriptors_NoRules tests when no rules exist
 func TestGetAvailableDescriptors_NoRules(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	descriptors := GetAvailableDescriptors(db.GetDefaultTenantId(), "stb")
 
@@ -298,7 +296,7 @@ func TestGetAvailableDescriptors_NoRules(t *testing.T) {
 
 // TestGetAvailableProfileDescriptors_Success tests successful profile descriptor retrieval
 func TestGetAvailableProfileDescriptors_Success(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create permanent telemetry profiles
 	profile1 := &xwlogupload.PermanentTelemetryProfile{
@@ -338,7 +336,7 @@ func TestGetAvailableProfileDescriptors_Success(t *testing.T) {
 
 // TestGetAvailableProfileDescriptors_FilterByApplicationType tests filtering by application type
 func TestGetAvailableProfileDescriptors_FilterByApplicationType(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create profiles with different application types
 	profileStb := &xwlogupload.PermanentTelemetryProfile{
@@ -378,7 +376,7 @@ func TestGetAvailableProfileDescriptors_FilterByApplicationType(t *testing.T) {
 
 // TestGetAvailableProfileDescriptors_EmptyApplicationType tests with empty application type
 func TestGetAvailableProfileDescriptors_EmptyApplicationType(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create profiles with various application types
 	profile1 := &xwlogupload.PermanentTelemetryProfile{
@@ -404,7 +402,7 @@ func TestGetAvailableProfileDescriptors_EmptyApplicationType(t *testing.T) {
 
 // TestGetAvailableProfileDescriptors_NoProfiles tests when no profiles exist
 func TestGetAvailableProfileDescriptors_NoProfiles(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	descriptors := GetAvailableProfileDescriptors(db.GetDefaultTenantId(), "stb")
 
@@ -461,7 +459,7 @@ func TestCreateRuleForAttribute(t *testing.T) {
 
 // TestCreateTelemetryProfile tests profile creation and storage
 func TestCreateTelemetryProfile(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create a telemetry profile
 	profile := buildTelemetryProfile(60000)
@@ -483,7 +481,7 @@ func TestCreateTelemetryProfile(t *testing.T) {
 } // TestDropTelemetryFor_ComplexConditions tests dropping profiles with complex rule conditions
 
 func TestDropTelemetryFor_ComplexConditions(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	// Create multiple profiles with different attributes
 	profile1 := buildTelemetryProfile(60000)

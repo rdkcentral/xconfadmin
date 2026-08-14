@@ -110,7 +110,6 @@ func TestUpdatePercentFilter_LastKnownGoodAndIntermediateVersionNotFound(t *test
 }
 
 func TestUpdatePercentFilter_WhitelistValidPath(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 	// store whitelist
 	ipg := shared.NewIpAddressGroupWithAddrStrings("G_OK_PF", "G_OK_PF", []string{"10.10.0.1"})
@@ -124,7 +123,6 @@ func TestUpdatePercentFilter_WhitelistValidPath(t *testing.T) {
 }
 
 func TestConvertPercentageBean_SumAndWhitelist(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	// prepare a namespaced list
 	ipg := shared.NewIpAddressGroupWithAddrStrings("G_PCB", "G_PCB", []string{"192.168.0.1"})
 	nl := shared.ConvertFromIpAddressGroup(ipg)

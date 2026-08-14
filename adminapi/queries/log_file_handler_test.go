@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"github.com/rdkcentral/xconfadmin/shared"
 
 	"github.com/rdkcentral/xconfadmin/shared/logupload"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
@@ -24,7 +23,6 @@ func makeLogFileXW(obj any) (*httptest.ResponseRecorder, *xwhttp.XResponseWriter
 }
 
 func TestCreateLogFile_ResponseWriterCastError(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	// pass plain recorder -> cast fail
 	r := httptest.NewRequest(http.MethodPost, "/logfile", nil)
 	rr := httptest.NewRecorder()
@@ -33,7 +31,6 @@ func TestCreateLogFile_ResponseWriterCastError(t *testing.T) {
 }
 
 func TestCreateLogFile_InvalidJSON(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	r := httptest.NewRequest(http.MethodPost, "/logfile", nil)
 	rr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(rr)
@@ -43,7 +40,6 @@ func TestCreateLogFile_InvalidJSON(t *testing.T) {
 }
 
 func TestCreateLogFile_EmptyName(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	lf := logupload.LogFile{ID: "", Name: ""}
 	rr, xw := makeLogFileXW(lf)
 	r := httptest.NewRequest(http.MethodPost, "/logfile", nil)
@@ -52,7 +48,6 @@ func TestCreateLogFile_EmptyName(t *testing.T) {
 }
 
 func TestCreateLogFile_NewSuccess(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	lf := logupload.LogFile{Name: "alpha.log"}
 	rr, xw := makeLogFileXW(lf)
 	r := httptest.NewRequest(http.MethodPost, "/logfile", nil)
@@ -65,7 +60,6 @@ func TestCreateLogFile_NewSuccess(t *testing.T) {
 }
 
 func TestCreateLogFile_DuplicateName(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	// seed first
 	seed := logupload.LogFile{Name: "dup.log"}
 	rr1, xw1 := makeLogFileXW(seed)
@@ -84,7 +78,6 @@ func TestCreateLogFile_DuplicateName(t *testing.T) {
 }
 
 func TestCreateLogFile_UpdatePath(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	// The update path in CreateLogFile calls updateLogUploadSettingsAndLogFileGroups
 	// which invokes GetAllLogUploadSettings/GetLogFileGroupsList. On multi-tenant DAO
 	// these return an error when the tables are empty, causing a 500.

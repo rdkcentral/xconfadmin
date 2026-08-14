@@ -80,7 +80,6 @@ func TestUpdateLocationFilter_LocationValidation(t *testing.T) {
 }
 
 func TestUpdateLocationFilter_SuccessAndDelete(t *testing.T) {
-	xshared.SkipIfMockDatabase(t) // Service test uses db.GetCachedSimpleDao() directly
 	xshared.TruncateTable(t, db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES)
 
 	// Pre-cleanup: remove any models/environments from other tests

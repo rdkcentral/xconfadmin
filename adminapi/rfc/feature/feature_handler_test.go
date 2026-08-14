@@ -32,17 +32,6 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	// Check if we should use mock database (set via environment variable or default to true for speed)
-	useMock := os.Getenv("USE_MOCK_DB")
-	if useMock == "true" || useMock == "1" {
-		fmt.Printf("Using MOCK database for fast unit tests\n")
-
-		// CRITICAL: Initialize mock database FIRST - this overrides GetCachedSimpleDaoFunc
-		// so all subsequent code uses our in-memory mock
-		xshared.InitMockDatabase()
-		defer xshared.DisableMockDatabase()
-	}
-
 	cfgFile := "../config/sample_xconfadmin.conf"
 	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
 		cfgFile = "../../config/sample_xconfadmin.conf"

@@ -133,19 +133,6 @@ func TestMain(m *testing.M) {
 	db.SetDatabaseClient(server.XW_XconfServer.DatabaseClient)
 	defer server.XW_XconfServer.DatabaseClient.Close()
 
-	// Check if we should use mock database (set via environment variable or default to true for speed)
-	useMock := os.Getenv("USE_MOCK_DB")
-	if useMock == "true" || useMock == "1" {
-		fmt.Printf("Using MOCK database for fast unit tests\n")
-
-		// PERFORMANCE OPTIMIZATION: Initialize in-memory mock for <15s test execution
-		// Replaces slow Cassandra operations with instant in-memory operations
-		// CRITICAL: Initialize mock database FIRST for ultra-fast testing!
-		// This replaces ALL DB calls with in-memory mock (like telemetry/dcm success)
-		xshared.InitMockDatabase()
-		defer xshared.DisableMockDatabase()
-	}
-
 	// setup router
 	router = server.XW_XconfServer.GetRouter(false)
 
@@ -283,37 +270,8 @@ func SetupTelemetryRoutes(server *xhttp.WebconfigServer, r *mux.Router) {
 	}
 }
 
-// DeleteTelemetryEntities - Ultra-fast cleanup using in-memory mock
-// Replaces slow Cassandra truncation (60s) with instant mock.Clear() (<1ms)
-func DeleteTelemetryEntities(t *testing.T) {
-	if xshared.IsMockDatabaseEnabled() {
-		// FAST PATH: Clear in-memory mock instantly
-		xshared.ClearMockDatabase()
-		return
-	}
-
-	// SLOW PATH: Only used for real database integration tests
-	telemetryTables := []string{
-		db.TABLE_TELEMETRY_PROFILES,
-		db.TABLE_TELEMETRY_RULES,
-		db.TABLE_TELEMETRY_TWO_PROFILES,
-		db.TABLE_TELEMETRY_TWO_RULES,
-		db.TABLE_PERMANENT_TELEMETRY_PROFILES,
-		db.TABLE_TELEMETRY_CHANGES,
-		db.TABLE_TELEMETRY_APPROVED_CHANGES,
-		db.TABLE_TELEMETRY_TWO_CHANGES,
-		db.TABLE_TELEMETRY_APPROVED_TWO_CHANGES,
-	}
-
-	tenantId := db.GetDefaultTenantId()
-	for _, tableName := range telemetryTables {
-		xshared.TruncateTable(t, tenantId, tableName)
-		db.GetCachedSimpleDao().RefreshAll(tenantId, tableName)
-	}
-}
-
 func TestAddTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
@@ -358,7 +316,7 @@ func TestAddTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 	entry := &logupload.TelemetryElement{
@@ -404,7 +362,7 @@ func TestRemoveTelemetryProfileEntryChangeAndApproveIt(t *testing.T) {
 }
 
 func TestTelemetryProfileCreate(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 
@@ -430,7 +388,7 @@ func TestTelemetryProfileCreate(t *testing.T) {
 }
 
 func TestTelemetryProfileCreateChangeAndApproveIt(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 
@@ -471,7 +429,7 @@ func TestTelemetryProfileCreateChangeAndApproveIt(t *testing.T) {
 }
 
 func TestTelemetryProfileUpdate(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
@@ -513,7 +471,7 @@ func TestTelemetryProfileUpdate(t *testing.T) {
 }
 
 func TestTelemetryProfileUpdateChangeAndApproveIt(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
@@ -569,7 +527,7 @@ func TestTelemetryProfileUpdateChangeAndApproveIt(t *testing.T) {
 }
 
 func TestTelemetryProfileDelete(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
@@ -593,7 +551,7 @@ func TestTelemetryProfileDelete(t *testing.T) {
 }
 
 func TestTelemetryProfileDeleteChangeAndApproveIt(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
@@ -634,7 +592,7 @@ func TestTelemetryProfileDeleteChangeAndApproveIt(t *testing.T) {
 }
 
 func TestTelemetryProfileCreateChangeThrowsExceptionInCaseIfDuplicatedChange(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 
@@ -657,7 +615,7 @@ func TestTelemetryProfileCreateChangeThrowsExceptionInCaseIfDuplicatedChange(t *
 }
 
 func TestTelemetryProfileUpdateChangeThrowsExceptionInCaseIfDuplicatedChange(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
@@ -691,7 +649,7 @@ func TestTelemetryProfileUpdateChangeThrowsExceptionInCaseIfDuplicatedChange(t *
 }
 
 func TestTelemetryProfileDeleteChangeThrowsExceptionInCaseIfDuplicatedChange(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
@@ -714,7 +672,7 @@ func TestTelemetryProfileDeleteChangeThrowsExceptionInCaseIfDuplicatedChange(t *
 }
 
 func TestUpdateTelemetyProfileThrowsAnExceptionInCaseOfDuplicatedTelemetryEntries(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
@@ -753,7 +711,7 @@ func TestUpdateTelemetyProfileThrowsAnExceptionInCaseOfDuplicatedTelemetryEntrie
 }
 
 func TestAddTelemetryThrowsAnExceptionInCaseOfDuplicate(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 	xshared.SetOneInDao(db.TABLE_PERMANENT_TELEMETRY_PROFILES, p.ID, p)
@@ -790,7 +748,7 @@ func TestAddTelemetryThrowsAnExceptionInCaseOfDuplicate(t *testing.T) {
 }
 
 func IgnoreTestApplicationTypeIsMandatory(t *testing.T) {
-	DeleteTelemetryEntities(t)
+	xshared.DeleteTelemetryEntities(t)
 
 	p := createTelemetryProfile()
 	profileBytes, _ := json.Marshal(p)

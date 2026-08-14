@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"github.com/rdkcentral/xconfadmin/shared"
 
 	"github.com/gorilla/mux"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
@@ -22,7 +21,6 @@ func makeQueriesXW(body string) (*httptest.ResponseRecorder, *xwhttp.XResponseWr
 }
 
 func TestGetQueriesPercentageBean(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("GET", "/api/queries/percentageBean", nil)
 	w, xw := makeQueriesXW("")
 
@@ -33,7 +31,6 @@ func TestGetQueriesPercentageBean(t *testing.T) {
 }
 
 func TestGetQueriesPercentageBeanById(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("GET", "/api/queries/percentageBean/test-id", nil)
 	req = mux.SetURLVars(req, map[string]string{"id": "test-id"})
 	w, xw := makeQueriesXW("")
@@ -45,7 +42,6 @@ func TestGetQueriesPercentageBeanById(t *testing.T) {
 }
 
 func TestGetQueriesModels(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("GET", "/api/queries/models", nil)
 	w, xw := makeQueriesXW("")
 
@@ -56,7 +52,6 @@ func TestGetQueriesModels(t *testing.T) {
 }
 
 func TestGetQueriesModelsById(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("GET", "/api/queries/models/TEST-MODEL", nil)
 	req = mux.SetURLVars(req, map[string]string{"id": "TEST-MODEL"})
 	w, xw := makeQueriesXW("")
@@ -68,7 +63,6 @@ func TestGetQueriesModelsById(t *testing.T) {
 }
 
 func TestCreateModelHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	body := `{"id":"TEST-MODEL","description":"Test Model"}`
 	req := httptest.NewRequest("POST", "/api/queries/models", nil)
 	req.Header.Set("Content-Type", "application/json")
@@ -81,7 +75,6 @@ func TestCreateModelHandler(t *testing.T) {
 }
 
 func TestUpdateModelHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	body := `{"id":"TEST-MODEL","description":"Updated Model"}`
 	req := httptest.NewRequest("PUT", "/api/queries/models", nil)
 	req.Header.Set("Content-Type", "application/json")
@@ -94,7 +87,6 @@ func TestUpdateModelHandler(t *testing.T) {
 }
 
 func TestDeleteModelHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("DELETE", "/api/queries/models/TEST-MODEL", nil)
 	req = mux.SetURLVars(req, map[string]string{"id": "TEST-MODEL"})
 	w, xw := makeQueriesXW("")
@@ -106,7 +98,6 @@ func TestDeleteModelHandler(t *testing.T) {
 }
 
 func TestGetQueriesFirmwareConfigsById(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("GET", "/api/queries/firmwareConfigs/test-config-id", nil)
 	req = mux.SetURLVars(req, map[string]string{"id": "test-config-id"})
 	w, xw := makeQueriesXW("")
@@ -118,7 +109,6 @@ func TestGetQueriesFirmwareConfigsById(t *testing.T) {
 }
 
 func TestGetQueriesFirmwareConfigsByModelIdASFlavor(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("GET", "/api/queries/firmwareConfigs/model/TEST-MODEL", nil)
 	req = mux.SetURLVars(req, map[string]string{"modelId": "TEST-MODEL"})
 	w, xw := makeQueriesXW("")
@@ -130,7 +120,6 @@ func TestGetQueriesFirmwareConfigsByModelIdASFlavor(t *testing.T) {
 }
 
 func TestCreateFirmwareConfigHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	body := `{"id":"test-config","description":"Test Config","applicationType":"stb"}`
 	req := httptest.NewRequest("POST", "/api/queries/firmwareConfigs", nil)
 	req.Header.Set("Content-Type", "application/json")
@@ -143,7 +132,6 @@ func TestCreateFirmwareConfigHandler(t *testing.T) {
 }
 
 func TestUpdateFirmwareConfigHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	body := `{"id":"test-config","description":"Updated Config","applicationType":"stb"}`
 	req := httptest.NewRequest("PUT", "/api/queries/firmwareConfigs", nil)
 	req.Header.Set("Content-Type", "application/json")
@@ -156,7 +144,6 @@ func TestUpdateFirmwareConfigHandler(t *testing.T) {
 }
 
 func TestDeleteFirmwareConfigHandlerASFlavor(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("DELETE", "/api/queries/firmwareConfigs/test-config", nil)
 	req = mux.SetURLVars(req, map[string]string{"id": "test-config"})
 	w, xw := makeQueriesXW("")
@@ -168,7 +155,6 @@ func TestDeleteFirmwareConfigHandlerASFlavor(t *testing.T) {
 }
 
 func TestUpdateDownloadLocationFilterHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	body := `{"httpLocation":"http://test.com","applicationType":"stb"}`
 	req := httptest.NewRequest("PUT", "/api/queries/filters/downloadLocation", nil)
 	req.Header.Set("Content-Type", "application/json")
@@ -181,7 +167,6 @@ func TestUpdateDownloadLocationFilterHandler(t *testing.T) {
 }
 
 func TestDeleteIpsFilterHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("DELETE", "/api/queries/filters/ips/test-filter", nil)
 	req = mux.SetURLVars(req, map[string]string{"name": "test-filter"})
 	w, xw := makeQueriesXW("")
@@ -193,7 +178,6 @@ func TestDeleteIpsFilterHandler(t *testing.T) {
 }
 
 func TestUpdateTimeFilterHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	body := `{"name":"test-time-filter","start":"08:00","end":"17:00","applicationType":"stb"}`
 	req := httptest.NewRequest("PUT", "/api/queries/filters/time", nil)
 	req.Header.Set("Content-Type", "application/json")
@@ -206,7 +190,6 @@ func TestUpdateTimeFilterHandler(t *testing.T) {
 }
 
 func TestDeleteTimeFilterHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("DELETE", "/api/queries/filters/time/test-filter", nil)
 	req = mux.SetURLVars(req, map[string]string{"name": "test-filter"})
 	w, xw := makeQueriesXW("")
@@ -218,7 +201,6 @@ func TestDeleteTimeFilterHandler(t *testing.T) {
 }
 
 func TestUpdateLocationFilterHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	body := `{"name":"test-location-filter","httpLocation":"http://test.com","applicationType":"stb"}`
 	req := httptest.NewRequest("PUT", "/api/queries/filters/location", nil)
 	req.Header.Set("Content-Type", "application/json")
@@ -231,7 +213,6 @@ func TestUpdateLocationFilterHandler(t *testing.T) {
 }
 
 func TestDeleteLocationFilterHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("DELETE", "/api/queries/filters/location/test-filter", nil)
 	req = mux.SetURLVars(req, map[string]string{"name": "test-filter"})
 	w, xw := makeQueriesXW("")
@@ -243,7 +224,6 @@ func TestDeleteLocationFilterHandler(t *testing.T) {
 }
 
 func TestGetQueriesFiltersPercent(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("GET", "/api/queries/filters/percent", nil)
 	w, xw := makeQueriesXW("")
 
@@ -254,7 +234,6 @@ func TestGetQueriesFiltersPercent(t *testing.T) {
 }
 
 func TestUpdatePercentFilterHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	body := `{"percentage":50,"applicationType":"stb"}`
 	req := httptest.NewRequest("PUT", "/api/queries/filters/percent", nil)
 	req.Header.Set("Content-Type", "application/json")
@@ -267,7 +246,6 @@ func TestUpdatePercentFilterHandler(t *testing.T) {
 }
 
 func TestUpdateRebootImmediatelyHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	body := `{"name":"test-reboot-filter","applicationType":"stb"}`
 	req := httptest.NewRequest("PUT", "/api/queries/filters/rebootImmediately", nil)
 	req.Header.Set("Content-Type", "application/json")
@@ -280,7 +258,6 @@ func TestUpdateRebootImmediatelyHandler(t *testing.T) {
 }
 
 func TestDeleteRebootImmediatelyHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("DELETE", "/api/queries/filters/rebootImmediately/test-filter", nil)
 	req = mux.SetURLVars(req, map[string]string{"name": "test-filter"})
 	w, xw := makeQueriesXW("")
@@ -292,7 +269,6 @@ func TestDeleteRebootImmediatelyHandler(t *testing.T) {
 }
 
 func TestGetRoundRobinFilterHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("GET", "/api/roundrobinfilter", nil)
 	w, xw := makeQueriesXW("")
 
@@ -303,7 +279,6 @@ func TestGetRoundRobinFilterHandler(t *testing.T) {
 }
 
 func TestGetIpRuleByIpAddressGroup(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("GET", "/api/queries/rules/ips/group/test-group", nil)
 	req = mux.SetURLVars(req, map[string]string{"ipAddressGroupName": "test-group"})
 	w, xw := makeQueriesXW("")
@@ -315,7 +290,6 @@ func TestGetIpRuleByIpAddressGroup(t *testing.T) {
 }
 
 func TestUpdateIpRule(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	body := `{"name":"test-ip-rule","environmentId":"QA","modelId":"TEST","applicationType":"stb"}`
 	req := httptest.NewRequest("PUT", "/api/queries/rules/ips", nil)
 	req.Header.Set("Content-Type", "application/json")
@@ -328,7 +302,6 @@ func TestUpdateIpRule(t *testing.T) {
 }
 
 func TestGetMACRulesByMAC(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("GET", "/api/queries/rules/macs/AA:BB:CC:DD:EE:FF", nil)
 	req = mux.SetURLVars(req, map[string]string{"macAddress": "AA:BB:CC:DD:EE:FF"})
 	w, xw := makeQueriesXW("")
@@ -340,7 +313,6 @@ func TestGetMACRulesByMAC(t *testing.T) {
 }
 
 func TestSaveMACRule(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	body := `{"name":"test-mac-rule","macListRef":"test-list","targetedModelIds":["TEST"],"applicationType":"stb"}`
 	req := httptest.NewRequest("POST", "/api/queries/rules/macs", nil)
 	req.Header.Set("Content-Type", "application/json")
@@ -353,7 +325,6 @@ func TestSaveMACRule(t *testing.T) {
 }
 
 func TestDeleteIpRule(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("DELETE", "/api/queries/rules/ips/test-rule", nil)
 	req = mux.SetURLVars(req, map[string]string{"name": "test-rule"})
 	w, xw := makeQueriesXW("")
@@ -365,7 +336,6 @@ func TestDeleteIpRule(t *testing.T) {
 }
 
 func TestGetMigrationInfoHandler(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("GET", "/api/migration", nil)
 	w, xw := makeQueriesXW("")
 
@@ -377,7 +347,6 @@ func TestGetMigrationInfoHandler(t *testing.T) {
 
 // Additional tests for completeness
 func TestGetQueriesPercentageBean_WithExport(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("GET", "/api/queries/percentageBean?export", nil)
 	w, xw := makeQueriesXW("")
 
@@ -388,7 +357,6 @@ func TestGetQueriesPercentageBean_WithExport(t *testing.T) {
 }
 
 func TestGetQueriesFiltersPercent_WithField(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("GET", "/api/queries/filters/percent?field=testField", nil)
 	w, xw := makeQueriesXW("")
 
@@ -399,7 +367,6 @@ func TestGetQueriesFiltersPercent_WithField(t *testing.T) {
 }
 
 func TestUpdateLocationFilterHandler_EmptyBody(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	body := `{}`
 	req := httptest.NewRequest("PUT", "/api/queries/filters/location", nil)
 	req.Header.Set("Content-Type", "application/json")
@@ -412,7 +379,6 @@ func TestUpdateLocationFilterHandler_EmptyBody(t *testing.T) {
 }
 
 func TestDeleteLocationFilterHandler_EmptyName(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	req := httptest.NewRequest("DELETE", "/api/queries/filters/location/", nil)
 	req = mux.SetURLVars(req, map[string]string{"name": ""})
 	w, xw := makeQueriesXW("")

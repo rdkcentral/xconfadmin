@@ -60,7 +60,6 @@ func PBCreateFirmwareConfig(firmwareVersion string, modelId string, firmwareDown
 }
 
 func TestPBAllApi(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	//	_, router := GetTestWebConfigServer(testconfig)
 	//adminapi.XconfSetup(server, router)
@@ -250,7 +249,6 @@ func TestPBAllApi(t *testing.T) {
 }
 
 func TestPercentageBeanAdminUpdateAPI(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 
 	percentageBean, err := PreCreatePercentageBean()
@@ -272,7 +270,6 @@ func TestPercentageBeanAdminUpdateAPI(t *testing.T) {
 }
 
 func TestPercentageBeanUpdatesAPI(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	percentageBean, err := PreCreatePercentageBean()
 	assert.Nil(t, err)
@@ -293,7 +290,6 @@ func TestPercentageBeanUpdatesAPI(t *testing.T) {
 }
 
 func TestPercentageBeanExportAllAPI(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	percentageBean, err := PreCreatePercentageBean()
 	assert.Nil(t, err)
@@ -313,7 +309,6 @@ func TestPercentageBeanExportAllAPI(t *testing.T) {
 }
 
 func TestSearchPercentageBeanByMinCheckVersion(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	percentageBean1, err := PreCreatePercentageBean()
 	assert.Nil(t, err)
@@ -409,7 +404,6 @@ func TestSearchPercentageBeanByMinCheckVersion(t *testing.T) {
 
 // Export branch for GetPercentageBeanByIdHandler
 func TestGetPercentageBeanByIdHandler_Export(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	pb, err := PreCreatePercentageBean()
 	assert.Nil(t, err)
@@ -422,7 +416,6 @@ func TestGetPercentageBeanByIdHandler_Export(t *testing.T) {
 
 // Missing ID branch for GetPercentageBeanByIdHandler
 func TestGetPercentageBeanByIdHandler_MissingID(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	// Path without ID will not match the /{id} route; expect 404 from mux
 	url := fmt.Sprintf("%s/?applicationType=stb", PB_URL_BASE)
@@ -433,7 +426,6 @@ func TestGetPercentageBeanByIdHandler_MissingID(t *testing.T) {
 
 // ApplicationType mismatch triggering not found
 func TestGetPercentageBeanByIdHandler_AppTypeMismatch(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	pb, _ := PreCreatePercentageBean()
 	url := fmt.Sprintf("%s/%s?applicationType=rdkcloud", PB_URL_BASE, pb.ID)
@@ -444,7 +436,6 @@ func TestGetPercentageBeanByIdHandler_AppTypeMismatch(t *testing.T) {
 
 // Export branch for GetAllPercentageBeanAsRule
 func TestGetAllPercentageBeanAsRule_Export(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	_, _ = PreCreatePercentageBean()
 	// Correct path per router: /percentfilter/percentageBean/allAsRules
@@ -457,7 +448,6 @@ func TestGetAllPercentageBeanAsRule_Export(t *testing.T) {
 
 // Export branch for GetPercentageBeanAsRuleById
 func TestGetPercentageBeanAsRuleById_Export(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	pb, _ := PreCreatePercentageBean()
 	// Correct path per router: /percentfilter/percentageBean/asRule/{id}
@@ -470,7 +460,6 @@ func TestGetPercentageBeanAsRuleById_Export(t *testing.T) {
 
 // PercentageBeanAsRuleById missing ID parameter
 func TestGetPercentageBeanAsRuleById_MissingID(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	// Missing ID will hit the route without variable -> 404
 	url := "/xconfAdminService/percentfilter/percentageBean/asRule/?applicationType=stb"
@@ -481,7 +470,6 @@ func TestGetPercentageBeanAsRuleById_MissingID(t *testing.T) {
 
 // PostPercentageBeanEntitiesHandler invalid JSON
 func TestPostPercentageBeanEntitiesHandler_InvalidJSON(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	url := fmt.Sprintf("%s/entities?applicationType=stb", PB_URL_BASE)
 	r := httptest.NewRequest(http.MethodPost, url, bytes.NewBuffer([]byte("{invalid")))
@@ -491,7 +479,6 @@ func TestPostPercentageBeanEntitiesHandler_InvalidJSON(t *testing.T) {
 
 // PutPercentageBeanEntitiesHandler invalid JSON
 func TestPutPercentageBeanEntitiesHandler_InvalidJSON(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	url := fmt.Sprintf("%s/entities?applicationType=stb", PB_URL_BASE)
 	r := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer([]byte("{invalid")))
@@ -501,7 +488,6 @@ func TestPutPercentageBeanEntitiesHandler_InvalidJSON(t *testing.T) {
 
 // PostPercentageBeanFilteredWithParamsHandler invalid JSON body
 func TestPostPercentageBeanFilteredWithParamsHandler_InvalidJSON(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	url := "/xconfAdminService/percentfilter/percentageBean/filtered?applicationType=stb&pageNumber=1&pageSize=10"
 	r := httptest.NewRequest(http.MethodPost, url, bytes.NewBuffer([]byte("{invalid")))
@@ -511,7 +497,6 @@ func TestPostPercentageBeanFilteredWithParamsHandler_InvalidJSON(t *testing.T) {
 
 // Pagination error: pageNumber <1
 func TestPostPercentageBeanFilteredWithParamsHandler_InvalidPage(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	_, _ = PreCreatePercentageBean()
 	url := "/xconfAdminService/percentfilter/percentageBean/filtered?applicationType=stb&pageNumber=0&pageSize=10"
@@ -522,7 +507,6 @@ func TestPostPercentageBeanFilteredWithParamsHandler_InvalidPage(t *testing.T) {
 
 // Pagination error: pageSize <1
 func TestPostPercentageBeanFilteredWithParamsHandler_InvalidSize(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 	_, _ = PreCreatePercentageBean()
 	url := "/xconfAdminService/percentfilter/percentageBean/filtered?applicationType=stb&pageNumber=1&pageSize=0"
@@ -533,7 +517,6 @@ func TestPostPercentageBeanFilteredWithParamsHandler_InvalidSize(t *testing.T) {
 
 // Wakeup pool handler invalid force param
 func TestCreateWakeupPoolHandler_InvalidForceParam(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	url := "/xconfAdminService/wakeuppool?force=notabool"
 	r := httptest.NewRequest(http.MethodPost, url, nil)
 	rr := xshared.ExecuteRequest(r, router)
@@ -545,7 +528,6 @@ func TestCreateWakeupPoolHandler_InvalidForceParam(t *testing.T) {
 
 // Wakeup pool handler unsupported force true
 func TestCreateWakeupPoolHandler_UnsupportedForce(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	url := "/xconfAdminService/wakeuppool?force=true"
 	r := httptest.NewRequest(http.MethodPost, url, nil)
 	rr := xshared.ExecuteRequest(r, router)
@@ -557,7 +539,6 @@ func TestCreateWakeupPoolHandler_UnsupportedForce(t *testing.T) {
 
 // Wakeup pool handler success path (force default false)
 func TestCreateWakeupPoolHandler_Success(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	url := "/xconfAdminService/wakeuppool"
 	r := httptest.NewRequest(http.MethodPost, url, nil)
 	rr := xshared.ExecuteRequest(r, router)
@@ -630,7 +611,6 @@ func unmarshalPercentFilterExport(b []byte) map[string]interface{} {
 
 // Test GetPercentageBeanAllHandler - Success case
 func TestGetPercentageBeanAllHandler_Success(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 
 	// Create test percentage bean
@@ -646,7 +626,6 @@ func TestGetPercentageBeanAllHandler_Success(t *testing.T) {
 
 // Test GetPercentageBeanAllHandler - Error case (no auth)
 func TestGetPercentageBeanAllHandler_Error(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 
 	// This test verifies the handler runs without error
@@ -663,7 +642,6 @@ func TestGetPercentageBeanAllHandler_Error(t *testing.T) {
 
 // Test CreateWakeupPoolHandler - Additional error coverage for xhttp.AdminError
 func TestCreateWakeupPoolHandler_AdminError(t *testing.T) {
-	shared.SkipIfMockDatabase(t)
 	shared.DeleteAllEntities(t)
 
 	// Test with invalid JSON to trigger AdminError path
