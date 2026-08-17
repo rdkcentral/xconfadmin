@@ -43,6 +43,7 @@ func RegisterChangeRoutes(router *mux.Router, paths []*mux.Router) []*mux.Router
 	telemetryProfilePath.HandleFunc("/entry/remove/{id}", RemoveTelemetryProfileEntryHandler).Methods("PUT").Name("Telemetry1-Profiles")
 	telemetryProfilePath.HandleFunc("/change/entry/add/{id}", AddTelemetryProfileEntryChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
 	telemetryProfilePath.HandleFunc("/change/entry/remove/{id}", RemoveTelemetryProfileEntryChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
+	paths = append(paths, telemetryProfilePath)
 
 	// telemetry/v2/profile
 	telemetryV2ProfilePath := router.PathPrefix("/xconfAdminService/telemetry/v2/profile").Subrouter()
