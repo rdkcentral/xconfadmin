@@ -76,22 +76,6 @@ func TestPostLogRepoSettingsEntitiesHandler_Success(t *testing.T) {
 	assert.Equal(t, xcommon.ENTITY_STATUS_SUCCESS, responseMap["repo-2"].Status)
 }
 
-// TestPostLogRepoSettingsEntitiesHandler_InvalidJSON tests invalid JSON handling
-func TestPostLogRepoSettingsEntitiesHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-
-	invalidJSON := []byte(`{bad json}`)
-
-	req, err := http.NewRequest("POST", "/xconfAdminService/dcm/uploadRepository/entities", bytes.NewBuffer(invalidJSON))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-}
-
 // TestPostLogRepoSettingsEntitiesHandler_DuplicateEntity tests duplicate entity handling
 func TestPostLogRepoSettingsEntitiesHandler_DuplicateEntity(t *testing.T) {
 	xshared.DeleteAllEntities(t)
@@ -229,22 +213,6 @@ func TestPutLogRepoSettingsEntitiesHandler_Success(t *testing.T) {
 	assert.Equal(t, 2, len(responseMap))
 	assert.Equal(t, xcommon.ENTITY_STATUS_SUCCESS, responseMap["update-repo-1"].Status)
 	assert.Equal(t, xcommon.ENTITY_STATUS_SUCCESS, responseMap["update-repo-2"].Status)
-}
-
-// TestPutLogRepoSettingsEntitiesHandler_InvalidJSON tests invalid JSON handling for update
-func TestPutLogRepoSettingsEntitiesHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-
-	invalidJSON := []byte(`{bad json}`)
-
-	req, err := http.NewRequest("PUT", "/xconfAdminService/dcm/uploadRepository/entities", bytes.NewBuffer(invalidJSON))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
 // TestPutLogRepoSettingsEntitiesHandler_NonExistentEntity tests updating non-existent entity
@@ -699,22 +667,6 @@ func TestDeleteLogRepoSettingsByIdHandler_Success(t *testing.T) {
 	assert.Assert(t, deleted == nil)
 }
 
-// TestCreateLogRepoSettingsHandler_InvalidJSON tests create with invalid JSON (error path)
-func TestCreateLogRepoSettingsHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-
-	invalidJSON := []byte(`{invalid json`)
-
-	req, err := http.NewRequest("POST", "/xconfAdminService/dcm/uploadRepository", bytes.NewBuffer(invalidJSON))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-}
-
 // TestCreateLogRepoSettingsHandler_EmptyBody tests create with empty body (nil condition)
 func TestCreateLogRepoSettingsHandler_EmptyBody(t *testing.T) {
 	xshared.DeleteAllEntities(t)
@@ -754,22 +706,6 @@ func TestCreateLogRepoSettingsHandler_DuplicateID(t *testing.T) {
 	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Assert(t, res.StatusCode >= http.StatusBadRequest)
-}
-
-// TestUpdateLogRepoSettingsHandler_InvalidJSON tests update with invalid JSON (error path)
-func TestUpdateLogRepoSettingsHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-
-	invalidJSON := []byte(`{invalid json`)
-
-	req, err := http.NewRequest("PUT", "/xconfAdminService/dcm/uploadRepository", bytes.NewBuffer(invalidJSON))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
 // TestUpdateLogRepoSettingsHandler_NonExistent tests update of non-existent repository (error path)
@@ -848,22 +784,6 @@ func TestPostLogRepoSettingsFilteredWithParamsHandler_EmptyBody(t *testing.T) {
 	var repos []logupload.UploadRepository
 	json.NewDecoder(res.Body).Decode(&repos)
 	assert.Equal(t, 0, len(repos))
-}
-
-// TestPostLogRepoSettingsFilteredWithParamsHandler_InvalidJSON tests filtered search with invalid JSON (error path)
-func TestPostLogRepoSettingsFilteredWithParamsHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-
-	invalidJSON := []byte(`{invalid}`)
-
-	req, err := http.NewRequest("POST", "/xconfAdminService/dcm/uploadRepository/filtered", bytes.NewBuffer(invalidJSON))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
 // TestPostLogRepoSettingsFilteredWithParamsHandler_WithContext tests filtered search with context

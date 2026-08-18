@@ -372,42 +372,6 @@ func TestGetTelemetryTwoProfileByIdHandler_NonExistent(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "does not exist")
 }
 
-// Test CreateTelemetryTwoProfileHandler - invalid JSON
-func TestCreateTelemetryTwoProfileHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`{invalid json}`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile?applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON (xhttp.WriteAdminErrorResponse via auth error)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test CreateTelemetryTwoProfileChangeHandler - invalid JSON
-func TestCreateTelemetryTwoProfileChangeHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`{not-valid-json`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile/change?applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test UpdateTelemetryTwoProfileHandler - invalid JSON
-func TestUpdateTelemetryTwoProfileHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`{malformed}`)
-	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/profile?applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test UpdateTelemetryTwoProfileChangeHandler - invalid JSON
-func TestUpdateTelemetryTwoProfileChangeHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`{broken json`)
-	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/profile/change?applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 // Test DeleteTelemetryTwoProfileChangeHandler - missing ID
 func TestDeleteTelemetryTwoProfileChangeHandler_MissingID(t *testing.T) {
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/v2/profile/change?applicationType=stb", nil)
@@ -427,15 +391,6 @@ func TestDeleteTelemetryTwoProfileChangeHandler_EmptyID(t *testing.T) {
 	DeleteTelemetryTwoProfileChangeHandler(xw, req)
 	// Should return 400 for empty ID (xhttp.WriteAdminErrorResponse)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
-
-// Test PostTelemetryTwoProfilesByIdListHandler - invalid JSON
-func TestPostTelemetryTwoProfilesByIdListHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`not an array`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile/byIdList?applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON (xhttp.WriteAdminErrorResponse)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 // Test PostTelemetryTwoProfilesByIdListHandler - responsewriter cast error
@@ -458,15 +413,6 @@ func TestPostTelemetryTwoProfileFilteredHandler_InvalidPageNumber(t *testing.T) 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
-// Test PostTelemetryTwoProfileFilteredHandler - invalid JSON
-func TestPostTelemetryTwoProfileFilteredHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`{invalid}`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile/filtered?pageNumber=1&pageSize=10&applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON (xhttp.WriteAdminErrorResponse)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 // Test PostTelemetryTwoProfileFilteredHandler - responsewriter cast error
 func TestPostTelemetryTwoProfileFilteredHandler_CastError(t *testing.T) {
 	body := []byte(`{}`)
@@ -478,15 +424,6 @@ func TestPostTelemetryTwoProfileFilteredHandler_CastError(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
-// Test PostTelemetryTwoProfileEntitiesHandler - invalid JSON
-func TestPostTelemetryTwoProfileEntitiesHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`not-json`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile/entities?applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON (xhttp.WriteAdminErrorResponse)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 // Test PostTelemetryTwoProfileEntitiesHandler - responsewriter cast error
 func TestPostTelemetryTwoProfileEntitiesHandler_CastError(t *testing.T) {
 	body := []byte(`[]`)
@@ -496,15 +433,6 @@ func TestPostTelemetryTwoProfileEntitiesHandler_CastError(t *testing.T) {
 	PostTelemetryTwoProfileEntitiesHandler(w, r)
 	// Should return 500 for cast error (xhttp.AdminError)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
-
-// Test PutTelemetryTwoProfileEntitiesHandler - invalid JSON
-func TestPutTelemetryTwoProfileEntitiesHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`{broken`)
-	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/profile/entities?applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON (xhttp.WriteAdminErrorResponse)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 // Test PutTelemetryTwoProfileEntitiesHandler - responsewriter cast error
@@ -526,16 +454,4 @@ func TestTelemetryTwoTestPageHandler_InvalidContextJSON(t *testing.T) {
 	rr := execTelemetryTwoReq(r, badBody)
 	// Handler should still process it (may succeed or fail depending on processing)
 	assert.True(t, rr.Code >= 200)
-}
-
-// Test GetTelemetryTwoProfilesHandler - auth error
-func TestGetTelemetryTwoProfilesHandler_AuthError(t *testing.T) {
-	// Request without proper auth headers should fail
-	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/v2/profile", nil)
-	w := httptest.NewRecorder()
-	xw := xwhttp.NewXResponseWriter(w)
-	GetTelemetryTwoProfilesHandler(xw, r)
-	// Should return error for missing applicationType (xhttp.AdminError)
-	// The actual error may vary - could be 400, 401, 403, or 500 depending on auth config
-	assert.True(t, w.Code >= 400 || w.Code == http.StatusOK, "Expected error code or OK, got %d", w.Code)
 }

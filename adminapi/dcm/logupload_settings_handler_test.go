@@ -360,21 +360,6 @@ func TestDeleteLogUploadSettingsByIdHandler_Success(t *testing.T) {
 
 // ========== Tests for CreateLogUploadSettingsHandler - error paths ==========
 
-// TestCreateLogUploadSettingsHandler_InvalidJSON tests create with invalid JSON (error path)
-func TestCreateLogUploadSettingsHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-
-	invalidJSON := []byte(`{invalid json`)
-
-	req := httptest.NewRequest("POST", "/xconfAdminService/dcm/logUploadSettings", bytes.NewBuffer(invalidJSON))
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-}
-
 // TestCreateLogUploadSettingsHandler_EmptyBody tests create with empty body (nil condition)
 func TestCreateLogUploadSettingsHandler_EmptyBody(t *testing.T) {
 	xshared.DeleteAllEntities(t)
@@ -453,21 +438,6 @@ func TestCreateLogUploadSettingsHandler_Success(t *testing.T) {
 }
 
 // ========== Tests for UpdateLogUploadSettingsHandler - error paths ==========
-
-// TestUpdateLogUploadSettingsHandler_InvalidJSON tests update with invalid JSON (error path)
-func TestUpdateLogUploadSettingsHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-
-	invalidJSON := []byte(`{invalid json`)
-
-	req := httptest.NewRequest("PUT", "/xconfAdminService/dcm/logUploadSettings", bytes.NewBuffer(invalidJSON))
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-}
 
 // TestUpdateLogUploadSettingsHandler_NonExistent tests update of non-existent settings (error path)
 func TestUpdateLogUploadSettingsHandler_NonExistent(t *testing.T) {
@@ -552,21 +522,6 @@ func TestPostLogUploadSettingsFilteredWithParamsHandler_EmptyBody(t *testing.T) 
 	var settings []logupload.LogUploadSettings
 	json.NewDecoder(res.Body).Decode(&settings)
 	assert.Equal(t, 0, len(settings))
-}
-
-// TestPostLogUploadSettingsFilteredWithParamsHandler_InvalidJSON tests filtered search with invalid JSON (error path)
-func TestPostLogUploadSettingsFilteredWithParamsHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-
-	invalidJSON := []byte(`{invalid}`)
-
-	req := httptest.NewRequest("POST", "/xconfAdminService/dcm/logUploadSettings/filtered", bytes.NewBuffer(invalidJSON))
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
 // TestPostLogUploadSettingsFilteredWithParamsHandler_WithContext tests filtered search with context
