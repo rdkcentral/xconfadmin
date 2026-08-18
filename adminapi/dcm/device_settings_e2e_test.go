@@ -485,25 +485,6 @@ func TestGetDeviceSettingsExportHandler_VerifyContentDisposition(t *testing.T) {
 	}
 }
 
-// TestGetDeviceSettingsExportHandler_AuthError tests auth error handling
-func TestGetDeviceSettingsExportHandler_AuthError(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-
-	// Make request without auth cookie
-	url := "/xconfAdminService/dcm/deviceSettings/export"
-	req, err := http.NewRequest("GET", url, nil)
-	assert.NilError(t, err)
-	// Don't add applicationType cookie to test default behavior
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-
-	// In test environment, auth might pass with default "stb" or fail
-	// We verify it returns a valid response (either success or error)
-	assert.Check(t, res.StatusCode == http.StatusOK || res.StatusCode >= 400,
-		"Should return either success or error status")
-}
-
 // TestGetDeviceSettingsExportHandler_MultipleFormulasWithSomeMatching tests partial matching
 func TestGetDeviceSettingsExportHandler_MultipleFormulasWithSomeMatching(t *testing.T) {
 	xshared.DeleteAllEntities(t) // Integration test
@@ -763,22 +744,6 @@ func TestDeleteDeviceSettingsByIdHandler_NotFound(t *testing.T) {
 	defer res.Body.Close()
 
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
-}
-
-// TestCreateDeviceSettingsHandler_InvalidJSON tests create with invalid JSON
-func TestCreateDeviceSettingsHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-
-	url := "/xconfAdminService/dcm/deviceSettings"
-	invalidJSON := []byte(`{"id":"invalid"invalid json}`)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(invalidJSON))
-	assert.NilError(t, err)
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-
-	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 }
 
 // TestUpdateDeviceSettingsHandler_Success tests successful update

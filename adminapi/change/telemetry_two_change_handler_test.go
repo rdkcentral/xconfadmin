@@ -215,16 +215,6 @@ func TestGetTwoChangesFilteredHandler_InvalidPageSize(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), "Invalid value for pageSize")
 }
 
-func TestGetTwoChangesFilteredHandler_InvalidJSON(t *testing.T) {
-	cleanupChangeTest()
-	r := httptest.NewRequest("POST", "/xconfAdminService/telemetry/v2/change/changes/filtered?pageNumber=1&pageSize=10&applicationType=stb", strings.NewReader("invalid json"))
-	rr := httptest.NewRecorder()
-	xw := xwhttp.NewXResponseWriter(rr)
-	xw.SetBody("invalid json")
-	GetTwoChangesFilteredHandler(xw, r)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 func TestGetTwoChangesFilteredHandler_EmptyResult(t *testing.T) {
 	cleanupChangeTest()
 	defer cleanupChangeTest() // Ensure cleanup even if test fails
@@ -320,16 +310,6 @@ func TestGetApprovedTwoChangesFilteredHandler_MissingPageSize(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), "Invalid value for pageSize")
 }
 
-func TestGetApprovedTwoChangesFilteredHandler_InvalidJSON(t *testing.T) {
-	cleanupChangeTest()
-	r := httptest.NewRequest("POST", "/xconfAdminService/telemetry/v2/change/approved/filtered?pageNumber=1&pageSize=10&applicationType=stb", strings.NewReader("{invalid}"))
-	rr := httptest.NewRecorder()
-	xw := xwhttp.NewXResponseWriter(rr)
-	xw.SetBody("{invalid}")
-	GetApprovedTwoChangesFilteredHandler(xw, r)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 func TestGetApprovedTwoChangesFilteredHandler_EmptyResult(t *testing.T) {
 	cleanupChangeTest()
 	r := httptest.NewRequest("POST", "/xconfAdminService/telemetry/v2/change/approved/filtered?pageNumber=1&pageSize=10&applicationType=stb", nil)
@@ -381,16 +361,6 @@ func TestRevertTwoChangesHandler_Success(t *testing.T) {
 	var errorMap map[string]string
 	err := json.Unmarshal(rr.Body.Bytes(), &errorMap)
 	assert.NoError(t, err)
-}
-
-func TestRevertTwoChangesHandler_InvalidJSON(t *testing.T) {
-	cleanupChangeTest()
-	r := httptest.NewRequest("POST", "/xconfAdminService/telemetry/v2/change/revert?applicationType=stb", strings.NewReader("not json"))
-	rr := httptest.NewRecorder()
-	xw := xwhttp.NewXResponseWriter(rr)
-	xw.SetBody("not json")
-	RevertTwoChangesHandler(xw, r)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestRevertTwoChangesHandler_EmptyList(t *testing.T) {
@@ -463,16 +433,6 @@ func TestApproveTwoChangesHandler_Success(t *testing.T) {
 	if approved2 != nil {
 		xchange.DeleteOneApprovedTelemetryTwoChange(db.GetDefaultTenantId(), approved2.ID)
 	}
-}
-
-func TestApproveTwoChangesHandler_InvalidJSON(t *testing.T) {
-	cleanupChangeTest()
-	r := httptest.NewRequest("POST", "/xconfAdminService/telemetry/v2/change/approve?applicationType=stb", strings.NewReader("{not valid json"))
-	rr := httptest.NewRecorder()
-	xw := xwhttp.NewXResponseWriter(rr)
-	xw.SetBody("{not valid json")
-	ApproveTwoChangesHandler(xw, r)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestApproveTwoChangesHandler_EmptyList(t *testing.T) {

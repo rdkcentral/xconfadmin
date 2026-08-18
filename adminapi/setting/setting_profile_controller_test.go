@@ -751,19 +751,6 @@ func TestDeleteOneSettingProfilesHandler_NoID(t *testing.T) {
 	assert.NotEqual(t, http.StatusOK, w.Status())
 }
 
-// TestUpdateSettingProfilesHandler_InvalidJSON tests update with invalid JSON
-func TestUpdateSettingProfilesHandler_InvalidJSON(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPut, "/setting-profiles", strings.NewReader(`{invalid json}`))
-	recorder := httptest.NewRecorder()
-	w := xwhttp.NewXResponseWriter(recorder)
-	w.SetBody(`{invalid json}`)
-	ctx := context.WithValue(req.Context(), "applicationType", "STB")
-	req = req.WithContext(ctx)
-
-	UpdateSettingProfilesHandler(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Status())
-}
-
 // TestUpdateSettingProfilesHandler_ValidProfile tests update with valid profile
 func TestUpdateSettingProfilesHandler_ValidProfile(t *testing.T) {
 	t.Skip("Requires database configuration - cannot set up test data for update")

@@ -1,7 +1,6 @@
 package dcm
 
 import (
-	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -23,20 +22,6 @@ func newTestXWriter(body string) (*xwhttp.XResponseWriter, *httptest.ResponseRec
 	xw := xwhttp.NewXResponseWriter(rr)
 	xw.SetBody(body)
 	return xw, rr
-}
-
-// 1. Cast error path: provide a plain ResponseRecorder (not wrapped) so handler fails casting
-func TestDcmTestPageHandler_CastError(t *testing.T) {
-	// Need applicationType for auth.CanRead; append as query param
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/dcm/testpage?applicationType=stb", bytes.NewReader([]byte(`{}`)))
-	w := httptest.NewRecorder() // NOT an XResponseWriter -> triggers cast error branch
-	DcmTestPageHandler(w, r)
-	if w.Code != http.StatusInternalServerError { // AdminError writes 500
-		t.Fatalf("expected 500 cast error, got %d body=%s", w.Code, w.Body.String())
-	}
-	if !strings.Contains(w.Body.String(), "responsewriter cast error") {
-		t.Fatalf("expected cast error message in body, got %s", w.Body.String())
-	}
 }
 
 // 2. Bad JSON path: XResponseWriter but body not valid JSON

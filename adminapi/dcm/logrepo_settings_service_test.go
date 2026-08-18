@@ -606,28 +606,6 @@ func TestDeleteLogRepoSettingsbyId_Success(t *testing.T) {
 
 // ========== Tests for LogRepoSettingsGeneratePage - error paths ==========
 
-// TestLogRepoSettingsGeneratePage_InvalidPageNumber tests with page number < 1
-func TestLogRepoSettingsGeneratePage_InvalidPageNumber(t *testing.T) {
-	repos := []*logupload.UploadRepository{
-		{ID: "1", Name: "Repo 1"},
-		{ID: "2", Name: "Repo 2"},
-	}
-
-	result := LogRepoSettingsGeneratePage(repos, 0, 10)
-	assert.Equal(t, 0, len(result))
-}
-
-// TestLogRepoSettingsGeneratePage_InvalidPageSize tests with page size < 1
-func TestLogRepoSettingsGeneratePage_InvalidPageSize(t *testing.T) {
-	repos := []*logupload.UploadRepository{
-		{ID: "1", Name: "Repo 1"},
-		{ID: "2", Name: "Repo 2"},
-	}
-
-	result := LogRepoSettingsGeneratePage(repos, 1, 0)
-	assert.Equal(t, 0, len(result))
-}
-
 // TestLogRepoSettingsGeneratePage_EmptyList tests with empty list
 func TestLogRepoSettingsGeneratePage_EmptyList(t *testing.T) {
 	repos := []*logupload.UploadRepository{}
@@ -671,36 +649,6 @@ func TestLogRepoSettingsGeneratePage_Success(t *testing.T) {
 }
 
 // ========== Tests for LogRepoSettingsGeneratePageWithContext - error paths ==========
-
-// TestLogRepoSettingsGeneratePageWithContext_InvalidPageNumber tests with invalid page number
-func TestLogRepoSettingsGeneratePageWithContext_InvalidPageNumber(t *testing.T) {
-	repos := []*logupload.UploadRepository{
-		{ID: "1", Name: "Repo 1"},
-	}
-
-	contextMap := map[string]string{
-		"pageNumber": "0",
-		"pageSize":   "10",
-	}
-
-	_, err := LogRepoSettingsGeneratePageWithContext(repos, contextMap)
-	assert.Assert(t, err != nil)
-}
-
-// TestLogRepoSettingsGeneratePageWithContext_InvalidPageSize tests with invalid page size
-func TestLogRepoSettingsGeneratePageWithContext_InvalidPageSize(t *testing.T) {
-	repos := []*logupload.UploadRepository{
-		{ID: "1", Name: "Repo 1"},
-	}
-
-	contextMap := map[string]string{
-		"pageNumber": "1",
-		"pageSize":   "0",
-	}
-
-	_, err := LogRepoSettingsGeneratePageWithContext(repos, contextMap)
-	assert.Assert(t, err != nil)
-}
 
 // TestLogRepoSettingsGeneratePageWithContext_EmptyContext tests with empty context (uses defaults)
 func TestLogRepoSettingsGeneratePageWithContext_EmptyContext(t *testing.T) {

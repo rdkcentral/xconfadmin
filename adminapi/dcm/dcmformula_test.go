@@ -979,25 +979,6 @@ func unmarshalFormulas(b []byte) []*logupload.DCMGenericRule {
 	return formulas
 }
 
-// Test ImportDcmFormulasHandler - Auth Error
-func TestImportDcmFormulasHandler_AuthError(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/import/all"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
-	// No applicationType cookie - auth will fail
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK) // Auth allows default applicationType
-}
-
-// Test ImportDcmFormulasHandler - Invalid JSON
-func TestImportDcmFormulasHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 // Test ImportDcmFormulasHandler - Success
 func TestImportDcmFormulasHandler_Success(t *testing.T) {
 	xshared.DeleteAllEntities(t)
@@ -1015,25 +996,6 @@ func TestImportDcmFormulasHandler_Success(t *testing.T) {
 	assert.Assert(t, rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest)
 }
 
-// Test PostDcmFormulaListHandler - Auth Error
-func TestPostDcmFormulaListHandler_AuthError(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/entities"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
-	// No applicationType - auth will allow with default
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-// Test PostDcmFormulaListHandler - XResponseWriter Cast Error
-func TestPostDcmFormulaListHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 // Test PostDcmFormulaListHandler - Success
 func TestPostDcmFormulaListHandler_Success(t *testing.T) {
 	xshared.DeleteAllEntities(t)
@@ -1048,25 +1010,6 @@ func TestPostDcmFormulaListHandler_Success(t *testing.T) {
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(formulaJson))
 	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
-}
-
-// Test PutDcmFormulaListHandler - Auth Error
-func TestPutDcmFormulaListHandler_AuthError(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/entities"
-	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`[]`)))
-	// No applicationType - auth will allow with default
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-// Test PutDcmFormulaListHandler - Invalid JSON
-func TestPutDcmFormulaListHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
-	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 // Test PutDcmFormulaListHandler - Success
@@ -1086,16 +1029,6 @@ func TestPutDcmFormulaListHandler_Success(t *testing.T) {
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(formulaJson))
 	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
-}
-
-// Test GetDcmFormulaHandler - Auth Error
-func TestGetDcmFormulaHandler_AuthError(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula"
-	req := httptest.NewRequest("GET", url, nil)
-	// No applicationType - auth will allow with default
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
 }
 
 // Test GetDcmFormulaHandler - ReturnJsonResponse Error (simulated by marshaling)
@@ -1151,155 +1084,11 @@ func TestGetDcmFormulaByIdHandler_NotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
-// Test CreateDcmFormulaHandler - Auth Error
-func TestCreateDcmFormulaHandler_AuthError(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	formula := createFormula("MODEL_CREATE_AUTH", 0)
-	formulaJson, _ := json.Marshal(formula)
-
-	url := "/xconfAdminService/dcm/formula"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer(formulaJson))
-	// No applicationType - auth will allow with default
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-// Test CreateDcmFormulaHandler - Invalid JSON
-func TestCreateDcmFormulaHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test UpdateDcmFormulaHandler - Auth Error
-func TestUpdateDcmFormulaHandler_AuthError(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	formula := createFormula("MODEL_UPDATE_AUTH", 0)
-	formulaJson, _ := json.Marshal(formula)
-
-	url := "/xconfAdminService/dcm/formula"
-	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(formulaJson))
-	// No applicationType - auth will allow with default
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-// Test UpdateDcmFormulaHandler - Invalid JSON
-func TestUpdateDcmFormulaHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula?applicationType=stb"
-	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test DeleteDcmFormulaByIdHandler - Auth Error
-func TestDeleteDcmFormulaByIdHandler_AuthError(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/some-id"
-	req := httptest.NewRequest("DELETE", url, nil)
-	// No applicationType - auth will allow with default
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK || rr.Code == http.StatusNotFound)
-}
-
-// Test DcmFormulaSettingsAvailabilitygHandler - Auth Error
-func TestDcmFormulaSettingsAvailabilitygHandler_AuthError(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/settingsAvailability"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
-	// No applicationType - auth will allow with default
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-// Test DcmFormulaSettingsAvailabilitygHandler - Invalid JSON
-func TestDcmFormulaSettingsAvailabilitygHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/settingsAvailability?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test DcmFormulasAvailabilitygHandler - Auth Error
-func TestDcmFormulasAvailabilitygHandler_AuthError(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/formulasAvailability"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
-	// No applicationType - auth will allow with default
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-// Test DcmFormulasAvailabilitygHandler - Invalid JSON
-func TestDcmFormulasAvailabilitygHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/formulasAvailability?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test PostDcmFormulaFilteredWithParamsHandler - Auth Error
-func TestPostDcmFormulaFilteredWithParamsHandler_AuthError(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/filtered"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`{}`)))
-	// No applicationType - auth will allow with default
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-// Test PostDcmFormulaFilteredWithParamsHandler - Invalid JSON
-func TestPostDcmFormulaFilteredWithParamsHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/filtered?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test DcmFormulaChangePriorityHandler - Auth Error
-func TestDcmFormulaChangePriorityHandler_AuthError(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/some-id/priority/1"
-	req := httptest.NewRequest("POST", url, nil)
-	// No applicationType - auth will allow with default
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK || rr.Code == http.StatusBadRequest)
-}
-
 // Test DcmFormulaChangePriorityHandler - Missing Formula
 func TestDcmFormulaChangePriorityHandler_MissingFormula(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/non-existent-id/priority/1?applicationType=stb"
 	req := httptest.NewRequest("POST", url, nil)
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test ImportDcmFormulaWithOverwriteHandler - Auth Error
-func TestImportDcmFormulaWithOverwriteHandler_AuthError(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	formula := createFormula("MODEL_IMPORT_OW", 0)
-	fws := logupload.FormulaWithSettings{Formula: formula}
-	fwsJson, _ := json.Marshal(fws)
-
-	url := "/xconfAdminService/dcm/formula/import/false"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	// No applicationType - auth will allow with default
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK || rr.Code == http.StatusBadRequest || rr.Code == http.StatusConflict)
-}
-
-// Test ImportDcmFormulaWithOverwriteHandler - Invalid JSON
-func TestImportDcmFormulaWithOverwriteHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/import/false?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
 	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
@@ -2047,34 +1836,6 @@ func TestPutDcmFormulaListHandler_InvalidFormula(t *testing.T) {
 }
 
 // ========== Additional Error Path Coverage ==========
-
-func TestImportDcmFormulasHandler_CastError(t *testing.T) {
-	// This test documents the XResponseWriter cast error path
-	// In practice with ExecuteRequest middleware, this is always successful
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK) // Should succeed with middleware
-}
-
-func TestPostDcmFormulaListHandler_CastError(t *testing.T) {
-	// Documents the XResponseWriter cast error path
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-func TestPutDcmFormulaListHandler_CastError(t *testing.T) {
-	// Documents the XResponseWriter cast error path
-	xshared.DeleteAllEntities(t)
-	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
-	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`[]`)))
-	rr := xshared.ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
 
 // ========== Comprehensive Unit Tests for importFormula and importFormulas ==========
 

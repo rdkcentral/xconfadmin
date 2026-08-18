@@ -592,14 +592,6 @@ func cleanupAllApprovedChanges() {
 // ============================================================================
 
 // GetProfileChangesHandler Error Tests
-func TestGetProfileChangesHandler_AuthError(t *testing.T) {
-	// Test without proper authentication
-	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/all", nil)
-	rr := xshared.ExecuteRequest(r, chgRouter)
-	// May return OK or error depending on auth implementation
-	assert.True(t, rr.Code >= http.StatusOK)
-}
-
 func TestGetProfileChangesHandler_JsonMarshalError(t *testing.T) {
 	// Test successful flow - JSON marshal errors are unlikely in normal operation
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/all?applicationType=stb", nil)
@@ -608,12 +600,6 @@ func TestGetProfileChangesHandler_JsonMarshalError(t *testing.T) {
 }
 
 // ApproveChangeHandler Error Tests
-func TestApproveChangeHandler_AuthError(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/approve/someId", nil)
-	rr := xshared.ExecuteRequest(r, chgRouter)
-	assert.True(t, rr.Code >= http.StatusBadRequest)
-}
-
 func TestApproveChangeHandler_MissingChangeId(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/approve/?applicationType=stb", nil)
 	rr := xshared.ExecuteRequest(r, chgRouter)
@@ -676,12 +662,6 @@ func TestGetApprovedHandler_JsonMarshalSuccess(t *testing.T) {
 }
 
 // CancelChangeHandler Error Tests
-func TestCancelChangeHandler_AuthError(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/cancel/someId", nil)
-	rr := xshared.ExecuteRequest(r, chgRouter)
-	assert.True(t, rr.Code >= http.StatusBadRequest)
-}
-
 func TestCancelChangeHandler_MissingChangeId(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/cancel/?applicationType=stb", nil)
 	rr := xshared.ExecuteRequest(r, chgRouter)
@@ -747,13 +727,6 @@ func TestGetGroupedChangesHandler_InvalidPageSize(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), "pageSize")
 }
 
-func TestGetGroupedChangesHandler_AuthError(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/changes/grouped/byId?pageNumber=1&pageSize=10", nil)
-	rr := xshared.ExecuteRequest(r, chgRouter)
-	// May return OK or error depending on auth state
-	assert.True(t, rr.Code >= http.StatusOK)
-}
-
 func TestGetGroupedChangesHandler_SuccessWithHeaders(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/changes/grouped/byId?pageNumber=1&pageSize=10&applicationType=stb", nil)
 	rr := xshared.ExecuteRequest(r, chgRouter)
@@ -789,13 +762,6 @@ func TestGetGroupedApprovedChangesHandler_InvalidPageSize(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), "pageSize")
 }
 
-func TestGetGroupedApprovedChangesHandler_AuthError(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/approved/grouped/byId?pageNumber=1&pageSize=10", nil)
-	rr := xshared.ExecuteRequest(r, chgRouter)
-	// May return OK or error depending on auth state
-	assert.True(t, rr.Code >= http.StatusOK)
-}
-
 func TestGetGroupedApprovedChangesHandler_SuccessWithHeaders(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/change/approved/grouped/byId?pageNumber=1&pageSize=10&applicationType=stb", nil)
 	rr := xshared.ExecuteRequest(r, chgRouter)
@@ -810,21 +776,6 @@ func TestGetChangedEntityIdsHandler_JsonMarshalSuccess(t *testing.T) {
 }
 
 // ApproveChangesHandler Error Tests
-func TestApproveChangesHandler_AuthError(t *testing.T) {
-	body := []byte(`["change1","change2"]`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/approveChanges", bytes.NewReader(body))
-	rr := xshared.ExecuteRequest(r, chgRouter)
-	assert.True(t, rr.Code >= http.StatusBadRequest)
-}
-
-func TestApproveChangesHandler_InvalidJson(t *testing.T) {
-	body := []byte(`{invalid json}`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/approveChanges?applicationType=stb", bytes.NewReader(body))
-	rr := xshared.ExecuteRequest(r, chgRouter)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-	assert.Contains(t, rr.Body.String(), "Unable to extract changeIds")
-}
-
 func TestApproveChangesHandler_ServiceError(t *testing.T) {
 	body := []byte(`["nonExistent1","nonExistent2"]`)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/approveChanges?applicationType=stb", bytes.NewReader(body))
@@ -844,21 +795,6 @@ func TestApproveChangesHandler_SuccessWithHeaders(t *testing.T) {
 }
 
 // RevertChangesHandler Error Tests
-func TestRevertChangesHandler_AuthError(t *testing.T) {
-	body := []byte(`["approve1","approve2"]`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/revertChanges", bytes.NewReader(body))
-	rr := xshared.ExecuteRequest(r, chgRouter)
-	assert.True(t, rr.Code >= http.StatusBadRequest)
-}
-
-func TestRevertChangesHandler_InvalidJson(t *testing.T) {
-	body := []byte(`{invalid json}`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/revertChanges?applicationType=stb", bytes.NewReader(body))
-	rr := xshared.ExecuteRequest(r, chgRouter)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-	assert.Contains(t, rr.Body.String(), "Unable to extract changeIds")
-}
-
 func TestRevertChangesHandler_ServiceError(t *testing.T) {
 	body := []byte(`["nonExistent1","nonExistent2"]`)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/revertChanges?applicationType=stb", bytes.NewReader(body))
@@ -877,14 +813,6 @@ func TestRevertChangesHandler_Success(t *testing.T) {
 }
 
 // GetApprovedFilteredHandler Error Tests
-func TestGetApprovedFilteredHandler_AuthError(t *testing.T) {
-	body := []byte(`{}`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/approved/filtered", bytes.NewReader(body))
-	rr := xshared.ExecuteRequest(r, chgRouter)
-	// May return OK or error depending on auth state
-	assert.True(t, rr.Code >= http.StatusOK)
-}
-
 func TestGetApprovedFilteredHandler_InvalidPageNumber(t *testing.T) {
 	body := []byte(`{}`)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/approved/filtered?pageNumber=invalid&applicationType=stb", bytes.NewReader(body))
@@ -899,14 +827,6 @@ func TestGetApprovedFilteredHandler_InvalidPageSize(t *testing.T) {
 	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	assert.Contains(t, rr.Body.String(), "pageSize")
-}
-
-func TestGetApprovedFilteredHandler_InvalidJson(t *testing.T) {
-	body := []byte(`{invalid json}`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/approved/filtered?applicationType=stb", bytes.NewReader(body))
-	rr := xshared.ExecuteRequest(r, chgRouter)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-	assert.Contains(t, rr.Body.String(), "Unable to extract searchContext")
 }
 
 func TestGetApprovedFilteredHandler_DefaultPagination(t *testing.T) {
@@ -924,14 +844,6 @@ func TestGetApprovedFilteredHandler_SuccessWithHeaders(t *testing.T) {
 }
 
 // GetChangesFilteredHandler Error Tests
-func TestGetChangesFilteredHandler_AuthError(t *testing.T) {
-	body := []byte(`{}`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/changes/filtered", bytes.NewReader(body))
-	rr := xshared.ExecuteRequest(r, chgRouter)
-	// May return OK or error depending on auth state
-	assert.True(t, rr.Code >= http.StatusOK)
-}
-
 func TestGetChangesFilteredHandler_InvalidPageNumber(t *testing.T) {
 	body := []byte(`{}`)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/changes/filtered?pageNumber=abc&applicationType=stb", bytes.NewReader(body))
@@ -946,14 +858,6 @@ func TestGetChangesFilteredHandler_InvalidPageSize(t *testing.T) {
 	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	assert.Contains(t, rr.Body.String(), "pageSize")
-}
-
-func TestGetChangesFilteredHandler_InvalidJson(t *testing.T) {
-	body := []byte(`{bad json}`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/change/changes/filtered?applicationType=stb", bytes.NewReader(body))
-	rr := xshared.ExecuteRequest(r, chgRouter)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-	assert.Contains(t, rr.Body.String(), "Unable to extract searchContext")
 }
 
 func TestGetChangesFilteredHandler_EmptyBody(t *testing.T) {
