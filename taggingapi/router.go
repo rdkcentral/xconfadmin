@@ -26,6 +26,11 @@ func routeTaggingServiceApis(r *mux.Router, s *xhttp.WebconfigServer) {
 	taggingPath := r.PathPrefix("/taggingService/tags").Subrouter()
 
 	taggingPath.HandleFunc("", tag.GetAllTagsHandler).Methods("GET").Name("Get-all-tags")
+
+	taggingPath.HandleFunc("/sync", tag.TriggerTagSyncHandler).Methods("POST").Name("Trigger-tag-sync")
+	taggingPath.HandleFunc("/sync/status", tag.TagSyncStatusHandler).Methods("GET").Name("Tag-sync-status")
+	taggingPath.HandleFunc("/sync/abort", tag.AbortTagSyncHandler).Methods("POST").Name("Abort-tag-sync")
+
 	taggingPath.HandleFunc("/{tag}", tag.GetTagByIdHandler).Methods("GET").Name("Get-tag-by-id")
 	taggingPath.HandleFunc("/{tag}/members", tag.AddMembersToTagHandler).Methods("PUT").Name("Add-members-to-tag")
 	taggingPath.HandleFunc("/{tag}", tag.DeleteTagHandler).Methods("DELETE").Name("Delete-tag-v2")

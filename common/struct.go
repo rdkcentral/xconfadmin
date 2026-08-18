@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -91,8 +92,28 @@ func GetBooleanAppSetting(key string, vargs ...bool) bool {
 		return defaultVal
 	}
 
-	setting := inst.(*shared.AppSetting)
-	return setting.Value.(bool)
+	setting, ok := inst.(*shared.AppSetting)
+	if !ok {
+		log.Warn(fmt.Sprintf("AppSetting %s has an unexpected record type; using default %v", key, defaultVal))
+		return defaultVal
+	}
+	return coerceBoolSetting(key, setting.Value, defaultVal)
+}
+
+// coerceBoolSetting tolerates the JSON types operators actually send for a
+// boolean setting: a real bool, or a string like "true"/"false". Anything
+// else falls back to the default instead of panicking or being ignored.
+func coerceBoolSetting(key string, value interface{}, defaultVal bool) bool {
+	switch v := value.(type) {
+	case bool:
+		return v
+	case string:
+		if parsed, err := strconv.ParseBool(strings.TrimSpace(v)); err == nil {
+			return parsed
+		}
+	}
+	log.Warn(fmt.Sprintf("AppSetting %s has a non-boolean value %v; using default %v", key, value, defaultVal))
+	return defaultVal
 }
 
 type ResponseEntity struct {

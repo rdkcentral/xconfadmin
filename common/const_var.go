@@ -179,6 +179,7 @@ const (
 	PROP_LOCKDOWN_ENDTIME               = "LockdownEndTime"
 	PROP_PRECOOK_LOCKDOWN_ENABLED       = "PrecookLockdownEnabled"
 	PROP_CANARY_TIMEZONE_LIST           = "CanaryTimezoneList"
+	PROP_TAGGING_SYNC_ENABLED           = "TaggingSyncEnabled"
 )
 
 const (
@@ -260,6 +261,7 @@ var AllAppSettings = []string{
 	PROP_LOCKDOWN_ENDTIME,
 	PROP_PRECOOK_LOCKDOWN_ENABLED,
 	PROP_CANARY_TIMEZONE_LIST,
+	PROP_TAGGING_SYNC_ENABLED,
 }
 
 const (
