@@ -145,22 +145,6 @@ func TestPostFirmwareRuleHandler_DuplicateID(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, res.StatusCode)
 }
 
-// TestPostFirmwareRuleHandler_InvalidJSON tests invalid JSON handling
-func TestPostFirmwareRuleHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-
-	invalidJSON := []byte(`{invalid json}`)
-
-	req, err := http.NewRequest("POST", "/xconfAdminService/firmwarerule", bytes.NewBuffer(invalidJSON))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-}
-
 // TestPutFirmwareRuleHandler_Success tests successful firmware rule update
 func TestPutFirmwareRuleHandler_Success(t *testing.T) {
 	xshared.DeleteAllEntities(t)

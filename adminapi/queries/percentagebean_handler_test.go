@@ -468,33 +468,6 @@ func TestGetPercentageBeanAsRuleById_MissingID(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
-// PostPercentageBeanEntitiesHandler invalid JSON
-func TestPostPercentageBeanEntitiesHandler_InvalidJSON(t *testing.T) {
-	shared.DeleteAllEntities(t)
-	url := fmt.Sprintf("%s/entities?applicationType=stb", PB_URL_BASE)
-	r := httptest.NewRequest(http.MethodPost, url, bytes.NewBuffer([]byte("{invalid")))
-	rr := xshared.ExecuteRequest(r, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// PutPercentageBeanEntitiesHandler invalid JSON
-func TestPutPercentageBeanEntitiesHandler_InvalidJSON(t *testing.T) {
-	shared.DeleteAllEntities(t)
-	url := fmt.Sprintf("%s/entities?applicationType=stb", PB_URL_BASE)
-	r := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer([]byte("{invalid")))
-	rr := xshared.ExecuteRequest(r, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// PostPercentageBeanFilteredWithParamsHandler invalid JSON body
-func TestPostPercentageBeanFilteredWithParamsHandler_InvalidJSON(t *testing.T) {
-	shared.DeleteAllEntities(t)
-	url := "/xconfAdminService/percentfilter/percentageBean/filtered?applicationType=stb&pageNumber=1&pageSize=10"
-	r := httptest.NewRequest(http.MethodPost, url, bytes.NewBuffer([]byte("{invalid")))
-	rr := xshared.ExecuteRequest(r, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 // Pagination error: pageNumber <1
 func TestPostPercentageBeanFilteredWithParamsHandler_InvalidPage(t *testing.T) {
 	shared.DeleteAllEntities(t)

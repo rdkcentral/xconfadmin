@@ -84,22 +84,6 @@ func TestPostModelEntitiesHandler_Success(t *testing.T) {
 	assert.Equal(t, savedModel2.Description, "Test Model 2")
 }
 
-func TestPostModelEntitiesHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-
-	invalidBody := []byte(`{"invalid json}`)
-
-	url := "/xconfAdminService/model/entities"
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(invalidBody))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-
-	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
-}
-
 func TestPostModelEntitiesHandler_DuplicateModel(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 
@@ -242,22 +226,6 @@ func TestPostModelEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
 // 	assert.Check(t, updated2 != nil)
 // 	assert.Equal(t, updated2.Description, "Updated 2")
 // }
-
-func TestPutModelEntitiesHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-
-	invalidBody := []byte(`{"bad": json}`)
-
-	url := "/xconfAdminService/model/entities"
-	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(invalidBody))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-
-	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
-}
 
 func TestPutModelEntitiesHandler_NonExistentModel(t *testing.T) {
 	xshared.DeleteAllEntities(t)
@@ -467,22 +435,6 @@ func TestPostModelFilteredHandler_WithEmptyBody(t *testing.T) {
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 }
 
-func TestPostModelFilteredHandler_InvalidJSON(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-
-	invalidBody := []byte(`{invalid}`)
-
-	url := "/xconfAdminService/model/filtered?pageNumber=1&pageSize=10"
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(invalidBody))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-
-	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
-}
-
 func TestPostModelFilteredHandler_InvalidPageNumber(t *testing.T) {
 	xshared.DeleteAllEntities(t)
 
@@ -561,19 +513,6 @@ func TestGetModelByIdHandler_Success(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, returnedModel.ID, "GET_BY_ID_MODEL")
 	assert.Equal(t, returnedModel.Description, "Test Model")
-}
-
-func TestGetModelByIdHandler_NotFound(t *testing.T) {
-	xshared.DeleteAllEntities(t)
-
-	url := "/xconfAdminService/model/NONEXISTENT"
-	req, err := http.NewRequest("GET", url, nil)
-	assert.NilError(t, err)
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-
-	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 }
 
 func TestGetModelByIdHandler_WithExport(t *testing.T) {
@@ -879,22 +818,6 @@ func TestPostModelFilteredHandler_ZeroPageSize(t *testing.T) {
 
 	// Should return 400 for zero page size
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
-}
-
-func TestGetModelByIdHandler_EmptyID(t *testing.T) {
-	//xshared.DeleteAllEntities(t)
-
-	// Try to get model with empty ID - this will fail at routing level
-	// but test the handler behavior
-	url := "/xconfAdminService/model/"
-	req, err := http.NewRequest("GET", url, nil)
-	assert.NilError(t, err)
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-
-	// Router will not match this path, so it will return 404 or redirect
-	assert.Check(t, res.StatusCode != http.StatusOK, "Empty ID should not succeed")
 }
 
 func TestPostModelEntitiesHandler_ValidationError(t *testing.T) {

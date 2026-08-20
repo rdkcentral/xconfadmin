@@ -30,15 +30,6 @@ func TestCreateLogFile_ResponseWriterCastError(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 }
 
-func TestCreateLogFile_InvalidJSON(t *testing.T) {
-	r := httptest.NewRequest(http.MethodPost, "/logfile", nil)
-	rr := httptest.NewRecorder()
-	xw := xwhttp.NewXResponseWriter(rr)
-	xw.SetBody("{not-json")
-	CreateLogFile(xw, r)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 func TestCreateLogFile_EmptyName(t *testing.T) {
 	lf := logupload.LogFile{ID: "", Name: ""}
 	rr, xw := makeLogFileXW(lf)

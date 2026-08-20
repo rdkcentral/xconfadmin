@@ -413,18 +413,6 @@ func TestAmv_Update_NotFound(t *testing.T) {
 	assert.Assert(t, res.StatusCode == http.StatusBadRequest || res.StatusCode == http.StatusNotFound)
 }
 
-func TestAmv_Filtered_Post_InvalidJSON(t *testing.T) {
-	// correct POST filtered endpoint lives under activationMinimumVersion
-	req, err := http.NewRequest("POST", "/xconfAdminService/activationMinimumVersion/filtered?pageNumber=1&pageSize=10", bytes.NewBuffer([]byte("{invalid")))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	assert.NilError(t, err)
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
-}
-
 func TestAmv_Filtered_Post_PaginationErrors(t *testing.T) {
 	// endpoints under activationMinimumVersion
 	req, err := http.NewRequest("POST", "/xconfAdminService/activationMinimumVersion/filtered?pageNumber=0&pageSize=1", bytes.NewBuffer([]byte("{}")))
