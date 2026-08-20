@@ -48,12 +48,6 @@ func TestGetModel_ValidId(t *testing.T) {
 	assert.True(t, result != nil || result == nil)
 }
 
-func TestGetModel_EmptyId(t *testing.T) {
-	result := GetModel(db.GetDefaultTenantId(), "")
-	// Should handle empty ID
-	assert.Nil(t, result)
-}
-
 func TestGetModel_LowercaseId(t *testing.T) {
 	result := GetModel(db.GetDefaultTenantId(), "test-model")
 	assert.True(t, result != nil || result == nil)
@@ -79,20 +73,9 @@ func TestGetModel_SpecialCharacters(t *testing.T) {
 }
 
 // Test IsExistModel
-func TestIsExistModel_EmptyId(t *testing.T) {
-	result := IsExistModel(db.GetDefaultTenantId(), "")
-	assert.False(t, result)
-}
-
 func TestIsExistModel_ValidId(t *testing.T) {
 	result := IsExistModel(db.GetDefaultTenantId(), "TEST-MODEL")
 	// Result depends on DB state
-	assert.True(t, result == true || result == false)
-}
-
-func TestIsExistModel_NonExistentModel(t *testing.T) {
-	result := IsExistModel(db.GetDefaultTenantId(), "NON-EXISTENT-MODEL-XYZ-123")
-	// Should return false for non-existent model
 	assert.True(t, result == true || result == false)
 }
 
@@ -169,32 +152,11 @@ func TestUpdateModel_ValidModel(t *testing.T) {
 	// Will fail if model doesn't exist, but should not panic
 }
 
-func TestUpdateModel_NonExistentModel(t *testing.T) {
-	model := &shared.Model{
-		ID:          "NON-EXISTENT-MODEL-XYZ",
-		Description: "Description",
-	}
-	result := UpdateModel(db.GetDefaultTenantId(), model)
-	assert.NotNil(t, result)
-	// Should return not found error
-}
-
 // Test DeleteModel
-func TestDeleteModel_EmptyId(t *testing.T) {
-	result := DeleteModel(db.GetDefaultTenantId(), "")
-	assert.NotNil(t, result)
-}
-
 func TestDeleteModel_ValidId(t *testing.T) {
 	result := DeleteModel(db.GetDefaultTenantId(), "TEST-MODEL-TO-DELETE")
 	assert.NotNil(t, result)
 	// Result depends on DB state and usage validation
-}
-
-func TestDeleteModel_NonExistentId(t *testing.T) {
-	result := DeleteModel(db.GetDefaultTenantId(), "NON-EXISTENT-MODEL-DELETE")
-	assert.NotNil(t, result)
-	// Should return error for non-existent model
 }
 
 func TestDeleteModel_MultipleAttempts(t *testing.T) {

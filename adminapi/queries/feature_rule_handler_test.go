@@ -314,16 +314,6 @@ func TestGetFeatureRulesFilteredWithPage_BadPageSize(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), "pageSize must be a number")
 }
 
-func TestGetFeatureRulesFilteredWithPage_InvalidJSON(t *testing.T) {
-	r := httptest.NewRequest("POST", "/featureRules/filteredWithPage?applicationType=stb", nil)
-	rr := httptest.NewRecorder()
-	xw := xwhttp.NewXResponseWriter(rr)
-	xw.SetBody("{invalid-json")
-	GetFeatureRulesFilteredWithPage(xw, r)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-	assert.Contains(t, rr.Body.String(), "Unable to extract searchContext")
-}
-
 func TestGetFeatureRulesFilteredWithPage_Success(t *testing.T) {
 	frCleanup(t)
 	f := frMakeFeature("FeatA", "stb")

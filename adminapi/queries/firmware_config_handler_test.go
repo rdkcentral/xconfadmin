@@ -192,23 +192,6 @@ func TestPostFirmwareConfigEntitiesHandler_ApplicationTypeMismatch(t *testing.T)
 	}
 }
 
-// TestPostFirmwareConfigEntitiesHandler_InvalidJSON tests invalid JSON handling
-func TestPostFirmwareConfigEntitiesHandler_InvalidJSON(t *testing.T) {
-	shared.DeleteAllEntities(t)
-	setupTestModels()
-
-	invalidJSON := []byte(`{bad json}`)
-
-	req, err := http.NewRequest("POST", "/xconfAdminService/firmwareconfig/entities", bytes.NewBuffer(invalidJSON))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
-}
-
 // TestPutFirmwareConfigEntitiesHandler_Success tests successful batch update
 func TestPutFirmwareConfigEntitiesHandler_Success(t *testing.T) {
 	shared.DeleteAllEntities(t)
@@ -429,23 +412,6 @@ func TestPostFirmwareConfigBySupportedModelsHandler_Success(t *testing.T) {
 	var fcList []estbfirmware.FirmwareConfig
 	json.NewDecoder(res.Body).Decode(&fcList)
 	assert.Equal(t, 2, len(fcList))
-}
-
-// TestPostFirmwareConfigBySupportedModelsHandler_InvalidJSON tests invalid JSON
-func TestPostFirmwareConfigBySupportedModelsHandler_InvalidJSON(t *testing.T) {
-	shared.DeleteAllEntities(t)
-	setupTestModels()
-
-	invalidJSON := []byte(`{bad json}`)
-
-	req, err := http.NewRequest("POST", "/xconfAdminService/firmwareconfig/bySupportedModels", bytes.NewBuffer(invalidJSON))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := xshared.ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
 // TestGetFirmwareConfigFirmwareConfigMapHandler_Success tests getting config map

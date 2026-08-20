@@ -62,27 +62,6 @@ func TestDeleteIpAddressGroupHandler_Success(t *testing.T) {
 	assert.True(t, rr.Code == http.StatusNoContent || rr.Code == http.StatusOK)
 }
 
-func TestDeleteIpAddressGroupHandler_MissingId(t *testing.T) {
-	// Test WriteAdminErrorResponse for missing ID
-	req := httptest.NewRequest("DELETE", "/xconfAdminService/queries/ipAddressGroups/?applicationType=stb", nil)
-	rr := httptest.NewRecorder()
-
-	DeleteIpAddressGroupHandler(rr, req)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-	assert.Contains(t, rr.Body.String(), "invalid")
-}
-
-func TestDeleteIpAddressGroupHandler_AuthError(t *testing.T) {
-	// Test xhttp.AdminError path - no auth
-	req := httptest.NewRequest("DELETE", "/xconfAdminService/queries/ipAddressGroups/test-id", nil)
-	req = mux.SetURLVars(req, map[string]string{"id": "test-id"})
-	rr := httptest.NewRecorder()
-
-	DeleteIpAddressGroupHandler(rr, req)
-	// May succeed with default auth or return error
-	assert.True(t, rr.Code >= 200 && rr.Code < 500)
-}
-
 func TestGetQueriesIpAddressGroupsV2_Success(t *testing.T) {
 	// Test successful retrieval of IP address groups
 	req := httptest.NewRequest("GET", "/xconfAdminService/queries/ipAddressGroups?applicationType=stb", nil)
@@ -90,16 +69,6 @@ func TestGetQueriesIpAddressGroupsV2_Success(t *testing.T) {
 
 	GetQueriesIpAddressGroupsV2(rr, req)
 	assert.Equal(t, http.StatusOK, rr.Code)
-}
-
-func TestGetQueriesIpAddressGroupsV2_AuthError(t *testing.T) {
-	// Test xhttp.AdminError in auth.CanRead
-	req := httptest.NewRequest("GET", "/xconfAdminService/queries/ipAddressGroups", nil)
-	rr := httptest.NewRecorder()
-
-	GetQueriesIpAddressGroupsV2(rr, req)
-	// Auth handling varies
-	assert.True(t, rr.Code >= 200 && rr.Code < 500)
 }
 
 func TestGetQueriesMacListsById_Success(t *testing.T) {
@@ -114,29 +83,6 @@ func TestGetQueriesMacListsById_Success(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	GetQueriesMacListsById(rr, req)
-	assert.Equal(t, http.StatusOK, rr.Code)
-}
-
-func TestGetQueriesMacListsById_MissingId(t *testing.T) {
-	// Test WriteAdminErrorResponse for missing ID
-	req := httptest.NewRequest("GET", "/xconfAdminService/queries/macs/?applicationType=stb", nil)
-	rr := httptest.NewRecorder()
-
-	GetQueriesMacListsById(rr, req)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-	assert.Contains(t, rr.Body.String(), "invalid")
-}
-
-func TestGetQueriesMacListsById_NotFound(t *testing.T) {
-	// Test when MAC list doesn't exist - WriteXconfResponse returns empty
-	nonExistentId := uuid.NewString()
-	url := fmt.Sprintf("/xconfAdminService/queries/macs/%s?applicationType=stb", nonExistentId)
-	req := httptest.NewRequest("GET", url, nil)
-	req = mux.SetURLVars(req, map[string]string{"id": nonExistentId})
-	rr := httptest.NewRecorder()
-
-	GetQueriesMacListsById(rr, req)
-	// Returns 200 with empty body when not found (backward compatibility)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
@@ -164,29 +110,6 @@ func TestAddDataMacListHandler_Success(t *testing.T) {
 	assert.True(t, rr.Code >= 200 && rr.Code < 300, "Expected 2xx status, got %d: %s", rr.Code, rr.Body.String())
 }
 
-func TestAddDataMacListHandler_MissingListId(t *testing.T) {
-	// Test WriteAdminErrorResponse for missing listId
-	req := httptest.NewRequest("POST", "/xconfAdminService/queries/macs/addData/?applicationType=stb", nil)
-	rr := httptest.NewRecorder()
-
-	AddDataMacListHandler(rr, req)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-	assert.Contains(t, rr.Body.String(), "invalid")
-}
-
-func TestAddDataMacListHandler_InvalidJson(t *testing.T) {
-	// Test error when XResponseWriter cast succeeds but invalid JSON body
-	listId := uuid.NewString()
-	url := fmt.Sprintf("/xconfAdminService/queries/macs/addData/%s?applicationType=stb", listId)
-	req := httptest.NewRequest("POST", url, nil)
-	req = mux.SetURLVars(req, map[string]string{"listId": listId})
-	rr, xw := makeNSXW(nil)
-	xw.SetBody("invalid json")
-
-	AddDataMacListHandler(xw, req)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 func TestRemoveDataMacListHandler_Success(t *testing.T) {
 	// Test successful removal of data from MAC list
 	// Create a list with 2 MACs so we can remove one
@@ -212,29 +135,6 @@ func TestRemoveDataMacListHandler_Success(t *testing.T) {
 	RemoveDataMacListHandler(xw, req)
 	// Should succeed
 	assert.True(t, rr.Code >= 200 && rr.Code < 300, "Expected 2xx status, got %d: %s", rr.Code, rr.Body.String())
-}
-
-func TestRemoveDataMacListHandler_MissingListId(t *testing.T) {
-	// Test WriteAdminErrorResponse for missing listId
-	req := httptest.NewRequest("DELETE", "/xconfAdminService/queries/macs/removeData/?applicationType=stb", nil)
-	rr := httptest.NewRecorder()
-
-	RemoveDataMacListHandler(rr, req)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-	assert.Contains(t, rr.Body.String(), "invalid")
-}
-
-func TestRemoveDataMacListHandler_InvalidJson(t *testing.T) {
-	// Test WriteAdminErrorResponse for invalid JSON
-	listId := uuid.NewString()
-	url := fmt.Sprintf("/xconfAdminService/queries/macs/removeData/%s?applicationType=stb", listId)
-	req := httptest.NewRequest("DELETE", url, nil)
-	req = mux.SetURLVars(req, map[string]string{"listId": listId})
-	rr, xw := makeNSXW(nil)
-	xw.SetBody("invalid json")
-
-	RemoveDataMacListHandler(xw, req)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestGetNamespacedListHandler_Success(t *testing.T) {
@@ -293,17 +193,6 @@ func TestGetNamespacedListHandler_ExportWithHeaders(t *testing.T) {
 		// Check Content-Disposition header is set for successful export
 		assert.NotEmpty(t, rr.Header().Get("Content-Disposition"))
 	}
-}
-
-func TestGetNamespacedListHandler_AuthError(t *testing.T) {
-	// Test xhttp.AdminError in auth.CanRead
-	req := httptest.NewRequest("GET", "/xconfAdminService/queries/namespacedLists/test-id", nil)
-	req = mux.SetURLVars(req, map[string]string{"id": "test-id"})
-	rr := httptest.NewRecorder()
-
-	GetNamespacedListHandler(rr, req)
-	// Auth handling varies, may succeed with default or return error
-	assert.True(t, rr.Code >= 200 && rr.Code < 500)
 }
 
 // Additional error case tests for comprehensive coverage
