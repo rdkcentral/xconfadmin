@@ -320,13 +320,17 @@ The tag sync job walks Cassandra (the source of truth for tag membership) and br
 with it. It exists because XDAS entries carry a server-side TTL: members on inactive devices expire
 out of XDAS while Cassandra still holds them, and rule evaluation stops seeing their tags.
 
+Cassandra stores **membership only** — the per-member tag value lives solely in XDAS, supplied when
+the member was first added. That is why every mode reads XDAS before deciding what to write: it is
+the only way to learn the value a member already carries.
+
 The job has three modes sharing the same walk:
 
 | Mode | Writes | What it does |
 |------|--------|--------------|
 | `detect` | none | Read-only census: classifies every member as present / missing in XDAS and reports the missing-member numbers |
 | `repair` | pushes missing members only | Restores members that expired out of XDAS |
-| `refresh` | re-pushes every member | Every push carries the TTL header, so this resets XDAS TTLs for the whole population, including inactive devices. Present members are re-pushed with their **observed** XDAS value (values are never overwritten with blanks) |
+| `refresh` | re-pushes every member | Repair plus the members that are already present. Present members are re-pushed with their **observed** XDAS value (values are never overwritten with blanks). Use it for the two jobs that both amount to re-pushing the whole population: resetting XDAS TTLs (every push carries the TTL header, so inactive devices are covered too) and forcing a cross-region resync (see below) |
 
 The job is **additive-only**: it never deletes anything from either store. XDAS server errors (5xx,
 transport failures) are never counted as missing — only a clean "not found" is. A circuit breaker
@@ -336,6 +340,26 @@ probe (a known-good member that still reads back) before the run continues.
 Only **one run** can be active across the whole cluster at a time (a Cassandra lock with heartbeat
 enforces this). Progress is checkpointed continuously, so an aborted or crashed run can be resumed
 without re-walking what was already covered.
+
+#### Using `refresh` to resync regions
+
+Writes go out through the group **sync** service, which propagates to every region, while reads come
+from the group service the instance is configured against. A `refresh` run therefore re-pushes the
+whole population outward and levels out a regional imbalance — no separate mode is needed for it.
+
+Know the merge policy before starting one, because the run makes the **read** region authoritative:
+
+- A member **present** in the read region is re-pushed with the value read there, so that region's
+  value wins in every other region.
+- A member **missing** in the read region is pushed with an empty value — the same blank that repair
+  writes when restoring an expired member. If another region still holds a real value for that
+  member, this **overwrites it with a blank**.
+
+That blank is harmless in the case the job was built for (TTL expiry removes the member everywhere,
+so there is no value left to preserve), but it is a real risk when the absence *is* the imbalance.
+Before a region-levelling run, trigger it from an instance reading the most complete region, and use
+`dryRun` with `maxMembers` first: a `wouldPush` count far above the `missingKey` + `missingField`
+totals from a `detect` run over the same scope means the read region is not the complete one.
 
 ---
 
@@ -361,7 +385,7 @@ Requires the write capability (`x1:coast:xconf:write` or `x1:appds:xconf:*`).
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `mode` | string | `"detect"` | `detect`, `repair` or `refresh` (see table above) |
+| `mode` | string | `"detect"` | `detect`, `repair` or `refresh` (see table above). `refresh` is also the mode for a cross-region resync |
 | `tags` | array of strings | all tags | Restrict the walk to these tag ids; unknown ids are ignored |
 | `rate` | integer | config (100) | Maximum XDAS calls per second for the entire run. Both reads and pushes take a slot, so in `refresh` mode the effective member throughput is about `rate / 2` |
 | `workers` | integer | config (20) | Concurrent workers processing members within a chunk |
@@ -385,6 +409,14 @@ curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/syn
   --header 'Authorization: Bearer <SAT token>' \
   --header 'Content-Type: application/json' \
   --data '{"mode": "repair", "tags": ["tag-a", "tag-b"], "dryRun": true, "maxMembers": 100000, "rate": 300}'
+```
+
+**Example — cross-region resync of one tag, dry run first:**
+```bash
+curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/sync' \
+  --header 'Authorization: Bearer <SAT token>' \
+  --header 'Content-Type: application/json' \
+  --data '{"mode": "refresh", "tags": ["tag-a"], "dryRun": true, "maxMembers": 100000, "probeMember": "AA:BB:CC:DD:EE:FF"}'
 ```
 
 **Example — resume the previous run:**

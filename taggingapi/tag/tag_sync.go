@@ -26,9 +26,14 @@ import (
 //
 //	detect  - read-only census: count members present/missing in XDAS
 //	repair  - push back only the members missing in XDAS
-//	refresh - re-push every member, preserving the observed value; every
-//	          push carries the TTL header, so this resets XDAS TTLs for the
-//	          whole population including inactive devices
+//	refresh - repair plus the members already present, re-pushed with the
+//	          value observed in XDAS. Re-pushing the whole population serves
+//	          two jobs: every push carries the TTL header, so XDAS TTLs reset
+//	          for inactive devices too, and writes fan out through the sync
+//	          service to every region, levelling a regional imbalance. Note
+//	          this makes the read region authoritative - a member missing
+//	          there is pushed with a blank value, which overwrites a real
+//	          value another region may still hold.
 //
 // The job is additive-only: it never deletes anything from either store.
 type TagSyncMode string
@@ -950,19 +955,44 @@ func (e *tagSyncEngine) setCheckpoint(tagId string, bucketId int, lastMember str
 	e.mu.Unlock()
 }
 
+// recordTagResult folds one finished tag into the run report. A resumed run
+// re-walks the tag it stopped inside and records it a second time, so the
+// same TagId can arrive twice across the run's segments: fold it into the
+// existing entry rather than appending, or the tag lands on the leaderboard
+// twice with partial numbers and tagsWithMissing counts one tag as two.
 func (e *tagSyncEngine) recordTagResult(perTag *TagMissingStat) {
 	if perTag.Missing == 0 {
 		return
 	}
 	e.mu.Lock()
-	e.run.TagsWithMissing++
-	e.missingStats = append(e.missingStats, *perTag)
-	if len(e.missingStats) > 2*tagSyncTopMissingKeep {
-		e.trimMissingLocked()
+	if existing := e.findMissingStatLocked(perTag.TagId); existing != nil {
+		existing.Checked += perTag.Checked
+		existing.Missing += perTag.Missing
+		existing.Pushed += perTag.Pushed
+	} else {
+		e.run.TagsWithMissing++
+		e.missingStats = append(e.missingStats, *perTag)
+		if len(e.missingStats) > 2*tagSyncTopMissingKeep {
+			e.trimMissingLocked()
+		}
 	}
 	e.mu.Unlock()
+	// The line reports this segment's numbers, not the merged total: it is a
+	// record of what this walk saw, and the merged total is in the run record.
 	e.logf(log.InfoLevel, "tag sync: tag %s has missing members: checked=%d missing=%d pushed=%d",
 		perTag.TagId, perTag.Checked, perTag.Missing, perTag.Pushed)
+}
+
+// findMissingStatLocked returns the leaderboard entry for tagId, or nil. The
+// caller must hold e.mu and must not append to e.missingStats while using the
+// returned pointer.
+func (e *tagSyncEngine) findMissingStatLocked(tagId string) *TagMissingStat {
+	for i := range e.missingStats {
+		if e.missingStats[i].TagId == tagId {
+			return &e.missingStats[i]
+		}
+	}
+	return nil
 }
 
 func (e *tagSyncEngine) trimMissingLocked() {

@@ -826,6 +826,39 @@ func TestTagSyncOperatorProbeConsultedBeforePool(t *testing.T) {
 	assert.Equal(t, TagSyncStateCompleted, run.State)
 }
 
+func TestTagSyncResumedTagIsNotCountedTwice(t *testing.T) {
+	// A maxMembers-limited run records the tag it stopped inside, then the
+	// resume re-walks that same tag and records it again. Without merging,
+	// the tag lands twice on the leaderboard and tagsWithMissing counts one
+	// tag as two, so the operator report overstates the drift.
+	all := members("M", 250)
+	cass := map[string][]string{"tag1": all}
+	xdas := newFakeXdas()
+	for i, m := range all {
+		if i%4 != 0 { // 25% missing: under the breaker's missing-rate threshold
+			xdas.records[m] = map[string]string{"t_tag1": ""}
+		}
+	}
+	dao := newFakeTagSyncDao()
+
+	env1 := newTestEnv(cass, xdas, dao)
+	run1 := execute(t, TagSyncOptions{Mode: TagSyncModeDetect, MaxMembers: 150}, env1)
+	assert.True(t, run1.Limited, "the first run must stop inside tag1 for this to be a resume")
+	assert.Equal(t, "tag1", run1.Checkpoint.TagId)
+	assert.Equal(t, 1, run1.TagsWithMissing)
+
+	env2 := newTestEnv(cass, xdas, dao)
+	run2 := execute(t, TagSyncOptions{Resume: true}, env2)
+
+	assert.Equal(t, TagSyncStateCompleted, run2.State)
+	assert.Equal(t, 1, run2.TagsWithMissing, "one tag with missing members, not one per run segment")
+	if assert.Len(t, run2.TopMissingTags, 1, "the resumed tag must merge into its existing entry") {
+		assert.Equal(t, "tag1", run2.TopMissingTags[0].TagId)
+		assert.Equal(t, run2.Counts.MissingField+run2.Counts.MissingKey, run2.TopMissingTags[0].Missing,
+			"the merged entry must account for every missing member both segments saw")
+	}
+}
+
 func TestTagSyncLimitedRunIsResumable(t *testing.T) {
 	// Ramp workflow: run with MaxMembers, review the numbers, then resume to
 	// cover the rest without re-walking what was already checked.
