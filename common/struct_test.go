@@ -209,9 +209,16 @@ func TestCoerceBoolSetting(t *testing.T) {
 	assert.Equal(t, true, coerceBoolSetting("k", "true", false))
 	assert.Equal(t, false, coerceBoolSetting("k", " False ", true))
 
+	// JSON numbers decode into float64, so an operator PUTing 1 or 0 must not
+	// be dropped on the floor - TaggingSyncEnabled defaults to true, so an
+	// ignored 0 leaves the kill switch off and the sync job running.
+	assert.Equal(t, true, coerceBoolSetting("k", float64(1), false))
+	assert.Equal(t, false, coerceBoolSetting("k", float64(0), true))
+
 	// Anything else falls back to the default instead of panicking.
 	assert.Equal(t, true, coerceBoolSetting("k", "banana", true))
 	assert.Equal(t, false, coerceBoolSetting("k", 42.0, false))
+	assert.Equal(t, true, coerceBoolSetting("k", 42.0, true))
 	assert.Equal(t, true, coerceBoolSetting("k", nil, true))
 }
 

@@ -101,8 +101,9 @@ func GetBooleanAppSetting(key string, vargs ...bool) bool {
 }
 
 // coerceBoolSetting tolerates the JSON types operators actually send for a
-// boolean setting: a real bool, or a string like "true"/"false". Anything
-// else falls back to the default instead of panicking or being ignored.
+// boolean setting: a real bool, a string like "true"/"false", or the numbers
+// 1 and 0. Anything else falls back to the default instead of panicking or
+// being ignored.
 func coerceBoolSetting(key string, value interface{}, defaultVal bool) bool {
 	switch v := value.(type) {
 	case bool:
@@ -110,6 +111,14 @@ func coerceBoolSetting(key string, value interface{}, defaultVal bool) bool {
 	case string:
 		if parsed, err := strconv.ParseBool(strings.TrimSpace(v)); err == nil {
 			return parsed
+		}
+	case float64:
+		// encoding/json decodes every JSON number into float64 when the target
+		// is an interface{}, so an operator PUTing 1 or 0 arrives here. Only
+		// those two carry a boolean meaning; any other number is a typo rather
+		// than an intent to flip the setting.
+		if v == 0 || v == 1 {
+			return v == 1
 		}
 	}
 	log.Warn(fmt.Sprintf("AppSetting %s has a non-boolean value %v; using default %v", key, value, defaultVal))
