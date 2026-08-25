@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/rdkcentral/xconfadmin/common"
 	"github.com/rdkcentral/xconfadmin/util"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
@@ -17,13 +16,16 @@ const (
 	Template = "%s%s"
 )
 
-// Tag types, aliased from common so the canonical values stay importable by the
-// http connectors, which pick an XDAS keyspace from the type and cannot import
-// this package (taggingapi/tag already depends on http).
+// Tag types. The type governs member validation and normalization, not
+// storage routing: device (mac) and account members share one XDAS keyspace.
+//
+// TagTypeLegacy is the empty string on purpose: it is what the untyped routes
+// pass and what pre-feature Cassandra rows read back as, so "legacy" and
+// "explicitly mac" are one equivalence class and existing data is never touched.
 const (
-	TagTypeLegacy  = common.TagTypeLegacy
-	TagTypeMac     = common.TagTypeMac
-	TagTypeAccount = common.TagTypeAccount
+	TagTypeLegacy  = ""
+	TagTypeMac     = "mac"
+	TagTypeAccount = "account"
 )
 
 // ValidateTagType rejects anything that is not a known tag type. The empty
@@ -40,10 +42,12 @@ func ValidateTagType(tagType string) error {
 
 // ensureTagTypeSupported rejects account requests while tag_type_column_enabled
 // is off. Without the column an account write would answer 200 and store an
-// untyped row, so the tag reads back as legacy forever while its members sit in
-// the account keyspace; reads would return an empty list indistinguishable from
-// "no account tags exist". 503 rather than 400 — the request is well formed, the
-// deployment just lacks the ALTER, so it is retryable.
+// untyped row, so the tag reads back as legacy forever — a later untyped or mac
+// write would run its numeric members through the MAC normalizer (corrupting
+// 12-digit ids, see TestNormalizeMember_TwelveDigitAccountIdIsNotTreatedAsMac)
+// and the typed routes would misclassify the tag. 503 rather than 400 — the
+// request is well formed, the deployment just lacks the ALTER, so it is
+// retryable.
 func ensureTagTypeSupported(tagType string) error {
 	if IsAccountTag(tagType) && !tagTypeColumnEnabled() {
 		return xwcommon.NewRemoteErrorAS(http.StatusServiceUnavailable,
@@ -57,10 +61,11 @@ func IsAccountTag(tagType string) bool {
 }
 
 // NormalizeMember converts a member to its canonical form for the given tag
-// type. It returns an error because account normalization can fail: a swallowed
-// malformed account id reaches the account keyspace, where it is
-// indistinguishable from a real one. Mac and legacy results are byte-identical
-// to ToNormalizedEcm, keeping untyped routes unchanged.
+// type. It returns an error because account normalization can fail: this
+// validation is the only thing keeping a malformed account id out of the shared
+// XDAS keyspace, where it would be indistinguishable from a real one. Mac and
+// legacy results are byte-identical to ToNormalizedEcm, keeping untyped routes
+// unchanged.
 func NormalizeMember(member string, tagType string) (string, error) {
 	if IsAccountTag(tagType) {
 		normalized := strings.TrimSpace(member)

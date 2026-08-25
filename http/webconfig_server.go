@@ -350,7 +350,13 @@ func getHeadersForLogAsMap(header http.Header, notLoggedHeaders []string) map[st
 
 // isBulkTagMemberPayload matches the tagging endpoints whose request body is a
 // bulk member list (PUT/DELETE /taggingService/tags/{tag}/members).
+//
+// The method is part of the match so an unrouted request that merely lands on
+// the same path shape does not get its body suppressed.
 func isBulkTagMemberPayload(r *http.Request) bool {
+	if r.Method != http.MethodPut && r.Method != http.MethodDelete {
+		return false
+	}
 	return strings.HasPrefix(r.URL.Path, "/taggingService/tags/") &&
 		strings.HasSuffix(r.URL.Path, "/members")
 }

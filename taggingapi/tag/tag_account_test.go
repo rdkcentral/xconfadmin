@@ -33,19 +33,6 @@ func withTagTypeColumn(t *testing.T, enabled bool) {
 	t.Cleanup(func() { SetTagApiConfig(old) })
 }
 
-// withAccountTemplates points the sync connector's account templates at the
-// mock server installed by withMockXdasSync.
-func withAccountTemplates(t *testing.T) {
-	t.Helper()
-	connector := GetGroupServiceSyncConnector()
-	connector.SetAddAccountGroupMemberTemplate("%s/ada/%s")
-	connector.SetRemoveAccountGroupMemberTemplate("%s/ada/%s?field=%s")
-	t.Cleanup(func() {
-		connector.SetAddAccountGroupMemberTemplate("")
-		connector.SetRemoveAccountGroupMemberTemplate("")
-	})
-}
-
 // --- Account id validation ---
 
 func TestAccountIdValidator(t *testing.T) {
@@ -464,10 +451,11 @@ func TestGetAllTagIds_DoesNotStripTagPrefix(t *testing.T) {
 		"a tag named t_beta must not collapse onto beta")
 }
 
-// --- Keyspace routing ---
+// --- Shared keyspace ---
 
-// Account writes must reach the account keyspace, and mac writes the device one.
-func TestAddMembers_AccountTagUsesAccountKeyspace(t *testing.T) {
+// Account and mac members share the device XDAS keyspace; an account write must
+// reach it with the id unmodified (numeric validation, no ECM shift).
+func TestAddMembers_AccountTagUsesSharedKeyspace(t *testing.T) {
 	setupTestEnvironment()
 	withTagTypeColumn(t, true)
 
@@ -476,7 +464,6 @@ func TestAddMembers_AccountTagUsesAccountKeyspace(t *testing.T) {
 		paths = append(paths, r.URL.Path)
 		w.WriteHeader(http.StatusOK)
 	})
-	withAccountTemplates(t)
 
 	// Empty DB: "acct-tag" has no owner yet, the ordinary way one gets created.
 	withMockDbClient(t, &mockDbClient{
@@ -490,7 +477,7 @@ func TestAddMembers_AccountTagUsesAccountKeyspace(t *testing.T) {
 	assert.Equal(t, 1, stats.XdasOk)
 
 	assert.Len(t, paths, 1)
-	assert.True(t, strings.HasPrefix(paths[0], "/ada/"), "got %q, want the account keyspace", paths[0])
+	assert.True(t, strings.HasPrefix(paths[0], "/ft/"), "got %q, want the shared keyspace", paths[0])
 	assert.Contains(t, paths[0], "2846573900878987927")
 }
 
@@ -503,7 +490,6 @@ func TestAddMembers_LegacyTagStillUsesDeviceKeyspace(t *testing.T) {
 		paths = append(paths, r.URL.Path)
 		w.WriteHeader(http.StatusOK)
 	})
-	withAccountTemplates(t)
 	withMockDbClient(t, &mockDbClient{
 		queryFunc: func(query string, params ...string) ([]map[string]any, error) {
 			return []map[string]any{}, nil
@@ -518,9 +504,10 @@ func TestAddMembers_LegacyTagStillUsesDeviceKeyspace(t *testing.T) {
 	assert.True(t, strings.HasPrefix(paths[0], "/ft/"), "got %q, want the device keyspace", paths[0])
 }
 
-// Deleting an account tag through the untyped route must still delete from the
-// account keyspace; taking the type from the URL would orphan every XDAS entry.
-func TestDeleteTag_LegacyRouteDeletesFromAccountKeyspace(t *testing.T) {
+// Deleting an account tag through the untyped route must resolve the account
+// type from storage: a 12-digit id would otherwise go through the MAC path and
+// be ECM-shifted to a different XDAS key, orphaning the real entry.
+func TestDeleteTag_LegacyRouteResolvesAccountTypeFromStorage(t *testing.T) {
 	setupTestEnvironment()
 	withTagTypeColumn(t, true)
 
@@ -531,7 +518,6 @@ func TestDeleteTag_LegacyRouteDeletesFromAccountKeyspace(t *testing.T) {
 		}
 		w.WriteHeader(http.StatusOK)
 	})
-	withAccountTemplates(t)
 
 	var memberFetches atomic.Int32
 	withMockDbClient(t, &mockDbClient{
@@ -552,18 +538,18 @@ func TestDeleteTag_LegacyRouteDeletesFromAccountKeyspace(t *testing.T) {
 
 	assert.NotEmpty(t, deletePaths, "expected XDAS deletes to be issued")
 	for _, path := range deletePaths {
-		assert.True(t, strings.HasPrefix(path, "/ada/"),
-			"got %q, want the account keyspace resolved from storage", path)
+		assert.Contains(t, path, "2846573900878987927",
+			"got %q, want the stored account id deleted unmodified", path)
 	}
 }
 
 // --- Untyped writes adopt the stored type ---
 
 // An untyped write to an account tag must execute as an account write. Taking
-// the type from the route would normalize its members as MACs into the device
-// keyspace while their Cassandra rows land in the account tag's partitions — a
-// mixture DeleteTag can never remove.
-func TestAddMembers_UntypedWriteToAccountTagAdoptsAccountKeyspace(t *testing.T) {
+// the type from the route would run its members through the MAC normalizer —
+// ECM-shifting 12-digit ids under a different XDAS key than the Cassandra rows —
+// a mixture DeleteTag can never remove.
+func TestAddMembers_UntypedWriteToAccountTagAdoptsAccountType(t *testing.T) {
 	setupTestEnvironment()
 	withTagTypeColumn(t, true)
 
@@ -572,7 +558,6 @@ func TestAddMembers_UntypedWriteToAccountTagAdoptsAccountKeyspace(t *testing.T) 
 		paths = append(paths, r.URL.Path)
 		w.WriteHeader(http.StatusOK)
 	})
-	withAccountTemplates(t)
 
 	var captured *mockBatch
 	withMockDbClient(t, &mockDbClient{
@@ -594,8 +579,8 @@ func TestAddMembers_UntypedWriteToAccountTagAdoptsAccountKeyspace(t *testing.T) 
 	assert.Equal(t, TagTypeAccount, stats.TagType)
 
 	assert.Len(t, paths, 1)
-	assert.True(t, strings.HasPrefix(paths[0], "/ada/"),
-		"got %q, want the account keyspace resolved from storage", paths[0])
+	assert.Contains(t, paths[0], "2846573900878987927",
+		"got %q, want the account id written unmodified", paths[0])
 
 	// The rows keep the account type, so the tag cannot decay toward legacy.
 	assert.NotNil(t, captured)
@@ -605,7 +590,7 @@ func TestAddMembers_UntypedWriteToAccountTagAdoptsAccountKeyspace(t *testing.T) 
 }
 
 // MAC members on an untyped write to an account tag fail account normalization
-// and must reach no keyspace at all; they used to land in the device one.
+// and must not reach XDAS at all.
 func TestAddMembers_UntypedWriteOfMacsToAccountTagIssuesNoXdasCalls(t *testing.T) {
 	setupTestEnvironment()
 	withTagTypeColumn(t, true)
@@ -615,7 +600,6 @@ func TestAddMembers_UntypedWriteOfMacsToAccountTagIssuesNoXdasCalls(t *testing.T
 		requests.Add(1)
 		w.WriteHeader(http.StatusOK)
 	})
-	withAccountTemplates(t)
 	withMockDb(t, func(query string, params ...string) ([]map[string]any, error) {
 		if isMetadataQuery(query) {
 			return []map[string]any{{"bucket_id": 3, "tag_type": TagTypeAccount}}, nil
@@ -628,10 +612,10 @@ func TestAddMembers_UntypedWriteOfMacsToAccountTagIssuesNoXdasCalls(t *testing.T
 	assert.Equal(t, 0, stats.XdasOk)
 	assert.Equal(t, 1, stats.XdasFail)
 	assert.Equal(t, int32(0), requests.Load(),
-		"MAC members must not reach any keyspace of an account tag")
+		"MAC members of an account tag must not reach XDAS")
 }
 
-func TestRemoveMembers_UntypedRemoveFromAccountTagAdoptsAccountKeyspace(t *testing.T) {
+func TestRemoveMembers_UntypedRemoveFromAccountTagAdoptsAccountType(t *testing.T) {
 	setupTestEnvironment()
 	withTagTypeColumn(t, true)
 
@@ -642,7 +626,6 @@ func TestRemoveMembers_UntypedRemoveFromAccountTagAdoptsAccountKeyspace(t *testi
 		}
 		w.WriteHeader(http.StatusOK)
 	})
-	withAccountTemplates(t)
 	withMockDb(t, func(query string, params ...string) ([]map[string]any, error) {
 		if isMetadataQuery(query) {
 			return []map[string]any{{"bucket_id": 3, "tag_type": TagTypeAccount}}, nil
@@ -656,14 +639,13 @@ func TestRemoveMembers_UntypedRemoveFromAccountTagAdoptsAccountKeyspace(t *testi
 	assert.Equal(t, TagTypeAccount, stats.TagType)
 
 	assert.Len(t, deletePaths, 1)
-	assert.True(t, strings.HasPrefix(deletePaths[0], "/ada/"),
-		"got %q, want the account keyspace resolved from storage", deletePaths[0])
-	assert.Contains(t, deletePaths[0], "2846573900878987927")
+	assert.Contains(t, deletePaths[0], "2846573900878987927",
+		"got %q, want the account id removed unmodified", deletePaths[0])
 }
 
 // The stored type of a mac/legacy tag resolves to legacy, so untyped writes to
 // existing tags keep today's behavior byte-for-byte.
-func TestAddMembers_UntypedWriteToExistingLegacyTagKeepsDeviceKeyspace(t *testing.T) {
+func TestAddMembers_UntypedWriteToExistingLegacyTagKeepsLegacyBehavior(t *testing.T) {
 	setupTestEnvironment()
 	withTagTypeColumn(t, true)
 
@@ -672,7 +654,6 @@ func TestAddMembers_UntypedWriteToExistingLegacyTagKeepsDeviceKeyspace(t *testin
 		paths = append(paths, r.URL.Path)
 		w.WriteHeader(http.StatusOK)
 	})
-	withAccountTemplates(t)
 	withMockDb(t, func(query string, params ...string) ([]map[string]any, error) {
 		if isMetadataQuery(query) {
 			return []map[string]any{{"bucket_id": 1, "tag_type": TagTypeLegacy}}, nil
@@ -688,7 +669,8 @@ func TestAddMembers_UntypedWriteToExistingLegacyTagKeepsDeviceKeyspace(t *testin
 	assert.True(t, strings.HasPrefix(paths[0], "/ft/"), "got %q, want the device keyspace", paths[0])
 }
 
-// An unreadable stored type must not default the write to the device keyspace.
+// An unreadable stored type must not default the write to legacy — account
+// members would silently go through the MAC normalizer.
 func TestAddMembers_UntypedWriteFailsClosedOnMetadataError(t *testing.T) {
 	setupTestEnvironment()
 	withTagTypeColumn(t, true)
@@ -698,7 +680,6 @@ func TestAddMembers_UntypedWriteFailsClosedOnMetadataError(t *testing.T) {
 		requests.Add(1)
 		w.WriteHeader(http.StatusOK)
 	})
-	withAccountTemplates(t)
 	withMockDb(t, func(query string, params ...string) ([]map[string]any, error) {
 		return nil, fmt.Errorf("cassandra unavailable")
 	})
@@ -711,8 +692,8 @@ func TestAddMembers_UntypedWriteFailsClosedOnMetadataError(t *testing.T) {
 
 // --- Fail-loud behavior ---
 
-// An unconfigured account template must fail rather than silently falling back
-// to the device keyspace, where account ids would be unrecoverable.
+// A blank add template must fail the write rather than fmt.Sprintf its way to a
+// garbage URL; a member "stored" that way is unrecoverable.
 func TestAccountWrite_FailsClosedWithoutTemplate(t *testing.T) {
 	setupTestEnvironment()
 	withTagTypeColumn(t, true)
@@ -722,8 +703,9 @@ func TestAccountWrite_FailsClosedWithoutTemplate(t *testing.T) {
 		requests.Add(1)
 		w.WriteHeader(http.StatusOK)
 	})
-	// Deliberately no withAccountTemplates.
-	GetGroupServiceSyncConnector().SetAddAccountGroupMemberTemplate("")
+	// Blank the template withMockXdasSync just set; restore it for later tests.
+	GetGroupServiceSyncConnector().SetAddGroupMemberTemplate("")
+	t.Cleanup(func() { GetGroupServiceSyncConnector().SetAddGroupMemberTemplate("%s/ft/%s") })
 
 	withMockDbClient(t, &mockDbClient{
 		queryFunc: func(query string, params ...string) ([]map[string]any, error) {
@@ -737,7 +719,7 @@ func TestAccountWrite_FailsClosedWithoutTemplate(t *testing.T) {
 	stats, err := AddMembersWithXdas("acct-tag", []string{"2846573900878987927"}, "", TagTypeAccount)
 	assert.Error(t, err)
 	assert.Equal(t, 0, stats.XdasOk)
-	assert.Equal(t, int32(0), requests.Load(), "no request may be issued to the device keyspace")
+	assert.Equal(t, int32(0), requests.Load(), "no request may be issued with a blank template")
 }
 
 // An invalid member must be rejected before any XDAS call.
@@ -750,7 +732,6 @@ func TestAccountWrite_InvalidMemberIssuesNoXdasCall(t *testing.T) {
 		requests.Add(1)
 		w.WriteHeader(http.StatusOK)
 	})
-	withAccountTemplates(t)
 	withMockDbClient(t, &mockDbClient{
 		queryFunc: func(query string, params ...string) ([]map[string]any, error) {
 			if isMetadataQuery(query) {
@@ -848,8 +829,8 @@ func TestGetTagTypeFromRequest(t *testing.T) {
 // --- Account routes are refused while the column is disabled ---
 
 // Accepting the write would answer 200 while storing an untyped metadata row, so
-// the tag reads back as legacy forever — invisible to the account listing — after
-// its members reached the account keyspace.
+// the tag reads back as legacy forever — invisible to the account listing — with
+// its members already in XDAS.
 func TestAddMembersToTagHandler_RejectsAccountWhenColumnDisabled(t *testing.T) {
 	setupTestEnvironment()
 	withTagTypeColumn(t, false)
@@ -871,7 +852,7 @@ func TestAddMembersToTagHandler_RejectsAccountWhenColumnDisabled(t *testing.T) {
 
 	assert.Equal(t, http.StatusServiceUnavailable, recorder.Code)
 	assert.Contains(t, recorder.Body.String(), "tag_type_column_enabled")
-	assert.Equal(t, int32(0), xdasRequests.Load(), "nothing may reach the account keyspace")
+	assert.Equal(t, int32(0), xdasRequests.Load(), "nothing may reach XDAS")
 }
 
 // The listing can only ever come back empty without the column, which reads as

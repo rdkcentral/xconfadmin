@@ -28,4 +28,14 @@ func TestIsBulkTagMemberPayload(t *testing.T) {
 		r := httptest.NewRequest("POST", path, nil)
 		assert.False(t, isBulkTagMemberPayload(r), path)
 	}
+
+	// A method with no bulk-member route registered on this path shape is not a
+	// bulk payload, even though the path matches.
+	for _, method := range []string{"POST", "GET"} {
+		r := httptest.NewRequest(method, "/taggingService/tags/my-tag/members", nil)
+		assert.False(t, isBulkTagMemberPayload(r), method)
+	}
+
+	r := httptest.NewRequest("DELETE", "/taggingService/tags/my-tag/members", nil)
+	assert.True(t, isBulkTagMemberPayload(r))
 }

@@ -190,19 +190,6 @@ const (
 	EndRange   = "endRange"
 )
 
-// Tag types. These live in common (rather than taggingapi/tag) because the XDAS
-// connectors in the http package need them to select a keyspace, and
-// taggingapi/tag already imports http — the dependency cannot go both ways.
-//
-// TagTypeLegacy is the empty string on purpose: it is what the untyped routes
-// pass and what pre-feature Cassandra rows read back as, so "legacy" and
-// "explicitly mac" are one equivalence class and existing data is never touched.
-const (
-	TagTypeLegacy  = ""
-	TagTypeMac     = "mac"
-	TagTypeAccount = "account"
-)
-
 const (
 	READONLY_MODE           = "ReadonlyMode"
 	READONLY_MODE_STARTTIME = "ReadonlyModeStartTime"

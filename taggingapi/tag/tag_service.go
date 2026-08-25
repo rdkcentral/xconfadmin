@@ -33,7 +33,7 @@ func GetTagsByMember(member string, tagType string) ([]string, error) {
 	if err != nil {
 		return []string{}, err
 	}
-	tagsAsHashes, err := GetGroupServiceConnector().GetGroupsMemberBelongsToOfType(member, tagType)
+	tagsAsHashes, err := GetGroupServiceConnector().GetGroupsMemberBelongsTo(member)
 	if err != nil {
 		log.Errorf("xdas error getting members by %s group: %s", member, err.Error())
 		return []string{}, err
@@ -47,7 +47,7 @@ func GetTagsWithValuesByMember(member string, tagType string) (map[string]string
 	if err != nil {
 		return map[string]string{}, err
 	}
-	tagsAsHashes, err := GetGroupServiceConnector().GetGroupsMemberBelongsToOfType(member, tagType)
+	tagsAsHashes, err := GetGroupServiceConnector().GetGroupsMemberBelongsTo(member)
 	if err != nil {
 		log.Errorf("xdas error getting members by %s group: %s", member, err.Error())
 		return map[string]string{}, err
@@ -96,7 +96,7 @@ func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<-
 			agg.add(err)
 			continue
 		}
-		err = GetGroupServiceSyncConnector().AddMembersToTagOfType(normalized, &xdasMembers, tagType)
+		err = GetGroupServiceSyncConnector().AddMembersToTag(normalized, &xdasMembers)
 		if err != nil {
 			failCount++
 			agg.add(err)
@@ -122,7 +122,7 @@ func removeTagMembersFromXdas(id string, members <-chan string, removedMembers c
 			agg.add(err)
 			continue
 		}
-		err = GetGroupServiceSyncConnector().RemoveGroupMembersOfType(normalized, id, tagType)
+		err = GetGroupServiceSyncConnector().RemoveGroupMembers(normalized, id)
 		if err != nil {
 			failCount++
 			agg.add(err)

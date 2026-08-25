@@ -341,11 +341,12 @@ func checkTagTypeCompatible(tagId string, existing string, requestedType string)
 // type for untyped ones.
 //
 // Adopting the stored type keeps an untyped write to an account tag from
-// splitting it across stores — normalizing its members as MACs would send them
-// to the device keyspace while their Cassandra rows land in the account tag's
-// partitions, and DeleteTag would then wedge on the mixture. Untyped writes to
-// mac/legacy tags and to tags that do not exist resolve to legacy, so untyped
-// behavior is unchanged; the cost is one metadata read per untyped batch.
+// mis-normalizing its members — the MAC path corrupts a 12-digit numeric id
+// (it parses as hex and gets ECM-shifted), so the member would land under a
+// different XDAS key and Cassandra row than the account path stores, and
+// DeleteTag would then wedge on the mixture. Untyped writes to mac/legacy tags
+// and to tags that do not exist resolve to legacy, so untyped behavior is
+// unchanged; the cost is one metadata read per untyped batch.
 func effectiveWriteTagType(tagId string, requestedType string) (string, error) {
 	if !tagTypeColumnEnabled() {
 		return requestedType, nil
@@ -355,7 +356,8 @@ func effectiveWriteTagType(tagId string, requestedType string) (string, error) {
 	}
 	_, stored, err := getTagMeta(tagId)
 	if err != nil {
-		// Fail closed: an unreadable type must not default to the device keyspace.
+		// Fail closed: an unreadable type must not silently run the write as
+		// legacy — account members would go through the MAC normalizer.
 		return requestedType, err
 	}
 	return stored, nil
@@ -739,8 +741,8 @@ func AddMembersWithXdas(tagId string, members []string, tagValue string, tagType
 	}
 
 	// Must run before the XDAS phase. A conflict detected afterwards would leave
-	// members in a keyspace with no Cassandra record pointing at them, and XDAS
-	// cannot be enumerated to find them again.
+	// members in XDAS with no Cassandra record pointing at them, and XDAS cannot
+	// be enumerated to find them again.
 	tagType, err := effectiveWriteTagType(tagId, tagType)
 	if err != nil {
 		return stats, err
@@ -753,7 +755,7 @@ func AddMembersWithXdas(tagId string, members []string, tagValue string, tagType
 	stats.FirstError = firstError
 
 	// Every XDAS write failed. Falling through to a 202 with stored=0 would make
-	// a misconfigured keyspace look like a healthy API that stored nothing.
+	// a misconfigured XDAS look like a healthy API that stored nothing.
 	if stats.XdasOk == 0 && stats.XdasFail > 0 {
 		return stats, xwcommon.NewRemoteErrorAS(http.StatusBadGateway,
 			fmt.Sprintf("all %d XDAS writes failed: %s", stats.XdasFail, firstError))
@@ -789,8 +791,9 @@ func RemoveMembersWithXdas(tagId string, members []string, tagType string) (Writ
 		return stats, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
 
-	// Without this, DELETE /tags/account/{macTag}/members would delete from the
-	// account keyspace for a tag whose members live in the device one.
+	// Without this, DELETE /tags/account/{macTag}/members would validate the
+	// tag's MAC members as account ids and fail every removal, and the reverse
+	// direction would ECM-shift numeric ids and miss the real XDAS entries.
 	tagType, err := effectiveWriteTagType(tagId, tagType)
 	if err != nil {
 		return stats, err
@@ -999,8 +1002,10 @@ func DeleteTag(tagId string, auditId string) error {
 	}
 
 	// Type resolved from storage, never from the request: deleting an account tag
-	// through the untyped route must still hit the account keyspace, or the
-	// Cassandra rows go and the XDAS entries are orphaned beyond recovery.
+	// through the untyped route must still normalize its members as account ids —
+	// a 12-digit id would otherwise go through the MAC path and be ECM-shifted to
+	// a different XDAS key, so the Cassandra rows would go while the real XDAS
+	// entries stay orphaned beyond recovery.
 	populatedBuckets, tagType, err := getTagMeta(tagId)
 	if err != nil {
 		return fmt.Errorf("failed to get populated buckets: %w", err)
