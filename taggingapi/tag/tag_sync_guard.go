@@ -80,9 +80,33 @@ type syncBreaker struct {
 	missingHigh        bool
 }
 
+// Fallbacks for a non-positive breaker knob, mirroring the config defaults.
+// Every threshold is a >= comparison, so a zero is degenerate rather than
+// lenient: it trips on the first healthy member, aborting the run blaming XDAS.
+const (
+	syncBreakerDefaultWindow          = 200
+	syncBreakerDefaultErrorRate       = 25
+	syncBreakerDefaultMissingRate     = 90
+	syncBreakerDefaultMaxConsecErrors = 10
+)
+
 func newSyncBreaker(window, minSample, errorRatePercent, missingRatePercent, maxConsecErrors int) *syncBreaker {
 	if window <= 0 {
-		window = 200
+		window = syncBreakerDefaultWindow
+	}
+	if errorRatePercent <= 0 {
+		errorRatePercent = syncBreakerDefaultErrorRate
+	}
+	if missingRatePercent <= 0 {
+		missingRatePercent = syncBreakerDefaultMissingRate
+	}
+	if maxConsecErrors <= 0 {
+		maxConsecErrors = syncBreakerDefaultMaxConsecErrors
+	}
+	// Zero minSample is coherent (arm from the first member); only fix
+	// negatives.
+	if minSample < 0 {
+		minSample = 0
 	}
 	return &syncBreaker{
 		window:             make([]syncOutcome, window),

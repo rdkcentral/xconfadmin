@@ -27,13 +27,9 @@ import (
 //	detect  - read-only census: count members present/missing in XDAS
 //	repair  - push back only the members missing in XDAS
 //	refresh - repair plus the members already present, re-pushed with the
-//	          value observed in XDAS. Re-pushing the whole population serves
-//	          two jobs: every push carries the TTL header, so XDAS TTLs reset
-//	          for inactive devices too, and writes fan out through the sync
-//	          service to every region, levelling a regional imbalance. Note
-//	          this makes the read region authoritative - a member missing
-//	          there is pushed with a blank value, which overwrites a real
-//	          value another region may still hold.
+//	          value observed in XDAS: resets TTLs and fans out to every
+//	          region. Makes the read region authoritative - a member missing
+//	          there is pushed blank over any value another region holds.
 //
 // The job is additive-only: it never deletes anything from either store.
 type TagSyncMode string
@@ -68,6 +64,9 @@ const (
 	// pool) before a high missing rate is treated as an outage; also bounds
 	// the preflight retries on transient errors.
 	tagSyncProbeAttempts = 3
+	// Attempts one member's push gets before it counts as failed; the
+	// checkpoint never comes back to it. 4xx is not retried.
+	tagSyncPushAttempts = 3
 	// Run records surviving pruning at finalize; the status endpoint shows
 	// 10, the rest is headroom while keeping the partition scan bounded.
 	tagSyncRunHistoryKeep = 20
@@ -230,11 +229,18 @@ type tagSyncEngine struct {
 	knownTags    map[string]bool
 	xdasOnlySeen map[string]bool
 
-	mu                sync.Mutex
-	missingStats      []TagMissingStat
-	lastSave          time.Time
-	lastProgress      time.Time
-	ignoreMissingRate bool
+	// Counts.Checked when this segment began, so MaxMembers is measured per
+	// segment rather than against a resumed run's lifetime total.
+	checkedAtStart int64
+
+	mu              sync.Mutex
+	missingStats    []TagMissingStat
+	lastSave        time.Time
+	lastProgress    time.Time
+	lastHeartbeatOk time.Time
+	// Damps the "missing members are real" warning, which the per-chunk
+	// guard would otherwise repeat for the whole run.
+	confirmLogged bool
 	// probePool holds the last few members this run observed present in
 	// XDAS. They are the preferred probe candidates: unlike a configured
 	// probe device, the pool cannot rot away, because the walk itself
@@ -358,6 +364,9 @@ func prepareTagSync(opts TagSyncOptions, env *tagSyncEnv) (*tagSyncEngine, error
 		breaker:      newSyncBreaker(cfg.BreakerWindow, cfg.BreakerMinSample, cfg.BreakerErrorRatePercent, cfg.BreakerMissingRatePercent, cfg.BreakerMaxConsecErrors),
 		xdasOnlySeen: make(map[string]bool),
 		missingStats: append([]TagMissingStat(nil), run.TopMissingTags...),
+		// The lock was just acquired, so start the staleness clock now.
+		lastHeartbeatOk: time.Now(),
+		checkedAtStart:  run.Counts.Checked,
 	}, nil
 }
 
@@ -416,9 +425,20 @@ func lockOwner(l *TagSyncLock) string {
 	return l.Owner
 }
 
+// releaseTagSyncLock releases only a lock this run still holds: the row is one
+// cell every instance overwrites, so releasing after a takeover would hand a
+// third run a free pass over a walk still in progress.
 func releaseTagSyncLock(dao tagSyncDao, owner string, runId string) {
-	err := dao.saveLock(&TagSyncLock{Owner: owner, RunId: runId, HeartbeatAt: time.Now().UTC(), Released: true})
+	current, err := dao.getLock()
 	if err != nil {
+		log.Errorf("tag sync lock read before release failed (goes stale in %v): %v", tagSyncLockStaleAfter, err)
+		return
+	}
+	if current != nil && current.RunId != runId {
+		log.Warnf("tag sync lock is held by runId=%s owner=%s; runId=%s leaves it alone", current.RunId, current.Owner, runId)
+		return
+	}
+	if err := dao.saveLock(&TagSyncLock{Owner: owner, RunId: runId, HeartbeatAt: time.Now().UTC(), Released: true}); err != nil {
 		log.Errorf("tag sync lock release failed (goes stale in %v): %v", tagSyncLockStaleAfter, err)
 	}
 }
@@ -582,8 +602,13 @@ func (e *tagSyncEngine) heartbeatLoop(stop <-chan struct{}, done chan<- struct{}
 		case <-ticker.C:
 			lock := &TagSyncLock{Owner: e.run.Owner, RunId: e.run.RunId, HeartbeatAt: time.Now().UTC()}
 			if err := e.env.dao.saveLock(lock); err != nil {
+				// checkAbort stops the walk once these span a full window.
 				e.logf(log.WarnLevel, "tag sync heartbeat save failed: %v", err)
+				continue
 			}
+			e.mu.Lock()
+			e.lastHeartbeatOk = time.Now()
+			e.mu.Unlock()
 		}
 	}
 }
@@ -646,7 +671,7 @@ func (e *tagSyncEngine) walkTag(ctx context.Context, tagId string, perTag *TagMi
 					tagSyncBreakerTrippedTotal.WithLabelValues(reason).Inc()
 					return &tagSyncAbort{reason: reason}
 				}
-				if e.opts.MaxMembers > 0 && e.counts().Checked >= e.opts.MaxMembers {
+				if e.memberLimitReached() {
 					return errTagSyncLimitReached
 				}
 				if err := e.checkAbort(ctx); err != nil {
@@ -664,13 +689,13 @@ func (e *tagSyncEngine) walkTag(ctx context.Context, tagId string, perTag *TagMi
 				e.saveRun()
 				return &tagSyncAbort{reason: reason}
 			}
-			if e.breaker.missingRateHigh() && !e.ignoreMissingRate {
+			if e.breaker.missingRateHigh() {
 				if err := e.confirmMissingWithProbe(ctx); err != nil {
 					e.saveRun()
 					return err
 				}
 			}
-			if e.opts.MaxMembers > 0 && e.counts().Checked >= e.opts.MaxMembers {
+			if e.memberLimitReached() {
 				e.saveRun()
 				return errTagSyncLimitReached
 			}
@@ -689,7 +714,28 @@ func (e *tagSyncEngine) checkAbort(ctx context.Context) error {
 	if !e.env.syncEnabled() {
 		return &tagSyncAbort{reason: "kill_switch"}
 	}
+	// Past the staleness window another instance may have taken this lock
+	// over, and two walks would put twice the configured rate on XDAS.
+	if e.heartbeatStale() {
+		return &tagSyncAbort{reason: "lock_heartbeat_stale"}
+	}
 	return nil
+}
+
+func (e *tagSyncEngine) heartbeatStale() bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return time.Since(e.lastHeartbeatOk) >= tagSyncLockStaleAfter
+}
+
+// memberLimitReached reports whether this segment spent its MaxMembers budget.
+// Per segment, not per run record: a resume carries earlier Checked forward, so
+// the raw total would stop a restated MaxMembers after one member.
+func (e *tagSyncEngine) memberLimitReached() bool {
+	if e.opts.MaxMembers <= 0 {
+		return false
+	}
+	return e.counts().Checked-e.checkedAtStart >= e.opts.MaxMembers
 }
 
 // configuredProbe returns the probe member passed with this run's trigger,
@@ -718,6 +764,11 @@ func (e *tagSyncEngine) probeCandidates() []string {
 // confirmMissingWithProbe distinguishes genuine mass expiry from an XDAS
 // outage that answers 404 for everything: any known-good member still present
 // means the missing members are real and the run may continue.
+//
+// Re-run on every chunk with a high missing rate, not once per run: it speaks
+// for one moment, and an outage starting later would go unguarded (404s count
+// as missing, so no rate breaker catches them). Only a definitive answer is
+// evidence - a transient error is a 5xx problem the other breakers own.
 func (e *tagSyncEngine) confirmMissingWithProbe(ctx context.Context) error {
 	candidates := e.probeCandidates()
 	if len(candidates) == 0 {
@@ -726,42 +777,66 @@ func (e *tagSyncEngine) confirmMissingWithProbe(ctx context.Context) error {
 			// nothing to protect: continue and flag the report instead of
 			// blocking the census in the exact mass-expiry scenario it
 			// exists for. Later chunks retry - the pool may fill and confirm.
-			e.mu.Lock()
-			alreadyFlagged := e.run.MissingRateUnconfirmed
-			e.run.MissingRateUnconfirmed = true
-			e.mu.Unlock()
-			if !alreadyFlagged {
-				e.logf(log.WarnLevel, "tag sync: missing rate exceeded %d%% with no probe available; detect continues with missingRateUnconfirmed",
-					e.env.config.BreakerMissingRatePercent)
-			}
+			e.confirmLogged = false
+			e.markMissingRateUnconfirmed("tag sync: missing rate exceeded %d%% with no probe available; detect continues with missingRateUnconfirmed",
+				e.env.config.BreakerMissingRatePercent)
 			return nil
 		}
 		tagSyncBreakerTrippedTotal.WithLabelValues("missing_rate_no_probe_available").Inc()
 		return &tagSyncAbort{reason: "missing_rate_high_no_probe_available"}
 	}
-	attempts := 0
+	// Candidates XDAS answered about either way; a transient failure is not
+	// an answer and must not spend the budget.
+	definitive := 0
+	var lastTransient error
 	for _, candidate := range candidates {
-		if attempts >= tagSyncProbeAttempts {
+		if definitive >= tagSyncProbeAttempts {
 			break
 		}
-		attempts++
 		if err := e.limiter.wait(ctx); err != nil {
 			return &tagSyncAbort{reason: "cancelled"}
 		}
 		fields, err := e.env.xdasGetFields(candidate)
-		if err == nil && len(fields) > 0 {
-			e.ignoreMissingRate = true
+		switch {
+		case err == nil && len(fields) > 0:
 			e.breaker.clearMissingHigh()
-			e.mu.Lock()
-			e.run.MissingRateUnconfirmed = false
-			e.mu.Unlock()
-			e.logf(log.WarnLevel, "tag sync: missing rate exceeded %d%% but probe member %s is present in XDAS - the missing members are real, continuing",
-				e.env.config.BreakerMissingRatePercent, candidate)
+			if !e.confirmLogged {
+				e.confirmLogged = true
+				e.logf(log.WarnLevel, "tag sync: missing rate exceeded %d%% but probe member %s is present in XDAS - the missing members are real, continuing",
+					e.env.config.BreakerMissingRatePercent, candidate)
+			}
 			return nil
+		case err == nil, isXdasNotFound(err):
+			// Answered: this known-good member is genuinely gone.
+			definitive++
+		default:
+			lastTransient = err
 		}
+	}
+
+	e.confirmLogged = false
+	if definitive == 0 {
+		// Unanswered, not outage evidence: flag the numbers, leave 5xx to the
+		// breakers that own it, and re-confirm next chunk.
+		e.markMissingRateUnconfirmed("tag sync: missing rate exceeded %d%% but every probe errored (%v); numbers unconfirmed, continuing",
+			e.env.config.BreakerMissingRatePercent, lastTransient)
+		return nil
 	}
 	tagSyncBreakerTrippedTotal.WithLabelValues("missing_rate_probe_failed").Inc()
 	return &tagSyncAbort{reason: "missing_rate_high_probe_failed"}
+}
+
+// markMissingRateUnconfirmed flags a census stretch gathered without a working
+// probe. Sticky - a later confirmation cannot verify members counted blind -
+// and logs only on the first latch.
+func (e *tagSyncEngine) markMissingRateUnconfirmed(format string, args ...interface{}) {
+	e.mu.Lock()
+	alreadyFlagged := e.run.MissingRateUnconfirmed
+	e.run.MissingRateUnconfirmed = true
+	e.mu.Unlock()
+	if !alreadyFlagged {
+		e.logf(log.WarnLevel, format, args...)
+	}
 }
 
 // processChunk fans the chunk through the worker pool and reports whether
@@ -793,7 +868,7 @@ func (e *tagSyncEngine) processChunk(ctx context.Context, prefixedTag string, ch
 				if e.stepMember(cctx, prefixedTag, member, perTag) {
 					processed.Add(1)
 				}
-				if e.opts.MaxMembers > 0 && e.counts().Checked >= e.opts.MaxMembers {
+				if e.memberLimitReached() {
 					cancel()
 				}
 			}
@@ -896,13 +971,23 @@ func (e *tagSyncEngine) stepMember(ctx context.Context, prefixedTag string, rawM
 		e.mu.Unlock()
 		return true
 	}
-	if err := e.limiter.wait(ctx); err != nil {
-		// Cancelled while waiting for the push slot: report the member as
-		// unprocessed so the chunk does not count as complete and the resume
-		// re-checks it.
-		return false
+	// The checkpoint advances either way, so a push abandoned here is drift
+	// this run found, failed to fix, and never revisits.
+	var pushErr error
+	for attempt := 0; attempt < tagSyncPushAttempts; attempt++ {
+		if err := e.limiter.wait(ctx); err != nil {
+			// Cancelled while waiting for the push slot: report the member as
+			// unprocessed so the chunk does not count as complete and the
+			// resume re-checks it.
+			return false
+		}
+		pushErr = e.env.xdasPush(normalized, prefixedTag, pushValue)
+		if pushErr == nil || !isRetryablePushError(pushErr) {
+			break
+		}
 	}
-	if err := e.env.xdasPush(normalized, prefixedTag, pushValue); err != nil {
+	if pushErr != nil {
+		// One outcome per member, not per attempt: the window counts members.
 		e.mu.Lock()
 		e.run.Counts.PushFailed++
 		e.run.Counts.XdasErrors++
@@ -916,6 +1001,16 @@ func (e *tagSyncEngine) stepMember(ctx context.Context, prefixedTag string, rawM
 	perTag.Pushed++
 	e.mu.Unlock()
 	tagSyncPushedTotal.WithLabelValues(pushReason).Inc()
+	return true
+}
+
+// isRetryablePushError reports whether a retry is worth the rate budget: a 4xx
+// is XDAS refusing the request itself and would be refused again.
+func isRetryablePushError(err error) bool {
+	var remoteErr xwcommon.RemoteHttpErrorAS
+	if errors.As(err, &remoteErr) {
+		return remoteErr.StatusCode < 400 || remoteErr.StatusCode >= 500
+	}
 	return true
 }
 
@@ -955,11 +1050,9 @@ func (e *tagSyncEngine) setCheckpoint(tagId string, bucketId int, lastMember str
 	e.mu.Unlock()
 }
 
-// recordTagResult folds one finished tag into the run report. A resumed run
-// re-walks the tag it stopped inside and records it a second time, so the
-// same TagId can arrive twice across the run's segments: fold it into the
-// existing entry rather than appending, or the tag lands on the leaderboard
-// twice with partial numbers and tagsWithMissing counts one tag as two.
+// recordTagResult folds one finished tag into the run report. A resume records
+// the tag it stopped inside a second time, so merge on TagId - appending would
+// list it twice with partial numbers and count one tag as two.
 func (e *tagSyncEngine) recordTagResult(perTag *TagMissingStat) {
 	if perTag.Missing == 0 {
 		return
@@ -977,15 +1070,13 @@ func (e *tagSyncEngine) recordTagResult(perTag *TagMissingStat) {
 		}
 	}
 	e.mu.Unlock()
-	// The line reports this segment's numbers, not the merged total: it is a
-	// record of what this walk saw, and the merged total is in the run record.
+	// This segment's numbers, not the merged total in the run record.
 	e.logf(log.InfoLevel, "tag sync: tag %s has missing members: checked=%d missing=%d pushed=%d",
 		perTag.TagId, perTag.Checked, perTag.Missing, perTag.Pushed)
 }
 
-// findMissingStatLocked returns the leaderboard entry for tagId, or nil. The
-// caller must hold e.mu and must not append to e.missingStats while using the
-// returned pointer.
+// findMissingStatLocked returns the entry for tagId, or nil. Hold e.mu, and do
+// not append to e.missingStats while using the pointer.
 func (e *tagSyncEngine) findMissingStatLocked(tagId string) *TagMissingStat {
 	for i := range e.missingStats {
 		if e.missingStats[i].TagId == tagId {
@@ -1067,6 +1158,12 @@ func (e *tagSyncEngine) finishCompleted(limited bool) {
 		limited, counts.Checked, counts.Present, counts.MissingField, counts.MissingKey,
 		counts.Pushed, counts.PushFailed, counts.XdasErrors, counts.XdasOnlyFieldsSeen,
 		e.run.MissingRate, e.run.TagsWithMissing)
+	if counts.PushFailed > 0 {
+		// completed is not proof the drift is closed: only another run over
+		// the same tags picks these up again.
+		e.logf(log.WarnLevel, "tag sync: %d member(s) stayed unpushed after %d attempts each; the run completed but did not close their drift - re-run the same mode over the affected tags to retry them",
+			counts.PushFailed, tagSyncPushAttempts)
+	}
 }
 
 func (e *tagSyncEngine) finishAborted(reason string) {

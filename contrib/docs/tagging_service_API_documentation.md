@@ -18,6 +18,7 @@
    - [Tag Sync Status](#tag-sync-status)
    - [Abort Tag Sync](#abort-tag-sync)
    - [Kill Switch](#kill-switch)
+   - [Push Failures](#push-failures)
    - [Abort Reasons](#abort-reasons)
    - [Configuration Defaults](#configuration-defaults)
 4. [XConf Rule Configuration with Tags](#xconf-rule-configuration-with-tags)
@@ -335,7 +336,10 @@ The job has three modes sharing the same walk:
 The job is **additive-only**: it never deletes anything from either store. XDAS server errors (5xx,
 transport failures) are never counted as missing — only a clean "not found" is. A circuit breaker
 aborts the run if XDAS looks unhealthy, and a suspiciously high missing rate must be confirmed by a
-probe (a known-good member that still reads back) before the run continues.
+probe (a known-good member that still reads back) before the run continues. That confirmation is
+re-run on **every chunk** whose missing rate is high, not once per run: it only establishes that XDAS
+was answering correctly at one moment, and an outage starting later would otherwise go unguarded —
+404s count as missing rather than error, so neither rate breaker catches them.
 
 Only **one run** can be active across the whole cluster at a time (a Cassandra lock with heartbeat
 enforces this). Progress is checkpointed continuously, so an aborted or crashed run can be resumed
@@ -391,7 +395,7 @@ Requires the write capability (`x1:coast:xconf:write` or `x1:appds:xconf:*`).
 | `workers` | integer | config (20) | Concurrent workers processing members within a chunk |
 | `chunkSize` | integer | config (5000) | Members fetched per Cassandra page; also the checkpoint granularity |
 | `dryRun` | boolean | `false` | Classify and count, but never push; pushes that would have happened are reported as `wouldPush` |
-| `maxMembers` | integer | unlimited | Stop cleanly after checking this many members. The run finishes as `completed` with `limited: true` and **can be resumed** — use this to ramp up (e.g. 100k first, review, then resume) |
+| `maxMembers` | integer | unlimited | Stop cleanly after checking this many members. The run finishes as `completed` with `limited: true` and **can be resumed** — use this to ramp up (e.g. 100k first, review, then resume). The budget is **per segment**: restating `maxMembers: 100000` on each resume walks another 100k, it does not measure against what earlier segments already checked |
 | `resume` | boolean | `false` | Continue the most recent resumable run (aborted, crashed, or completed-limited) from its checkpoint. `mode` and `tags` are taken from the resumed run; `rate`, `workers`, `chunkSize`, `dryRun` and `maxMembers` may be set anew — note they do **not** inherit from the original run: omitted values fall back to the config defaults (so restate `dryRun: true` when resuming a dry run, or the continuation pushes for real). `probeMember` is the exception: it carries over from the original run unless overridden |
 | `probeMember` | string | none | A known-good member (one that must currently be present in XDAS). Used to tell genuine mass expiry from an XDAS outage that answers "not found" for everything, and as a preflight check in write modes. Passed per run deliberately — a probe pinned in config would itself rot away via TTL expiry |
 
@@ -482,7 +486,7 @@ GET /taggingService/tags/sync/status
 | `counts.present` | Members whose tag field was found in XDAS |
 | `counts.missingField` | XDAS record exists but the tag field is gone |
 | `counts.missingKey` | No XDAS record for the member at all (typically TTL expiry) |
-| `counts.pushed` / `counts.pushFailed` | Write-mode push outcomes |
+| `counts.pushed` / `counts.pushFailed` | Write-mode push outcomes, counted per **member** rather than per attempt. `pushFailed` is members left unpushed after every retry — see [Push Failures](#push-failures) |
 | `counts.wouldPush` | Pushes suppressed by `dryRun` |
 | `counts.xdasErrors` | 5xx/transport errors — never counted as missing |
 | `counts.xdasOnlyFieldsSeen` | Distinct XDAS tag fields with no Cassandra counterpart (reported only, never deleted) |
@@ -492,7 +496,7 @@ GET /taggingService/tags/sync/status
 | `abortReason` | Why an aborted run stopped (see [Abort Reasons](#abort-reasons)) |
 | `limited` | Run stopped at `maxMembers`; resumable |
 | `resumes` | How many times this record has been resumed |
-| `missingRateUnconfirmed` | A `detect` census crossed the missing-rate threshold with no probe available; the numbers need manual confirmation |
+| `missingRateUnconfirmed` | Part of the run crossed the missing-rate threshold with no probe available, or with every probe erroring in transit, so those members were counted without a health check on XDAS. Sticky once set: a later successful confirmation does not retroactively verify members already counted blind, so the numbers need manual confirmation |
 
 ---
 
@@ -535,15 +539,45 @@ curl --location --request PUT 'http://<xconf-admin-url>/xconfAdminService/appset
 
 ---
 
+### Push Failures
+
+A push that fails is retried up to 3 times per member. A 4xx is not retried — XDAS is rejecting the
+request itself, so the identical call would be rejected again — while transport failures and 5xx are
+the transient kind a retry usually clears. Every attempt takes a slot from the configured `rate`, so
+retries are paid for out of the same budget as everything else.
+
+Members still unpushed after that are counted in `counts.pushFailed`, and **the walk moves on**: the
+checkpoint advances past them, so neither the rest of the run nor a later `resume` revisits them.
+
+This means a run that finishes as `completed` is **not** proof the drift it found is closed. A run
+that reports `pushFailed > 0` identified those members as missing, could not push them, and left
+them missing. The run also emits a warning line naming the count when it completes:
+
+```
+tag sync: 12 member(s) stayed unpushed after 3 attempts each; the run completed but did not
+close their drift - re-run the same mode over the affected tags to retry them
+```
+
+Treat `pushFailed > 0` as "re-run this when convenient" rather than as a failure needing immediate
+action — a systemic push outage trips the circuit breaker and aborts the run instead, so a non-zero
+`pushFailed` on a completed run means scattered failures. Re-running the same mode over the same
+tags is idempotent: the read pass re-finds exactly the members still missing and retries just those.
+The per-member detail is deliberately not stored in the run record, which is a single JSON cell that
+every status poll re-reads. Use `counts.pushFailed`, or the `tagging_sync_xdas_errors_total{op="push"}`
+counter, to decide when a re-run is worth it.
+
+---
+
 ### Abort Reasons
 
 | `abortReason` | Meaning | What to do |
 |---------------|---------|------------|
 | `cancelled` | Abort endpoint or shutdown | Resume when ready |
 | `kill_switch` | `TaggingSyncEnabled` was set to false | Re-enable, then resume |
+| `lock_heartbeat_stale` | The run could not refresh its lock for a full staleness window, so another instance may have taken it over | Check Cassandra write health; resume once one run at a time is assured |
 | `xdas_unhealthy_consecutive_errors` | Too many XDAS errors in a row | Check XDAS health, then resume |
 | `xdas_unhealthy_error_rate` | XDAS error rate over the window threshold | Check XDAS health, then resume |
-| `missing_rate_high_probe_failed` | Missing rate crossed the threshold and the probe (or recently-present members) could not be read back — looks like an XDAS outage, not genuine expiry | Verify XDAS; do not trust the run's missing counts |
+| `missing_rate_high_probe_failed` | Missing rate crossed the threshold and XDAS answered that the probe (or recently-present members) are gone too — looks like an XDAS outage, not genuine expiry. A probe that only errored in transit is not an answer and does not abort | Verify XDAS; do not trust the run's missing counts |
 | `missing_rate_high_no_probe_available` | Write mode crossed the missing-rate threshold with no probe to confirm | Re-trigger with a `probeMember` |
 | `probe_member_not_readable` | Write-mode preflight: the supplied probe is not present in XDAS | Pick a probe device that is verifiably in XDAS |
 | `cassandra_suspect_no_tags` | The tag census came back empty — indistinguishable from a Cassandra failure | Check Cassandra; re-trigger |

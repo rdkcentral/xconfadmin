@@ -481,6 +481,166 @@ func TestTagSyncProbePoolDetectsMidRunOutage(t *testing.T) {
 	assert.Equal(t, "missing_rate_high_probe_failed", run.AbortReason)
 }
 
+func TestTagSyncOutageAfterAConfirmationStillAborts(t *testing.T) {
+	// Probe confirms early, then XDAS starts 404ing everything. A confirmation
+	// speaks for one moment, so the guard must re-arm - otherwise the rest of
+	// the run pushes on the strength of one stale check.
+	tagOne := membersInOneBucket("A", 120)
+	tagTwo := members("B", 400)
+	cass := map[string][]string{"a-first": tagOne, "b-second": tagTwo}
+	xdas := newFakeXdas()
+	// Present probe, so the early confirmation succeeds.
+	xdas.records["PROBE"] = map[string]string{"t_whatever": ""}
+
+	var mu sync.Mutex
+	outage := false
+	env := newTestEnv(cass, xdas, newFakeTagSyncDao())
+	realGet := env.xdasGetFields
+	env.xdasGetFields = func(member string) (map[string]string, error) {
+		mu.Lock()
+		on := outage
+		mu.Unlock()
+		if on {
+			return nil, xwcommon.NewRemoteErrorAS(404, "not found")
+		}
+		return realGet(member)
+	}
+	// Outage starts after the guard has already confirmed once.
+	realMembers := env.getMembersFromBucket
+	env.getMembersFromBucket = func(tagId string, bucketId int, lastMember string, limit int) ([]string, error) {
+		if tagId == "b-second" {
+			mu.Lock()
+			outage = true
+			mu.Unlock()
+		}
+		return realMembers(tagId, bucketId, lastMember, limit)
+	}
+
+	run := execute(t, TagSyncOptions{Mode: TagSyncModeRepair, DryRun: true, ProbeMember: "PROBE"}, env)
+
+	assert.Equal(t, TagSyncStateAborted, run.State,
+		"the guard must re-arm and catch the outage that started after the confirmation")
+	assert.Equal(t, "missing_rate_high_probe_failed", run.AbortReason)
+}
+
+func TestTagSyncTransientProbeErrorsDoNotAbort(t *testing.T) {
+	// A 5xx probe never answered the question; that is a transport problem the
+	// other breakers own, not proof of mass expiry.
+	cass := map[string][]string{"tag1": members("M", 60)}
+	xdas := newFakeXdas()
+	xdas.getErr["PROBE"] = xwcommon.NewRemoteErrorAS(503, "unavailable")
+
+	env := newTestEnv(cass, xdas, newFakeTagSyncDao())
+	run := execute(t, TagSyncOptions{Mode: TagSyncModeDetect, ProbeMember: "PROBE"}, env)
+
+	assert.Equal(t, TagSyncStateCompleted, run.State, "a 5xx probe is inconclusive, not proof of an outage")
+	assert.True(t, run.MissingRateUnconfirmed, "but the census numbers stay flagged as unverified")
+	assert.Equal(t, int64(60), run.Counts.MissingKey)
+}
+
+func TestTagSyncMissingRateUnconfirmedIsSticky(t *testing.T) {
+	// A stretch counted with no working probe stays flagged: a later
+	// confirmation says nothing about members already counted blind.
+	all := members("M", 300)
+	cass := map[string][]string{"tag1": all}
+	xdas := newFakeXdas()
+
+	var mu sync.Mutex
+	gets := 0
+	env := newTestEnv(cass, xdas, newFakeTagSyncDao())
+	realGet := env.xdasGetFields
+	env.xdasGetFields = func(member string) (map[string]string, error) {
+		mu.Lock()
+		gets++
+		// Nothing present at first (empty pool, run flagged), then members
+		// read back and later confirmations succeed.
+		present := gets > 150
+		mu.Unlock()
+		if present {
+			return map[string]string{"t_tag1": ""}, nil
+		}
+		return realGet(member)
+	}
+	run := execute(t, TagSyncOptions{Mode: TagSyncModeDetect}, env)
+
+	assert.Equal(t, TagSyncStateCompleted, run.State)
+	assert.True(t, run.MissingRateUnconfirmed,
+		"the blind stretch is not retroactively verified by a later confirmation")
+}
+
+func TestTagSyncPushRetriesTransientFailures(t *testing.T) {
+	// The checkpoint never revisits this member, so a transient failure would
+	// leave it missing while the run still reported completed.
+	cass := map[string][]string{"tag1": {"M0"}}
+	xdas := newFakeXdas()
+	xdas.records["M0"] = map[string]string{"t_other": ""}
+
+	env := newTestEnv(cass, xdas, newFakeTagSyncDao())
+	realPush := env.xdasPush
+	var mu sync.Mutex
+	attempts := 0
+	env.xdasPush = func(member string, tag string, value string) error {
+		mu.Lock()
+		attempts++
+		fail := attempts < tagSyncPushAttempts
+		mu.Unlock()
+		if fail {
+			return xwcommon.NewRemoteErrorAS(503, "unavailable")
+		}
+		return realPush(member, tag, value)
+	}
+	run := execute(t, TagSyncOptions{Mode: TagSyncModeRepair}, env)
+
+	assert.Equal(t, TagSyncStateCompleted, run.State)
+	assert.Equal(t, int64(1), run.Counts.Pushed, "the retry must land the push")
+	assert.Equal(t, int64(0), run.Counts.PushFailed)
+	assert.Equal(t, tagSyncPushAttempts, attempts)
+}
+
+func TestTagSyncPushGivesUpAfterTheAttemptBudget(t *testing.T) {
+	// Bounded: a member XDAS keeps refusing is counted failed, not retried
+	// forever.
+	cass := map[string][]string{"tag1": {"M0"}}
+	xdas := newFakeXdas()
+	xdas.records["M0"] = map[string]string{"t_other": ""}
+
+	env := newTestEnv(cass, xdas, newFakeTagSyncDao())
+	var mu sync.Mutex
+	attempts := 0
+	env.xdasPush = func(member string, tag string, value string) error {
+		mu.Lock()
+		attempts++
+		mu.Unlock()
+		return xwcommon.NewRemoteErrorAS(503, "unavailable")
+	}
+	run := execute(t, TagSyncOptions{Mode: TagSyncModeRepair}, env)
+
+	assert.Equal(t, int64(1), run.Counts.PushFailed, "one member left unpushed, not one per attempt")
+	assert.Equal(t, int64(1), run.Counts.XdasErrors)
+	assert.Equal(t, tagSyncPushAttempts, attempts)
+}
+
+func TestTagSyncPushDoesNotRetryRejections(t *testing.T) {
+	// A 4xx would be refused again; retrying only burns rate budget.
+	cass := map[string][]string{"tag1": {"M0"}}
+	xdas := newFakeXdas()
+	xdas.records["M0"] = map[string]string{"t_other": ""}
+
+	env := newTestEnv(cass, xdas, newFakeTagSyncDao())
+	var mu sync.Mutex
+	attempts := 0
+	env.xdasPush = func(member string, tag string, value string) error {
+		mu.Lock()
+		attempts++
+		mu.Unlock()
+		return xwcommon.NewRemoteErrorAS(400, "bad request")
+	}
+	run := execute(t, TagSyncOptions{Mode: TagSyncModeRepair}, env)
+
+	assert.Equal(t, int64(1), run.Counts.PushFailed)
+	assert.Equal(t, 1, attempts, "a rejected push is not retried")
+}
+
 func TestTagSyncWriteModePreflightProbe(t *testing.T) {
 	cass := map[string][]string{"tag1": {"M0"}}
 	xdas := newFakeXdas() // probe not readable
@@ -827,10 +987,8 @@ func TestTagSyncOperatorProbeConsultedBeforePool(t *testing.T) {
 }
 
 func TestTagSyncResumedTagIsNotCountedTwice(t *testing.T) {
-	// A maxMembers-limited run records the tag it stopped inside, then the
-	// resume re-walks that same tag and records it again. Without merging,
-	// the tag lands twice on the leaderboard and tagsWithMissing counts one
-	// tag as two, so the operator report overstates the drift.
+	// A limited run records the tag it stopped inside; the resume re-walks and
+	// records it again. Without merging the report counts one tag as two.
 	all := members("M", 250)
 	cass := map[string][]string{"tag1": all}
 	xdas := newFakeXdas()
@@ -857,6 +1015,94 @@ func TestTagSyncResumedTagIsNotCountedTwice(t *testing.T) {
 		assert.Equal(t, run2.Counts.MissingField+run2.Counts.MissingKey, run2.TopMissingTags[0].Missing,
 			"the merged entry must account for every missing member both segments saw")
 	}
+}
+
+func TestTagSyncResumeSpendsAFreshMemberBudget(t *testing.T) {
+	// Restating the same maxMembers on a resume must walk the next page. Against
+	// the run's lifetime Checked the budget is spent and it walks one member.
+	all := members("M", 250)
+	cass := map[string][]string{"tag1": all}
+	xdas := newFakeXdas()
+	for _, m := range all {
+		xdas.records[m] = map[string]string{"t_tag1": ""}
+	}
+	dao := newFakeTagSyncDao()
+
+	env1 := newTestEnv(cass, xdas, dao)
+	run1 := execute(t, TagSyncOptions{Mode: TagSyncModeDetect, MaxMembers: 150}, env1)
+	assert.True(t, run1.Limited)
+	assert.Equal(t, int64(150), run1.Counts.Checked)
+
+	env2 := newTestEnv(cass, xdas, dao)
+	run2 := execute(t, TagSyncOptions{Resume: true, MaxMembers: 150}, env2)
+
+	assert.Greater(t, run2.Counts.Checked-run1.Counts.Checked, int64(50),
+		"the resume must spend its own maxMembers budget, not the run's lifetime total")
+	assert.Equal(t, TagSyncStateCompleted, run2.State)
+}
+
+func TestTagSyncReleaseLeavesAnotherRunsLockAlone(t *testing.T) {
+	// A run that lost its lock to a takeover must not mark the new owner's lock
+	// released on the way out - that would let a third run start.
+	dao := newFakeTagSyncDao()
+	assert.NoError(t, dao.saveLock(&TagSyncLock{
+		Owner: "podA", RunId: "runA", HeartbeatAt: time.Now().UTC().Add(-10 * tagSyncLockStaleAfter),
+	}))
+	assert.NoError(t, acquireTagSyncLock(dao, "podB", "runB"))
+
+	releaseTagSyncLock(dao, "podA", "runA")
+
+	lock, err := dao.getLock()
+	assert.NoError(t, err)
+	if assert.NotNil(t, lock) {
+		assert.Equal(t, "runB", lock.RunId, "B still owns the lock")
+		assert.False(t, lock.Released, "B is still walking, so its lock must not read as released")
+	}
+	assert.Error(t, acquireTagSyncLock(dao, "podC", "runC"), "a third run must still be refused")
+
+	// B's own release works normally.
+	releaseTagSyncLock(dao, "podB", "runB")
+	assert.NoError(t, acquireTagSyncLock(dao, "podC", "runC"))
+}
+
+func TestTagSyncStaleHeartbeatStopsTheWalk(t *testing.T) {
+	// Unrefreshed for a full staleness window, the lock may already be taken
+	// over, so this walk must stop.
+	env := newTestEnv(map[string][]string{"tag1": {"M0"}}, newFakeXdas(), newFakeTagSyncDao())
+	engine, err := prepareTagSync(TagSyncOptions{Mode: TagSyncModeDetect}, env)
+	assert.NoError(t, err)
+
+	assert.NoError(t, engine.checkAbort(context.Background()), "a fresh run holds a fresh heartbeat")
+
+	engine.mu.Lock()
+	engine.lastHeartbeatOk = time.Now().Add(-2 * tagSyncLockStaleAfter)
+	engine.mu.Unlock()
+
+	err = engine.checkAbort(context.Background())
+	var abort *tagSyncAbort
+	if assert.ErrorAs(t, err, &abort) {
+		assert.Equal(t, "lock_heartbeat_stale", abort.reason)
+	}
+}
+
+func TestSyncBreakerZeroConfigDoesNotTripOnHealthyMembers(t *testing.T) {
+	// Thresholds are >= comparisons, so a zero from config would abort on the
+	// first healthy member. Non-positive knobs fall back to defaults.
+	b := newSyncBreaker(0, 0, 0, 0, 0)
+	for i := 0; i < 1000; i++ {
+		b.record(syncOutcomeOk)
+	}
+	reason, tripped := b.tripped()
+	assert.False(t, tripped, "healthy traffic must not trip a zero-configured breaker: %s", reason)
+	assert.False(t, b.missingRateHigh(), "zero missing-rate percent must not flag every healthy member")
+
+	// The defaults are genuinely in force: 10 consecutive errors still trip.
+	for i := 0; i < syncBreakerDefaultMaxConsecErrors; i++ {
+		b.record(syncOutcomeError)
+	}
+	reason, tripped = b.tripped()
+	assert.True(t, tripped)
+	assert.Equal(t, "xdas_unhealthy_consecutive_errors", reason)
 }
 
 func TestTagSyncLimitedRunIsResumable(t *testing.T) {
