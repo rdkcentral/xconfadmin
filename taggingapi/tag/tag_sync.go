@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"sort"
 	"strings"
@@ -89,8 +90,9 @@ type TagSyncOptions struct {
 	DryRun     bool        `json:"dryRun,omitempty"`
 	MaxMembers int64       `json:"maxMembers,omitempty"`
 	Resume     bool        `json:"resume,omitempty"`
-	// ProbeMember overrides the configured probe for this run, so a rotted
-	// probe device never requires a config rollout.
+	// ProbeMember is a member that must currently be present in XDAS.
+	// Required for a write mode that actually pushes; see
+	// requireProbeForWrites.
 	ProbeMember string `json:"probeMember,omitempty"`
 }
 
@@ -229,6 +231,9 @@ type tagSyncEngine struct {
 	knownTags    map[string]bool
 	xdasOnlySeen map[string]bool
 
+	// Members processed between outage-guard evaluations.
+	guardBatch int
+
 	// Counts.Checked when this segment began, so MaxMembers is measured per
 	// segment rather than against a resumed run's lifetime total.
 	checkedAtStart int64
@@ -274,6 +279,9 @@ func PrepareTagSync(opts TagSyncOptions) (*tagSyncEngine, error) {
 	return prepareTagSync(opts, env)
 }
 
+// validateTagSyncOptions checks what can be judged from the request alone.
+// The probe requirement is not here: on a resume the effective options are
+// only known after the merge, so prepareTagSync enforces it.
 func validateTagSyncOptions(opts *TagSyncOptions) error {
 	if opts.Mode == "" {
 		opts.Mode = TagSyncModeDetect
@@ -284,6 +292,31 @@ func validateTagSyncOptions(opts *TagSyncOptions) error {
 	default:
 		return fmt.Errorf("invalid mode %q: must be detect, repair or refresh", opts.Mode)
 	}
+}
+
+// requireProbeForWrites rejects a pushing run with no probe member. Without one
+// nothing can tell mass expiry from an XDAS outage answering "not found" for
+// everything, and the preflight check that catches an outage before the first
+// push has nothing to read. Dry runs and detect push nothing, so they are free
+// to run without one.
+func requireProbeForWrites(opts TagSyncOptions) error {
+	if opts.Mode == TagSyncModeDetect || opts.DryRun || opts.ProbeMember != "" {
+		return nil
+	}
+	return xwcommon.NewRemoteErrorAS(http.StatusBadRequest,
+		fmt.Sprintf("mode %s requires probeMember: a member that must currently be present in XDAS", opts.Mode))
+}
+
+// guardBatchSize is how many members are processed between outage-guard
+// evaluations. The guard cannot arm before minSample members and reads no finer
+// than the breaker window, so batching at the larger of the two runs it as early
+// as it can possibly say anything - capping a bad XDAS at one batch of pushes
+// rather than a whole Cassandra page.
+func guardBatchSize(chunkSize, window, minSample int) int {
+	if window <= 0 {
+		window = syncBreakerDefaultWindow
+	}
+	return min(chunkSize, max(window, minSample))
 }
 
 // positiveOr returns v when positive, otherwise fallback, floored to 1: a
@@ -348,6 +381,12 @@ func prepareTagSync(opts TagSyncOptions, env *tagSyncEnv) (*tagSyncEngine, error
 		}
 	}
 
+	// After the resume merge: probeMember carries over from the resumed run,
+	// but dryRun does not, so a resume can turn a dry census into a real write.
+	if err := requireProbeForWrites(opts); err != nil {
+		return nil, err
+	}
+
 	if err := acquireTagSyncLock(env.dao, owner, run.RunId); err != nil {
 		return nil, err
 	}
@@ -367,6 +406,7 @@ func prepareTagSync(opts TagSyncOptions, env *tagSyncEnv) (*tagSyncEngine, error
 		// The lock was just acquired, so start the staleness clock now.
 		lastHeartbeatOk: time.Now(),
 		checkedAtStart:  run.Counts.Checked,
+		guardBatch:      guardBatchSize(opts.ChunkSize, cfg.BreakerWindow, cfg.BreakerMinSample),
 	}, nil
 }
 
@@ -563,7 +603,8 @@ func filterTags(all []string, requested []string) []string {
 func (e *tagSyncEngine) preflightProbe(ctx context.Context) error {
 	probe := e.configuredProbe()
 	if probe == "" {
-		e.logf(log.WarnLevel, "tag sync: no probeMember passed with the trigger; %s mode runs without the preflight probe check", e.opts.Mode)
+		// Only a dry run gets here; a pushing run is rejected without a probe.
+		e.logf(log.WarnLevel, "tag sync: no probeMember passed with the trigger; %s dry run continues without the preflight probe check", e.opts.Mode)
 		return nil
 	}
 	normalized := ToNormalizedEcm(probe)
@@ -633,11 +674,6 @@ func (e *tagSyncEngine) walkTag(ctx context.Context, tagId string, perTag *TagMi
 			}
 		}
 		for {
-			if err := e.checkAbort(ctx); err != nil {
-				e.setCheckpoint(tagId, bucketId, lastMember)
-				e.saveRun()
-				return err
-			}
 			chunk, err := e.env.getMembersFromBucket(tagId, bucketId, lastMember, e.opts.ChunkSize)
 			if err != nil {
 				e.setCheckpoint(tagId, bucketId, lastMember)
@@ -659,46 +695,59 @@ func (e *tagSyncEngine) walkTag(ctx context.Context, tagId string, perTag *TagMi
 				break
 			}
 
-			completed := e.processChunk(ctx, prefixedTag, chunk, perTag)
-			if !completed {
-				// Part of this chunk was drained unprocessed (breaker trip,
-				// cancel, or member limit). The checkpoint stays at the chunk
-				// start so a resume re-walks the whole chunk; re-checking a
-				// member is idempotent, skipping one is not.
-				e.setCheckpoint(tagId, bucketId, lastMember)
-				e.saveRun()
-				if reason, tripped := e.breaker.tripped(); tripped {
-					tagSyncBreakerTrippedTotal.WithLabelValues(reason).Inc()
-					return &tagSyncAbort{reason: reason}
-				}
-				if e.memberLimitReached() {
-					return errTagSyncLimitReached
-				}
+			// One Cassandra page, walked in guard-sized batches: the outage
+			// guards below run between them, so a bad XDAS costs at most one
+			// batch of pushes instead of the whole page.
+			for start := 0; start < len(chunk); start += e.guardBatch {
+				batch := chunk[start:min(start+e.guardBatch, len(chunk))]
+
 				if err := e.checkAbort(ctx); err != nil {
-					return err
-				}
-				return &tagSyncAbort{reason: "chunk_incomplete"}
-			}
-
-			lastMember = chunk[len(chunk)-1]
-			e.setCheckpoint(tagId, bucketId, lastMember)
-			e.maybeSaveProgress()
-
-			if reason, tripped := e.breaker.tripped(); tripped {
-				tagSyncBreakerTrippedTotal.WithLabelValues(reason).Inc()
-				e.saveRun()
-				return &tagSyncAbort{reason: reason}
-			}
-			if e.breaker.missingRateHigh() {
-				if err := e.confirmMissingWithProbe(ctx); err != nil {
+					e.setCheckpoint(tagId, bucketId, lastMember)
 					e.saveRun()
 					return err
 				}
+
+				if !e.processBatch(ctx, prefixedTag, batch, perTag) {
+					// Part of this batch was drained unprocessed (breaker trip,
+					// cancel, or member limit). The checkpoint stays at the batch
+					// start so a resume re-walks the whole batch; re-checking a
+					// member is idempotent, skipping one is not.
+					e.setCheckpoint(tagId, bucketId, lastMember)
+					e.saveRun()
+					if reason, tripped := e.breaker.tripped(); tripped {
+						tagSyncBreakerTrippedTotal.WithLabelValues(reason).Inc()
+						return &tagSyncAbort{reason: reason}
+					}
+					if e.memberLimitReached() {
+						return errTagSyncLimitReached
+					}
+					if err := e.checkAbort(ctx); err != nil {
+						return err
+					}
+					return &tagSyncAbort{reason: "chunk_incomplete"}
+				}
+
+				lastMember = batch[len(batch)-1]
+				e.setCheckpoint(tagId, bucketId, lastMember)
+				e.maybeSaveProgress()
+
+				if reason, tripped := e.breaker.tripped(); tripped {
+					tagSyncBreakerTrippedTotal.WithLabelValues(reason).Inc()
+					e.saveRun()
+					return &tagSyncAbort{reason: reason}
+				}
+				if e.breaker.missingRateHigh() {
+					if err := e.confirmMissingWithProbe(ctx); err != nil {
+						e.saveRun()
+						return err
+					}
+				}
+				if e.memberLimitReached() {
+					e.saveRun()
+					return errTagSyncLimitReached
+				}
 			}
-			if e.memberLimitReached() {
-				e.saveRun()
-				return errTagSyncLimitReached
-			}
+
 			if len(chunk) < e.opts.ChunkSize {
 				break
 			}
@@ -839,11 +888,11 @@ func (e *tagSyncEngine) markMissingRateUnconfirmed(format string, args ...interf
 	}
 }
 
-// processChunk fans the chunk through the worker pool and reports whether
-// every member was fully processed; the caller only advances the checkpoint
-// past a fully processed chunk.
-func (e *tagSyncEngine) processChunk(ctx context.Context, prefixedTag string, chunk []string, perTag *TagMissingStat) bool {
-	workers := min(e.opts.Workers, len(chunk))
+// processBatch fans one guard-sized batch through the worker pool and reports
+// whether every member was fully processed; the caller only advances the
+// checkpoint past a fully processed batch.
+func (e *tagSyncEngine) processBatch(ctx context.Context, prefixedTag string, batch []string, perTag *TagMissingStat) bool {
+	workers := min(e.opts.Workers, len(batch))
 	cctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -874,12 +923,12 @@ func (e *tagSyncEngine) processChunk(ctx context.Context, prefixedTag string, ch
 			}
 		}()
 	}
-	for _, member := range chunk {
+	for _, member := range batch {
 		memberCh <- member
 	}
 	close(memberCh)
 	wg.Wait()
-	return processed.Load() == int64(len(chunk))
+	return processed.Load() == int64(len(batch))
 }
 
 // stepMember is the per-member unit of work: one XDAS read, classification,

@@ -3,6 +3,7 @@ package tag
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sort"
 	"sync"
 	"testing"
@@ -249,6 +250,19 @@ func membersInOneBucket(prefix string, n int) []string {
 	return out
 }
 
+// testProbeMember is the known-good member write modes now have to name.
+const testProbeMember = "PROBEOK"
+
+// withProbe registers testProbeMember as present in the fake XDAS and points
+// opts at it, so a pushing run passes requireProbeForWrites and the preflight.
+func withProbe(x *fakeXdas, opts TagSyncOptions) TagSyncOptions {
+	x.mu.Lock()
+	x.records[testProbeMember] = map[string]string{"t_probe": ""}
+	x.mu.Unlock()
+	opts.ProbeMember = testProbeMember
+	return opts
+}
+
 func execute(t *testing.T, opts TagSyncOptions, env *tagSyncEnv) *TagSyncRun {
 	t.Helper()
 	engine, err := prepareTagSync(opts, env)
@@ -291,7 +305,7 @@ func TestTagSyncRefreshPreservesObservedValue(t *testing.T) {
 	xdas.records["M0"] = map[string]string{"t_tag1": "gold"}
 
 	env := newTestEnv(cass, xdas, newFakeTagSyncDao())
-	run := execute(t, TagSyncOptions{Mode: TagSyncModeRefresh}, env)
+	run := execute(t, withProbe(xdas, TagSyncOptions{Mode: TagSyncModeRefresh}), env)
 
 	assert.Equal(t, TagSyncStateCompleted, run.State)
 	assert.Equal(t, int64(2), run.Counts.Pushed)
@@ -314,7 +328,7 @@ func TestTagSyncRepairPushesOnlyMissing(t *testing.T) {
 	xdas.records["M1"] = map[string]string{"t_other": ""}
 
 	env := newTestEnv(cass, xdas, newFakeTagSyncDao())
-	run := execute(t, TagSyncOptions{Mode: TagSyncModeRepair}, env)
+	run := execute(t, withProbe(xdas, TagSyncOptions{Mode: TagSyncModeRepair}), env)
 
 	assert.Equal(t, TagSyncStateCompleted, run.State)
 	assert.Equal(t, int64(2), run.Counts.Pushed)
@@ -589,7 +603,7 @@ func TestTagSyncPushRetriesTransientFailures(t *testing.T) {
 		}
 		return realPush(member, tag, value)
 	}
-	run := execute(t, TagSyncOptions{Mode: TagSyncModeRepair}, env)
+	run := execute(t, withProbe(xdas, TagSyncOptions{Mode: TagSyncModeRepair}), env)
 
 	assert.Equal(t, TagSyncStateCompleted, run.State)
 	assert.Equal(t, int64(1), run.Counts.Pushed, "the retry must land the push")
@@ -613,7 +627,7 @@ func TestTagSyncPushGivesUpAfterTheAttemptBudget(t *testing.T) {
 		mu.Unlock()
 		return xwcommon.NewRemoteErrorAS(503, "unavailable")
 	}
-	run := execute(t, TagSyncOptions{Mode: TagSyncModeRepair}, env)
+	run := execute(t, withProbe(xdas, TagSyncOptions{Mode: TagSyncModeRepair}), env)
 
 	assert.Equal(t, int64(1), run.Counts.PushFailed, "one member left unpushed, not one per attempt")
 	assert.Equal(t, int64(1), run.Counts.XdasErrors)
@@ -635,7 +649,7 @@ func TestTagSyncPushDoesNotRetryRejections(t *testing.T) {
 		mu.Unlock()
 		return xwcommon.NewRemoteErrorAS(400, "bad request")
 	}
-	run := execute(t, TagSyncOptions{Mode: TagSyncModeRepair}, env)
+	run := execute(t, withProbe(xdas, TagSyncOptions{Mode: TagSyncModeRepair}), env)
 
 	assert.Equal(t, int64(1), run.Counts.PushFailed)
 	assert.Equal(t, 1, attempts, "a rejected push is not retried")
@@ -651,6 +665,105 @@ func TestTagSyncWriteModePreflightProbe(t *testing.T) {
 	assert.Equal(t, TagSyncStateAborted, run.State)
 	assert.Equal(t, "probe_member_not_readable", run.AbortReason)
 	assert.Equal(t, 0, xdas.pushCount(), "no pushes before a failed preflight probe")
+}
+
+func TestTagSyncWriteModeRequiresProbeMember(t *testing.T) {
+	// Without a probe nothing can tell mass expiry from an XDAS outage, so a
+	// pushing run is refused before it takes the lock.
+	dao := newFakeTagSyncDao()
+	env := newTestEnv(map[string][]string{"tag1": {"M0"}}, newFakeXdas(), dao)
+
+	for _, mode := range []TagSyncMode{TagSyncModeRepair, TagSyncModeRefresh} {
+		_, err := prepareTagSync(TagSyncOptions{Mode: mode}, env)
+		if assert.Error(t, err, "%s must require a probeMember", mode) {
+			assert.Equal(t, http.StatusBadRequest, xwcommon.GetXconfErrorStatusCode(err))
+		}
+	}
+	lock, _ := dao.getLock()
+	assert.Nil(t, lock, "a rejected run must not take the lock")
+}
+
+func TestTagSyncProbeMemberIsOptionalWithoutPushes(t *testing.T) {
+	// Detect and dry runs push nothing, so they stay runnable with no probe.
+	env := newTestEnv(map[string][]string{"tag1": {"M0"}}, newFakeXdas(), newFakeTagSyncDao())
+
+	_, err := prepareTagSync(TagSyncOptions{Mode: TagSyncModeDetect}, env)
+	assert.NoError(t, err)
+
+	env2 := newTestEnv(map[string][]string{"tag1": {"M0"}}, newFakeXdas(), newFakeTagSyncDao())
+	_, err = prepareTagSync(TagSyncOptions{Mode: TagSyncModeRepair, DryRun: true}, env2)
+	assert.NoError(t, err)
+}
+
+func TestTagSyncResumeIntoRealPushesRequiresProbeMember(t *testing.T) {
+	// dryRun does not carry over on resume, so resuming a probeless dry run
+	// without restating it would turn a census into real pushes.
+	dao := newFakeTagSyncDao()
+	dao.runs["20260101-000000-aaaa"] = &TagSyncRun{
+		RunId:   "20260101-000000-aaaa",
+		Mode:    TagSyncModeRepair,
+		State:   TagSyncStateAborted,
+		Options: TagSyncOptions{Mode: TagSyncModeRepair, DryRun: true},
+	}
+	env := newTestEnv(map[string][]string{"tag1": {"M0"}}, newFakeXdas(), dao)
+
+	_, err := prepareTagSync(TagSyncOptions{Resume: true}, env)
+	if assert.Error(t, err) {
+		assert.Equal(t, http.StatusBadRequest, xwcommon.GetXconfErrorStatusCode(err))
+	}
+
+	// Restating dryRun keeps the resume runnable.
+	_, err = prepareTagSync(TagSyncOptions{Resume: true, DryRun: true}, env)
+	assert.NoError(t, err)
+}
+
+func TestTagSyncOutageCostsOneGuardBatchNotAWholeChunk(t *testing.T) {
+	// XDAS starts answering "not found" for everything right after the
+	// preflight. The guard runs between batches, so the pushes it lets through
+	// are bounded by one batch instead of the whole Cassandra page.
+	all := membersInOneBucket("M", 1000)
+	cass := map[string][]string{"tag1": all}
+	xdas := newFakeXdas()
+
+	env := newTestEnv(cass, xdas, newFakeTagSyncDao())
+	env.config.ChunkSize = 1000
+	env.config.BreakerWindow = 50
+	env.config.BreakerMinSample = 100
+	// max(window, minSample) = 100 members per batch, out of a 1000 chunk.
+	wantMaxPushes := 100
+
+	opts := withProbe(xdas, TagSyncOptions{Mode: TagSyncModeRepair})
+	realGet := env.xdasGetFields
+	var mu sync.Mutex
+	gets := 0
+	env.xdasGetFields = func(member string) (map[string]string, error) {
+		mu.Lock()
+		gets++
+		outage := gets > 1 // the preflight probe reads back fine, nothing after does
+		mu.Unlock()
+		if outage {
+			return nil, xwcommon.NewRemoteErrorAS(404, "not found")
+		}
+		return realGet(member)
+	}
+	run := execute(t, opts, env)
+
+	assert.Equal(t, TagSyncStateAborted, run.State)
+	assert.Equal(t, "missing_rate_high_probe_failed", run.AbortReason)
+	assert.LessOrEqual(t, xdas.pushCount(), wantMaxPushes,
+		"the guard must stop the run within one batch of pushes")
+	assert.Less(t, xdas.pushCount(), env.config.ChunkSize,
+		"a whole chunk of blind pushes is what the batching prevents")
+}
+
+func TestGuardBatchSize(t *testing.T) {
+	// The guard cannot say anything before minSample members and reads no
+	// finer than the window, so the batch is the larger of the two - capped by
+	// the Cassandra page it slices.
+	assert.Equal(t, 500, guardBatchSize(5000, 200, 500))
+	assert.Equal(t, 1000, guardBatchSize(5000, 1000, 500))
+	assert.Equal(t, 100, guardBatchSize(100, 200, 500))
+	assert.Equal(t, syncBreakerDefaultWindow, guardBatchSize(5000, 0, 0))
 }
 
 func TestTagSyncKillSwitchAborts(t *testing.T) {
@@ -767,11 +880,12 @@ func TestTagSyncNormalizesRawMemberOnce(t *testing.T) {
 	xdas := newFakeXdas()
 
 	env := newTestEnv(cass, xdas, newFakeTagSyncDao())
-	run := execute(t, TagSyncOptions{Mode: TagSyncModeRepair}, env)
+	run := execute(t, withProbe(xdas, TagSyncOptions{Mode: TagSyncModeRepair}), env)
 
 	assert.Equal(t, TagSyncStateCompleted, run.State)
-	if assert.Equal(t, 1, xdas.getCount()) {
-		assert.Equal(t, normalized, xdas.gets[0], "GET must use the normalized form of the raw Cassandra member")
+	// gets[0] is the preflight probe; the member is the only other read.
+	if assert.Equal(t, 2, xdas.getCount()) {
+		assert.Equal(t, normalized, xdas.gets[1], "GET must use the normalized form of the raw Cassandra member")
 	}
 	if assert.Equal(t, 1, xdas.pushCount()) {
 		assert.Equal(t, normalized, xdas.pushes[0].member, "push must reuse the same normalized form")
