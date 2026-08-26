@@ -119,6 +119,11 @@ func TriggerTagSyncHandler(w http.ResponseWriter, r *http.Request) {
 // recent run history, straight from the TagSyncState table.
 // GET /taggingService/tags/sync/status
 func TagSyncStatusHandler(w http.ResponseWriter, r *http.Request) {
+	if !auth.HasReadPermissionForTool(r) {
+		xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "No read permission: tools")
+		return
+	}
+
 	dao := newTagSyncDao()
 
 	var active *TagSyncRun

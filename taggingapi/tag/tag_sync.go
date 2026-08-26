@@ -356,6 +356,9 @@ func prepareTagSync(opts TagSyncOptions, env *tagSyncEnv) (*tagSyncEngine, error
 		run.CompletedAt = nil
 		run.Limited = false
 		run.Owner = owner
+		// Without this the record keeps the previous segment's timestamp until
+		// the first batch save, so status shows a running run that looks dead.
+		run.UpdatedAt = time.Now().UTC()
 		run.Resumes++
 		// Mode and filters stay as recorded; pacing may be overridden.
 		run.Options.Rate = opts.Rate
@@ -366,8 +369,10 @@ func prepareTagSync(opts TagSyncOptions, env *tagSyncEnv) (*tagSyncEngine, error
 		if opts.ProbeMember != "" {
 			run.Options.ProbeMember = opts.ProbeMember
 		}
+		// Options reports the effective set for this segment, and this one is a
+		// resume; only the fresh run recorded false.
+		run.Options.Resume = true
 		opts = run.Options
-		opts.Resume = true
 	} else {
 		now := time.Now().UTC()
 		run = &TagSyncRun{

@@ -10,10 +10,8 @@ import (
 
 	"github.com/rdkcentral/xconfadmin/util"
 
-	"github.com/rdkcentral/xconfwebconfig/db"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
-	core "github.com/rdkcentral/xconfwebconfig/shared"
 	shared "github.com/rdkcentral/xconfwebconfig/shared"
 
 	log "github.com/sirupsen/logrus"
@@ -73,7 +71,7 @@ func SetAppSetting(key string, value interface{}) (*shared.AppSetting, error) {
 		Value:   value,
 	}
 
-	err := db.GetCachedSimpleDao().SetOne(db.TABLE_APP_SETTINGS, setting.ID, &setting)
+	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_APP_SETTINGS, setting.ID, &setting)
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +335,7 @@ func DeleteOneEnvironment(id string) error {
 	return nil
 }
 
-func SetOneModel(model *core.Model) (*core.Model, error) {
+func SetOneModel(model *shared.Model) (*shared.Model, error) {
 	model.Updated = util.GetTimestamp()
 	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_MODEL, model.ID, model)
 	if err != nil {

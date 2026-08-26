@@ -451,14 +451,22 @@ curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/syn
 
 ### Tag Sync Status
 
-Reports the currently active run (on any instance) and recent run history. Read-level access.
+Reports the currently active run (on any instance) and recent run history.
 
 **Endpoint:**
 ```
 GET /taggingService/tags/sync/status
 ```
 
-**Response Status Code:** `200 OK`
+Requires the read capability (`x1:coast:xconf:read` or `x1:appds:xconf:*`). The run record carries
+device identifiers (`options.probeMember`, `checkpoint.lastMember`), the owning host and per-tag
+drift numbers, so it is guarded like the rest of the tools plane rather than left open to any
+authenticated caller. Note that the write capability alone does not grant read here — a token that
+triggers runs also needs read to poll their status.
+
+**Response Status Codes:**
+- `200 OK`: body as below
+- `403 Forbidden`: token lacks the tools read capability
 
 **Response Body:**
 ```json
@@ -478,9 +486,9 @@ GET /taggingService/tags/sync/status
 | Field | Description |
 |-------|-------------|
 | `runId` | Time-prefixed unique id; also the `audit_id` on every log line of the run |
-| `mode`, `options`, `owner` | What was requested and which instance is running it |
+| `mode`, `options`, `owner` | What is in effect for the segment now running, and which instance is running it — a resume overwrites the pacing fields and sets `options.resume` |
 | `state` | `running`, `completed` or `aborted` |
-| `startedAt`, `updatedAt`, `completedAt` | Timestamps; `updatedAt` advances with every checkpoint save |
+| `startedAt`, `updatedAt`, `completedAt` | Timestamps. `startedAt` stays at the original run's start across resumes (`resumes` counts the segments); `updatedAt` advances with every checkpoint save and is re-stamped the moment a resume takes the record over, so it is a usable liveness signal |
 | `checkpoint` | Walk position (`tagId`, `bucketId`, `lastMember`) — where a resume would continue |
 | `counts.checked` | Members checked against XDAS so far |
 | `counts.present` | Members whose tag field was found in XDAS |
@@ -531,7 +539,7 @@ curl --location --request PUT 'http://<xconf-admin-url>/xconfAdminService/appset
   --data '{"TaggingSyncEnabled": false}'
 ```
 
-- `false` rejects new triggers (`409`) and makes any running run abort at its next chunk boundary
+- `false` rejects new triggers (`409`) and makes any running run abort at its next batch boundary
   (`abortReason: "kill_switch"`), on whichever instance it runs — takes effect within about a minute
   (app settings cache refresh)
 - The setting is seeded as `true` at startup; absent or unreadable also means enabled

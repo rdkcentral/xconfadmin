@@ -845,6 +845,33 @@ func TestTagSyncResumeSkipsWalkedMembers(t *testing.T) {
 		"resume must not re-check already walked members")
 }
 
+func TestTagSyncResumeRestampsTheRecordForTheNewSegment(t *testing.T) {
+	// Status polled right after a resume must not show the previous segment's
+	// timestamp, nor options claiming this is not a resume.
+	stale := time.Now().UTC().Add(-48 * time.Hour)
+	dao := newFakeTagSyncDao()
+	dao.runs["20260101-000000-aaaa"] = &TagSyncRun{
+		RunId:     "20260101-000000-aaaa",
+		Mode:      TagSyncModeDetect,
+		State:     TagSyncStateAborted,
+		Options:   TagSyncOptions{Mode: TagSyncModeDetect},
+		StartedAt: stale,
+		UpdatedAt: stale,
+	}
+	env := newTestEnv(map[string][]string{"tag1": {"M0"}}, newFakeXdas(), dao)
+
+	engine, err := prepareTagSync(TagSyncOptions{Resume: true}, env)
+	assert.NoError(t, err)
+	assert.True(t, engine.opts.Resume)
+
+	saved, err := dao.getRun("20260101-000000-aaaa")
+	assert.NoError(t, err)
+	assert.True(t, saved.UpdatedAt.After(stale), "the record must be stamped for the segment now running")
+	assert.True(t, saved.Options.Resume, "options must describe the segment actually running")
+	assert.Equal(t, stale, saved.StartedAt, "startedAt still marks the original run")
+	assert.Equal(t, 1, saved.Resumes)
+}
+
 func TestTagSyncResumeNothingToResume(t *testing.T) {
 	env := newTestEnv(map[string][]string{}, newFakeXdas(), newFakeTagSyncDao())
 	_, err := prepareTagSync(TagSyncOptions{Resume: true}, env)
