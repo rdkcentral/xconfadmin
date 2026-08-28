@@ -38,7 +38,14 @@ func TriggerTagSyncHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var opts TagSyncOptions
-	body := readRequestBody(w, r)
+	body, err := readRequestBody(w, r)
+	if err != nil {
+		// A body that failed to read must not fall through as "no options
+		// sent": that starts a default detect run the caller gets a 202 for,
+		// holding the cluster lock against the run they actually asked for.
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf("request body read error: %s", err.Error())))
+		return
+	}
 	if len(body) > 0 {
 		if err := json.Unmarshal(body, &opts); err != nil {
 			xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(RequestBodyReadErrorMsg, err.Error())))
@@ -183,16 +190,17 @@ func AbortTagSyncHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // readRequestBody works both when the auth middleware has already buffered
-// the body into XResponseWriter and when it has not.
-func readRequestBody(w http.ResponseWriter, r *http.Request) []byte {
+// the body into XResponseWriter and when it has not. A read failure comes back
+// as an error rather than an empty body, so the caller can tell "no options
+// sent" from "options lost in transit".
+func readRequestBody(w http.ResponseWriter, r *http.Request) ([]byte, error) {
 	if xw, ok := w.(*xwhttp.XResponseWriter); ok {
 		if body := xw.Body(); body != "" {
-			return []byte(body)
+			return []byte(body), nil
 		}
 	}
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		return nil
+	if r.Body == nil {
+		return nil, nil
 	}
-	return body
+	return io.ReadAll(r.Body)
 }

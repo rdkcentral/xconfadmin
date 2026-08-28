@@ -1181,17 +1181,36 @@ func (e *tagSyncEngine) maybeSaveProgress() {
 	}
 }
 
-func (e *tagSyncEngine) saveRun() {
+func (e *tagSyncEngine) saveRun() TagSyncRun {
 	e.mu.Lock()
 	e.run.UpdatedAt = time.Now().UTC()
 	// Refresh the missing-members leaderboard on every save so mid-run status
 	// shows live numbers and a crash loses at most one checkpoint interval.
 	e.run.TopMissingTags = topMissing(e.missingStats)
+	// Same for the rate: computed only at the end it would read 0 for the
+	// whole walk, which is the stretch an operator actually watches. Guarded
+	// so a resumed segment keeps the rate it carried in until it checks
+	// something of its own.
+	if e.run.Counts.Checked > 0 {
+		e.run.MissingRate = missingRate(e.run.Counts)
+	}
 	snapshot := *e.run
 	e.mu.Unlock()
+
+	tagSyncMissingRate.Set(snapshot.MissingRate)
 	if err := e.env.dao.saveRun(&snapshot); err != nil {
 		e.logf(log.WarnLevel, "tag sync run save failed: %v", err)
 	}
+	return snapshot
+}
+
+// missingRate is the share of checked members that XDAS did not have the tag
+// for, counting both a missing field and a missing record.
+func missingRate(c TagSyncCounts) float64 {
+	if c.Checked == 0 {
+		return 0
+	}
+	return float64(c.MissingField+c.MissingKey) / float64(c.Checked)
 }
 
 // topMissing returns the tags with the most missing members, worst first,
@@ -1206,12 +1225,12 @@ func topMissing(missingStats []TagMissingStat) []TagMissingStat {
 }
 
 func (e *tagSyncEngine) finishCompleted(limited bool) {
-	e.finalize(TagSyncStateCompleted, "", limited)
-	counts := e.counts()
+	run := e.finalize(TagSyncStateCompleted, "", limited)
+	counts := run.Counts
 	e.logf(log.InfoLevel, "tag sync run completed: limited=%v checked=%d present=%d missingField=%d missingKey=%d pushed=%d pushFailed=%d xdasErrors=%d xdasOnlyFields=%d missingRate=%.4f tagsWithMissing=%d",
 		limited, counts.Checked, counts.Present, counts.MissingField, counts.MissingKey,
 		counts.Pushed, counts.PushFailed, counts.XdasErrors, counts.XdasOnlyFieldsSeen,
-		e.run.MissingRate, e.run.TagsWithMissing)
+		run.MissingRate, run.TagsWithMissing)
 	if counts.PushFailed > 0 {
 		// completed is not proof the drift is closed: only another run over
 		// the same tags picks these up again.
@@ -1221,32 +1240,31 @@ func (e *tagSyncEngine) finishCompleted(limited bool) {
 }
 
 func (e *tagSyncEngine) finishAborted(reason string) {
-	e.finalize(TagSyncStateAborted, reason, false)
-	counts := e.counts()
+	run := e.finalize(TagSyncStateAborted, reason, false)
+	counts := run.Counts
 	e.logf(log.WarnLevel, "tag sync run aborted: reason=%s checked=%d missing=%d pushed=%d checkpoint=%s/%d/%s",
 		reason, counts.Checked, counts.MissingField+counts.MissingKey, counts.Pushed,
-		e.run.Checkpoint.TagId, e.run.Checkpoint.BucketId, e.run.Checkpoint.LastMember)
+		run.Checkpoint.TagId, run.Checkpoint.BucketId, run.Checkpoint.LastMember)
 }
 
-func (e *tagSyncEngine) finalize(state string, abortReason string, limited bool) {
+// finalize stamps the terminal state and returns the record as persisted, so
+// the caller can log it without reading e.run outside the mutex.
+func (e *tagSyncEngine) finalize(state string, abortReason string, limited bool) TagSyncRun {
 	now := time.Now().UTC()
 	e.mu.Lock()
 	e.run.State = state
 	e.run.AbortReason = abortReason
 	e.run.Limited = limited
 	e.run.CompletedAt = &now
-	if e.run.Counts.Checked > 0 {
-		e.run.MissingRate = float64(e.run.Counts.MissingField+e.run.Counts.MissingKey) / float64(e.run.Counts.Checked)
-	}
 	e.mu.Unlock()
 
-	tagSyncMissingRate.Set(e.run.MissingRate)
-	e.saveRun()
+	snapshot := e.saveRun()
 	// Run ids are time-prefixed, so pruning by lexical order keeps the newest
 	// records and stops the history partition from growing without bound.
 	if err := e.env.dao.pruneRuns(tagSyncRunHistoryKeep); err != nil {
 		e.logf(log.WarnLevel, "tag sync run history prune failed: %v", err)
 	}
+	return snapshot
 }
 
 func (e *tagSyncEngine) logf(level log.Level, format string, args ...interface{}) {

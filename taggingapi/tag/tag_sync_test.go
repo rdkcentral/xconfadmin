@@ -964,6 +964,48 @@ func TestTagSyncRunPersistedWithFinalState(t *testing.T) {
 	}
 }
 
+func TestTagSyncStatusShowsLiveMissingRate(t *testing.T) {
+	// The rate used to be computed only when the run finished, so status
+	// polled during a long walk reported missingRate=0 for the whole run.
+	dao := newFakeTagSyncDao()
+	env := newTestEnv(map[string][]string{"tag1": {"M0"}}, newFakeXdas(), dao)
+	engine, err := prepareTagSync(TagSyncOptions{Mode: TagSyncModeDetect}, env)
+	assert.NoError(t, err)
+
+	engine.run.Counts.Checked = 4
+	engine.run.Counts.Present = 1
+	engine.run.Counts.MissingField = 2
+	engine.run.Counts.MissingKey = 1
+	engine.saveRun()
+
+	saved, err := dao.getRun(engine.run.RunId)
+	assert.NoError(t, err)
+	assert.Nil(t, saved.CompletedAt, "the run is still going")
+	assert.InDelta(t, 0.75, saved.MissingRate, 0.0001)
+}
+
+func TestTagSyncResumedRateSurvivesACheckpointBeforeAnyCheck(t *testing.T) {
+	// A resumed segment saves before it has checked anything of its own; that
+	// save must not overwrite the rate carried in with a bare 0.
+	dao := newFakeTagSyncDao()
+	dao.runs["20260101-000000-aaaa"] = &TagSyncRun{
+		RunId:       "20260101-000000-aaaa",
+		Mode:        TagSyncModeDetect,
+		State:       TagSyncStateAborted,
+		Options:     TagSyncOptions{Mode: TagSyncModeDetect},
+		MissingRate: 0.5,
+	}
+	env := newTestEnv(map[string][]string{"tag1": {"M0"}}, newFakeXdas(), dao)
+	engine, err := prepareTagSync(TagSyncOptions{Resume: true}, env)
+	assert.NoError(t, err)
+
+	engine.saveRun()
+
+	saved, err := dao.getRun("20260101-000000-aaaa")
+	assert.NoError(t, err)
+	assert.InDelta(t, 0.5, saved.MissingRate, 0.0001)
+}
+
 func TestTagSyncInvalidMode(t *testing.T) {
 	opts := TagSyncOptions{Mode: "bogus"}
 	err := validateTagSyncOptions(&opts)

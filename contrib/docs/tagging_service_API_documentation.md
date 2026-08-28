@@ -433,7 +433,7 @@ curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/syn
 
 **Response Status Codes:**
 - `202 Accepted`: run started in the background
-- `400 Bad Request`: malformed body, invalid `mode`, or a pushing `repair`/`refresh` run with no `probeMember`
+- `400 Bad Request`: unreadable or malformed body, invalid `mode`, or a pushing `repair`/`refresh` run with no `probeMember`
 - `403 Forbidden`: token lacks the tools write capability
 - `409 Conflict`: a run is already active (response includes its `runId` and `owner`), or the kill switch is off
 
@@ -500,7 +500,7 @@ triggers runs also needs read to poll their status.
 | `counts.xdasOnlyFieldsSeen` | Distinct XDAS tag fields with no Cassandra counterpart (reported only, never deleted) |
 | `tagsTotal`, `tagsDone`, `tagsWithMissing` | Walk progress by tag |
 | `topMissingTags` | Up to 100 tags with the most missing members, with per-tag checked/missing/pushed counts; refreshed on every checkpoint save |
-| `missingRate` | `(missingField + missingKey) / checked` |
+| `missingRate` | `(missingField + missingKey) / checked`, refreshed on every checkpoint save so it is live during a run |
 | `abortReason` | Why an aborted run stopped (see [Abort Reasons](#abort-reasons)) |
 | `limited` | Run stopped at `maxMembers`; resumable |
 | `resumes` | How many times this record has been resumed |
