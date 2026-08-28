@@ -416,7 +416,9 @@ func prepareTagSync(opts TagSyncOptions, env *tagSyncEnv) (*tagSyncEngine, error
 }
 
 func findResumableRun(dao tagSyncDao) (*TagSyncRun, error) {
-	runs, err := dao.listRuns(10)
+	// Scan the whole retained history: a resumable run stays resumable while
+	// its record survives pruning, however many finished runs follow it.
+	runs, err := dao.listRuns(tagSyncRunHistoryKeep)
 	if err != nil {
 		return nil, fmt.Errorf("tag sync run list failed: %w", err)
 	}

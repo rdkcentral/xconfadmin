@@ -879,6 +879,22 @@ func TestTagSyncResumeNothingToResume(t *testing.T) {
 	assert.Contains(t, err.Error(), "no aborted tag sync run to resume")
 }
 
+func TestTagSyncResumeBehindManyFinishedRuns(t *testing.T) {
+	// The aborted run is older than a full status page of completed runs, but
+	// still inside the retained history, so resume must reach it.
+	dao := newFakeTagSyncDao()
+	dao.saveRun(&TagSyncRun{RunId: "20250101-000000", State: TagSyncStateAborted})
+	for i := 1; i < tagSyncRunHistoryKeep; i++ {
+		dao.saveRun(&TagSyncRun{RunId: fmt.Sprintf("20250101-%06d", i), State: TagSyncStateCompleted})
+	}
+
+	resumed, err := findResumableRun(dao)
+	assert.NoError(t, err)
+	if assert.NotNil(t, resumed) {
+		assert.Equal(t, "20250101-000000", resumed.RunId)
+	}
+}
+
 func TestTagSyncTagFilter(t *testing.T) {
 	cass := map[string][]string{
 		"tag1": members("A", 10),
