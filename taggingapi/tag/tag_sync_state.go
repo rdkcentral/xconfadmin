@@ -45,7 +45,7 @@ type TagSyncLock struct {
 type tagSyncDao interface {
 	saveRun(run *TagSyncRun) error
 	getRun(runId string) (*TagSyncRun, error)
-	// listRuns returns up to limit runs, newest first.
+	// listRuns returns the newest limit runs, newest first.
 	listRuns(limit int) ([]*TagSyncRun, error)
 	// pruneRuns deletes run rows beyond the newest keep, so the history
 	// partition the status endpoint scans stays bounded.
@@ -81,15 +81,7 @@ func (tagSyncDaoImpl) getRun(runId string) (*TagSyncRun, error) {
 }
 
 func (tagSyncDaoImpl) listRuns(limit int) ([]*TagSyncRun, error) {
-	// Run ids are time-prefixed, so the clustering order is chronological and
-	// Cassandra can return the newest rows itself.
-	var rows []map[string]any
-	var err error
-	if limit > 0 {
-		rows, err = ds.GetSimpleDao().Query(QueryTagSyncStateListNewest, tagSyncRunKey, strconv.Itoa(limit))
-	} else {
-		rows, err = ds.GetSimpleDao().Query(QueryTagSyncStateList, tagSyncRunKey)
-	}
+	rows, err := ds.GetSimpleDao().Query(QueryTagSyncStateListNewest, tagSyncRunKey, strconv.Itoa(limit))
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +93,6 @@ func (tagSyncDaoImpl) listRuns(limit int) ([]*TagSyncRun, error) {
 		}
 		runs = append(runs, run)
 	}
-	sort.Slice(runs, func(i, j int) bool { return runs[i].RunId > runs[j].RunId })
 	return runs, nil
 }
 

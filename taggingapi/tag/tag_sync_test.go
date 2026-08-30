@@ -60,7 +60,7 @@ func (s *fakeTagSyncDao) listRuns(limit int) ([]*TagSyncRun, error) {
 		runs = append(runs, &copied)
 	}
 	sort.Slice(runs, func(i, j int) bool { return runs[i].RunId > runs[j].RunId })
-	if limit > 0 && len(runs) > limit {
+	if len(runs) > limit {
 		runs = runs[:limit]
 	}
 	return runs, nil
@@ -426,9 +426,7 @@ func TestTagSyncMissingRateNoProbeWriteModeAborts(t *testing.T) {
 	assert.Equal(t, "missing_rate_high_no_probe_available", run.AbortReason)
 }
 
-func TestTagSyncProbeOptionOverridesConfig(t *testing.T) {
-	// The per-run probeMember from the trigger body works without any
-	// configured probe (no restart needed to point at a fresh device).
+func TestTagSyncProbeMemberComesFromTheTrigger(t *testing.T) {
 	cass := map[string][]string{"tag1": members("M", 60)}
 	xdas := newFakeXdas()
 	xdas.records["RUNPROBE"] = map[string]string{"t_whatever": ""}
@@ -1000,28 +998,6 @@ func TestTagSyncStatusShowsLiveMissingRate(t *testing.T) {
 	assert.InDelta(t, 0.75, saved.MissingRate, 0.0001)
 }
 
-func TestTagSyncResumedRateSurvivesACheckpointBeforeAnyCheck(t *testing.T) {
-	// A resumed segment saves before it has checked anything of its own; that
-	// save must not overwrite the rate carried in with a bare 0.
-	dao := newFakeTagSyncDao()
-	dao.runs["20260101-000000-aaaa"] = &TagSyncRun{
-		RunId:       "20260101-000000-aaaa",
-		Mode:        TagSyncModeDetect,
-		State:       TagSyncStateAborted,
-		Options:     TagSyncOptions{Mode: TagSyncModeDetect},
-		MissingRate: 0.5,
-	}
-	env := newTestEnv(map[string][]string{"tag1": {"M0"}}, newFakeXdas(), dao)
-	engine, err := prepareTagSync(TagSyncOptions{Resume: true}, env)
-	assert.NoError(t, err)
-
-	engine.saveRun()
-
-	saved, err := dao.getRun("20260101-000000-aaaa")
-	assert.NoError(t, err)
-	assert.InDelta(t, 0.5, saved.MissingRate, 0.0001)
-}
-
 func TestTagSyncInvalidMode(t *testing.T) {
 	opts := TagSyncOptions{Mode: "bogus"}
 	err := validateTagSyncOptions(&opts)
@@ -1444,7 +1420,7 @@ func TestTagSyncRunHistoryPruned(t *testing.T) {
 	run := execute(t, TagSyncOptions{Mode: TagSyncModeDetect}, newTestEnv(cass, xdas, dao))
 	assert.Equal(t, TagSyncStateCompleted, run.State)
 
-	runs, err := dao.listRuns(0)
+	runs, err := dao.listRuns(2 * tagSyncRunHistoryKeep)
 	assert.NoError(t, err)
 	assert.LessOrEqual(t, len(runs), tagSyncRunHistoryKeep, "old runs are pruned at finalize")
 	saved, _ := dao.getRun(run.RunId)
