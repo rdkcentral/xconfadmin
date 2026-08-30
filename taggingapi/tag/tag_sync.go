@@ -1081,16 +1081,27 @@ func isXdasNotFound(err error) bool {
 // tagSyncMaxCountedXdasOnlyFields new fields stop being counted rather than
 // silently double-counted.
 func (e *tagSyncEngine) noteXdasOnlyFields(fields map[string]string) {
+	// Filter before locking: knownTags is read-only during the walk, so the
+	// common case (nothing XDAS-only) touches the engine lock not at all, and
+	// the rest take it once per member instead of once per field.
+	var xdasOnly []string
 	for field := range fields {
 		if !strings.HasPrefix(field, Prefix) || e.knownTags[field] {
 			continue
 		}
-		e.mu.Lock()
+		xdasOnly = append(xdasOnly, field)
+	}
+	if len(xdasOnly) == 0 {
+		return
+	}
+
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	for _, field := range xdasOnly {
 		if !e.xdasOnlySeen[field] && len(e.xdasOnlySeen) < tagSyncMaxCountedXdasOnlyFields {
 			e.xdasOnlySeen[field] = true
 			e.run.Counts.XdasOnlyFieldsSeen++
 		}
-		e.mu.Unlock()
 	}
 }
 
