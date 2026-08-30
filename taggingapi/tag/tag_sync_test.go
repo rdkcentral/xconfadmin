@@ -1003,6 +1003,49 @@ func TestTagSyncInvalidMode(t *testing.T) {
 	err := validateTagSyncOptions(&opts)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid mode")
+
+	opts = TagSyncOptions{Resume: true, Mode: "bogus"}
+	assert.Error(t, validateTagSyncOptions(&opts), "a resume still rejects a value that is not a mode")
+}
+
+func TestTagSyncValidateDefaultsModeOnlyForFreshRuns(t *testing.T) {
+	opts := TagSyncOptions{}
+	assert.NoError(t, validateTagSyncOptions(&opts))
+	assert.Equal(t, TagSyncModeDetect, opts.Mode)
+
+	opts = TagSyncOptions{Resume: true}
+	assert.NoError(t, validateTagSyncOptions(&opts))
+	assert.Equal(t, TagSyncMode(""), opts.Mode, "the recorded run supplies the mode")
+}
+
+func TestTagSyncResumeRejectsAModeChange(t *testing.T) {
+	aborted := func() *fakeTagSyncDao {
+		dao := newFakeTagSyncDao()
+		dao.runs["20260101-000000-aaaa"] = &TagSyncRun{
+			RunId:   "20260101-000000-aaaa",
+			Mode:    TagSyncModeDetect,
+			State:   TagSyncStateAborted,
+			Options: TagSyncOptions{Mode: TagSyncModeDetect},
+		}
+		return dao
+	}
+	cass := map[string][]string{"tag1": {"M0"}}
+
+	dao := aborted()
+	_, err := prepareTagSync(TagSyncOptions{Resume: true, Mode: TagSyncModeRepair}, newTestEnv(cass, newFakeXdas(), dao))
+	var remoteErr xwcommon.RemoteHttpErrorAS
+	if assert.ErrorAs(t, err, &remoteErr) {
+		assert.Equal(t, 400, remoteErr.StatusCode)
+		assert.Contains(t, err.Error(), "mode cannot change on resume")
+	}
+	assert.Nil(t, dao.lock, "a rejected resume must not take the lock")
+
+	for _, mode := range []TagSyncMode{"", TagSyncModeDetect} {
+		engine, err := prepareTagSync(TagSyncOptions{Resume: true, Mode: mode}, newTestEnv(cass, newFakeXdas(), aborted()))
+		if assert.NoError(t, err, "mode %q", mode) {
+			assert.Equal(t, TagSyncModeDetect, engine.opts.Mode)
+		}
+	}
 }
 
 func TestRateLimiterPaces(t *testing.T) {

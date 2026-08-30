@@ -270,11 +270,15 @@ func PrepareTagSync(opts TagSyncOptions) (*tagSyncEngine, error) {
 }
 
 // validateTagSyncOptions checks what can be judged from the request alone.
-// The probe requirement is not here: on a resume the effective options are
-// only known after the merge, so prepareTagSync enforces it.
+// A resume leaves an omitted mode empty for the recorded run to supply; the
+// probe requirement is likewise left to prepareTagSync, where the effective
+// options are known.
 func validateTagSyncOptions(opts *TagSyncOptions) error {
 	if opts.Mode == "" {
-		opts.Mode = TagSyncModeDetect
+		if !opts.Resume {
+			opts.Mode = TagSyncModeDetect
+		}
+		return nil
 	}
 	switch opts.Mode {
 	case TagSyncModeDetect, TagSyncModeRepair, TagSyncModeRefresh:
@@ -339,6 +343,12 @@ func prepareTagSync(opts TagSyncOptions, env *tagSyncEnv) (*tagSyncEngine, error
 		resumed, err := findResumableRun(env.dao)
 		if err != nil {
 			return nil, err
+		}
+		// Silently keeping the recorded mode would let an operator believe a
+		// detect census had been resumed as a repair.
+		if opts.Mode != "" && opts.Mode != resumed.Mode {
+			return nil, xwcommon.NewRemoteErrorAS(http.StatusBadRequest,
+				fmt.Sprintf("mode cannot change on resume: run %s is %s", resumed.RunId, resumed.Mode))
 		}
 		run = resumed
 		run.State = TagSyncStateRunning
