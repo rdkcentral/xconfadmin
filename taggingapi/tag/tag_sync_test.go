@@ -1301,6 +1301,81 @@ func TestTagSyncStaleHeartbeatStopsTheWalk(t *testing.T) {
 	}
 }
 
+func TestTagSyncHeartbeatStopsAfterLockTakeover(t *testing.T) {
+	// Heartbeats stalled long enough for another instance to take the lock
+	// over. Once they recover, writing ours back would flap the row and leave
+	// both walks running: the loop must stand down and let the walk abort.
+	oldStale := tagSyncLockStaleAfter
+	tagSyncLockStaleAfter = 60 * time.Millisecond
+	defer func() { tagSyncLockStaleAfter = oldStale }()
+
+	dao := newFakeTagSyncDao()
+	env := newTestEnv(map[string][]string{"tag1": {"M0"}}, newFakeXdas(), dao)
+	engine, err := prepareTagSync(TagSyncOptions{Mode: TagSyncModeDetect}, env)
+	assert.NoError(t, err)
+
+	assert.NoError(t, dao.saveLock(&TagSyncLock{Owner: "podB", RunId: "runB", HeartbeatAt: time.Now().UTC()}))
+
+	stop := make(chan struct{})
+	defer close(stop)
+	done := make(chan struct{})
+	go engine.heartbeatLoop(stop, done)
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the heartbeat loop kept running after the takeover")
+	}
+
+	lock, err := dao.getLock()
+	assert.NoError(t, err)
+	if assert.NotNil(t, lock) {
+		assert.Equal(t, "runB", lock.RunId, "the new owner's lock must not be overwritten")
+	}
+	var abort *tagSyncAbort
+	if assert.ErrorAs(t, engine.checkAbort(context.Background()), &abort) {
+		assert.Equal(t, "lock_heartbeat_stale", abort.reason, "the walk must stop, not keep going beside the new owner")
+	}
+}
+
+func TestTagSyncCheckpointTagSurvivesLeaderboardTrim(t *testing.T) {
+	// With more tags missing than the leaderboard keeps, the tag the run
+	// stopped inside must still be on it: a resume seeds from the record and
+	// merges into that entry instead of counting the tag a second time.
+	env := newTestEnv(map[string][]string{"tag1": {"M0"}}, newFakeXdas(), newFakeTagSyncDao())
+	engine, err := prepareTagSync(TagSyncOptions{Mode: TagSyncModeDetect}, env)
+	assert.NoError(t, err)
+
+	for i := 0; i < 2*tagSyncTopMissingKeep+5; i++ {
+		engine.setCheckpoint(fmt.Sprintf("busy%03d", i), 0, "M9")
+		engine.recordTagResult(&TagMissingStat{TagId: fmt.Sprintf("busy%03d", i), Checked: 1000, Missing: 1000})
+	}
+	// The run stops inside a tag with far fewer missing members than the rest.
+	engine.setCheckpoint("tail", 0, "M9")
+	engine.recordTagResult(&TagMissingStat{TagId: "tail", Checked: 10, Missing: 1})
+	saved := engine.saveRun()
+
+	assert.LessOrEqual(t, len(saved.TopMissingTags), tagSyncTopMissingKeep+1)
+	assert.True(t, containsTagStat(saved.TopMissingTags, "tail"), "the tag a resume re-walks must stay on the leaderboard")
+
+	resumed := &tagSyncEngine{
+		run:          &TagSyncRun{TagsWithMissing: saved.TagsWithMissing},
+		missingStats: append([]TagMissingStat(nil), saved.TopMissingTags...),
+	}
+	resumed.recordTagResult(&TagMissingStat{TagId: "tail", Checked: 5, Missing: 2})
+
+	assert.Equal(t, saved.TagsWithMissing, resumed.run.TagsWithMissing, "the re-walked tag must merge, not count as a second tag")
+	if assert.True(t, containsTagStat(resumed.missingStats, "tail")) {
+		merged := TagMissingStat{}
+		for _, stat := range resumed.missingStats {
+			if stat.TagId == "tail" {
+				merged = stat
+			}
+		}
+		assert.Equal(t, int64(15), merged.Checked)
+		assert.Equal(t, int64(3), merged.Missing)
+	}
+}
+
 func TestSyncBreakerZeroConfigDoesNotTripOnHealthyMembers(t *testing.T) {
 	// Thresholds are >= comparisons, so a zero from config would abort on the
 	// first healthy member. Non-positive knobs fall back to defaults.

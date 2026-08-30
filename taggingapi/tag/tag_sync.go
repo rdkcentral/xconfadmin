@@ -638,7 +638,8 @@ func (e *tagSyncEngine) preflightProbe(ctx context.Context) error {
 
 // heartbeatLoop refreshes the lock heartbeat on a wall-clock cadence,
 // independent of chunk pacing: a chunk slower than the staleness window must
-// not let another instance treat the lock as stale and start a second run.
+// not let another instance treat the lock as stale and start a second run. It
+// also stops the moment the lock belongs to someone else.
 func (e *tagSyncEngine) heartbeatLoop(stop <-chan struct{}, done chan<- struct{}) {
 	defer close(done)
 	ticker := time.NewTicker(tagSyncLockStaleAfter / 3)
@@ -648,6 +649,19 @@ func (e *tagSyncEngine) heartbeatLoop(stop <-chan struct{}, done chan<- struct{}
 		case <-stop:
 			return
 		case <-ticker.C:
+			current, err := e.env.dao.getLock()
+			if err != nil {
+				e.logf(log.WarnLevel, "tag sync heartbeat lock read failed: %v", err)
+				continue
+			}
+			if current != nil && current.RunId != "" && current.RunId != e.run.RunId {
+				e.logf(log.WarnLevel, "tag sync heartbeat: lock taken over by runId=%s owner=%s; this run stops",
+					current.RunId, current.Owner)
+				e.mu.Lock()
+				e.lastHeartbeatOk = time.Now().Add(-2 * tagSyncLockStaleAfter)
+				e.mu.Unlock()
+				return
+			}
 			lock := &TagSyncLock{Owner: e.run.Owner, RunId: e.run.RunId, HeartbeatAt: time.Now().UTC()}
 			if err := e.env.dao.saveLock(lock); err != nil {
 				// checkAbort stops the walk once these span a full window.
@@ -1157,10 +1171,7 @@ func (e *tagSyncEngine) findMissingStatLocked(tagId string) *TagMissingStat {
 }
 
 func (e *tagSyncEngine) trimMissingLocked() {
-	sort.Slice(e.missingStats, func(i, j int) bool { return e.missingStats[i].Missing > e.missingStats[j].Missing })
-	if len(e.missingStats) > tagSyncTopMissingKeep {
-		e.missingStats = e.missingStats[:tagSyncTopMissingKeep]
-	}
+	e.missingStats = topMissing(e.missingStats, e.run.Checkpoint.TagId)
 }
 
 // maybeSaveProgress persists the run record at most once per checkpoint
@@ -1202,7 +1213,7 @@ func (e *tagSyncEngine) saveRun() TagSyncRun {
 	e.run.UpdatedAt = time.Now().UTC()
 	// Refresh the missing-members leaderboard on every save so mid-run status
 	// shows live numbers and a crash loses at most one checkpoint interval.
-	e.run.TopMissingTags = topMissing(e.missingStats)
+	e.run.TopMissingTags = topMissing(e.missingStats, e.run.Checkpoint.TagId)
 	// Same for the rate: computed only at the end it would read 0 for the
 	// whole walk, which is the stretch an operator actually watches. Guarded
 	// so a resumed segment keeps the rate it carried in until it checks
@@ -1230,14 +1241,35 @@ func missingRate(c TagSyncCounts) float64 {
 }
 
 // topMissing returns the tags with the most missing members, worst first,
-// without mutating the input.
-func topMissing(missingStats []TagMissingStat) []TagMissingStat {
+// without mutating the input. The tag the checkpoint sits in is kept whatever
+// its rank: a resume seeds from this list and re-walks that tag, and a tag
+// trimmed off it comes back as a second entry, counted as a second tag with
+// missing members.
+func topMissing(missingStats []TagMissingStat, keepTagId string) []TagMissingStat {
 	out := append([]TagMissingStat(nil), missingStats...)
 	sort.Slice(out, func(i, j int) bool { return out[i].Missing > out[j].Missing })
-	if len(out) > tagSyncTopMissingKeep {
-		out = out[:tagSyncTopMissingKeep]
+	if len(out) <= tagSyncTopMissingKeep {
+		return out
 	}
-	return out
+	kept := out[:tagSyncTopMissingKeep:tagSyncTopMissingKeep]
+	if keepTagId == "" || containsTagStat(kept, keepTagId) {
+		return kept
+	}
+	for _, stat := range out[tagSyncTopMissingKeep:] {
+		if stat.TagId == keepTagId {
+			return append(kept, stat)
+		}
+	}
+	return kept
+}
+
+func containsTagStat(stats []TagMissingStat, tagId string) bool {
+	for _, stat := range stats {
+		if stat.TagId == tagId {
+			return true
+		}
+	}
+	return false
 }
 
 func (e *tagSyncEngine) finishCompleted(limited bool) {
