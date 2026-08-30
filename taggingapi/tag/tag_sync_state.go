@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"time"
 
 	ds "github.com/rdkcentral/xconfwebconfig/db"
@@ -22,7 +23,9 @@ const (
 	QueryTagSyncStateUpsert = `INSERT INTO "TagSyncState" (key, column1, value) VALUES (?, ?, ?)`
 	QueryTagSyncStateGet    = `SELECT value FROM "TagSyncState" WHERE key = ? AND column1 = ?`
 	QueryTagSyncStateList   = `SELECT column1, value FROM "TagSyncState" WHERE key = ?`
-	QueryTagSyncStateDelete = `DELETE FROM "TagSyncState" WHERE key = ? AND column1 = ?`
+
+	QueryTagSyncStateListNewest = `SELECT column1, value FROM "TagSyncState" WHERE key = ? ORDER BY column1 DESC LIMIT ?`
+	QueryTagSyncStateDelete     = `DELETE FROM "TagSyncState" WHERE key = ? AND column1 = ?`
 
 	tagSyncRunKey     = "run"
 	tagSyncControlKey = "control"
@@ -78,7 +81,15 @@ func (tagSyncDaoImpl) getRun(runId string) (*TagSyncRun, error) {
 }
 
 func (tagSyncDaoImpl) listRuns(limit int) ([]*TagSyncRun, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryTagSyncStateList, tagSyncRunKey)
+	// Run ids are time-prefixed, so the clustering order is chronological and
+	// Cassandra can return the newest rows itself.
+	var rows []map[string]any
+	var err error
+	if limit > 0 {
+		rows, err = ds.GetSimpleDao().Query(QueryTagSyncStateListNewest, tagSyncRunKey, strconv.Itoa(limit))
+	} else {
+		rows, err = ds.GetSimpleDao().Query(QueryTagSyncStateList, tagSyncRunKey)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -90,11 +101,7 @@ func (tagSyncDaoImpl) listRuns(limit int) ([]*TagSyncRun, error) {
 		}
 		runs = append(runs, run)
 	}
-	// Run ids are time-prefixed, so lexical order is chronological.
 	sort.Slice(runs, func(i, j int) bool { return runs[i].RunId > runs[j].RunId })
-	if limit > 0 && len(runs) > limit {
-		runs = runs[:limit]
-	}
 	return runs, nil
 }
 

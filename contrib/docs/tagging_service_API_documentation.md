@@ -14,6 +14,7 @@
    - [Remove Member from Tag](#remove-member-from-tag)
    - [Get Tag Members](#get-tag-members)
 3. [Tag Sync Job](#tag-sync-job)
+   - [Before the first run: create the state table](#before-the-first-run-create-the-state-table)
    - [Trigger Tag Sync](#trigger-tag-sync)
    - [Tag Sync Status](#tag-sync-status)
    - [Abort Tag Sync](#abort-tag-sync)
@@ -343,6 +344,19 @@ probe (a known-good member that still reads back) before the run continues — s
 Only **one run** can be active across the whole cluster at a time (a Cassandra lock with heartbeat
 enforces this). Progress is checkpointed continuously, so an aborted or crashed run can be resumed
 without re-walking what was already covered.
+
+#### Before the first run: create the state table
+
+Run state (the run records with their checkpoints, and the single-run lock) lives in its own
+Cassandra table, which the service does **not** create. Create it in the XConf keyspace before
+using the sync endpoints, or trigger/status/abort fail with a CQL error:
+
+```sql
+CREATE TABLE IF NOT EXISTS "TagSyncState"
+    (key text, column1 text, value text, PRIMARY KEY ((key), column1));
+```
+
+The table stays small: run history is pruned to the newest few runs as each run finishes.
 
 #### Using `refresh` to resync regions
 
