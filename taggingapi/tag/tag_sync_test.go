@@ -1216,6 +1216,23 @@ func TestTagSyncResumedTagIsNotCountedTwice(t *testing.T) {
 	}
 }
 
+func TestTagSyncTagStatsMergeAcrossSegments(t *testing.T) {
+	// A listed tag whose later segment finds nothing missing must still fold
+	// that segment's checked/pushed into its entry.
+	e := &tagSyncEngine{run: &TagSyncRun{}}
+	e.recordTagResult(&TagMissingStat{TagId: "tag1", Checked: 100, Missing: 5, Pushed: 5})
+	e.recordTagResult(&TagMissingStat{TagId: "tag1", Checked: 50, Pushed: 3})
+	e.recordTagResult(&TagMissingStat{TagId: "tag2", Checked: 70})
+
+	assert.Equal(t, 1, e.run.TagsWithMissing, "a tag with nothing missing is never listed")
+	if assert.Len(t, e.missingStats, 1) {
+		assert.Equal(t, "tag1", e.missingStats[0].TagId)
+		assert.Equal(t, int64(150), e.missingStats[0].Checked)
+		assert.Equal(t, int64(5), e.missingStats[0].Missing)
+		assert.Equal(t, int64(8), e.missingStats[0].Pushed)
+	}
+}
+
 func TestTagSyncResumeSpendsAFreshMemberBudget(t *testing.T) {
 	// Restating the same maxMembers on a resume must walk the next page. Against
 	// the run's lifetime Checked the budget is spent and it walks one member.

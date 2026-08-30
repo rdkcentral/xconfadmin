@@ -1108,17 +1108,16 @@ func (e *tagSyncEngine) setCheckpoint(tagId string, bucketId int, lastMember str
 
 // recordTagResult folds one finished tag into the run report. A resume records
 // the tag it stopped inside a second time, so merge on TagId - appending would
-// list it twice with partial numbers and count one tag as two.
+// list it twice with partial numbers and count one tag as two. Only a tag with
+// missing members earns an entry, but once listed it keeps accumulating: a
+// later segment that finds nothing missing still checked and pushed members.
 func (e *tagSyncEngine) recordTagResult(perTag *TagMissingStat) {
-	if perTag.Missing == 0 {
-		return
-	}
 	e.mu.Lock()
 	if existing := e.findMissingStatLocked(perTag.TagId); existing != nil {
 		existing.Checked += perTag.Checked
 		existing.Missing += perTag.Missing
 		existing.Pushed += perTag.Pushed
-	} else {
+	} else if perTag.Missing > 0 {
 		e.run.TagsWithMissing++
 		e.missingStats = append(e.missingStats, *perTag)
 		if len(e.missingStats) > 2*tagSyncTopMissingKeep {
@@ -1126,6 +1125,10 @@ func (e *tagSyncEngine) recordTagResult(perTag *TagMissingStat) {
 		}
 	}
 	e.mu.Unlock()
+
+	if perTag.Missing == 0 {
+		return
+	}
 	// This segment's numbers, not the merged total in the run record.
 	e.logf(log.InfoLevel, "tag sync: tag %s has missing members: checked=%d missing=%d pushed=%d",
 		perTag.TagId, perTag.Checked, perTag.Missing, perTag.Pushed)

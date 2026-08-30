@@ -18,7 +18,11 @@ func newRateLimiter(perSecond int) *rateLimiter {
 	if perSecond <= 0 {
 		perSecond = 1
 	}
-	return &rateLimiter{interval: time.Second / time.Duration(perSecond)}
+	interval := time.Second / time.Duration(perSecond)
+	if interval < time.Nanosecond {
+		interval = time.Nanosecond
+	}
+	return &rateLimiter{interval: interval}
 }
 
 func (l *rateLimiter) wait(ctx context.Context) error {
