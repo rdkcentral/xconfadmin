@@ -353,7 +353,7 @@ func prepareTagSync(opts TagSyncOptions, env *tagSyncEnv) (*tagSyncEngine, error
 		}
 		// Same for the tag filter: the recorded one wins on resume, so a new
 		// filter would be silently discarded.
-		if len(opts.Tags) > 0 && !slices.Equal(opts.Tags, resumed.Options.Tags) {
+		if len(opts.Tags) > 0 && !sameTagFilter(opts.Tags, resumed.Options.Tags) {
 			return nil, xwcommon.NewRemoteErrorAS(http.StatusBadRequest,
 				fmt.Sprintf("tags filter cannot change on resume: run %s recorded %v", resumed.RunId, resumed.Options.Tags))
 		}
@@ -592,6 +592,15 @@ func filterTags(all []string, requested []string) []string {
 		}
 	}
 	return filtered
+}
+
+// sameTagFilter compares two tag filters as sets: the walk sorts and
+// filterTags dedupes, so order and duplicates carry no meaning.
+func sameTagFilter(a, b []string) bool {
+	canon := func(tags []string) []string {
+		return slices.Compact(slices.Sorted(slices.Values(tags)))
+	}
+	return slices.Equal(canon(a), canon(b))
 }
 
 // preflightProbe blocks write modes when the configured known-good member
