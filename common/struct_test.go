@@ -198,6 +198,29 @@ func TestGetBooleanAppSetting(t *testing.T) {
 	assert.Equal(t, true, val)
 }
 
+func TestCoerceBoolSetting(t *testing.T) {
+	// Real booleans pass through.
+	assert.Equal(t, true, coerceBoolSetting("k", true, false))
+	assert.Equal(t, false, coerceBoolSetting("k", false, true))
+
+	// String-typed booleans (what an operator naturally PUTs) are honored
+	// instead of being silently ignored.
+	assert.Equal(t, false, coerceBoolSetting("k", "false", true))
+	assert.Equal(t, true, coerceBoolSetting("k", "true", false))
+	assert.Equal(t, false, coerceBoolSetting("k", " False ", true))
+
+	// JSON numbers decode into float64. TaggingSyncEnabled defaults to true,
+	// so an ignored 0 leaves the kill switch off and the job running.
+	assert.Equal(t, true, coerceBoolSetting("k", float64(1), false))
+	assert.Equal(t, false, coerceBoolSetting("k", float64(0), true))
+
+	// Anything else falls back to the default instead of panicking.
+	assert.Equal(t, true, coerceBoolSetting("k", "banana", true))
+	assert.Equal(t, false, coerceBoolSetting("k", 42.0, false))
+	assert.Equal(t, true, coerceBoolSetting("k", 42.0, true))
+	assert.Equal(t, true, coerceBoolSetting("k", nil, true))
+}
+
 func TestGetAppSettings(t *testing.T) {
 	// This function calls DB, so without DB it will return an error
 	settings, _ := GetAppSettings()

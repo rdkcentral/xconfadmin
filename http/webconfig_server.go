@@ -58,6 +58,7 @@ type WebconfigServer struct {
 	*GroupServiceConnector
 	*GroupServiceSyncConnector
 	*taggingapi_config.TaggingApiConfig
+	TagSyncConfig *taggingapi_config.TagSyncConfig
 	*tracing.XpcTracer
 	tlsConfig             *tls.Config
 	DistributedLockConfig *DistributedLockConfig
@@ -198,6 +199,7 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 		GroupServiceConnector:     NewGroupServiceConnector(conf, tlsConfig),
 		GroupServiceSyncConnector: NewGroupServiceSyncConnector(conf, tlsConfig),
 		TaggingApiConfig:          taggingapi_config.NewTaggingApiConfig(conf),
+		TagSyncConfig:             taggingapi_config.NewTagSyncConfig(conf),
 		DistributedLockConfig:     NewDistributedLockConfig(conf),
 		XconfConnector:            NewXconfConnector(conf, "xconf", tlsConfig),
 		XW_XconfServer:            xhttp.NewXconfServer(sc, testOnly, ec.xw_ect),

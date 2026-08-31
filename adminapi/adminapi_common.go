@@ -158,4 +158,7 @@ func initAppSettings() {
 		common.SetAppSetting(common.PROP_CANARY_TIMEZONE_LIST, common.DefaultCanaryTimezone)
 	}
 
+	if _, ok := settings[common.PROP_TAGGING_SYNC_ENABLED]; !ok {
+		common.SetAppSetting(common.PROP_TAGGING_SYNC_ENABLED, true)
+	}
 }
