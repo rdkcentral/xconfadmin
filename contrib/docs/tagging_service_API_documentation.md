@@ -396,8 +396,6 @@ Content-Type = application/json
 Authorization = Bearer {SAT token}
 ```
 
-Requires the write capability (`x1:coast:xconf:write` or `x1:appds:xconf:*`).
-
 **Request Body (JSON — an empty body runs `detect` with defaults. Every field is optional except
 `probeMember`, which a pushing `repair`/`refresh` run must supply):**
 
@@ -448,7 +446,6 @@ curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/syn
 **Response Status Codes:**
 - `202 Accepted`: run started in the background
 - `400 Bad Request`: unreadable or malformed body, invalid `mode`, or a pushing `repair`/`refresh` run with no `probeMember`
-- `403 Forbidden`: token lacks the tools write capability
 - `409 Conflict`: a run is already active (response includes its `runId` and `owner`), or the kill switch is off
 
 **Response Body (202):**
@@ -472,15 +469,8 @@ Reports the currently active run (on any instance) and recent run history.
 GET /taggingService/tags/sync/status
 ```
 
-Requires the read capability (`x1:coast:xconf:read` or `x1:appds:xconf:*`). The run record carries
-device identifiers (`options.probeMember`, `checkpoint.lastMember`), the owning host and per-tag
-drift numbers, so it is guarded like the rest of the tools plane rather than left open to any
-authenticated caller. Note that the write capability alone does not grant read here — a token that
-triggers runs also needs read to poll their status.
-
 **Response Status Codes:**
 - `200 OK`: body as below
-- `403 Forbidden`: token lacks the tools read capability
 
 **Response Body:**
 ```json
@@ -532,11 +522,8 @@ be resumed later.
 POST /taggingService/tags/sync/abort
 ```
 
-Requires the write capability (`x1:coast:xconf:write` or `x1:appds:xconf:*`).
-
 **Response Status Codes:**
 - `202 Accepted`: abort requested; body contains the `runId`
-- `403 Forbidden`: token lacks the tools write capability
 - `404 Not Found`: no active run on the instance that received the request — to stop a run on
   another instance, use the [kill switch](#kill-switch)
 
