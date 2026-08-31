@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -349,6 +350,12 @@ func prepareTagSync(opts TagSyncOptions, env *tagSyncEnv) (*tagSyncEngine, error
 		if opts.Mode != "" && opts.Mode != resumed.Mode {
 			return nil, xwcommon.NewRemoteErrorAS(http.StatusBadRequest,
 				fmt.Sprintf("mode cannot change on resume: run %s is %s", resumed.RunId, resumed.Mode))
+		}
+		// Same for the tag filter: the recorded one wins on resume, so a new
+		// filter would be silently discarded.
+		if len(opts.Tags) > 0 && !slices.Equal(opts.Tags, resumed.Options.Tags) {
+			return nil, xwcommon.NewRemoteErrorAS(http.StatusBadRequest,
+				fmt.Sprintf("tags filter cannot change on resume: run %s recorded %v", resumed.RunId, resumed.Options.Tags))
 		}
 		run = resumed
 		run.State = TagSyncStateRunning

@@ -1048,6 +1048,40 @@ func TestTagSyncResumeRejectsAModeChange(t *testing.T) {
 	}
 }
 
+func TestTagSyncResumeRejectsATagsFilterChange(t *testing.T) {
+	aborted := func(tags []string) *fakeTagSyncDao {
+		dao := newFakeTagSyncDao()
+		dao.runs["20260101-000000-aaaa"] = &TagSyncRun{
+			RunId:   "20260101-000000-aaaa",
+			Mode:    TagSyncModeDetect,
+			State:   TagSyncStateAborted,
+			Options: TagSyncOptions{Mode: TagSyncModeDetect, Tags: tags},
+		}
+		return dao
+	}
+	cass := map[string][]string{"tag1": {"M0"}}
+
+	// A filter the recorded run does not have, and a different one.
+	for _, recorded := range [][]string{nil, {"tag2"}} {
+		dao := aborted(recorded)
+		_, err := prepareTagSync(TagSyncOptions{Resume: true, Tags: []string{"tag1"}}, newTestEnv(cass, newFakeXdas(), dao))
+		var remoteErr xwcommon.RemoteHttpErrorAS
+		if assert.ErrorAs(t, err, &remoteErr, "recorded %v", recorded) {
+			assert.Equal(t, 400, remoteErr.StatusCode)
+			assert.Contains(t, err.Error(), "tags filter cannot change on resume")
+		}
+		assert.Nil(t, dao.lock, "a rejected resume must not take the lock")
+	}
+
+	// No filter, or the recorded one restated, resumes fine.
+	for _, tags := range [][]string{nil, {"tag1"}} {
+		engine, err := prepareTagSync(TagSyncOptions{Resume: true, Tags: tags}, newTestEnv(cass, newFakeXdas(), aborted([]string{"tag1"})))
+		if assert.NoError(t, err, "tags %v", tags) {
+			assert.Equal(t, []string{"tag1"}, engine.opts.Tags)
+		}
+	}
+}
+
 func TestRateLimiterPaces(t *testing.T) {
 	limiter := newRateLimiter(100) // 10ms apart
 	start := time.Now()
