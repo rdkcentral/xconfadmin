@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
@@ -29,14 +28,6 @@ var (
 // pattern): validate and lock synchronously, answer 202 with the run id.
 // POST /taggingService/tags/sync
 func TriggerTagSyncHandler(w http.ResponseWriter, r *http.Request) {
-	// Same capability bar as other tools-plane mutations (app settings,
-	// lockdown): a read-only token must not be able to start a cluster-wide
-	// TTL-resetting walk.
-	if !auth.HasWritePermissionForTool(r) {
-		xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "No write permission: tools")
-		return
-	}
-
 	var opts TagSyncOptions
 	body, err := readRequestBody(w, r)
 	if err != nil {
@@ -126,11 +117,6 @@ func TriggerTagSyncHandler(w http.ResponseWriter, r *http.Request) {
 // recent run history, straight from the TagSyncState table.
 // GET /taggingService/tags/sync/status
 func TagSyncStatusHandler(w http.ResponseWriter, r *http.Request) {
-	if !auth.HasReadPermissionForTool(r) {
-		xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "No read permission: tools")
-		return
-	}
-
 	dao := newTagSyncDao()
 
 	var active *TagSyncRun
@@ -169,11 +155,6 @@ func TagSyncStatusHandler(w http.ResponseWriter, r *http.Request) {
 // instances are stopped with the TaggingSyncEnabled kill switch instead.
 // POST /taggingService/tags/sync/abort
 func AbortTagSyncHandler(w http.ResponseWriter, r *http.Request) {
-	if !auth.HasWritePermissionForTool(r) {
-		xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "No write permission: tools")
-		return
-	}
-
 	activeTagSyncMu.Lock()
 	defer activeTagSyncMu.Unlock()
 	if activeTagSyncCancel == nil {

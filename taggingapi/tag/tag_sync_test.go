@@ -1073,11 +1073,12 @@ func TestTagSyncResumeRejectsATagsFilterChange(t *testing.T) {
 		assert.Nil(t, dao.lock, "a rejected resume must not take the lock")
 	}
 
-	// No filter, or the recorded one restated, resumes fine.
-	for _, tags := range [][]string{nil, {"tag1"}} {
-		engine, err := prepareTagSync(TagSyncOptions{Resume: true, Tags: tags}, newTestEnv(cass, newFakeXdas(), aborted([]string{"tag1"})))
+	// No filter, or the recorded one restated — same order or not, with
+	// duplicates or not — resumes fine: the filter is a set.
+	for _, tags := range [][]string{nil, {"tag1", "tag2"}, {"tag2", "tag1", "tag2"}} {
+		engine, err := prepareTagSync(TagSyncOptions{Resume: true, Tags: tags}, newTestEnv(cass, newFakeXdas(), aborted([]string{"tag1", "tag2"})))
 		if assert.NoError(t, err, "tags %v", tags) {
-			assert.Equal(t, []string{"tag1"}, engine.opts.Tags)
+			assert.Equal(t, []string{"tag1", "tag2"}, engine.opts.Tags, "the recorded filter stays as recorded")
 		}
 	}
 }
