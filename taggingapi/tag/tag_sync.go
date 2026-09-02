@@ -369,7 +369,7 @@ func findResumableRun(dao tagSyncDao) (*TagSyncRun, error) {
 		}
 	}
 	return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound,
-		"no aborted tag sync run to resume")
+		"no resumable tag sync run to resume")
 }
 
 func acquireTagSyncLock(dao tagSyncDao, owner string, runId string) error {

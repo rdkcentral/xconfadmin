@@ -572,7 +572,7 @@ func TestTagSyncResumeNothingToResume(t *testing.T) {
 	env := newTestEnv(map[string][]string{}, newFakeXdas(), newFakeTagSyncDao())
 	_, err := prepareTagSync(TagSyncOptions{Resume: true}, env)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no aborted tag sync run to resume")
+	assert.Contains(t, err.Error(), "no resumable tag sync run to resume")
 	// Nothing to resume is the caller's state, not a server fault.
 	assert.Equal(t, http.StatusNotFound, xwcommon.GetXconfErrorStatusCode(err))
 }
