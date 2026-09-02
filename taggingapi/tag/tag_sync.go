@@ -248,9 +248,8 @@ func validateTagSyncOptions(opts *TagSyncOptions) error {
 	}
 }
 
-// The breakers cannot arm before minSample and read no finer than the window,
-// so batching at the larger of the two evaluates them as early as they can say
-// anything - capping a bad XDAS at one batch, not a whole Cassandra page.
+// The breakers read no finer than the window and cannot arm before minSample,
+// so batch at the larger of the two - and never past one Cassandra page.
 func guardBatchSize(chunkSize, window, minSample int) int {
 	if window <= 0 {
 		window = syncBreakerDefaultWindow

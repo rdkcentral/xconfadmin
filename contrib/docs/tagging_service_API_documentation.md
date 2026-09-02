@@ -581,8 +581,13 @@ Two breakers watch XDAS health. The run aborts as `xdas_unhealthy_consecutive_er
 `tag_sync_breaker_max_consec_errors` errors in a row — active from the first member — and as
 `xdas_unhealthy_error_rate` when errors exceed `tag_sync_breaker_error_rate_percent` of a sliding
 `tag_sync_breaker_window` of members, which arms only once `tag_sync_breaker_min_sample` members
-have been seen. Both are evaluated between guard batches of `max(window, min_sample)` members, so a
-Cassandra page is never walked blind end to end.
+have been seen. Both are consulted before every member, so a tripped breaker stops the walk within
+about `workers` members rather than at a batch boundary.
+
+The walk is nonetheless sliced into guard batches of `min(chunkSize, max(window, min_sample))`
+members — 500 at the defaults, or one batch per page when `chunkSize` is smaller. That is the
+cadence at which the run re-checks the kill switch and its lock heartbeat, and advances its
+checkpoint; a Cassandra page is never walked end to end without those checks.
 
 > **Known gap.** Neither breaker catches an XDAS outage that answers "not found" for everything. A
 > 404 classifies as *missing*, not as an error, and mass expiry is the exact condition `repair` and
@@ -622,9 +627,12 @@ Server-side defaults for the trigger options and the safety guards, set in the s
 | `tag_sync_breaker_error_rate_percent` | 25 | Error rate over the window that aborts the run |
 | `tag_sync_breaker_max_consec_errors` | 10 | Consecutive XDAS errors that abort the run |
 
-`window` and `min_sample` also set the guard batch: a Cassandra page is walked in slices of
-`max(window, min_sample)` members — 500 by default — so the breakers are evaluated that often
-rather than once per page. See [Outage Guards](#outage-guards).
+`window` and `min_sample` also set the guard batch, `min(chunkSize, max(window, min_sample))` — 500
+at the defaults, or the whole page when `tag_sync_chunk_size` is smaller. That is the cadence for
+the kill-switch and lock-heartbeat checks and for checkpoint advancement; the breakers themselves
+are consulted before every member. Note a smaller `chunkSize` does not make the error rate fire
+sooner — it still arms only after `min_sample` members for the run. See
+[Outage Guards](#outage-guards).
 
 ---
 
