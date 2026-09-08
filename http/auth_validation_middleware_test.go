@@ -280,6 +280,21 @@ func TestCanAutoCreateTenantRequiresSATV2ReadWrite(t *testing.T) {
 	}
 }
 
+func TestCanOnboardTenantRequiresAllowedPartnerMatch(t *testing.T) {
+	if !canOnboardMissingTenant(AUTH_TYPE_SAT_V2, "COMCAST", []string{"xconf:system:readwrite"}, []string{"comcast"}) {
+		t.Fatal("expected allowed partner match to permit SAT v2 tenant onboarding")
+	}
+	if canOnboardMissingTenant(AUTH_TYPE_SAT_V2, "COMCAST", []string{"xconf:system:readwrite"}, []string{"acme"}) {
+		t.Fatal("expected tenant outside allowedPartners to be denied")
+	}
+	if canOnboardMissingTenant(AUTH_TYPE_SAT_V2, "COMCAST", []string{"xconf:system:readonly"}, []string{"comcast"}) {
+		t.Fatal("expected system-readonly capability to deny onboarding")
+	}
+	if canOnboardMissingTenant(AUTH_TYPE_LOGIN_TOKEN, "COMCAST", []string{"xconf:system:readwrite"}, []string{"comcast"}) {
+		t.Fatal("expected login-token onboarding to be denied")
+	}
+}
+
 // TestAuthMiddleware_TenantIdDefaultsWhenHeaderMissing verifies that the
 // default tenant ID is used when no tenantId header is present.
 func TestAuthMiddleware_TenantIdDefaultsWhenHeaderMissing(t *testing.T) {
