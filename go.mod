@@ -17,7 +17,7 @@
 //
 module github.com/rdkcentral/xconfadmin
 
-go 1.25.0
+go 1.26
 
 toolchain go1.25.11
 
