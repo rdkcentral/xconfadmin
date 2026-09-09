@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 )
 
@@ -26,7 +28,7 @@ func ensureEnvironmentRoutes() {
 		environmentPath.HandleFunc("", GetQueriesEnvironments).Methods(http.MethodGet)
 		environmentPath.HandleFunc("", CreateEnvironmentHandler).Methods(http.MethodPost)
 		environmentPath.HandleFunc("", UpdateEnvironmentHandler).Methods(http.MethodPut)
-		environmentPath.HandleFunc("/page", NotImplementedHandler).Methods(http.MethodGet)
+		environmentPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods(http.MethodGet)
 		environmentPath.HandleFunc("/filtered", PostEnvironmentFilteredHandler).Methods(http.MethodPost)
 		environmentPath.HandleFunc("/entities", PostEnvironmentEntitiesHandler).Methods(http.MethodPost)
 		environmentPath.HandleFunc("/entities", PutEnvironmentEntitiesHandler).Methods(http.MethodPut)
@@ -42,7 +44,7 @@ func createEnv(t *testing.T, env shared.Environment) {
 	b, _ := json.Marshal(env)
 	req, _ := http.NewRequest(http.MethodPost, "/xconfAdminService/environment", bytes.NewReader(b))
 	req.Header.Set("Accept", "application/json")
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusCreated {
 		body, _ := ioutil.ReadAll(res.Body)
 		t.Fatalf("create env %s expected 201 got %d body=%s", env.ID, res.StatusCode, string(body))
@@ -54,7 +56,7 @@ func updateEnv(t *testing.T, env shared.Environment, expected int) *http.Respons
 	b, _ := json.Marshal(env)
 	req, _ := http.NewRequest(http.MethodPut, "/xconfAdminService/environment", bytes.NewReader(b))
 	req.Header.Set("Accept", "application/json")
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != expected {
 		body, _ := ioutil.ReadAll(res.Body)
 		t.Fatalf("update env %s expected %d got %d body=%s", env.ID, expected, res.StatusCode, string(body))
@@ -64,15 +66,14 @@ func updateEnv(t *testing.T, env shared.Environment, expected int) *http.Respons
 
 // TestEnvironmentCreateUpdateConflictInvalidJSON tests POST(create), PUT(update), conflict, invalid JSON
 func TestEnvironmentCreateUpdateConflictInvalidJSON(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	ensureEnvironmentRoutes()
 	env := buildEnvironment("ENV_CREATE", "First")
 	createEnv(t, env)
 	// conflict create
 	b, _ := json.Marshal(env)
 	req, _ := http.NewRequest(http.MethodPost, "/xconfAdminService/environment", bytes.NewReader(b))
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusConflict {
 		t.Fatalf("expected 409 conflict got %d", res.StatusCode)
 	}
@@ -82,19 +83,19 @@ func TestEnvironmentCreateUpdateConflictInvalidJSON(t *testing.T) {
 	// update non-existent -> 409
 	missing := buildEnvironment("MISSING_ENV", "X")
 	req, _ = http.NewRequest(http.MethodPut, "/xconfAdminService/environment", bytes.NewReader([]byte(fmt.Sprintf("{\"ID\":\"%s\",\"Description\":\"Y\"}", missing.ID))))
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusConflict {
 		t.Fatalf("expected 409 for missing update got %d", res.StatusCode)
 	}
 	// invalid JSON create
 	req, _ = http.NewRequest(http.MethodPost, "/xconfAdminService/environment", bytes.NewReader([]byte("{bad")))
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400 invalid json got %d", res.StatusCode)
 	}
 	// invalid JSON update
 	req, _ = http.NewRequest(http.MethodPut, "/xconfAdminService/environment", bytes.NewReader([]byte("{bad")))
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400 invalid json update got %d", res.StatusCode)
 	}
@@ -102,8 +103,7 @@ func TestEnvironmentCreateUpdateConflictInvalidJSON(t *testing.T) {
 
 // TestEnvironmentGetListAndByIdDelete covers list retrieval, get by id, delete, delete conflict
 func TestEnvironmentGetListAndByIdDelete(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	ensureEnvironmentRoutes()
 	// create a few
 	for i := 0; i < 3; i++ {
@@ -111,31 +111,31 @@ func TestEnvironmentGetListAndByIdDelete(t *testing.T) {
 	}
 	// list
 	req, _ := http.NewRequest(http.MethodGet, "/xconfAdminService/environment", nil)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("expected list 200 got %d", res.StatusCode)
 	}
 	// get by id
 	req, _ = http.NewRequest(http.MethodGet, "/xconfAdminService/environment/ENV1", nil)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("expected get 200 got %d", res.StatusCode)
 	}
 	// get missing
 	req, _ = http.NewRequest(http.MethodGet, "/xconfAdminService/environment/NOPE", nil)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected get missing 404 got %d", res.StatusCode)
 	}
 	// delete existing
 	req, _ = http.NewRequest(http.MethodDelete, "/xconfAdminService/environment/ENV2", nil)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusNoContent {
 		t.Fatalf("expected delete 204 got %d", res.StatusCode)
 	}
 	// delete again -> assume 500 or 404 based on underlying delete (service returns 500 on internal error else 204). Missing table returns 500? We'll expect 204 not again; attempt delete missing to ensure not 204.
 	req, _ = http.NewRequest(http.MethodDelete, "/xconfAdminService/environment/ENV2", nil)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	// Accept repeat 204 behavior; ensure it's still 204
 	if res.StatusCode != http.StatusNoContent {
 		body, _ := ioutil.ReadAll(res.Body)
@@ -145,8 +145,7 @@ func TestEnvironmentGetListAndByIdDelete(t *testing.T) {
 
 // TestEnvironmentFilteredPaging tests filtered handler with paging context and header
 func TestEnvironmentFilteredPaging(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	ensureEnvironmentRoutes()
 	for i := 0; i < 7; i++ {
 		createEnv(t, buildEnvironment(fmt.Sprintf("ENV%03d", i), "DESC"))
@@ -154,7 +153,7 @@ func TestEnvironmentFilteredPaging(t *testing.T) {
 	body := map[string]string{"pageNumber": "2", "pageSize": "3"}
 	b, _ := json.Marshal(body)
 	req, _ := http.NewRequest(http.MethodPost, "/xconfAdminService/environment/filtered?pageNumber=2&pageSize=3", bytes.NewReader(b))
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 filtered got %d", res.StatusCode)
 	}
@@ -178,14 +177,14 @@ func TestEnvironmentFilteredPaging(t *testing.T) {
 	}
 	// second page request with pageSize greater than remaining to ensure slice works
 	req, _ = http.NewRequest(http.MethodPost, "/xconfAdminService/environment/filtered?pageNumber=3&pageSize=5", bytes.NewReader([]byte("{}")))
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusOK {
 		body, _ := ioutil.ReadAll(res.Body)
 		t.Fatalf("expected page 3 status 200 got %d body=%s", res.StatusCode, string(body))
 	}
 	// invalid json
 	req, _ = http.NewRequest(http.MethodPost, "/xconfAdminService/environment/filtered?pageNumber=1&pageSize=2", bytes.NewReader([]byte("{bad")))
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400 invalid json got %d", res.StatusCode)
 	}
@@ -193,7 +192,7 @@ func TestEnvironmentFilteredPaging(t *testing.T) {
 	body = map[string]string{"pageNumber": "0", "pageSize": "2"}
 	b, _ = json.Marshal(body)
 	req, _ = http.NewRequest(http.MethodPost, "/xconfAdminService/environment/filtered?pageNumber=0&pageSize=2", bytes.NewReader(b))
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400 invalid paging got %d", res.StatusCode)
 	}
@@ -201,18 +200,17 @@ func TestEnvironmentFilteredPaging(t *testing.T) {
 
 // TestEnvironmentBatchPostPutEntities tests batch create and update endpoints including invalid JSON
 func TestEnvironmentBatchPostPutEntities(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	list := []shared.Environment{buildEnvironment("B1", "D1"), buildEnvironment("B2", "D2"), buildEnvironment("B3", "D3")}
 	b, _ := json.Marshal(list)
 	req, _ := http.NewRequest(http.MethodPost, "/xconfAdminService/environment/entities", bytes.NewReader(b))
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 batch post got %d", res.StatusCode)
 	}
 	// duplicate create should mark failures for existing IDs
 	req, _ = http.NewRequest(http.MethodPost, "/xconfAdminService/environment/entities", bytes.NewReader(b))
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 batch re-post got %d", res.StatusCode)
 	}
@@ -220,13 +218,13 @@ func TestEnvironmentBatchPostPutEntities(t *testing.T) {
 	list[1].Description = "D2U"
 	b, _ = json.Marshal(list)
 	req, _ = http.NewRequest(http.MethodPut, "/xconfAdminService/environment/entities", bytes.NewReader(b))
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 batch put got %d", res.StatusCode)
 	}
 	// invalid json
 	req, _ = http.NewRequest(http.MethodPost, "/xconfAdminService/environment/entities", bytes.NewReader([]byte("{bad")))
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400 invalid json got %d", res.StatusCode)
 	}
@@ -234,9 +232,8 @@ func TestEnvironmentBatchPostPutEntities(t *testing.T) {
 
 // TestEnvironmentNotImplementedPage ensures /page endpoint returns 501 (NotImplementedHandler assumed)
 func TestEnvironmentNotImplementedPage(t *testing.T) {
-	SkipIfMockDatabase(t)
 	req, _ := http.NewRequest(http.MethodGet, "/xconfAdminService/environment/page", nil)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusNotImplemented && res.StatusCode != http.StatusOK { // allow if handler changed
 		t.Fatalf("expected 501 or 200 got %d", res.StatusCode)
 	}

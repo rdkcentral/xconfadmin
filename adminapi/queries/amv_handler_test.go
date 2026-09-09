@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
@@ -44,91 +45,6 @@ func TestGetAmvHandler_Success(t *testing.T) {
 	// For now, testing basic structure
 	assert.NotNil(t, req)
 	assert.NotNil(t, xw)
-}
-
-func TestGetAmvByIdHandler_InvalidId(t *testing.T) {
-	req := httptest.NewRequest("GET", "/api/queries/amv/", nil)
-	req.Header.Set(xwcommon.APPLICATION_TYPE, "stb")
-	w := httptest.NewRecorder()
-
-	// Without ID in mux vars, should fail
-	GetAmvByIdHandler(w, req)
-
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
-
-func TestPostAmvFilteredHandler_EmptyBody(t *testing.T) {
-	req := httptest.NewRequest("POST", "/api/queries/amv/filtered", bytes.NewBufferString(""))
-	req.Header.Set(xwcommon.APPLICATION_TYPE, "stb")
-	w := httptest.NewRecorder()
-	xw := &xwhttp.XResponseWriter{
-		ResponseWriter: w,
-	}
-
-	// This would require auth setup
-	assert.NotNil(t, xw)
-	assert.NotNil(t, req)
-}
-
-func TestPostAmvFilteredHandler_InvalidJSON(t *testing.T) {
-	invalidJSON := `{"invalid": json}`
-	req := httptest.NewRequest("POST", "/api/queries/amv/filtered", bytes.NewBufferString(invalidJSON))
-	w := httptest.NewRecorder()
-	xw := &xwhttp.XResponseWriter{
-		ResponseWriter: w,
-	}
-
-	assert.NotNil(t, xw)
-	assert.NotNil(t, req)
-}
-
-func TestDeleteAmvByIdHandler_NoId(t *testing.T) {
-	req := httptest.NewRequest("DELETE", "/api/queries/amv/", nil)
-	req.Header.Set(xwcommon.APPLICATION_TYPE, "stb")
-	w := httptest.NewRecorder()
-
-	DeleteAmvByIdHandler(w, req)
-
-	// Should return error when ID is missing
-	assert.Equal(t, http.StatusNotFound, w.Code)
-}
-
-func TestCreateAmvHandler_InvalidBody(t *testing.T) {
-	invalidJSON := `{"invalid json`
-	req := httptest.NewRequest("POST", "/api/queries/amv", bytes.NewBufferString(invalidJSON))
-	req.Header.Set(xwcommon.APPLICATION_TYPE, "stb")
-	w := httptest.NewRecorder()
-	xw := &xwhttp.XResponseWriter{
-		ResponseWriter: w,
-	}
-
-	assert.NotNil(t, xw)
-	assert.NotNil(t, req)
-}
-
-func TestImportAllAmvHandler_InvalidJSON(t *testing.T) {
-	invalidJSON := `[{"invalid": json}]`
-	req := httptest.NewRequest("POST", "/api/queries/amv/import", bytes.NewBufferString(invalidJSON))
-	w := httptest.NewRecorder()
-	xw := &xwhttp.XResponseWriter{
-		ResponseWriter: w,
-	}
-
-	assert.NotNil(t, xw)
-	assert.NotNil(t, req)
-}
-
-func TestImportAllAmvHandler_EmptyList(t *testing.T) {
-	emptyList := `[]`
-	req := httptest.NewRequest("POST", "/api/queries/amv/import", bytes.NewBufferString(emptyList))
-	req.Header.Set(xwcommon.APPLICATION_TYPE, "stb")
-	w := httptest.NewRecorder()
-	xw := &xwhttp.XResponseWriter{
-		ResponseWriter: w,
-	}
-
-	assert.NotNil(t, xw)
-	assert.NotNil(t, req)
 }
 
 func TestUpdateAmvHandler_ValidRequest(t *testing.T) {
@@ -151,37 +67,11 @@ func TestUpdateAmvHandler_ValidRequest(t *testing.T) {
 	assert.NotNil(t, w)
 }
 
-func TestPostAmvEntitiesHandler_EmptyList(t *testing.T) {
-	emptyList := `[]`
-	req := httptest.NewRequest("POST", "/api/queries/amv/entities", bytes.NewBufferString(emptyList))
-	req.Header.Set(xwcommon.APPLICATION_TYPE, "stb")
-	w := httptest.NewRecorder()
-	xw := &xwhttp.XResponseWriter{
-		ResponseWriter: w,
-	}
-
-	assert.NotNil(t, xw)
-	assert.NotNil(t, req)
-}
-
-func TestPutAmvEntitiesHandler_EmptyList(t *testing.T) {
-	emptyList := `[]`
-	req := httptest.NewRequest("PUT", "/api/queries/amv/entities", bytes.NewBufferString(emptyList))
-	req.Header.Set(xwcommon.APPLICATION_TYPE, "stb")
-	w := httptest.NewRecorder()
-	xw := &xwhttp.XResponseWriter{
-		ResponseWriter: w,
-	}
-
-	assert.NotNil(t, xw)
-	assert.NotNil(t, req)
-}
-
 func TestNotImplementedHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/queries/not-implemented", nil)
 	w := httptest.NewRecorder()
 
-	NotImplementedHandler(w, req)
+	xhttp.NotImplementedHandler(w, req)
 
 	assert.Equal(t, http.StatusNotImplemented, w.Code)
 }

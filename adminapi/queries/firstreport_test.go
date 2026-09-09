@@ -24,6 +24,7 @@ import (
 
 	"github.com/360EntSecGroup-Skylar/excelize"
 	xestb "github.com/rdkcentral/xconfadmin/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -51,7 +52,7 @@ func TestNextChar(t *testing.T) {
 func TestDoReport_EmptyMacAddresses(t *testing.T) {
 	macAddresses := []string{}
 
-	reportBytes, err := doReport(macAddresses)
+	reportBytes, err := doReport(db.GetDefaultTenantId(), macAddresses)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, reportBytes)
@@ -74,7 +75,7 @@ func TestDoReport_WithNoConfigLog(t *testing.T) {
 		"AA:BB:CC:DD:EE:02",
 	}
 
-	reportBytes, err := doReport(macAddresses)
+	reportBytes, err := doReport(db.GetDefaultTenantId(), macAddresses)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, reportBytes)
@@ -94,7 +95,7 @@ func TestDoReport_WithCompleteConfigLog(t *testing.T) {
 
 	// This test verifies the report can be generated
 	// In real usage, the Time field is populated by ConvertedContext marshaling logic
-	reportBytes, err := doReport([]string{macAddress})
+	reportBytes, err := doReport(db.GetDefaultTenantId(), []string{macAddress})
 
 	assert.NoError(t, err)
 	assert.NotNil(t, reportBytes)
@@ -130,12 +131,12 @@ func TestDoReport_WithNilFields(t *testing.T) {
 		FirmwareConfig: nil,                 // Nil firmware config
 	}
 
-	err := xestb.SetLastConfigLog(macAddress, configLog)
+	err := xestb.SetLastConfigLog(db.GetDefaultTenantId(), macAddress, configLog)
 	assert.NoError(t, err)
 
 	macAddresses := []string{macAddress}
 
-	reportBytes, err := doReport(macAddresses)
+	reportBytes, err := doReport(db.GetDefaultTenantId(), macAddresses)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, reportBytes)
@@ -150,7 +151,7 @@ func TestDoReport_WithConfigChangeLogs(t *testing.T) {
 	// Test that report generates with change logs structure
 	macAddress := "12:34:56:78:90:AB"
 
-	reportBytes, err := doReport([]string{macAddress})
+	reportBytes, err := doReport(db.GetDefaultTenantId(), []string{macAddress})
 
 	assert.NoError(t, err)
 	assert.NotNil(t, reportBytes)
@@ -177,7 +178,7 @@ func TestDoReport_MacAddressSorting(t *testing.T) {
 		"MM:MM:MM:MM:MM:MM",
 	}
 
-	reportBytes, err := doReport(macAddresses)
+	reportBytes, err := doReport(db.GetDefaultTenantId(), macAddresses)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, reportBytes)
@@ -193,7 +194,7 @@ func TestDoReport_MacAddressSorting(t *testing.T) {
 func TestDoReport_EmptyConfigChangeLogs(t *testing.T) {
 	macAddress := "CC:DD:EE:FF:00:11"
 
-	reportBytes, err := doReport([]string{macAddress})
+	reportBytes, err := doReport(db.GetDefaultTenantId(), []string{macAddress})
 
 	assert.NoError(t, err)
 	assert.NotNil(t, reportBytes)
@@ -209,7 +210,7 @@ func TestDoReport_EmptyConfigChangeLogs(t *testing.T) {
 func TestDoReport_MultipleFilters(t *testing.T) {
 	macAddress := "11:11:11:11:11:11"
 
-	reportBytes, err := doReport([]string{macAddress})
+	reportBytes, err := doReport(db.GetDefaultTenantId(), []string{macAddress})
 
 	assert.NoError(t, err)
 
@@ -251,7 +252,7 @@ func TestDoReport_AllHeadersPresent(t *testing.T) {
 		"lst chg firmwareDownloadProtocol",
 	}
 
-	reportBytes, err := doReport([]string{})
+	reportBytes, err := doReport(db.GetDefaultTenantId(), []string{})
 	assert.NoError(t, err)
 
 	xlsx, err := excelize.OpenReader(bytes.NewReader(reportBytes))
@@ -313,10 +314,10 @@ func TestDoReport_WithCompleteInput(t *testing.T) {
 		FirmwareConfig: firmwareConfig,
 	}
 
-	err := xestb.SetLastConfigLog(macAddress, configLog)
+	err := xestb.SetLastConfigLog(db.GetDefaultTenantId(), macAddress, configLog)
 	assert.NoError(t, err)
 
-	reportBytes, err := doReport([]string{macAddress})
+	reportBytes, err := doReport(db.GetDefaultTenantId(), []string{macAddress})
 	assert.NoError(t, err)
 	assert.NotNil(t, reportBytes)
 
@@ -355,7 +356,7 @@ func TestDoReport_WithChangeLogInput(t *testing.T) {
 		Filters:        []*xestb.RuleInfo{},
 		FirmwareConfig: nil,
 	}
-	err := xestb.SetLastConfigLog(macAddress, configLog)
+	err := xestb.SetLastConfigLog(db.GetDefaultTenantId(), macAddress, configLog)
 	assert.NoError(t, err)
 
 	// Create a change log entry using NewConvertedContext
@@ -393,10 +394,10 @@ func TestDoReport_WithChangeLogInput(t *testing.T) {
 		FirmwareConfig: changeLogFirmware,
 	}
 
-	err = xestb.SetConfigChangeLog(macAddress, changeLog)
+	err = xestb.SetConfigChangeLog(db.GetDefaultTenantId(), macAddress, changeLog)
 	assert.NoError(t, err)
 
-	reportBytes, err := doReport([]string{macAddress})
+	reportBytes, err := doReport(db.GetDefaultTenantId(), []string{macAddress})
 	assert.NoError(t, err)
 	assert.NotNil(t, reportBytes)
 
@@ -421,7 +422,7 @@ func TestDoReport_WithChangeLogNilInput(t *testing.T) {
 		Filters:        []*xestb.RuleInfo{},
 		FirmwareConfig: nil,
 	}
-	err := xestb.SetLastConfigLog(macAddress, configLog)
+	err := xestb.SetLastConfigLog(db.GetDefaultTenantId(), macAddress, configLog)
 	assert.NoError(t, err)
 
 	// Create change log with nil Input
@@ -434,10 +435,10 @@ func TestDoReport_WithChangeLogNilInput(t *testing.T) {
 		FirmwareConfig: nil,
 	}
 
-	err = xestb.SetConfigChangeLog(macAddress, changeLog)
+	err = xestb.SetConfigChangeLog(db.GetDefaultTenantId(), macAddress, changeLog)
 	assert.NoError(t, err)
 
-	reportBytes, err := doReport([]string{macAddress})
+	reportBytes, err := doReport(db.GetDefaultTenantId(), []string{macAddress})
 	assert.NoError(t, err)
 	assert.NotNil(t, reportBytes)
 
@@ -456,7 +457,7 @@ func TestDoReport_WithChangeLogHasRule(t *testing.T) {
 		ID:      xestb.LAST_CONFIG_LOG_ID,
 		Updated: testTime.Unix(),
 	}
-	err := xestb.SetLastConfigLog(macAddress, configLog)
+	err := xestb.SetLastConfigLog(db.GetDefaultTenantId(), macAddress, configLog)
 	assert.NoError(t, err)
 
 	// Create change log with Rule populated
@@ -472,10 +473,10 @@ func TestDoReport_WithChangeLogHasRule(t *testing.T) {
 		Rule:    changeLogRule,
 	}
 
-	err = xestb.SetConfigChangeLog(macAddress, changeLog)
+	err = xestb.SetConfigChangeLog(db.GetDefaultTenantId(), macAddress, changeLog)
 	assert.NoError(t, err)
 
-	reportBytes, err := doReport([]string{macAddress})
+	reportBytes, err := doReport(db.GetDefaultTenantId(), []string{macAddress})
 	assert.NoError(t, err)
 
 	// Verify report
@@ -495,7 +496,7 @@ func TestDoReport_WithChangeLogHasFirmwareConfig(t *testing.T) {
 		ID:      xestb.LAST_CONFIG_LOG_ID,
 		Updated: testTime.Unix(),
 	}
-	err := xestb.SetLastConfigLog(macAddress, configLog)
+	err := xestb.SetLastConfigLog(db.GetDefaultTenantId(), macAddress, configLog)
 	assert.NoError(t, err)
 
 	// Create change log with FirmwareConfig populated
@@ -514,10 +515,10 @@ func TestDoReport_WithChangeLogHasFirmwareConfig(t *testing.T) {
 		FirmwareConfig: firmware,
 	}
 
-	err = xestb.SetConfigChangeLog(macAddress, changeLog)
+	err = xestb.SetConfigChangeLog(db.GetDefaultTenantId(), macAddress, changeLog)
 	assert.NoError(t, err)
 
-	reportBytes, err := doReport([]string{macAddress})
+	reportBytes, err := doReport(db.GetDefaultTenantId(), []string{macAddress})
 	assert.NoError(t, err)
 
 	// Verify report
@@ -545,10 +546,10 @@ func TestDoReport_WithRuleNoOp(t *testing.T) {
 		Rule:    ruleInfo,
 	}
 
-	err := xestb.SetLastConfigLog(macAddress, configLog)
+	err := xestb.SetLastConfigLog(db.GetDefaultTenantId(), macAddress, configLog)
 	assert.NoError(t, err)
 
-	reportBytes, err := doReport([]string{macAddress})
+	reportBytes, err := doReport(db.GetDefaultTenantId(), []string{macAddress})
 	assert.NoError(t, err)
 
 	// Verify report contains true for noop
@@ -587,11 +588,11 @@ func TestDoReport_MultipleMacsSorted(t *testing.T) {
 			Input:   input,
 		}
 
-		err := xestb.SetLastConfigLog(mac, configLog)
+		err := xestb.SetLastConfigLog(db.GetDefaultTenantId(), mac, configLog)
 		assert.NoError(t, err)
 	}
 
-	reportBytes, err := doReport(macs)
+	reportBytes, err := doReport(db.GetDefaultTenantId(), macs)
 	assert.NoError(t, err)
 
 	xlsx, err := excelize.OpenReader(bytes.NewReader(reportBytes))

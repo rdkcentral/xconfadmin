@@ -24,6 +24,7 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	log "github.com/sirupsen/logrus"
@@ -54,15 +55,14 @@ func TestIsValidFirmwareRuleContext_Success(t *testing.T) {
 // Test putSizesOfFirmwareRulesByTypeIntoHeaders
 func TestPutSizesOfFirmwareRulesByTypeIntoHeaders_EmptyList(t *testing.T) {
 	rules := []*corefw.FirmwareRule{}
-	headers := putSizesOfFirmwareRulesByTypeIntoHeaders(rules)
+	headers := putSizesOfFirmwareRulesByTypeIntoHeaders(db.GetDefaultTenantId(), rules)
 	assert.Equal(t, "0", headers["RULE"])
 	assert.Equal(t, "0", headers["BLOCKING_FILTER"])
 	assert.Equal(t, "0", headers["DEFINE_PROPERTIES"])
 }
 
 func TestPutSizesOfFirmwareRulesByTypeIntoHeaders_WithRules(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create editable template
 	template := createTestFirmwareRule("template-1", "Template", "stb")
@@ -70,7 +70,7 @@ func TestPutSizesOfFirmwareRulesByTypeIntoHeaders_WithRules(t *testing.T) {
 		ID:       template.GetTemplateId(),
 		Editable: true,
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATE, templateEntity.ID, templateEntity)
+	xshared.SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, templateEntity.ID, templateEntity)
 
 	// Create rules of different types
 	rule1 := createTestFirmwareRule("rule-1", "Rule 1", "stb")
@@ -79,49 +79,45 @@ func TestPutSizesOfFirmwareRulesByTypeIntoHeaders_WithRules(t *testing.T) {
 	rule2 := createTestFirmwareRule("rule-2", "Rule 2", "stb")
 	rule2.ApplicableAction.ActionType = corefw.BLOCKING_FILTER
 
-	headers := putSizesOfFirmwareRulesByTypeIntoHeaders([]*corefw.FirmwareRule{rule1, rule2})
+	headers := putSizesOfFirmwareRulesByTypeIntoHeaders(db.GetDefaultTenantId(), []*corefw.FirmwareRule{rule1, rule2})
 	// Count may be 0 if template is not editable in test data
 	assert.NotNil(t, headers)
 }
 
 // Test checkRuleTypeAndCreate
 func TestCheckRuleTypeAndCreate_MAC_RULE(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	setupFirmwareRuleTemplates()
-	defer DeleteAllEntities()
 
 	rule := createTestFirmwareRule("", "Test MAC Rule", "stb")
 	rule.Type = corefw.MAC_RULE
 
 	fields := log.Fields{}
-	err := checkRuleTypeAndCreate(rule, "stb", fields)
+	err := checkRuleTypeAndCreate(db.GetDefaultTenantId(), rule, "stb", fields)
 	assert.Nil(t, err) // Should succeed with proper setup (firmware config exists)
 }
 
 func TestCheckRuleTypeAndCreate_ENV_MODEL_RULE(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	rule := createTestFirmwareRule("", "ENV Model Rule", "stb")
 	rule.Type = corefw.ENV_MODEL_RULE
 
 	fields := log.Fields{}
-	err := checkRuleTypeAndCreate(rule, "stb", fields)
+	err := checkRuleTypeAndCreate(db.GetDefaultTenantId(), rule, "stb", fields)
 	// Will return error due to validation but tests the code path
 	assert.NotNil(t, err)
 }
 
 // Test checkRuleTypeAndUpdate
 func TestCheckRuleTypeAndUpdate_AppTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	entityOnDb := createTestFirmwareRule("rule-1", "Existing Rule", "stb")
 	rule := *createTestFirmwareRule("rule-1", "Updated Rule", "xhome")
 
 	fields := log.Fields{}
-	err := checkRuleTypeAndUpdate(rule, entityOnDb, "xhome", fields)
+	err := checkRuleTypeAndUpdate(db.GetDefaultTenantId(), rule, entityOnDb, "xhome", fields)
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "ApplicationType cannot be changed")
 }
@@ -191,13 +187,12 @@ func TestValidateRuleAction_EmptyConfigId(t *testing.T) {
 		ConfigId: "",
 	}
 
-	err := validateRuleAction(rule, action)
+	err := validateRuleAction(db.GetDefaultTenantId(), rule, action)
 	assert.Nil(t, err) // Empty configId is a noop rule
 }
 
 func TestValidateRuleAction_InvalidConfigId(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	rule := corefw.FirmwareRule{
 		Name:            "Test",
@@ -207,15 +202,13 @@ func TestValidateRuleAction_InvalidConfigId(t *testing.T) {
 		ConfigId: "nonexistent-config",
 	}
 
-	err := validateRuleAction(rule, action)
+	err := validateRuleAction(db.GetDefaultTenantId(), rule, action)
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "doesn't exist")
 }
 
 func TestValidateRuleAction_DuplicateConfigEntries(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create a firmware config
 	config := &coreef.FirmwareConfig{
@@ -223,7 +216,7 @@ func TestValidateRuleAction_DuplicateConfigEntries(t *testing.T) {
 		Description:     "Test Config",
 		ApplicationType: "stb",
 	}
-	SetOneInDao(db.TABLE_FIRMWARE_CONFIG, config.ID, config)
+	xshared.SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, config.ID, config)
 
 	rule := corefw.FirmwareRule{
 		Name:            "Test",
@@ -237,7 +230,7 @@ func TestValidateRuleAction_DuplicateConfigEntries(t *testing.T) {
 		},
 	}
 
-	err := validateRuleAction(rule, action)
+	err := validateRuleAction(db.GetDefaultTenantId(), rule, action)
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "duplicate firmware configs")
 }
@@ -245,13 +238,12 @@ func TestValidateRuleAction_DuplicateConfigEntries(t *testing.T) {
 // Test validateDefinePropertiesApplicableAction
 func TestValidateDefinePropertiesApplicableAction_EmptyType(t *testing.T) {
 	action := corefw.ApplicableAction{}
-	err := validateDefinePropertiesApplicableAction(action, "", nil)
+	err := validateDefinePropertiesApplicableAction(db.GetDefaultTenantId(), action, "", nil)
 	assert.Nil(t, err)
 }
 
 func TestValidateDefinePropertiesApplicableAction_WithProperties(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	action := corefw.ApplicableAction{
 		Properties: map[string]string{
@@ -262,7 +254,7 @@ func TestValidateDefinePropertiesApplicableAction_WithProperties(t *testing.T) {
 		Name: "Test Rule",
 	}
 
-	err := validateDefinePropertiesApplicableAction(action, corefw.DOWNLOAD_LOCATION_FILTER, rule)
+	err := validateDefinePropertiesApplicableAction(db.GetDefaultTenantId(), action, corefw.DOWNLOAD_LOCATION_FILTER, rule)
 	// Will fail due to missing required properties
 	assert.NotNil(t, err)
 }
@@ -272,7 +264,7 @@ func TestValidateApplicableActionPropertiesGeneric_NoTemplate(t *testing.T) {
 	properties := map[string]string{}
 	rule := &corefw.FirmwareRule{Name: "Test"}
 
-	err := validateApplicableActionPropertiesGeneric("nonexistent", properties, rule)
+	err := validateApplicableActionPropertiesGeneric(db.GetDefaultTenantId(), "nonexistent", properties, rule)
 	assert.Nil(t, err)
 }
 

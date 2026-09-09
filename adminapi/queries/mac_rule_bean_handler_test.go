@@ -25,9 +25,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	admin_corefw "github.com/rdkcentral/xconfadmin/shared/firmware"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
@@ -39,8 +40,7 @@ import (
 )
 
 func TestGetMacRuleBeansWithoutVersionParam(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	macList := createAndSaveMacList()
 	mrt := createAndSaveMacRuleTemplate(macList.ID)
@@ -52,7 +52,7 @@ func TestGetMacRuleBeansWithoutVersionParam(t *testing.T) {
 
 	url := fmt.Sprintf("/xconfAdminService/queries/rules/macs?%v", queryParams)
 	r := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	mrbs := unmarshallMacRuleBeans(t, rr)
@@ -63,8 +63,7 @@ func TestGetMacRuleBeansWithoutVersionParam(t *testing.T) {
 }
 
 func TestGetMacRuleBeansWithVersionParams(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	macList := createAndSaveMacList()
 	macRuleTemplate := createAndSaveMacRuleTemplate(macList.ID)
@@ -82,7 +81,7 @@ func TestGetMacRuleBeansWithVersionParams(t *testing.T) {
 
 	url = fmt.Sprintf("/xconfAdminService/queries/rules/macs?%v", queryParams)
 	r := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	macRuleBeans := unmarshallMacRuleBeans(t, rr)
@@ -100,7 +99,7 @@ func TestGetMacRuleBeansWithVersionParams(t *testing.T) {
 
 	url = fmt.Sprintf("/xconfAdminService/queries/rules/macs?%v", queryParams)
 	r = httptest.NewRequest("GET", url, nil)
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	macRuleBeans = unmarshallMacRuleBeans(t, rr)
@@ -113,14 +112,14 @@ func createAndSaveMacList() *shared.GenericNamespacedList {
 	macList := shared.NewMacList()
 	macList.ID = "TEST_MAC_LIST"
 	macList.Data = []string{"AA:AA:AA:AA:AA:AA", "BB:BB:BB:BB:BB:BB"}
-	SetOneInDao(ds.TABLE_GENERIC_NS_LIST, macList.ID, macList)
+	xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, macList.ID, macList)
 	return macList
 }
 
 func createAndSaveMacRuleTemplate(macListId string) *corefw.FirmwareRuleTemplate {
 	macRule := estbfirmware.NewMacRule(macListId)
 	mrt := admin_corefw.NewFirmwareRuleTemplate(corefw.MAC_RULE, macRule, []string{}, 1)
-	SetOneInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE, mrt.ID, mrt)
+	xshared.SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, mrt.ID, mrt)
 	return mrt
 }
 
@@ -136,7 +135,7 @@ func createAndSaveFirmwareMacRule(templateId string, macRule *re.Rule, t *testin
 	url := fmt.Sprintf("/xconfAdminService/firmwarerule?%v", queryParams)
 
 	r := httptest.NewRequest("POST", url, bytes.NewReader(firmwareRuleBytes))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 
 	return firmwareRule

@@ -20,13 +20,14 @@ package queries
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/stretchr/testify/assert"
 )
 
 // Test GetIpAddressGroups
 func TestGetIpAddressGroups(t *testing.T) {
-	result := GetIpAddressGroups()
+	result := GetIpAddressGroups(db.GetDefaultTenantId())
 	assert.NotNil(t, result)
 	assert.IsType(t, []*shared.IpAddressGroup{}, result)
 }
@@ -34,7 +35,7 @@ func TestGetIpAddressGroups(t *testing.T) {
 func TestGetIpAddressGroups_ConsistentReturn(t *testing.T) {
 	// Multiple calls should return consistent results
 	for i := 0; i < 3; i++ {
-		result := GetIpAddressGroups()
+		result := GetIpAddressGroups(db.GetDefaultTenantId())
 		assert.NotNil(t, result)
 		assert.True(t, len(result) >= 0)
 	}
@@ -42,18 +43,18 @@ func TestGetIpAddressGroups_ConsistentReturn(t *testing.T) {
 
 // Test GetIpAddressGroupByName
 func TestGetIpAddressGroupByName_ValidName(t *testing.T) {
-	result := GetIpAddressGroupByName("test-group")
+	result := GetIpAddressGroupByName(db.GetDefaultTenantId(), "test-group")
 	// Result depends on DB state
 	assert.True(t, result != nil || result == nil)
 }
 
 func TestGetIpAddressGroupByName_EmptyName(t *testing.T) {
-	result := GetIpAddressGroupByName("")
+	result := GetIpAddressGroupByName(db.GetDefaultTenantId(), "")
 	assert.True(t, result != nil || result == nil)
 }
 
 func TestGetIpAddressGroupByName_NonExistent(t *testing.T) {
-	result := GetIpAddressGroupByName("non-existent-group-xyz-123")
+	result := GetIpAddressGroupByName(db.GetDefaultTenantId(), "non-existent-group-xyz-123")
 	assert.True(t, result != nil || result == nil)
 }
 
@@ -66,40 +67,40 @@ func TestGetIpAddressGroupByName_SpecialCharacters(t *testing.T) {
 
 	for _, name := range testNames {
 		assert.NotPanics(t, func() {
-			GetIpAddressGroupByName(name)
+			GetIpAddressGroupByName(db.GetDefaultTenantId(), name)
 		})
 	}
 }
 
 // Test GetIpAddressGroupsByIp
 func TestGetIpAddressGroupsByIp_ValidIp(t *testing.T) {
-	result := GetIpAddressGroupsByIp("192.168.1.1")
+	result := GetIpAddressGroupsByIp(db.GetDefaultTenantId(), "192.168.1.1")
 	assert.NotNil(t, result)
 	assert.IsType(t, []*shared.IpAddressGroup{}, result)
 }
 
 func TestGetIpAddressGroupsByIp_EmptyIp(t *testing.T) {
-	result := GetIpAddressGroupsByIp("")
+	result := GetIpAddressGroupsByIp(db.GetDefaultTenantId(), "")
 	assert.NotNil(t, result)
 }
 
 func TestGetIpAddressGroupsByIp_InvalidIp(t *testing.T) {
-	result := GetIpAddressGroupsByIp("invalid-ip")
+	result := GetIpAddressGroupsByIp(db.GetDefaultTenantId(), "invalid-ip")
 	assert.NotNil(t, result)
 }
 
 func TestGetIpAddressGroupsByIp_Ipv6(t *testing.T) {
-	result := GetIpAddressGroupsByIp("2001:0db8:85a3:0000:0000:8a2e:0370:7334")
+	result := GetIpAddressGroupsByIp(db.GetDefaultTenantId(), "2001:0db8:85a3:0000:0000:8a2e:0370:7334")
 	assert.NotNil(t, result)
 }
 
 func TestGetIpAddressGroupsByIp_LocalhostIpv4(t *testing.T) {
-	result := GetIpAddressGroupsByIp("127.0.0.1")
+	result := GetIpAddressGroupsByIp(db.GetDefaultTenantId(), "127.0.0.1")
 	assert.NotNil(t, result)
 }
 
 func TestGetIpAddressGroupsByIp_LocalhostIpv6(t *testing.T) {
-	result := GetIpAddressGroupsByIp("::1")
+	result := GetIpAddressGroupsByIp(db.GetDefaultTenantId(), "::1")
 	assert.NotNil(t, result)
 }
 
@@ -113,7 +114,7 @@ func TestGetIpAddressGroupsByIp_MultipleIps(t *testing.T) {
 	}
 
 	for _, ip := range testIps {
-		result := GetIpAddressGroupsByIp(ip)
+		result := GetIpAddressGroupsByIp(db.GetDefaultTenantId(), ip)
 		assert.NotNil(t, result)
 	}
 }
@@ -124,14 +125,14 @@ func TestCreateIpAddressGroup_ValidGroup(t *testing.T) {
 		Id:   "test-group",
 		Name: "Test Group",
 	}
-	result := CreateIpAddressGroup(ipGroup)
+	result := CreateIpAddressGroup(db.GetDefaultTenantId(), ipGroup)
 	assert.NotNil(t, result)
 	// Result depends on validation and DB state
 }
 
 func TestCreateIpAddressGroup_EmptyGroup(t *testing.T) {
 	ipGroup := &shared.IpAddressGroup{}
-	result := CreateIpAddressGroup(ipGroup)
+	result := CreateIpAddressGroup(db.GetDefaultTenantId(), ipGroup)
 	assert.NotNil(t, result)
 }
 
@@ -140,13 +141,13 @@ func TestCreateIpAddressGroup_WithIpAddresses(t *testing.T) {
 		Id:   "test-group-with-ips",
 		Name: "Test Group With IPs",
 	}
-	result := CreateIpAddressGroup(ipGroup)
+	result := CreateIpAddressGroup(db.GetDefaultTenantId(), ipGroup)
 	assert.NotNil(t, result)
 }
 
 // Test edge cases
 func TestGetIpAddressGroups_ReturnsSliceNotNil(t *testing.T) {
-	result := GetIpAddressGroups()
+	result := GetIpAddressGroups(db.GetDefaultTenantId())
 	assert.NotNil(t, result)
 	assert.IsType(t, []*shared.IpAddressGroup{}, result)
 }
@@ -156,32 +157,32 @@ func TestGetIpAddressGroupByName_MultipleCalls(t *testing.T) {
 	testName := "consistent-group"
 	for i := 0; i < 5; i++ {
 		assert.NotPanics(t, func() {
-			GetIpAddressGroupByName(testName)
+			GetIpAddressGroupByName(db.GetDefaultTenantId(), testName)
 		})
 	}
 }
 
 func TestGetIpAddressGroupsByIp_PrivateNetworks(t *testing.T) {
 	privateIps := []string{
-		"10.0.0.1",      // Class A private
-		"172.16.0.1",    // Class B private
-		"192.168.0.1",   // Class C private
+		"10.0.0.1",    // Class A private
+		"172.16.0.1",  // Class B private
+		"192.168.0.1", // Class C private
 	}
 
 	for _, ip := range privateIps {
-		result := GetIpAddressGroupsByIp(ip)
+		result := GetIpAddressGroupsByIp(db.GetDefaultTenantId(), ip)
 		assert.NotNil(t, result)
 	}
 }
 
 func TestGetIpAddressGroupsByIp_PublicIps(t *testing.T) {
 	publicIps := []string{
-		"8.8.8.8",       // Google DNS
-		"1.1.1.1",       // Cloudflare DNS
+		"8.8.8.8", // Google DNS
+		"1.1.1.1", // Cloudflare DNS
 	}
 
 	for _, ip := range publicIps {
-		result := GetIpAddressGroupsByIp(ip)
+		result := GetIpAddressGroupsByIp(db.GetDefaultTenantId(), ip)
 		assert.NotNil(t, result)
 	}
 }
@@ -191,19 +192,19 @@ func TestCreateIpAddressGroup_DuplicateId(t *testing.T) {
 		Id:   "duplicate-test",
 		Name: "Duplicate Test",
 	}
-	
-	result1 := CreateIpAddressGroup(ipGroup)
+
+	result1 := CreateIpAddressGroup(db.GetDefaultTenantId(), ipGroup)
 	assert.NotNil(t, result1)
-	
+
 	// Try creating again
-	result2 := CreateIpAddressGroup(ipGroup)
+	result2 := CreateIpAddressGroup(db.GetDefaultTenantId(), ipGroup)
 	assert.NotNil(t, result2)
 }
 
 func TestGetIpAddressGroupByName_LongName(t *testing.T) {
 	longName := "very-long-group-name-" + "repeated-" + "many-times"
 	assert.NotPanics(t, func() {
-		GetIpAddressGroupByName(longName)
+		GetIpAddressGroupByName(db.GetDefaultTenantId(), longName)
 	})
 }
 
@@ -215,7 +216,7 @@ func TestGetIpAddressGroupsByIp_EdgeCaseIps(t *testing.T) {
 	}
 
 	for _, ip := range edgeCaseIps {
-		result := GetIpAddressGroupsByIp(ip)
+		result := GetIpAddressGroupsByIp(db.GetDefaultTenantId(), ip)
 		assert.NotNil(t, result)
 	}
 }

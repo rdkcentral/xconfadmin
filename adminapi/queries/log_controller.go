@@ -47,10 +47,12 @@ func GetLogs(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("invalid mac address: "+macStr))
 		return
 	}
+
 	result := make(map[string]interface{}, 2)
-	last := estbfirmware.GetLastConfigLog(macAddress) //*ConfigChangeLog
+	tenantId := xhttp.GetTenantId(r)
+	last := estbfirmware.GetLastConfigLog(tenantId, macAddress) //*ConfigChangeLog
 	if last != nil {
-		configChangeLogList := estbfirmware.GetConfigChangeLogsOnly(macAddress) //[]*ConfigChangeLog
+		configChangeLogList := estbfirmware.GetConfigChangeLogsOnly(tenantId, macAddress) //[]*ConfigChangeLog
 		result["lastConfigLog"] = last
 		result["configChangeLog"] = configChangeLogList
 	}

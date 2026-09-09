@@ -34,8 +34,8 @@ import (
 	"github.com/rdkcentral/xconfadmin/adminapi/setting"
 	"github.com/rdkcentral/xconfadmin/adminapi/telemetry"
 	"github.com/rdkcentral/xconfadmin/adminapi/xcrp"
-
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+	"github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -52,8 +52,13 @@ func XconfSetup(server *xhttp.WebconfigServer, r *mux.Router) {
 	auth.WebServerInjection(server)
 	dataapi.RegisterTables()
 
-	db.GetCacheManager() // Initialize cache manager
-	initDB()
+	// Initialize function for onboarding new tenants to avoid circular dependency
+	server.OnboardTenantFunc = shared.OnboardTenant
+
+	tenantId := db.GetDefaultTenantId()
+	if _, err := shared.OnboardTenant(tenantId, tenantId); err != nil {
+		panic("Failed to initialize DB for tenant " + tenantId + ": " + err.Error())
+	}
 
 	if server.XW_XconfServer.ServerConfig.GetBoolean("xconfwebconfig.xconf.dataservice_enabled") {
 		dataapi.XconfSetup(server.XW_XconfServer, r)
@@ -224,9 +229,9 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	updatePath.HandleFunc("/percentageBean", queries.CreatePercentageBeanHandler).Methods("POST").Name("Updates")
 	updatePath.HandleFunc("/percentageBean", queries.UpdatePercentageBeanHandler).Methods("PUT").Name("Updates")
 	updatePath.HandleFunc("/logFile", queries.CreateLogFile).Methods("POST").Name("Updates")
-	updatePath.HandleFunc("/logUploadSettings/{timezone}/{scheduleTimezone}", queries.NotImplementedHandler).Methods("POST").Name("Updates")
-	updatePath.HandleFunc("/deviceSettings", queries.NotImplementedHandler).Methods("POST").Name("Updates")
-	updatePath.HandleFunc("/deviceSettings/{scheduleTimeZone}", queries.NotImplementedHandler).Methods("POST").Name("Updates")
+	updatePath.HandleFunc("/logUploadSettings/{timezone}/{scheduleTimezone}", xhttp.NotImplementedHandler).Methods("POST").Name("Updates")
+	updatePath.HandleFunc("/deviceSettings", xhttp.NotImplementedHandler).Methods("POST").Name("Updates")
+	updatePath.HandleFunc("/deviceSettings/{scheduleTimeZone}", xhttp.NotImplementedHandler).Methods("POST").Name("Updates")
 	paths = append(paths, updatePath)
 
 	updateFilterPath := r.PathPrefix("/xconfAdminService/updates/filters").Subrouter()
@@ -264,7 +269,7 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	modelPath.HandleFunc("/entities", queries.PostModelEntitiesHandler).Methods("POST").Name("Models")
 	modelPath.HandleFunc("/entities", queries.PutModelEntitiesHandler).Methods("PUT").Name("Models")
 	modelPath.HandleFunc("/filtered", queries.PostModelFilteredHandler).Methods("POST").Name("Models")
-	modelPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Models")
+	modelPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Models")
 	// url with var has to be placed last otherwise, it gets confused with url with defined paths
 	modelPath.HandleFunc("/{id}", queries.DeleteModelHandler).Methods("DELETE").Name("Models")
 	modelPath.HandleFunc("/{id}", queries.GetModelByIdHandler).Methods("GET").Name("Models")
@@ -275,7 +280,7 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	environmentPath.HandleFunc("", queries.GetQueriesEnvironments).Methods("GET").Name("Environments")
 	environmentPath.HandleFunc("", queries.CreateEnvironmentHandler).Methods("POST").Name("Environments")
 	environmentPath.HandleFunc("", queries.UpdateEnvironmentHandler).Methods("PUT").Name("Environments")
-	environmentPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Environments")
+	environmentPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Environments")
 	environmentPath.HandleFunc("/filtered", queries.PostEnvironmentFilteredHandler).Methods("POST").Name("Environments")
 	environmentPath.HandleFunc("/entities", queries.PostEnvironmentEntitiesHandler).Methods("POST").Name("Environments")
 	environmentPath.HandleFunc("/entities", queries.PutEnvironmentEntitiesHandler).Methods("PUT").Name("Environments")
@@ -290,7 +295,7 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	nameSpacedListPath.HandleFunc("", queries.UpdateNamespacedListHandler).Methods("PUT").Name("NameSpaced-Lists")
 	nameSpacedListPath.HandleFunc("/ids", queries.GetNamespacedListIdsHandler).Methods("GET").Name("NameSpaced-Lists")
 	nameSpacedListPath.HandleFunc("/ipAddressGroups", queries.GetIpAddressGroupsHandler).Methods("GET").Name("NameSpaced-Lists")
-	nameSpacedListPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("NameSpaced-Lists")
 	nameSpacedListPath.HandleFunc("/filtered", queries.PostNamespacedListFilteredHandler).Methods("POST").Name("NameSpaced-Lists")
 	nameSpacedListPath.HandleFunc("/entities", queries.PostNamespacedListEntitiesHandler).Methods("POST").Name("NameSpaced-Lists")
 	nameSpacedListPath.HandleFunc("/entities", queries.PutNamespacedListEntitiesHandler).Methods("PUT").Name("NameSpaced-Lists")
@@ -316,7 +321,7 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	firmwareRulePath.HandleFunc("/entities", queries.PostFirmwareRuleEntitiesHandler).Methods("POST").Name("Firmware-Rules")
 	firmwareRulePath.HandleFunc("/entities", queries.PutFirmwareRuleEntitiesHandler).Methods("PUT").Name("Firmware-Rules")
 	firmwareRulePath.HandleFunc("/filtered", queries.PostFirmwareRuleFilteredHandler).Methods("POST").Name("Firmware-Rules")
-	firmwareRulePath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-Rules")
 	// url with var has to be placed last otherwise, it gets confused with url with defined paths
 	firmwareRulePath.HandleFunc("/{id}", queries.DeleteFirmwareRuleByIdHandler).Methods("DELETE").Name("Firmware-Rules")
 	firmwareRulePath.HandleFunc("/{id}", queries.GetFirmwareRuleByIdHandler).Methods("GET").Name("Firmware-Rules")
@@ -337,7 +342,7 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	firmwareRuleTempPath.HandleFunc("/entities", queries.PostFirmwareRuleTemplateEntitiesHandler).Methods("POST").Name("Firmware-Templates")
 	firmwareRuleTempPath.HandleFunc("/entities", queries.PutFirmwareRuleTemplateEntitiesHandler).Methods("PUT").Name("Firmware-Templates")
 	firmwareRuleTempPath.HandleFunc("/filtered", queries.PostFirmwareRuleTemplateFilteredHandler).Methods("POST").Name("Firmware-Templates")
-	firmwareRuleTempPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-Templates")
 	// url with var has to be placed last otherwise, it gets confused with url with defined paths
 	firmwareRuleTempPath.HandleFunc("/{id}", queries.DeleteFirmwareRuleTemplateByIdHandler).Methods("DELETE").Name("Firmware-Templates")
 	firmwareRuleTempPath.HandleFunc("/{id}", queries.GetFirmwareRuleTemplateByIdHandler).Methods("GET").Name("Firmware-Templates")
@@ -357,7 +362,7 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	firmwareConfigPath.HandleFunc("/entities", queries.PostFirmwareConfigEntitiesHandler).Methods("POST").Name("Firmware-Configs")
 	firmwareConfigPath.HandleFunc("/entities", queries.PutFirmwareConfigEntitiesHandler).Methods("PUT").Name("Firmware-Configs")
 	firmwareConfigPath.HandleFunc("/filtered", queries.PostFirmwareConfigFilteredHandler).Methods("POST").Name("Firmware-Configs")
-	firmwareConfigPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-Configs")
 	// url with var has to be placed last otherwise, it gets confused with url with defined paths
 	firmwareConfigPath.HandleFunc("/{id}", queries.DeleteFirmwareConfigByIdHandler).Methods("DELETE").Name("Firmware-Configs")
 	firmwareConfigPath.HandleFunc("/{id}", queries.GetFirmwareConfigByIdHandler).Methods("GET").Name("Firmware-Configs")
@@ -368,7 +373,7 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	percentageBeanPath.HandleFunc("", queries.GetPercentageBeanAllHandler).Methods("GET").Name("Firmware-PercentFilter")
 	percentageBeanPath.HandleFunc("", queries.CreatePercentageBeanHandler).Methods("POST").Name("Firmware-PercentFilter")
 	percentageBeanPath.HandleFunc("", queries.UpdatePercentageBeanHandler).Methods("PUT").Name("Firmware-PercentFilter")
-	percentageBeanPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-PercentFilter")
 	percentageBeanPath.HandleFunc("/filtered", queries.PostPercentageBeanFilteredWithParamsHandler).Methods("POST").Name("Firmware-PercentFilter")
 	percentageBeanPath.HandleFunc("/entities", queries.PostPercentageBeanEntitiesHandler).Methods("POST").Name("Firmware-PercentFilter")
 	percentageBeanPath.HandleFunc("/entities", queries.PutPercentageBeanEntitiesHandler).Methods("PUT").Name("Firmware-PercentFilter")
@@ -398,7 +403,7 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	amvPath.HandleFunc("", queries.GetAmvHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	amvPath.HandleFunc("", queries.CreateAmvHandler).Methods("POST").Name("Firmware-ActivationVersion")
 	amvPath.HandleFunc("", queries.UpdateAmvHandler).Methods("PUT").Name("Firmware-ActivationVersion")
-	amvPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Firmware-ActivationVersion")
+	amvPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	amvPath.HandleFunc("/filtered", queries.GetAmvFilteredHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	amvPath.HandleFunc("/importAll", queries.ImportAllAmvHandler).Methods("POST").Name("Firmware-ActivationVersion")
 	amvPath.HandleFunc("/{id}", queries.DeleteAmvByIdHandler).Methods("DELETE").Name("Firmware-ActivationVersion")
@@ -410,7 +415,7 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	actMinVerPath.HandleFunc("", queries.GetAmvHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("", queries.CreateAmvHandler).Methods("POST").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("", queries.UpdateAmvHandler).Methods("PUT").Name("Firmware-ActivationVersion")
-	actMinVerPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Firmware-ActivationVersion")
+	actMinVerPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("/filtered", queries.PostAmvFilteredHandler).Methods("POST").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("/entities", queries.PostAmvEntitiesHandler).Methods("POST").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("/entities", queries.PutAmvEntitiesHandler).Methods("PUT").Name("Firmware-ActivationVersion")
@@ -419,36 +424,8 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	actMinVerPath.HandleFunc("/{id}", queries.GetAmvByIdHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	paths = append(paths, actMinVerPath)
 
-	// setting/profile
-	settingProfilePath := r.PathPrefix("/xconfAdminService/setting/profile").Subrouter()
-	settingProfilePath.HandleFunc("", setting.CreateSettingProfileHandler).Methods("POST").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("/entities", setting.CreateSettingProfilesPackageHandler).Methods("POST").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("", setting.UpdateSettingProfilesHandler).Methods("PUT").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("/entities", setting.UpdateSettingProfilesPackageHandler).Methods("PUT").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("", setting.GetSettingProfilesAllExport).Methods("GET").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("/{id}", setting.GetSettingProfileOneExport).Methods("GET").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("/filtered", setting.GetSettingProfilesFilteredWithPage).Methods("POST").Name("Settings-Profiles")
-	settingProfilePath.HandleFunc("/{id}", setting.DeleteOneSettingProfilesHandler).Methods("DELETE").Name("Settings-Profiles")
-	paths = append(paths, settingProfilePath)
-
-	// setting/rule
-	settingRulePath := r.PathPrefix("/xconfAdminService/setting/rule").Subrouter()
-	settingRulePath.HandleFunc("", setting.CreateSettingRuleHandler).Methods("POST").Name("Settings-Rules")
-	settingRulePath.HandleFunc("/entities", setting.CreateSettingRulesPackageHandler).Methods("POST").Name("Settings-Rules")
-	settingRulePath.HandleFunc("", setting.UpdateSettingRulesHandler).Methods("PUT").Name("Settings-Rules")
-	settingRulePath.HandleFunc("/entities", setting.UpdateSettingRulesPackageHandler).Methods("PUT").Name("Settings-Rules")
-	settingRulePath.HandleFunc("", setting.GetSettingRulesAllExport).Methods("GET").Name("Settings-Rules")
-	settingRulePath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Settings-Rules")
-	settingRulePath.HandleFunc("/{id}", setting.GetSettingRuleOneExport).Methods("GET").Name("Settings-Rules")
-	settingRulePath.HandleFunc("/filtered", setting.GetSettingRulesFilteredWithPage).Methods("POST").Name("Settings-Rules")
-	settingRulePath.HandleFunc("/{id}", setting.DeleteOneSettingRulesHandler).Methods("DELETE").Name("Settings-Rules")
-	paths = append(paths, settingRulePath)
-
-	// settings/testpage
-	settingTestpagePath := r.PathPrefix("/xconfAdminService/settings/testpage").Subrouter()
-	settingTestpagePath.HandleFunc("", setting.SettingTestPageHandler).Methods("POST").Name("Settings-TestPage")
-	paths = append(paths, settingTestpagePath)
+	// setting/profile setting/rule settings/testpage
+	paths = setting.RegisterSettingsRoutes(r, paths)
 
 	// featurerule
 	featureRulePath := r.PathPrefix("/xconfAdminService/featurerule").Subrouter()
@@ -483,7 +460,7 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	rfcFeaturerulePath.HandleFunc("/featurerule", queries.UpdateFeatureRuleHandler).Methods("PUT").Name("RFC-FeatureRules")
 	rfcFeaturerulePath.HandleFunc("/featurerule/entities", queries.UpdateFeatureRulesHandler).Methods("PUT").Name("RFC-FeatureRules")
 	rfcFeaturerulePath.HandleFunc("/featurerule", queries.GetFeatureRulesExportHandler).Methods("GET").Name("RFC-FeatureRules")
-	rfcFeaturerulePath.HandleFunc("/featurerule/page", queries.NotImplementedHandler).Methods("GET").Name("RFC-FeatureRules")
+	rfcFeaturerulePath.HandleFunc("/featurerule/page", xhttp.NotImplementedHandler).Methods("GET").Name("RFC-FeatureRules")
 	rfcFeaturerulePath.HandleFunc("/featurerule/{id}", queries.GetFeatureRuleOneExport).Methods("GET").Name("RFC-FeatureRules")
 	rfcFeaturerulePath.HandleFunc("/featurerule/filtered", queries.GetFeatureRulesFilteredWithPage).Methods("POST").Name("RFC-FeatureRules")
 	rfcFeaturerulePath.HandleFunc("/featurerule/{id}", queries.DeleteOneFeatureRuleHandler).Methods("DELETE").Name("RFC-FeatureRules")
@@ -504,220 +481,13 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	paths = append(paths, rfcFeaturePath)
 
 	// dcm/formula
-	dcmFormulaPath := r.PathPrefix("/xconfAdminService/dcm/formula").Subrouter()
-	dcmFormulaPath.HandleFunc("", dcm.GetDcmFormulaHandler).Methods("GET").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("", dcm.CreateDcmFormulaHandler).Methods("POST").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("", dcm.UpdateDcmFormulaHandler).Methods("PUT").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("/entities", dcm.PostDcmFormulaListHandler).Methods("POST").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("/entities", dcm.PutDcmFormulaListHandler).Methods("PUT").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("/list", dcm.PostDcmFormulaListHandler).Methods("POST").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("/list", dcm.PutDcmFormulaListHandler).Methods("PUT").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("/settingsAvailability", dcm.DcmFormulaSettingsAvailabilitygHandler).Methods("POST").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("/import/{overwrite}", dcm.ImportDcmFormulaWithOverwriteHandler).Methods("POST").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("/import", dcm.ImportDcmFormulasHandler).Methods("POST").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("/formulasAvailability", dcm.DcmFormulasAvailabilitygHandler).Methods("POST").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("/size", dcm.GetDcmFormulaSizeHandler).Methods("GET").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("/names", dcm.GetDcmFormulaNamesHandler).Methods("GET").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("/filtered", dcm.PostDcmFormulaFilteredWithParamsHandler).Methods("POST").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("/{id}/priority/{newPriority}", dcm.DcmFormulaChangePriorityHandler).Methods("POST").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("/{id}", dcm.DeleteDcmFormulaByIdHandler).Methods("DELETE").Name("DCM-Formulas")
-	dcmFormulaPath.HandleFunc("/{id}", dcm.GetDcmFormulaByIdHandler).Methods("GET").Name("DCM-Formulas")
-	paths = append(paths, dcmFormulaPath)
+	paths = dcm.RegisterDCMRoutes(r, paths)
 
-	// dcm/deviceSettings
-	dcmDeviceSettingsPath := r.PathPrefix("/xconfAdminService/dcm/deviceSettings").Subrouter()
-	dcmDeviceSettingsPath.HandleFunc("", dcm.GetDeviceSettingsHandler).Methods("GET").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("", dcm.CreateDeviceSettingsHandler).Methods("POST").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("", dcm.UpdateDeviceSettingsHandler).Methods("PUT").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("/size", dcm.GetDeviceSettingsSizeHandler).Methods("GET").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("/names", dcm.GetDeviceSettingsNamesHandler).Methods("GET").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("/filtered", dcm.PostDeviceSettingsFilteredWithParamsHandler).Methods("POST").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("/export", dcm.GetDeviceSettingsExportHandler).Methods("GET")
-	// url with var has to be placed last otherwise, it gets confused with url with defined paths
-	dcmDeviceSettingsPath.HandleFunc("/{id}", dcm.DeleteDeviceSettingsByIdHandler).Methods("DELETE").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("/{id}", dcm.GetDeviceSettingsByIdHandler).Methods("GET").Name("DCM-DeviceSettings")
-	paths = append(paths, dcmDeviceSettingsPath)
+	// telemetry/profile telemetry/v2/profile /change telemetry/change telemetry/v2/change
+	paths = change.RegisterChangeRoutes(r, paths)
 
-	// dcm/vodsettings
-	dcmVodSettingsPath := r.PathPrefix("/xconfAdminService/dcm/vodsettings").Subrouter()
-	dcmVodSettingsPath.HandleFunc("", dcm.GetVodSettingsHandler).Methods("GET").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("", dcm.CreateVodSettingsHandler).Methods("POST").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("", dcm.UpdateVodSettingsHandler).Methods("PUT").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("/size", dcm.GetVodSettingsSizeHandler).Methods("GET").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("/names", dcm.GetVodSettingsNamesHandler).Methods("GET").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("/filtered", dcm.PostVodSettingsFilteredWithParamsHandler).Methods("POST").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("/export", dcm.GetVodSettingExportHandler).Methods("GET").Name("DCM-VODSettings")
-	// url with var has to be placed last otherwise, it gets confused with url with defined paths
-	dcmVodSettingsPath.HandleFunc("/{id}", dcm.DeleteVodSettingsByIdHandler).Methods("DELETE").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("/{id}", dcm.GetVodSettingsByIdHandler).Methods("GET").Name("DCM-VODSettings")
-	paths = append(paths, dcmVodSettingsPath)
-
-	// dcm/uploadRepository
-	dcmUploadRepositoryPath := r.PathPrefix("/xconfAdminService/dcm/uploadRepository").Subrouter()
-	dcmUploadRepositoryPath.HandleFunc("", dcm.GetLogRepoSettingsHandler).Methods("GET").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("", dcm.CreateLogRepoSettingsHandler).Methods("POST").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("", dcm.UpdateLogRepoSettingsHandler).Methods("PUT").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/entities", dcm.PostLogRepoSettingsEntitiesHandler).Methods("POST").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/entities", dcm.PutLogRepoSettingsEntitiesHandler).Methods("PUT").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/size", dcm.GetLogRepoSettingsSizeHandler).Methods("GET").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/names", dcm.GetLogRepoSettingsNamesHandler).Methods("GET").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/filtered", dcm.PostLogRepoSettingsFilteredWithParamsHandler).Methods("POST").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/{id}", dcm.DeleteLogRepoSettingsByIdHandler).Methods("DELETE").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/{id}", dcm.GetLogRepoSettingsByIdHandler).Methods("GET").Name("DCM-UploadRepository")
-	paths = append(paths, dcmUploadRepositoryPath)
-
-	// dcm/logUploadSettings
-	dcmLogUploadSettingsPath := r.PathPrefix("/xconfAdminService/dcm/logUploadSettings").Subrouter()
-	dcmLogUploadSettingsPath.HandleFunc("", dcm.GetLogUploadSettingsHandler).Methods("GET").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("", dcm.CreateLogUploadSettingsHandler).Methods("POST").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("", dcm.UpdateLogUploadSettingsHandler).Methods("PUT").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("/size", dcm.GetLogUploadSettingsSizeHandler).Methods("GET").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("/names", dcm.GetLogUploadSettingsNamesHandler).Methods("GET").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("/filtered", dcm.PostLogUploadSettingsFilteredWithParamsHandler).Methods("POST").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("/export", dcm.GetLogRepoSettingsExportHandler).Methods("GET").Name("DCM-LogUploadSettings")
-	// url with var has to be placed last otherwise, it gets confused with url with defined paths)
-	dcmLogUploadSettingsPath.HandleFunc("/{id}", dcm.DeleteLogUploadSettingsByIdHandler).Methods("DELETE").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("/{id}", dcm.GetLogUploadSettingsByIdHandler).Methods("GET").Name("DCM-LogUploadSettings")
-	paths = append(paths, dcmLogUploadSettingsPath)
-
-	// dcm/testpage
-	dcmTestpagePath := r.PathPrefix("/xconfAdminService/dcm/testpage").Subrouter()
-	dcmTestpagePath.HandleFunc("", dcm.DcmTestPageHandler).Methods("POST").Name("DCM-TestPage")
-	paths = append(paths, dcmTestpagePath)
-
-	// telemetry
-	telemetryPath := r.PathPrefix("/xconfAdminService/telemetry").Subrouter()
-	telemetryPath.HandleFunc("/create/{contextAttributeName}/{expectedValue}", telemetry.CreateTelemetryEntryFor).Methods("POST").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/testpage", telemetry.TelemetryTestPageHandler).Methods("POST").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/drop/{contextAttributeName}/{expectedValue}", telemetry.DropTelemetryEntryFor).Methods("POST").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/getAvailableRuleDescriptors", telemetry.GetDescriptors).Methods("GET").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/getAvailableTelemetryDescriptors", telemetry.GetTelemetryDescriptors).Methods("GET").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/addTo/{ruleId}/{contextAttributeName}/{expectedValue}/{expires}", telemetry.TempAddToPermanentRule).Methods("POST").Name("Telemetry1-Uncategorized")
-	telemetryPath.HandleFunc("/bindToTelemetry/{telemetryId}/{contextAttributeName}/{expectedValue}/{expires}", telemetry.BindToTelemetry).Methods("POST").Name("Telemetry1-Uncategorized")
-	paths = append(paths, telemetryPath)
-
-	// telemetry/profile
-	telemetryProfilePath := r.PathPrefix("/xconfAdminService/telemetry/profile").Subrouter()
-	telemetryProfilePath.HandleFunc("", change.GetTelemetryProfilesHandler).Methods("GET").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("", change.CreateTelemetryProfileHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("", change.UpdateTelemetryProfileHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change", change.CreateTelemetryProfileChangeHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change", change.UpdateTelemetryProfileChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/{id}", change.DeleteTelemetryProfileHandler).Methods("DELETE").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change/{id}", change.DeleteTelemetryProfileChangeHandler).Methods("DELETE").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/{id}", change.GetTelemetryProfileByIdHandler).Methods("GET").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/entities", change.PostTelemetryProfileEntitiesHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/entities", change.PutTelemetryProfileEntitiesHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/filtered", change.PostTelemetryProfileFilteredHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/migrate/createTelemetryId", change.CreateTelemetryIdsHandler).Methods("GET").Name("Telemetry1-Profiles") //can be removed
-	telemetryProfilePath.HandleFunc("/entry/add/{id}", change.AddTelemetryProfileEntryHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/entry/remove/{id}", change.RemoveTelemetryProfileEntryHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change/entry/add/{id}", change.AddTelemetryProfileEntryChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change/entry/remove/{id}", change.RemoveTelemetryProfileEntryChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
-
-	paths = append(paths, telemetryProfilePath)
-
-	// telemetry/rule
-	telemetryRulePath := r.PathPrefix("/xconfAdminService/telemetry/rule").Subrouter()
-	telemetryRulePath.HandleFunc("", telemetry.GetTelemetryRulesHandler).Methods("GET").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("", telemetry.CreateTelemetryRuleHandler).Methods("POST").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("", telemetry.UpdateTelemetryRuleHandler).Methods("PUT").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("/entities", telemetry.PostTelemtryRuleEntitiesHandler).Methods("POST").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("/entities", telemetry.PutTelemetryRuleEntitiesHandler).Methods("PUT").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("/filtered", telemetry.PostTelemetryRuleFilteredWithParamsHandler).Methods("POST").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("/{id}", telemetry.DeleteTelmetryRuleByIdHandler).Methods("DELETE").Name("Telemetry1-Rules")
-	telemetryRulePath.HandleFunc("/{id}", telemetry.GetTelemetryRuleByIdHandler).Methods("GET").Name("Telemetry1-Rules")
-	paths = append(paths, telemetryRulePath)
-
-	// telemetry/v2/profile
-	telemetryV2ProfilePath := r.PathPrefix("/xconfAdminService/telemetry/v2/profile").Subrouter()
-	telemetryV2ProfilePath.HandleFunc("", change.GetTelemetryTwoProfilesHandler).Methods("GET").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("", change.CreateTelemetryTwoProfileHandler).Methods("POST").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("", change.UpdateTelemetryTwoProfileHandler).Methods("PUT").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/{id}", change.DeleteTelemetryTwoProfileHandler).Methods("DELETE").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/change", change.CreateTelemetryTwoProfileChangeHandler).Methods("POST").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/change", change.UpdateTelemetryTwoProfileChangeHandler).Methods("PUT").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/change/{id}", change.DeleteTelemetryTwoProfileChangeHandler).Methods("DELETE").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/{id}", change.GetTelemetryTwoProfileByIdHandler).Methods("GET").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/byIdList", change.PostTelemetryTwoProfilesByIdListHandler).Methods("POST").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/entities", change.PostTelemetryTwoProfileEntitiesHandler).Methods("POST").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/entities", change.PutTelemetryTwoProfileEntitiesHandler).Methods("PUT").Name("Telemetry2-Profiles")
-	telemetryV2ProfilePath.HandleFunc("/filtered", change.PostTelemetryTwoProfileFilteredHandler).Methods("POST").Name("Telemetry2-Profiles")
-	paths = append(paths, telemetryV2ProfilePath)
-
-	// telemetry/v2/rule
-	telemetryV2RulePath := r.PathPrefix("/xconfAdminService/telemetry/v2/rule").Subrouter()
-	telemetryV2RulePath.HandleFunc("", telemetry.CreateTelemetryTwoRuleHandler).Methods("POST").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/entities", telemetry.CreateTelemetryTwoRulesPackageHandler).Methods("POST").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("", telemetry.UpdateTelemetryTwoRuleHandler).Methods("PUT").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/entities", telemetry.UpdateTelemetryTwoRulesPackageHandler).Methods("PUT").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("", telemetry.GetTelemetryTwoRulesAllExport).Methods("GET").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/{id}", telemetry.GetTelemetryTwoRuleById).Methods("GET").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/filtered", telemetry.GetTelemetryTwoRulesFilteredWithPage).Methods("POST").Name("Telemetry2-Rules")
-	telemetryV2RulePath.HandleFunc("/{id}", telemetry.DeleteOneTelemetryTwoRuleHandler).Methods("DELETE").Name("Telemetry2-Rules")
-	paths = append(paths, telemetryV2RulePath)
-
-	// telemetry/v2/testpage
-	teleV2TestpagePath := r.PathPrefix("/xconfAdminService/telemetry/v2/testpage").Subrouter()
-	teleV2TestpagePath.HandleFunc("", change.TelemetryTwoTestPageHandler).Methods("POST").Name("Telemetry2-Uncategorized")
-	paths = append(paths, teleV2TestpagePath)
-
-	// change - these are the same as telemetry/change APIs which are needed
-	// to be compatible w/ Java AS; eventually these will be deprecated.
-	changePath := r.PathPrefix("/xconfAdminService/change").Subrouter()
-	changePath.HandleFunc("/all", change.GetProfileChangesHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approved", change.GetApprovedHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approve/{changeId}", change.ApproveChangeHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/revert/{approveId}", change.RevertChangeHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/cancel/{changeId}", change.CancelChangeHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/changes/grouped/byId", change.GetGroupedChangesHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approved/grouped/byId", change.GetGroupedApprovedChangesHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/entityIds", change.GetChangedEntityIdsHandler).Methods("GET").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approveChanges", change.ApproveChangesHandler).Methods("POST").Name("Telemetry1-Changes") //TODO verify usages
-	changePath.HandleFunc("/revertChanges", change.RevertChangesHandler).Methods("POST").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/approved/filtered", change.GetApprovedFilteredHandler).Methods("POST").Name("Telemetry1-Changes")
-	changePath.HandleFunc("/changes/filtered", change.GetChangesFilteredHandler).Methods("POST").Name("Telemetry1-Changes")
-	paths = append(paths, changePath)
-
-	// telemetry/change
-	telemetryChangePath := r.PathPrefix("/xconfAdminService/telemetry/change").Subrouter()
-	telemetryChangePath.HandleFunc("/all", change.GetProfileChangesHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/approved", change.GetApprovedHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/approve/{changeId}", change.ApproveChangeHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/revert/{approveId}", change.RevertChangeHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/cancel/{changeId}", change.CancelChangeHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/changes/grouped/byId", change.GetGroupedChangesHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/approved/grouped/byId", change.GetGroupedApprovedChangesHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/entityIds", change.GetChangedEntityIdsHandler).Methods("GET").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/approveChanges", change.ApproveChangesHandler).Methods("POST").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/revertChanges", change.RevertChangesHandler).Methods("POST").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/approved/filtered", change.GetApprovedFilteredHandler).Methods("POST").Name("Telemetry1-Changes")
-	telemetryChangePath.HandleFunc("/changes/filtered", change.GetChangesFilteredHandler).Methods("POST").Name("Telemetry1-Changes")
-	paths = append(paths, telemetryChangePath)
-
-	// telemetry/v2/change
-	telemetryTwoChangePath := r.PathPrefix("/xconfAdminService/telemetry/v2/change").Subrouter()
-	telemetryTwoChangePath.HandleFunc("/all", change.GetTwoProfileChangesHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/approved", change.GetApprovedTwoChangesHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/approve/{changeId}", change.ApproveTwoChangeHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/revert/{approveId}", change.RevertTwoChangeHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/cancel/{changeId}", change.CancelTwoChangeHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/entityIds", change.GetTwoChangeEntityIdsHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/changes/grouped/byId", change.GetGroupedTwoChangesHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/approved/grouped/byId", change.GetGroupedApprovedTwoChangesHandler).Methods("GET").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/approveChanges", change.ApproveTwoChangesHandler).Methods("POST").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/revertChanges", change.RevertTwoChangesHandler).Methods("POST").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/approved/filtered", change.GetApprovedTwoChangesFilteredHandler).Methods("POST").Name("Telemetry2-Changes")
-	telemetryTwoChangePath.HandleFunc("/changes/filtered", change.GetTwoChangesFilteredHandler).Methods("POST").Name("Telemetry2-Changes")
-	paths = append(paths, telemetryTwoChangePath)
+	// telemetry telemetry/rule telemetry/v2/rule
+	paths = telemetry.RegisterTelemetryRoutes(r, paths)
 
 	// changelog
 	changelogPath := r.PathPrefix("/xconfAdminService/changelog").Subrouter()
@@ -794,6 +564,13 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	wakeupPoolCreationPath := r.PathPrefix("/xconfAdminService/wakeuppool").Subrouter()
 	wakeupPoolCreationPath.HandleFunc("", queries.CreateWakeupPoolHandler).Methods("POST").Name("createwakeuppool")
 	authPaths = append(authPaths, wakeupPoolCreationPath)
+
+	// tenants
+	tenantsPath := r.PathPrefix("/xconfAdminService/tenants").Subrouter()
+	tenantsPath.HandleFunc("", queries.GetTenantsHandler).Methods("GET").Name("GetTenants")
+	tenantsPath.HandleFunc("", queries.CreateTenantHandler).Methods("POST").Name("CreateTenant")
+	tenantsPath.HandleFunc("/{id}", queries.DeleteTenantHandler).Methods("DELETE").Name("DeleteTenant")
+	paths = append(paths, tenantsPath)
 
 	// CORS
 	c := cors.New(cors.Options{

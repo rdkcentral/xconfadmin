@@ -25,6 +25,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rdkcentral/xconfadmin/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+
 	oscommon "github.com/rdkcentral/xconfadmin/common"
 
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
@@ -33,8 +36,7 @@ import (
 )
 
 func TestImportFeatureSecondTimeWithDiffAppType(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 
 	featureDiffAppType := &rfc.FeatureEntity{
 		Name:            "nameAppType",
@@ -47,7 +49,7 @@ func TestImportFeatureSecondTimeWithDiffAppType(t *testing.T) {
 	jsonByte, _ := json.Marshal(featureEntityList)
 	url := "/xconfAdminService/feature/importAll?applicationType=stb"
 	req, _ := http.NewRequest("POST", url, strings.NewReader(string(jsonByte)))
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
 	// Importing existing feature with different application-type should fail
@@ -55,11 +57,11 @@ func TestImportFeatureSecondTimeWithDiffAppType(t *testing.T) {
 	featureEntityList = []*rfc.FeatureEntity{featureDiffAppType}
 	jsonByte, _ = json.Marshal(featureEntityList)
 	req, _ = http.NewRequest("POST", url, strings.NewReader(string(jsonByte)))
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
 }
 func TestAllFeatureHandlers(t *testing.T) {
-	SkipIfMockDatabase(t)
+	shared.DeleteAllEntities(t)
 
 	featureEntity1 := &rfc.FeatureEntity{
 		Name:        "name1",
@@ -90,13 +92,11 @@ func TestAllFeatureHandlers(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	DeleteAllEntities()
-
 	// no data, GET empty 200 response
 	url := "/xconfAdminService/feature?applicationType=stb"
 	req, err := http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err := ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -106,21 +106,21 @@ func TestAllFeatureHandlers(t *testing.T) {
 	// no body, POST 400 bad request
 	req, err = http.NewRequest("POST", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 
 	// invalid applicationType, POST 400 bad request
 	jsonByte, err := json.Marshal(featureEntity2)
 	req, err = http.NewRequest("POST", url, strings.NewReader(string(jsonByte)))
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
 
 	// good request POST 201 created (no applicationType specified, should default on stb)
 	jsonByte, err = json.Marshal(featureEntity1)
 	req, err = http.NewRequest("POST", url, strings.NewReader(string(jsonByte)))
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -135,7 +135,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	// bad request, feature already exists, POST 409
 	req, err = http.NewRequest("POST", url, strings.NewReader(string(jsonByte)))
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -145,7 +145,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	// good request GET 200 with response
 	req, err = http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -161,7 +161,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = "/xconfAdminService/feature/filtered?applicationType=rdkcloud"
 	req, err = http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -174,7 +174,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = "/xconfAdminService/feature?applicationType=rdkcloud"
 	req, err = http.NewRequest("POST", url, strings.NewReader(string(jsonByte)))
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -190,7 +190,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = "/xconfAdminService/feature?applicationType=stb"
 	req, err = http.NewRequest("POST", url, strings.NewReader(string(jsonByte)))
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -204,7 +204,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = "/xconfAdminService/feature/filtered?applicationType=rdkcloud"
 	req, err = http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -218,7 +218,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = "/xconfAdminService/feature/filtered?applicationType=stb&FREE_ARG=key&FIXED_ARG=value"
 	req, err = http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -232,7 +232,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = "/xconfAdminService/feature/fakeFeatureId?applicationType=stb"
 	req, err = http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 	res.Body.Close()
 
@@ -240,7 +240,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/feature/%s"+"?applicationType=stb", featureEntity1.ID)
 	req, err = http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -254,7 +254,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = "/xconfAdminService/feature?applicationType=stb"
 	req, err = http.NewRequest("PUT", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 
 	// no featureId, PUT 400 bad requst
@@ -263,7 +263,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = "/xconfAdminService/feature?applicationType=stb"
 	req, err = http.NewRequest("PUT", url, strings.NewReader(string(jsonByte)))
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -277,7 +277,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = "/xconfAdminService/feature?applicationType=stb"
 	req, err = http.NewRequest("PUT", url, strings.NewReader(string(jsonByte)))
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -290,7 +290,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = "/xconfAdminService/feature?applicationType=stb"
 	req, err = http.NewRequest("PUT", url, strings.NewReader(string(jsonByte)))
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -304,7 +304,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = "/xconfAdminService/feature?applicationType=stb"
 	req, err = http.NewRequest("PUT", url, strings.NewReader(string(jsonByte)))
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	// assert.Equal(t, res.StatusCode, http.StatusConflict)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -320,7 +320,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = "/xconfAdminService/feature?applicationType=rdkcloud"
 	req, err = http.NewRequest("PUT", url, strings.NewReader(string(jsonByte)))
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -343,7 +343,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	jsonByte, err = json.Marshal(featureEntityList)
 	url = "/xconfAdminService/feature/importAll?applicationType=stb"
 	req, err = http.NewRequest("POST", url, strings.NewReader(string(jsonByte)))
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	res.Body.Close()
 
@@ -351,7 +351,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/feature/%s"+"?applicationType=stb", featureEntity1.ID)
 	req, err = http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -363,7 +363,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/feature/%s"+"?applicationType=stb", featureEntity4.ID)
 	req, err = http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -375,14 +375,14 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/feature/%s"+"?applicationType=stb", featureEntity6.ID)
 	req, err = http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 
 	// feature doesn't exist, GET /{id} 404 not found
 	url = "/xconfAdminService/feature/someFakeId?applicationType=stb"
 	req, err = http.NewRequest("GET", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -393,7 +393,7 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = "/xconfAdminService/feature/someFakeId?applicationType=stb"
 	req, err = http.NewRequest("DELETE", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -406,45 +406,44 @@ func TestAllFeatureHandlers(t *testing.T) {
 	url = "/xconfAdminService/feature/id1?applicationType=stb"
 	req, err = http.NewRequest("DELETE", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusNoContent)
 	res.Body.Close()
 
 	url = "/xconfAdminService/feature/id2?applicationType=rdkcloud"
 	req, err = http.NewRequest("DELETE", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusNoContent)
 	res.Body.Close()
 
 	url = "/xconfAdminService/feature/id3?applicationType=stb"
 	req, err = http.NewRequest("DELETE", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusNoContent)
 	res.Body.Close()
 
 	url = "/xconfAdminService/feature/id4?applicationType=stb"
 	req, err = http.NewRequest("DELETE", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusNoContent)
 	res.Body.Close()
 
 	url = "/xconfAdminService/feature/id5?applicationType=stb"
 	req, err = http.NewRequest("DELETE", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 	res.Body.Close()
 
 	url = "/xconfAdminService/feature/id6?applicationType=stb"
 	req, err = http.NewRequest("DELETE", url, nil)
 	assert.NilError(t, err)
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 	res.Body.Close()
-
 }
 
 func compareFeatureEntityObjects(t *testing.T, featureEntity1 *rfc.FeatureEntity, featureEntity2 *rfc.FeatureEntity) {

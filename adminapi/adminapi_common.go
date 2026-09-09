@@ -21,12 +21,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rdkcentral/xconfwebconfig/dataapi"
-
-	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
 	common "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
-
+	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -110,55 +107,4 @@ func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 		}
 	}
 	Xc = xc
-}
-
-func initDB() {
-	queries.CreateFirmwareRuleTemplates() // Initialize FirmwareRule templates
-	initAppSettings()                     // Initialize Application settings
-}
-
-func initAppSettings() {
-	settings, err := common.GetAppSettings()
-	if err != nil {
-		panic(err)
-	}
-	if _, ok := settings[common.PROP_LOCKDOWN_ENABLED]; !ok {
-		common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, false)
-	}
-	if _, ok := settings[common.PROP_CANARY_MAXSIZE]; !ok {
-		common.SetAppSetting(common.PROP_CANARY_MAXSIZE, common.CanarySize)
-	}
-	if _, ok := settings[common.PROP_CANARY_DISTRIBUTION_PERCENTAGE]; !ok {
-		common.SetAppSetting(common.PROP_CANARY_DISTRIBUTION_PERCENTAGE, common.CanaryDistributionPercentage)
-	}
-	if _, ok := settings[common.PROP_CANARY_FW_UPGRADE_STARTTIME]; !ok {
-		common.SetAppSetting(common.PROP_CANARY_FW_UPGRADE_STARTTIME, common.CanaryFwUpgradeStartTime)
-	}
-	if _, ok := settings[common.PROP_CANARY_FW_UPGRADE_ENDTIME]; !ok {
-		common.SetAppSetting(common.PROP_CANARY_FW_UPGRADE_ENDTIME, common.CanaryFwUpgradeEndTime)
-	}
-
-	if _, ok := settings[common.PROP_LOCKDOWN_STARTTIME]; !ok {
-		common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, common.DefaultLockdownStartTime)
-	}
-
-	if _, ok := settings[common.PROP_LOCKDOWN_ENDTIME]; !ok {
-		common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, common.DefaultLockdownEndTime)
-	}
-
-	if _, ok := settings[common.PROP_LOCKDOWN_MODULES]; !ok {
-		common.SetAppSetting(common.PROP_LOCKDOWN_MODULES, common.DefaultLockdownModules)
-	}
-
-	if _, ok := settings[common.PROP_PRECOOK_LOCKDOWN_ENABLED]; !ok {
-		common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, common.DefaultPrecookLockdownEnabled)
-	}
-
-	if _, ok := settings[common.PROP_CANARY_TIMEZONE_LIST]; !ok {
-		common.SetAppSetting(common.PROP_CANARY_TIMEZONE_LIST, common.DefaultCanaryTimezone)
-	}
-
-	if _, ok := settings[common.PROP_TAGGING_SYNC_ENABLED]; !ok {
-		common.SetAppSetting(common.PROP_TAGGING_SYNC_ENABLED, true)
-	}
 }

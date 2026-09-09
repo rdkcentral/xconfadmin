@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,31 +14,24 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
-	"github.com/rdkcentral/xconfadmin/adminapi/queries"
 	"github.com/rdkcentral/xconfadmin/common"
-	oshttp "github.com/rdkcentral/xconfadmin/http"
-
-	// "github.com/rdkcentral/xconfadmin/taggingapi/tag" // No longer needed - tag refactored
-	log "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
+	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
-	server *oshttp.WebconfigServer
+	server *xhttp.WebconfigServer
 	router *mux.Router
 )
 
 func TestMain(m *testing.M) {
-	// Initialize mock database for fast testing (63s -> <5s)
-	queries.InitMockDatabase()
-	defer queries.RestoreRealDatabase()
-
 	cfgFile := "../config/sample_xconfadmin.conf"
 	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
 		cfgFile = "../../config/sample_xconfadmin.conf"
@@ -60,7 +52,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	server = oshttp.NewWebconfigServer(sc, true, nil, nil)
+	server = xhttp.NewWebconfigServer(sc, true, nil, nil)
 	xwhttp.InitSatTokenManager(server.XW_XconfServer)
 	db.SetDatabaseClient(server.XW_XconfServer.DatabaseClient)
 	router = server.XW_XconfServer.GetRouter(false)
@@ -77,7 +69,8 @@ func TestMain(m *testing.M) {
 	server.XW_XconfServer.TearDown()
 	os.Exit(code)
 }
-func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
+
+func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 	if ws == nil {
 		common.CacheUpdateWindowSize = 60000
 		common.AllowedNumberOfFeatures = 100
@@ -149,8 +142,8 @@ func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 		}
 	}
 }
-func featureSetup(server *oshttp.WebconfigServer, r *mux.Router) {
 
+func featureSetup(server *xhttp.WebconfigServer, r *mux.Router) {
 	xc := dataapi.GetXconfConfigs(server.XW_XconfServer.ServerConfig.Config)
 
 	WebServerInjection(server, xc)
@@ -165,7 +158,7 @@ func featureSetup(server *oshttp.WebconfigServer, r *mux.Router) {
 	SetupRFCRoutes(server, r)
 }
 
-func SetupRFCRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
+func SetupRFCRoutes(server *xhttp.WebconfigServer, r *mux.Router) {
 	// rfc/feature
 	rfcFeaturePath := r.PathPrefix("/xconfAdminService/rfc/feature").Subrouter()
 	rfcFeaturePath.HandleFunc("", PostFeatureHandler).Methods("POST").Name("RFC-Feature")
@@ -193,92 +186,92 @@ func buildFeatureEntity(appType string) *xwrfc.FeatureEntity {
 }
 
 func TestGetFeaturesEmptyAndExport(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/rfc/feature?applicationType=stb", nil)
-	rr := executeRequest(r)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	// export empty
 	r = httptest.NewRequest(http.MethodGet, "/xconfAdminService/rfc/feature?applicationType=stb&export=true", nil)
-	rr = executeRequest(r)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestPostFeatureSuccessAndConflicts(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	fe := buildFeatureEntity("stb")
 	b, _ := json.Marshal(fe)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
-	rr := executeRequest(r)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	// conflict same id
 	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
-	rr = executeRequest(r)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusConflict, rr.Code)
 	// applicationType mismatch
 	fe.ApplicationType = "wrong"
 	b, _ = json.Marshal(fe)
 	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
-	rr = executeRequest(r)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusConflict, rr.Code)
 }
 
 func TestGetFeatureByIdSuccessExportAndNotFound(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	fe := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe.CreateFeature())
 	url := fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb", fe.ID)
 	r := httptest.NewRequest(http.MethodGet, url, nil)
-	rr := executeRequest(r)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	// export
 	url = fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb&export=true", fe.ID)
 	r = httptest.NewRequest(http.MethodGet, url, nil)
-	rr = executeRequest(r)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	// not found
 	url = fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb", uuid.NewString())
 	r = httptest.NewRequest(http.MethodGet, url, nil)
-	rr = executeRequest(r)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
 func TestPutFeatureSuccessAndNotFound(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	fe := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe.CreateFeature())
 	fe.ConfigData["extra"] = "123"
 	b, _ := json.Marshal(fe)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
-	rr := executeRequest(r)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	// not found different id
 	fe2 := buildFeatureEntity("stb")
 	b2, _ := json.Marshal(fe2)
 	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b2))
-	rr = executeRequest(r)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestDeleteFeatureByIdSuccessAndNotFound(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	fe := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe.CreateFeature())
 	url := fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb", fe.ID)
 	r := httptest.NewRequest(http.MethodDelete, url, nil)
-	rr := executeRequest(r)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 	url = fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb", fe.ID)
 	r = httptest.NewRequest(http.MethodDelete, url, nil)
-	rr = executeRequest(r)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
 func TestGetFeaturesFilteredPagingAndInvalid(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	// Create a few features for testing pagination
 	for i := 0; i < 5; i++ {
 		fe := buildFeatureEntity("stb")
-		_, _ = FeaturePost(fe.CreateFeature())
+		_, _ = FeaturePost(db.GetDefaultTenantId(), fe.CreateFeature())
 	}
 
 	t.Run("ValidPaginationRequest", func(t *testing.T) {
@@ -318,7 +311,7 @@ func TestGetFeaturesFilteredPagingAndInvalid(t *testing.T) {
 }
 
 func TestPostAndPutFeatureEntities(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	// prepare list ensuring unique FeatureName/FeatureInstance across entities
 	fe1 := buildFeatureEntity("stb")
 	fe2 := buildFeatureEntity("stb")
@@ -347,32 +340,32 @@ func TestPostAndPutFeatureEntities(t *testing.T) {
 }
 
 func TestGetFeaturesByIdList(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	fe1 := buildFeatureEntity("stb")
 	fe2 := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe1.CreateFeature())
-	_, _ = FeaturePost(fe2.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe1.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe2.CreateFeature())
 	ids := []string{fe1.ID, fe2.ID}
 	b, _ := json.Marshal(ids)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature/byIdList?applicationType=stb", bytes.NewReader(b))
-	rr := executeRequest(r)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 // Error path tests
 
 func TestGetFeatureByIdHandler_ExportNotFound(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	url := fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb&export=true", uuid.NewString())
 	r := httptest.NewRequest(http.MethodGet, url, nil)
-	rr := executeRequest(r)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
 func TestDeleteFeatureByIdHandler_FeatureUsedInRule(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	fe := buildFeatureEntity("stb")
-	feat, _ := FeaturePost(fe.CreateFeature())
+	feat, _ := FeaturePost(db.GetDefaultTenantId(), fe.CreateFeature())
 	// Create a feature rule that uses this feature
 	fr := &xwrfc.FeatureRule{
 		Id:              uuid.NewString(),
@@ -381,100 +374,100 @@ func TestDeleteFeatureByIdHandler_FeatureUsedInRule(t *testing.T) {
 		FeatureIds:      []string{feat.ID},
 		Priority:        1,
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FEATURE_CONTROL_RULE, fr.Id, fr)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FEATURE_CONTROL_RULES, fr.Id, fr)
 	// Try to delete the feature - should fail with conflict
 	url := fmt.Sprintf("/xconfAdminService/rfc/feature/%s?applicationType=stb", feat.ID)
 	r := httptest.NewRequest(http.MethodDelete, url, nil)
-	rr := executeRequest(r)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusConflict, rr.Code)
 	assert.Contains(t, rr.Body.String(), "linked to FeatureRule")
 }
 
 func TestPostFeatureHandler_InvalidJson(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	invalidJson := []byte(`{invalid json}`)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(invalidJson))
-	rr := executeRequest(r)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestPostFeatureHandler_InvalidFeature_BlankName(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	fe := buildFeatureEntity("stb")
 	// Make feature invalid by setting blank Name
 	fe.Name = ""
 	b, _ := json.Marshal(fe)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
-	rr := executeRequest(r)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Name is blank")
 }
 
 func TestPostFeatureHandler_DuplicateFeatureInstance(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	fe1 := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe1.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe1.CreateFeature())
 	// Create new feature with different ID but same FeatureName
 	fe2 := buildFeatureEntity("stb")
 	fe2.FeatureName = fe1.FeatureName
 	fe2.FeatureInstance = fe1.FeatureInstance
 	b, _ := json.Marshal(fe2)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
-	rr := executeRequest(r)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusConflict, rr.Code)
 	assert.Contains(t, rr.Body.String(), "featureInstance already exists")
 }
 
 func TestPutFeatureHandler_InvalidJson(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	invalidJson := []byte(`{invalid json}`)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(invalidJson))
-	rr := executeRequest(r)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestPutFeatureHandler_EmptyId(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	fe := buildFeatureEntity("stb")
 	fe.ID = ""
 	b, _ := json.Marshal(fe)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
-	rr := executeRequest(r)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Entity id is empty")
 }
 
 func TestPutFeatureHandler_InvalidFeature_BlankName(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	fe := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe.CreateFeature())
 	// Make feature invalid - blank Name should fail validation
 	fe.Name = ""
 	b, _ := json.Marshal(fe)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
-	rr := executeRequest(r)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Name is blank")
 }
 
 func TestPutFeatureHandler_DuplicateFeatureInstance(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	fe1 := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe1.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe1.CreateFeature())
 	fe2 := buildFeatureEntity("stb")
-	_, _ = FeaturePost(fe2.CreateFeature())
+	_, _ = FeaturePost(db.GetDefaultTenantId(), fe2.CreateFeature())
 	// Try to update fe2 with fe1's FeatureName
 	fe2.FeatureName = fe1.FeatureName
 	fe2.FeatureInstance = fe1.FeatureInstance
 	b, _ := json.Marshal(fe2)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature?applicationType=stb", bytes.NewReader(b))
-	rr := executeRequest(r)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusConflict, rr.Code)
 	assert.Contains(t, rr.Body.String(), "featureInstance already exists")
 }
 
 func TestPutFeatureEntitiesHandler_InvalidJson(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	invalidJson := []byte(`{invalid json}`)
 	req := httptest.NewRequest(http.MethodPut, "/xconfAdminService/rfc/feature/entities?applicationType=stb", bytes.NewReader(invalidJson))
 	rr := httptest.NewRecorder()
@@ -485,7 +478,7 @@ func TestPutFeatureEntitiesHandler_InvalidJson(t *testing.T) {
 }
 
 func TestPostFeatureEntitiesHandler_InvalidJson(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	invalidJson := []byte(`{invalid json}`)
 	req := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature/entities?applicationType=stb", bytes.NewReader(invalidJson))
 	rr := httptest.NewRecorder()
@@ -496,7 +489,7 @@ func TestPostFeatureEntitiesHandler_InvalidJson(t *testing.T) {
 }
 
 func TestGetFeaturesFilteredHandler_MissingPageParams(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	body := map[string]string{}
 	b, _ := json.Marshal(body)
 	// Missing pageNumber and pageSize
@@ -510,7 +503,7 @@ func TestGetFeaturesFilteredHandler_MissingPageParams(t *testing.T) {
 }
 
 func TestGetFeaturesFilteredHandler_InvalidPageSize(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	body := map[string]string{}
 	b, _ := json.Marshal(body)
 	// Invalid pageSize (negative)
@@ -524,7 +517,7 @@ func TestGetFeaturesFilteredHandler_InvalidPageSize(t *testing.T) {
 }
 
 func TestGetFeaturesFilteredHandler_InvalidPageNumber(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	body := map[string]string{}
 	b, _ := json.Marshal(body)
 	// Invalid pageNumber (non-numeric)
@@ -538,7 +531,7 @@ func TestGetFeaturesFilteredHandler_InvalidPageNumber(t *testing.T) {
 }
 
 func TestGetFeaturesFilteredHandler_InvalidBodyJson(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	invalidJson := []byte(`{invalid}`)
 	url := "/xconfAdminService/rfc/feature/filtered?pageNumber=1&pageSize=10&applicationType=stb"
 	req := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(invalidJson))
@@ -550,7 +543,7 @@ func TestGetFeaturesFilteredHandler_InvalidBodyJson(t *testing.T) {
 }
 
 func TestGetFeaturesByIdListHandler_InvalidJson(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	invalidJson := []byte(`{invalid json}`)
 	req := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature/byIdList?applicationType=stb", bytes.NewReader(invalidJson))
 	rr := httptest.NewRecorder()
@@ -562,7 +555,7 @@ func TestGetFeaturesByIdListHandler_InvalidJson(t *testing.T) {
 }
 
 func TestGetFeaturesByIdListHandler_EmptyList(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	emptyList := []string{}
 	b, _ := json.Marshal(emptyList)
 	req := httptest.NewRequest(http.MethodPost, "/xconfAdminService/rfc/feature/byIdList?applicationType=stb", bytes.NewReader(b))
@@ -574,11 +567,11 @@ func TestGetFeaturesByIdListHandler_EmptyList(t *testing.T) {
 }
 
 func TestGetFeaturesFilteredHandler_WithContextFilters(t *testing.T) {
-	cleanDB()
+	xshared.DeleteAllEntities(t)
 	// Create a few features
 	for i := 0; i < 3; i++ {
 		fe := buildFeatureEntity("stb")
-		_, _ = FeaturePost(fe.CreateFeature())
+		_, _ = FeaturePost(db.GetDefaultTenantId(), fe.CreateFeature())
 	}
 	// Filter with context
 	contextMap := map[string]string{"key": "value"}
@@ -590,36 +583,4 @@ func TestGetFeaturesFilteredHandler_WithContextFilters(t *testing.T) {
 	xw.SetBody(string(b))
 	GetFeaturesFilteredHandler(xw, req)
 	assert.Equal(t, http.StatusOK, rr.Code)
-}
-
-// helpers
-func executeRequest(r *http.Request) *httptest.ResponseRecorder {
-	// Wrap with XResponseWriter so handlers that cast can read drained body
-	baseRR := httptest.NewRecorder()
-	xw := xwhttp.NewXResponseWriter(baseRR)
-	if r.Body != nil {
-		// read body bytes to set into XResponseWriter for JSON extract handlers
-		buf := new(bytes.Buffer)
-		_, _ = buf.ReadFrom(r.Body)
-		r.Body = io.NopCloser(bytes.NewReader(buf.Bytes()))
-		xw.SetBody(buf.String())
-	}
-	router.ServeHTTP(xw, r)
-	return baseRR
-}
-
-func cleanDB() {
-	// Use fast in-memory mock clear if in mock mode
-	if queries.IsMockDatabaseEnabled() {
-		queries.ClearMockDatabase()
-		return
-	}
-	// Real database cleanup (only for integration tests)
-	for _, ti := range db.GetAllTableInfo() {
-		c := db.GetDatabaseClient().(*db.CassandraClient)
-		_ = c.DeleteAllXconfData(ti.TableName)
-		if ti.CacheData {
-			db.GetCachedSimpleDao().RefreshAll(ti.TableName)
-		}
-	}
 }

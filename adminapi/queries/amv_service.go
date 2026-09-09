@@ -31,9 +31,8 @@ import (
 
 	util "github.com/rdkcentral/xconfadmin/util"
 	xutil "github.com/rdkcentral/xconfadmin/util"
-
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	ru "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
@@ -80,9 +79,9 @@ func CreateActivationVersionResponse(rec *firmware.ActivationVersion) *Activatio
 	return &resp
 }
 
-func GetAmvALL() []*ActivationVersionResponse {
+func GetAmvALL(tenantId string) []*ActivationVersionResponse {
 	result := []*ActivationVersionResponse{}
-	amvs := GetAllAmvList()
+	amvs := GetAllAmvList(tenantId)
 	for _, amv := range amvs {
 		resp := CreateActivationVersionResponse(amv)
 		result = append(result, resp)
@@ -90,17 +89,17 @@ func GetAmvALL() []*ActivationVersionResponse {
 	return result
 }
 
-func GetAmv(id string) *ActivationVersionResponse {
-	amv := GetOneAmv(id)
+func GetAmv(tenantId, id string) *ActivationVersionResponse {
+	amv := GetOneAmv(tenantId, id)
 	if amv != nil {
 		return CreateActivationVersionResponse(amv)
 	}
 	return nil
 }
 
-func GetAllAmvList() []*firmware.ActivationVersion {
+func GetAllAmvList(tenantId string) []*firmware.ActivationVersion {
 	result := []*firmware.ActivationVersion{}
-	list, err := firmware.GetFirmwareRuleAllAsListDBForAdmin()
+	list, err := firmware.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
 	if err != nil {
 		log.Warn("no amv found")
 		return result
@@ -114,8 +113,8 @@ func GetAllAmvList() []*firmware.ActivationVersion {
 	return result
 }
 
-func GetOneAmv(id string) *firmware.ActivationVersion {
-	inst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_FIRMWARE_RULE, id)
+func GetOneAmv(tenantId string, id string) *firmware.ActivationVersion {
+	inst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_FIRMWARE_RULES, id)
 	if err != nil {
 		log.Warn("no amv found for " + id)
 		return nil
@@ -124,8 +123,8 @@ func GetOneAmv(id string) *firmware.ActivationVersion {
 	return coreef.ConvertIntoActivationVersion(fwRule)
 }
 
-func validateUsageForAmv(amvId string, app string) (string, error) {
-	amv := GetOneAmv(amvId)
+func validateUsageForAmv(tenantId, amvId string, app string) (string, error) {
+	amv := GetOneAmv(tenantId, amvId)
 	if amv == nil {
 		return fmt.Sprintf("Entity with id  %s does not exist ", amvId), nil
 	}
@@ -135,8 +134,8 @@ func validateUsageForAmv(amvId string, app string) (string, error) {
 	return "", nil
 }
 
-func DeleteAmvbyId(id string, app string) *xwhttp.ResponseEntity {
-	usage, err := validateUsageForAmv(id, app)
+func DeleteAmvbyId(tenantId, id string, app string) *xwhttp.ResponseEntity {
+	usage, err := validateUsageForAmv(tenantId, id, app)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, err, nil)
 	}
@@ -145,7 +144,7 @@ func DeleteAmvbyId(id string, app string) *xwhttp.ResponseEntity {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, errors.New(usage), nil)
 	}
 
-	err = DeleteOneAmv(id)
+	err = DeleteOneAmv(tenantId, id)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -153,8 +152,8 @@ func DeleteAmvbyId(id string, app string) *xwhttp.ResponseEntity {
 	return xwhttp.NewResponseEntity(http.StatusNoContent, nil, nil)
 }
 
-func DeleteOneAmv(id string) error {
-	err := ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_FIRMWARE_RULE, id)
+func DeleteOneAmv(tenantId, id string) error {
+	err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_FIRMWARE_RULES, id)
 	if err != nil {
 		return err
 	}
@@ -170,10 +169,10 @@ func ValidateModel(Id string) error {
 	return errors.New("Model is invalid")
 }
 
-func GetSupportedVersionforModel(modelids []string, FirmwareVersions []string, app string) []string {
+func GetSupportedVersionforModel(tenantId string, modelids []string, FirmwareVersions []string, app string) []string {
 	supportedFwList := []string{}
 	existedFwList := []string{}
-	configs := GetFirmwareConfigsByModelIdsAndApplication(modelids, app)
+	configs := GetFirmwareConfigsByModelIdsAndApplication(tenantId, modelids, app)
 	for _, config := range configs {
 		existedFwList = append(existedFwList, config.FirmwareVersion)
 	}
@@ -196,7 +195,7 @@ func GetSupportedVersionforModel(modelids []string, FirmwareVersions []string, a
 	return supportedFwList
 }
 
-func amvValidate(newamv *firmware.ActivationVersion) *xwhttp.ResponseEntity {
+func amvValidate(tenantId string, newamv *firmware.ActivationVersion) *xwhttp.ResponseEntity {
 	if newamv == nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("Activation minimum version should be specified"), nil)
 	}
@@ -214,12 +213,12 @@ func amvValidate(newamv *firmware.ActivationVersion) *xwhttp.ResponseEntity {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err1, nil)
 	}
 	newamv.Model = strings.ToUpper(newamv.Model)
-	if existedModel := shared.GetOneModel(newamv.Model); existedModel == nil {
+	if existedModel := shared.GetOneModel(tenantId, newamv.Model); existedModel == nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New(" Model does not exist "), nil)
 	}
 	modelIds := []string{}
 	modelIds = append(modelIds, newamv.Model)
-	newamv.FirmwareVersions = GetSupportedVersionforModel(modelIds, newamv.FirmwareVersions, newamv.ApplicationType)
+	newamv.FirmwareVersions = GetSupportedVersionforModel(tenantId, modelIds, newamv.FirmwareVersions, newamv.ApplicationType)
 	if xwutil.IsBlank(newamv.ID) {
 		newamv.ID = uuid.New().String()
 	}
@@ -233,7 +232,7 @@ func amvValidate(newamv *firmware.ActivationVersion) *xwhttp.ResponseEntity {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("regex and firmwareversions both can't be empty Or Given firmware version is not supported for this model"), nil)
 	}
 
-	amvs := GetAllAmvList()
+	amvs := GetAllAmvList(tenantId)
 	for _, examv := range amvs {
 		if newamv.ID != examv.ID && newamv.Model == examv.Model && newamv.PartnerId == examv.PartnerId {
 			return xwhttp.NewResponseEntity(http.StatusConflict, errors.New("ActivationVersion with the following model/partnerId already exists"), nil)
@@ -247,8 +246,8 @@ func amvValidate(newamv *firmware.ActivationVersion) *xwhttp.ResponseEntity {
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, nil)
 }
 
-func CreateAmv(amv *firmware.ActivationVersion, app string) *xwhttp.ResponseEntity {
-	_, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_FIRMWARE_RULE, amv.ID)
+func CreateAmv(tenantId string, amv *firmware.ActivationVersion, app string) *xwhttp.ResponseEntity {
+	_, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_FIRMWARE_RULES, amv.ID)
 	if err == nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s already exists", amv.ID), nil)
 	}
@@ -260,14 +259,14 @@ func CreateAmv(amv *firmware.ActivationVersion, app string) *xwhttp.ResponseEnti
 		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("Entity with id %s ApplicationType doesn't match", amv.ID), nil)
 
 	}
-	respEntity := amvValidate(amv)
+	respEntity := amvValidate(tenantId, amv)
 	if respEntity.Error != nil {
 		return respEntity
 	}
 
 	fwRule := coreef.ConvertIntoRule(amv)
 	ru.NormalizeConditions(&fwRule.Rule)
-	if err = firmware.CreateFirmwareRuleOneDB(fwRule); err != nil {
+	if err = firmware.CreateFirmwareRuleOneDB(tenantId, fwRule); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, amv)
@@ -285,8 +284,8 @@ func amvEqual(a, b []string) bool {
 	return true
 }
 
-func UpdateAmvImport(amvToImport *firmware.ActivationVersion, amvinDB *firmware.ActivationVersion) *xwhttp.ResponseEntity {
-	respEntity := amvValidate(amvToImport)
+func UpdateAmvImport(tenantId string, amvToImport *firmware.ActivationVersion, amvinDB *firmware.ActivationVersion) *xwhttp.ResponseEntity {
+	respEntity := amvValidate(tenantId, amvToImport)
 	if respEntity.Error != nil {
 		return respEntity
 	}
@@ -313,22 +312,22 @@ func UpdateAmvImport(amvToImport *firmware.ActivationVersion, amvinDB *firmware.
 	}
 	fwRule := coreef.ConvertIntoRule(amvinDB)
 	ru.NormalizeConditions(&fwRule.Rule)
-	if err := firmware.CreateFirmwareRuleOneDB(fwRule); err != nil {
+	if err := firmware.CreateFirmwareRuleOneDB(tenantId, fwRule); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, amvToImport)
 }
 
-func importOrUpdateAllAmvs(entities []firmware.ActivationVersion, app string) (map[string][]string, error) {
+func importOrUpdateAllAmvs(tenantId string, entities []firmware.ActivationVersion, app string) (map[string][]string, error) {
 	result := make(map[string][]string)
 	result["NOT_IMPORTED"] = []string{}
 	result["IMPORTED"] = []string{}
 
 	for _, entity := range entities {
 		entity := entity
-		entityOnDb, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_FIRMWARE_RULE, entity.ID)
+		entityOnDb, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_FIRMWARE_RULES, entity.ID)
 		if err != nil {
-			respCreate := CreateAmv(&entity, app)
+			respCreate := CreateAmv(tenantId, &entity, app)
 			err = respCreate.Error
 		} else {
 			fwRule := entityOnDb.(*firmware.FirmwareRule)
@@ -337,7 +336,7 @@ func importOrUpdateAllAmvs(entities []firmware.ActivationVersion, app string) (m
 				result["NOT_IMPORTED"] = append(result["NOT_IMPORTED"], entity.ID)
 				continue
 			}
-			respUpdate := UpdateAmvImport(&entity, amvinDB)
+			respUpdate := UpdateAmvImport(tenantId, &entity, amvinDB)
 			err = respUpdate.Error
 		}
 		if err == nil {
@@ -349,11 +348,11 @@ func importOrUpdateAllAmvs(entities []firmware.ActivationVersion, app string) (m
 	return result, nil
 }
 
-func UpdateAmv(amv *firmware.ActivationVersion, app string) *xwhttp.ResponseEntity {
+func UpdateAmv(tenantId string, amv *firmware.ActivationVersion, app string) *xwhttp.ResponseEntity {
 	if xwutil.IsBlank(amv.ID) {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, errors.New(" ID  is empty"), nil)
 	}
-	fwRule, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_FIRMWARE_RULE, amv.ID)
+	fwRule, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_FIRMWARE_RULES, amv.ID)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusNotFound, fmt.Errorf("Entity with id %s does not exist", amv.ID), nil)
 	}
@@ -363,7 +362,7 @@ func UpdateAmv(amv *firmware.ActivationVersion, app string) *xwhttp.ResponseEnti
 	if amvinDB.ApplicationType != amv.ApplicationType || amvinDB.ApplicationType != app {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("ApplicationType in db %s doesn't match the ApplicationType %s in req", amvinDB.ApplicationType, amv.ApplicationType), nil)
 	}
-	if respEntity := UpdateAmvImport(amv, amvinDB); respEntity.Error != nil {
+	if respEntity := UpdateAmvImport(tenantId, amv, amvinDB); respEntity.Error != nil {
 		return respEntity
 	}
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, amv)
@@ -405,7 +404,7 @@ func AmvGeneratePageWithContext(amvrules []*firmware.ActivationVersion, contextM
 
 func AmvFilterByContext(searchContext map[string]string) []*firmware.ActivationVersion {
 	var found bool
-	amvRules := GetAllAmvList()
+	amvRules := GetAllAmvList(searchContext[xwcommon.TENANT_ID])
 	amvRuleList := []*firmware.ActivationVersion{}
 	for _, amvRule := range amvRules {
 		if amvRule == nil {

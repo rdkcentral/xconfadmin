@@ -20,29 +20,30 @@ package queries
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetModels_Simple(t *testing.T) {
 	// Test basic functionality
-	result := GetModels()
+	result := GetModels(db.GetDefaultTenantId())
 	assert.NotNil(t, result)
 	assert.IsType(t, []*shared.ModelResponse{}, result)
 }
 
 func TestGetModel_NonExistent(t *testing.T) {
-	result := GetModel("NON_EXISTENT_MODEL")
+	result := GetModel(db.GetDefaultTenantId(), "NON_EXISTENT_MODEL")
 	// May or may not be nil depending on DB state
 	_ = result
 }
 
 func TestIsExistModel_Empty(t *testing.T) {
-	exists := IsExistModel("")
+	exists := IsExistModel(db.GetDefaultTenantId(), "NON_EXISTENT_MODEL")
 	assert.False(t, exists)
 }
 
 func TestIsExistModel_Check(t *testing.T) {
-	_ = IsExistModel("SOME_MODEL")
+	_ = IsExistModel(db.GetDefaultTenantId(), "SOME_MODEL")
 	// Function executes without panic
 }

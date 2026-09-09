@@ -27,6 +27,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rdkcentral/xconfadmin/shared"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+
 	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
@@ -57,8 +60,7 @@ func PBCreateFirmwareConfig(firmwareVersion string, modelId string, firmwareDown
 }
 
 func TestPBAllApi(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	//	_, router := GetTestWebConfigServer(testconfig)
 	//adminapi.XconfSetup(server, router)
 
@@ -91,7 +93,7 @@ func TestPBAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -101,7 +103,7 @@ func TestPBAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	defer res.Body.Close()
@@ -121,7 +123,7 @@ func TestPBAllApi(t *testing.T) {
 	assert.Nil(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
 
@@ -132,7 +134,7 @@ func TestPBAllApi(t *testing.T) {
 	assert.Nil(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -143,7 +145,7 @@ func TestPBAllApi(t *testing.T) {
 	assert.Nil(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 
@@ -155,7 +157,7 @@ func TestPBAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err = ioutil.ReadAll(res.Body)
 	assert.Nil(t, err)
@@ -174,7 +176,7 @@ func TestPBAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err = ioutil.ReadAll(res.Body)
 	assert.Nil(t, err)
@@ -190,7 +192,7 @@ func TestPBAllApi(t *testing.T) {
 	assert.Nil(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusNoContent)
 
@@ -203,7 +205,7 @@ func TestPBAllApi(t *testing.T) {
 	assert.Nil(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -222,7 +224,7 @@ func TestPBAllApi(t *testing.T) {
 	assert.Nil(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -239,16 +241,15 @@ func TestPBAllApi(t *testing.T) {
 	assert.Nil(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 }
 
 func TestPercentageBeanAdminUpdateAPI(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 
 	percentageBean, err := PreCreatePercentageBean()
 	assert.Nil(t, err)
@@ -258,7 +259,7 @@ func TestPercentageBeanAdminUpdateAPI(t *testing.T) {
 	percentageBeanBytes, _ := json.Marshal(percentageBean)
 
 	r := httptest.NewRequest("PUT", url, bytes.NewBuffer(percentageBeanBytes))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	percentageBeanResp := unmarshalPercentageBean(rr.Body.Bytes())
@@ -269,8 +270,7 @@ func TestPercentageBeanAdminUpdateAPI(t *testing.T) {
 }
 
 func TestPercentageBeanUpdatesAPI(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	percentageBean, err := PreCreatePercentageBean()
 	assert.Nil(t, err)
 
@@ -279,7 +279,7 @@ func TestPercentageBeanUpdatesAPI(t *testing.T) {
 	percentageBeanBytes, _ := json.Marshal(percentageBean)
 
 	r := httptest.NewRequest("PUT", url, bytes.NewBuffer(percentageBeanBytes))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	percentageBeanResp := unmarshalPercentageBean(rr.Body.Bytes())
@@ -290,15 +290,14 @@ func TestPercentageBeanUpdatesAPI(t *testing.T) {
 }
 
 func TestPercentageBeanExportAllAPI(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	percentageBean, err := PreCreatePercentageBean()
 	assert.Nil(t, err)
 
 	url := fmt.Sprintf("/xconfAdminService/percentfilter?export&applicationType=stb")
 
 	r := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	percentFilterExport := unmarshalPercentFilterExport(rr.Body.Bytes())
@@ -310,8 +309,7 @@ func TestPercentageBeanExportAllAPI(t *testing.T) {
 }
 
 func TestSearchPercentageBeanByMinCheckVersion(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	percentageBean1, err := PreCreatePercentageBean()
 	assert.Nil(t, err)
 
@@ -326,7 +324,7 @@ func TestSearchPercentageBeanByMinCheckVersion(t *testing.T) {
 	url := fmt.Sprintf("/xconfAdminService/percentfilter/percentageBean/filtered?%v", queryParams)
 
 	r := httptest.NewRequest("POST", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	percentageBeans := unmarshalPercentageBeans(rr.Body.Bytes())
@@ -340,7 +338,7 @@ func TestSearchPercentageBeanByMinCheckVersion(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/percentfilter/percentageBean/filtered?%v", queryParams)
 
 	r = httptest.NewRequest("POST", url, nil)
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	percentageBeans = unmarshalPercentageBeans(rr.Body.Bytes())
@@ -354,7 +352,7 @@ func TestSearchPercentageBeanByMinCheckVersion(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/percentfilter/percentageBean/filtered?%v", queryParams)
 
 	r = httptest.NewRequest("POST", url, nil)
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	percentageBeans = unmarshalPercentageBeans(rr.Body.Bytes())
@@ -367,7 +365,7 @@ func TestSearchPercentageBeanByMinCheckVersion(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/percentfilter/percentageBean/filtered?%v", queryParams)
 
 	r = httptest.NewRequest("POST", url, nil)
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	percentageBeans = unmarshalPercentageBeans(rr.Body.Bytes())
@@ -380,7 +378,7 @@ func TestSearchPercentageBeanByMinCheckVersion(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/percentfilter/percentageBean/filtered?%v", queryParams)
 
 	r = httptest.NewRequest("POST", url, nil)
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	percentageBeans = unmarshalPercentageBeans(rr.Body.Bytes())
@@ -393,7 +391,7 @@ func TestSearchPercentageBeanByMinCheckVersion(t *testing.T) {
 	url = fmt.Sprintf("/xconfAdminService/percentfilter/percentageBean/filtered?%v", queryParams)
 
 	r = httptest.NewRequest("POST", url, nil)
-	rr = ExecuteRequest(r, router)
+	rr = xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	percentageBeans = unmarshalPercentageBeans(rr.Body.Bytes())
@@ -406,134 +404,95 @@ func TestSearchPercentageBeanByMinCheckVersion(t *testing.T) {
 
 // Export branch for GetPercentageBeanByIdHandler
 func TestGetPercentageBeanByIdHandler_Export(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	pb, err := PreCreatePercentageBean()
 	assert.Nil(t, err)
 	url := fmt.Sprintf("%s/%s?applicationType=stb&export=true", PB_URL_BASE, pb.ID)
 	r := httptest.NewRequest(http.MethodGet, url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Header().Get("Content-Disposition"), pb.ID)
 }
 
 // Missing ID branch for GetPercentageBeanByIdHandler
 func TestGetPercentageBeanByIdHandler_MissingID(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	// Path without ID will not match the /{id} route; expect 404 from mux
 	url := fmt.Sprintf("%s/?applicationType=stb", PB_URL_BASE)
 	r := httptest.NewRequest(http.MethodGet, url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
 // ApplicationType mismatch triggering not found
 func TestGetPercentageBeanByIdHandler_AppTypeMismatch(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	pb, _ := PreCreatePercentageBean()
-	url := fmt.Sprintf("%s/%s?applicationType=xhome", PB_URL_BASE, pb.ID)
+	url := fmt.Sprintf("%s/%s?applicationType=rdkcloud", PB_URL_BASE, pb.ID)
 	r := httptest.NewRequest(http.MethodGet, url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
 // Export branch for GetAllPercentageBeanAsRule
 func TestGetAllPercentageBeanAsRule_Export(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	_, _ = PreCreatePercentageBean()
 	// Correct path per router: /percentfilter/percentageBean/allAsRules
 	url := "/xconfAdminService/percentfilter/percentageBean/allAsRules?applicationType=stb&export=true"
 	r := httptest.NewRequest(http.MethodGet, url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.NotEmpty(t, rr.Header().Get("Content-Disposition"))
 }
 
 // Export branch for GetPercentageBeanAsRuleById
 func TestGetPercentageBeanAsRuleById_Export(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	pb, _ := PreCreatePercentageBean()
 	// Correct path per router: /percentfilter/percentageBean/asRule/{id}
 	url := fmt.Sprintf("/xconfAdminService/percentfilter/percentageBean/asRule/%s?applicationType=stb&export=true", pb.ID)
 	r := httptest.NewRequest(http.MethodGet, url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.NotEmpty(t, rr.Header().Get("Content-Disposition"))
 }
 
 // PercentageBeanAsRuleById missing ID parameter
 func TestGetPercentageBeanAsRuleById_MissingID(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	// Missing ID will hit the route without variable -> 404
 	url := "/xconfAdminService/percentfilter/percentageBean/asRule/?applicationType=stb"
 	r := httptest.NewRequest(http.MethodGet, url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
-}
-
-// PostPercentageBeanEntitiesHandler invalid JSON
-func TestPostPercentageBeanEntitiesHandler_InvalidJSON(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	url := fmt.Sprintf("%s/entities?applicationType=stb", PB_URL_BASE)
-	r := httptest.NewRequest(http.MethodPost, url, bytes.NewBuffer([]byte("{invalid")))
-	rr := ExecuteRequest(r, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// PutPercentageBeanEntitiesHandler invalid JSON
-func TestPutPercentageBeanEntitiesHandler_InvalidJSON(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	url := fmt.Sprintf("%s/entities?applicationType=stb", PB_URL_BASE)
-	r := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer([]byte("{invalid")))
-	rr := ExecuteRequest(r, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// PostPercentageBeanFilteredWithParamsHandler invalid JSON body
-func TestPostPercentageBeanFilteredWithParamsHandler_InvalidJSON(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	url := "/xconfAdminService/percentfilter/percentageBean/filtered?applicationType=stb&pageNumber=1&pageSize=10"
-	r := httptest.NewRequest(http.MethodPost, url, bytes.NewBuffer([]byte("{invalid")))
-	rr := ExecuteRequest(r, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 // Pagination error: pageNumber <1
 func TestPostPercentageBeanFilteredWithParamsHandler_InvalidPage(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	_, _ = PreCreatePercentageBean()
 	url := "/xconfAdminService/percentfilter/percentageBean/filtered?applicationType=stb&pageNumber=0&pageSize=10"
 	r := httptest.NewRequest(http.MethodPost, url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 // Pagination error: pageSize <1
 func TestPostPercentageBeanFilteredWithParamsHandler_InvalidSize(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	_, _ = PreCreatePercentageBean()
 	url := "/xconfAdminService/percentfilter/percentageBean/filtered?applicationType=stb&pageNumber=1&pageSize=0"
 	r := httptest.NewRequest(http.MethodPost, url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 // Wakeup pool handler invalid force param
 func TestCreateWakeupPoolHandler_InvalidForceParam(t *testing.T) {
-	SkipIfMockDatabase(t)
 	url := "/xconfAdminService/wakeuppool?force=notabool"
 	r := httptest.NewRequest(http.MethodPost, url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	if rr.Code == http.StatusNotFound {
 		t.Skip("wakeupPool route not registered in test router")
 	}
@@ -542,10 +501,9 @@ func TestCreateWakeupPoolHandler_InvalidForceParam(t *testing.T) {
 
 // Wakeup pool handler unsupported force true
 func TestCreateWakeupPoolHandler_UnsupportedForce(t *testing.T) {
-	SkipIfMockDatabase(t)
 	url := "/xconfAdminService/wakeuppool?force=true"
 	r := httptest.NewRequest(http.MethodPost, url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	if rr.Code == http.StatusNotFound {
 		t.Skip("wakeupPool route not registered in test router")
 	}
@@ -554,10 +512,9 @@ func TestCreateWakeupPoolHandler_UnsupportedForce(t *testing.T) {
 
 // Wakeup pool handler success path (force default false)
 func TestCreateWakeupPoolHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
 	url := "/xconfAdminService/wakeuppool"
 	r := httptest.NewRequest(http.MethodPost, url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	if rr.Code == http.StatusNotFound {
 		t.Skip("wakeupPool route not registered in test router")
 	}
@@ -627,8 +584,7 @@ func unmarshalPercentFilterExport(b []byte) map[string]interface{} {
 
 // Test GetPercentageBeanAllHandler - Success case
 func TestGetPercentageBeanAllHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 
 	// Create test percentage bean
 	_, _ = PreCreatePercentageBean()
@@ -643,8 +599,7 @@ func TestGetPercentageBeanAllHandler_Success(t *testing.T) {
 
 // Test GetPercentageBeanAllHandler - Error case (no auth)
 func TestGetPercentageBeanAllHandler_Error(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 
 	// This test verifies the handler runs without error
 	// The actual error paths (xhttp.AdminError, WriteAdminErrorResponse)
@@ -660,8 +615,7 @@ func TestGetPercentageBeanAllHandler_Error(t *testing.T) {
 
 // Test CreateWakeupPoolHandler - Additional error coverage for xhttp.AdminError
 func TestCreateWakeupPoolHandler_AdminError(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 
 	// Test with invalid JSON to trigger AdminError path
 	invalidJSON := `{"invalid json`

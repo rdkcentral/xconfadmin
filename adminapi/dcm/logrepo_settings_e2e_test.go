@@ -24,7 +24,8 @@ import (
 	"net/http"
 	"testing"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"gotest.tools/assert"
@@ -34,15 +35,14 @@ func ImportLogRepTableData(data []string, tabletype logupload.UploadRepository) 
 	var err error
 	for _, row := range data {
 		err = json.Unmarshal([]byte(row), &tabletype)
-		err = setOneInDao(ds.TABLE_UPLOAD_REPOSITORY, tabletype.ID, &tabletype)
+		err = xshared.SetOneInDao(db.TABLE_UPLOAD_REPOSITORIES, tabletype.ID, &tabletype)
 	}
 	return err
 }
 
 func TestAllLogRepoSettingsAPIs(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test: requires external package data retrieval
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test: requires external package data retrieval
+	xshared.DeleteAllEntities(t)
 
 	//GET ALL LOG REPO SETTINGS
 
@@ -58,7 +58,7 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 	assert.NilError(t, err)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	defer res.Body.Close()
@@ -80,7 +80,7 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
 
@@ -90,7 +90,7 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
 
@@ -103,7 +103,7 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -116,7 +116,7 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
 
@@ -127,7 +127,7 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -138,7 +138,7 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -156,7 +156,7 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -174,7 +174,7 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -192,7 +192,7 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusNoContent)
 
@@ -205,7 +205,7 @@ func TestAllLogRepoSettingsAPIs(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 }

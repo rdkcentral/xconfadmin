@@ -24,9 +24,9 @@ import (
 	"net/http"
 	"testing"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
-
 	"gotest.tools/assert"
 )
 
@@ -34,15 +34,14 @@ func ImportVodSettingsTableData(data []string, tabletype logupload.VodSettings) 
 	var err error
 	for _, row := range data {
 		err = json.Unmarshal([]byte(row), &tabletype)
-		err = setOneInDao(ds.TABLE_VOD_SETTINGS, tabletype.ID, &tabletype)
+		err = xshared.SetOneInDao(db.TABLE_VOD_SETTINGS, tabletype.ID, &tabletype)
 	}
 	return err
 }
 
 func TestAllVodSettingsApis(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test: requires external package data retrieval
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test: requires external package data retrieval
+	xshared.DeleteAllEntities(t)
 
 	//GET ALL VOD SETTINGS
 	var tableData = []string{
@@ -61,7 +60,7 @@ func TestAllVodSettingsApis(t *testing.T) {
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 	assert.NilError(t, err)
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	defer res.Body.Close()
@@ -83,7 +82,7 @@ func TestAllVodSettingsApis(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
 
@@ -93,7 +92,7 @@ func TestAllVodSettingsApis(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
 
@@ -106,7 +105,7 @@ func TestAllVodSettingsApis(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -119,7 +118,7 @@ func TestAllVodSettingsApis(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusConflict)
 
@@ -129,7 +128,7 @@ func TestAllVodSettingsApis(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -141,7 +140,7 @@ func TestAllVodSettingsApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -159,7 +158,7 @@ func TestAllVodSettingsApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -178,7 +177,7 @@ func TestAllVodSettingsApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -195,7 +194,7 @@ func TestAllVodSettingsApis(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusNoContent)
 
@@ -206,7 +205,7 @@ func TestAllVodSettingsApis(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 

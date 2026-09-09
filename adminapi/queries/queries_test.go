@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"runtime/pprof"
 	"strings"
@@ -35,14 +34,13 @@ import (
 	"github.com/rdkcentral/xconfadmin/adminapi/firmware"
 	"github.com/rdkcentral/xconfadmin/adminapi/rfc/feature"
 	"github.com/rdkcentral/xconfadmin/common"
-	oshttp "github.com/rdkcentral/xconfadmin/http"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	xfw "github.com/rdkcentral/xconfadmin/shared/firmware"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
-
-	// "github.com/rdkcentral/xconfadmin/taggingapi/tag" // No longer needed - tag refactored
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	"github.com/rdkcentral/xconfwebconfig/db"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
@@ -66,11 +64,10 @@ type TableData struct {
 }
 
 var (
-	testConfigFile     string
-	jsonTestConfigFile string
-	sc                 *xwcommon.ServerConfig
-	server             *oshttp.WebconfigServer
-	router             *mux.Router
+	testConfigFile string
+	sc             *xwcommon.ServerConfig
+	server         *xhttp.WebconfigServer
+	router         *mux.Router
 	//globAut            *apiUnitTest
 )
 
@@ -93,62 +90,10 @@ func startTestWatchdog(pkgName string) func() {
 	return func() { close(done) }
 }
 
-func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRecorder { // restored local version
-	recorder := httptest.NewRecorder()
-	handler.ServeHTTP(recorder, r)
-	return recorder
-}
-
-func DeleteAllEntities() {
-	// For mock database, just clear it - ultra fast!
-	if IsMockDatabaseEnabled() {
-		ClearMockDatabase()
-		return
-	}
-
-	// Real DB cleanup: delete rows individually to avoid TRUNCATE latency on Cassandra 5.x
-	for _, tableInfo := range db.GetAllTableInfo() {
-		if err := truncateTable(tableInfo.TableName); err != nil {
-			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
-		}
-		if tableInfo.CacheData {
-			db.GetCachedSimpleDao().RefreshAll(tableInfo.TableName)
-		}
-	}
-}
-
-func truncateTable(tableName string) error {
-	dao := db.GetCachedSimpleDao()
-	keys, err := dao.GetKeys(tableName)
-	if err != nil {
-		// table may be empty or not yet exist; not an error
-		return nil
-	}
-	for _, key := range keys {
-		var keyStr string
-		switch k := key.(type) {
-		case string:
-			keyStr = k
-		case []byte:
-			keyStr = string(k)
-		default:
-			keyStr = fmt.Sprint(k)
-		}
-		if delErr := dao.DeleteOne(tableName, keyStr); delErr != nil {
-			fmt.Printf("failed to delete %s from %s: %v\n", keyStr, tableName, delErr)
-		}
-	}
-	return nil
-}
 func TestMain(m *testing.M) {
 	fmt.Printf("in TestMain\n")
 	stopWatchdog := startTestWatchdog("adminapi/queries")
 	defer stopWatchdog()
-
-	// CRITICAL: Initialize mock database FIRST for ultra-fast testing!
-	// This replaces ALL DB calls with in-memory mock (like telemetry/dcm success)
-	InitMockDatabase()
-	defer RestoreRealDatabase()
 
 	testConfigFile = "/app/xconfadmin/xconfadmin.conf"
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
@@ -201,7 +146,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	server = oshttp.NewWebconfigServer(sc, true, nil, nil)
+	server = xhttp.NewWebconfigServer(sc, true, nil, nil)
 	defer server.XW_XconfServer.Server.Close()
 	xwhttp.InitSatTokenManager(server.XW_XconfServer)
 
@@ -244,10 +189,10 @@ func ImportTableData(data []interface{}) error {
 	var err error
 	for _, row := range data {
 		switch row.(TableData).Tablename {
-		case "TABLE_ENVIRONMENT":
+		case "TABLE_ENVIRONMENTS":
 			var tabletype = shared.Environment{}
 			err = json.Unmarshal([]byte(row.(TableData).Tablerow), &tabletype)
-			err = SetOneInDao(ds.TABLE_ENVIRONMENT, tabletype.ID, &tabletype)
+			err = xshared.SetOneInDao(db.TABLE_ENVIRONMENTS, tabletype.ID, &tabletype)
 			break
 		case "TABLE_GENERIC_NS_LIST":
 			var humptyStrList = []string{
@@ -266,26 +211,26 @@ func ImportTableData(data []interface{}) error {
 
 			tabletype.TypeName = "IP_LIST"
 			tabletype.Data = ipList
-			err = SetOneInDao(ds.TABLE_GENERIC_NS_LIST, tabletype.ID, tabletype)
+			err = xshared.SetOneInDao(db.TABLE_GENERIC_NS_LIST, tabletype.ID, tabletype)
 			break
-		case "TABLE_FIRMWARE_CONFIG":
+		case "TABLE_FIRMWARE_CONFIGS":
 			var firmwareConfig = coreef.NewEmptyFirmwareConfig()
 			err = json.Unmarshal([]byte(row.(TableData).Tablerow), &firmwareConfig)
-			err = SetOneInDao(ds.TABLE_FIRMWARE_CONFIG, firmwareConfig.ID, firmwareConfig)
+			err = xshared.SetOneInDao(db.TABLE_FIRMWARE_CONFIGS, firmwareConfig.ID, firmwareConfig)
 			break
 
-		case "TABLE_FIRMWARE_RULE":
+		case "TABLE_FIRMWARE_RULES":
 			var firmwareRule = corefw.NewEmptyFirmwareRule()
 			var data_str = row.(TableData).Tablerow
 			err = json.Unmarshal([]byte(data_str), &firmwareRule)
-			err = SetOneInDao(ds.TABLE_FIRMWARE_RULE, firmwareRule.ID, firmwareRule)
+			err = xshared.SetOneInDao(db.TABLE_FIRMWARE_RULES, firmwareRule.ID, firmwareRule)
 			break
 
-		case "TABLE_SINGLETON_FILTER_VALUE":
+		case "TABLE_SINGLETON_FILTER_VALUES":
 			var data_str = row.(TableData).Tablerow
 			locationRoundRobinFilter := coreef.NewEmptyDownloadLocationRoundRobinFilterValue()
 			err = json.Unmarshal([]byte(data_str), &locationRoundRobinFilter)
-			err = SetOneInDao(ds.TABLE_SINGLETON_FILTER_VALUE, locationRoundRobinFilter.ID, locationRoundRobinFilter)
+			err = xshared.SetOneInDao(db.TABLE_SINGLETON_FILTER_VALUES, locationRoundRobinFilter.ID, locationRoundRobinFilter)
 			break
 		}
 
@@ -295,7 +240,7 @@ func ImportTableData(data []interface{}) error {
 }
 
 // WebServerInjection - local implementation to avoid circular dependency
-func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
+func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 	if ws == nil {
 		common.CacheUpdateWindowSize = 60000
 		common.AllowedNumberOfFeatures = 100
@@ -370,11 +315,11 @@ func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 
 // initDB - local implementation to avoid circular dependency
 func initDB() {
-	CreateFirmwareRuleTemplates() // Initialize FirmwareRule templates
+	xfw.CreateFirmwareRuleTemplates(db.GetDefaultTenantId()) // Initialize FirmwareRule templates
 	//initAppSettings()             // Initialize Application settings
 }
 
-func queriesSetup(server *oshttp.WebconfigServer, r *mux.Router) {
+func queriesSetup(server *xhttp.WebconfigServer, r *mux.Router) {
 	xc := dataapi.GetXconfConfigs(server.XW_XconfServer.ServerConfig.Config)
 
 	WebServerInjection(server, xc)
@@ -389,7 +334,7 @@ func queriesSetup(server *oshttp.WebconfigServer, r *mux.Router) {
 	db.GetCacheManager() // Initialize cache manager
 }
 
-func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
+func setupRoutes(server *xhttp.WebconfigServer, r *mux.Router) {
 	// Register DCM formula routes
 	paths := []*mux.Router{}
 	//dcmFormulaPath := r.PathPrefix("/xconfAdminService/dcm/formula").Subrouter()
@@ -471,9 +416,9 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	updatePath.HandleFunc("/percentageBean", CreatePercentageBeanHandler).Methods("POST").Name("Updates")
 	updatePath.HandleFunc("/percentageBean", UpdatePercentageBeanHandler).Methods("PUT").Name("Updates")
 	updatePath.HandleFunc("/logFile", CreateLogFile).Methods("POST").Name("Updates")
-	updatePath.HandleFunc("/logUploadSettings/{timezone}/{scheduleTimezone}", NotImplementedHandler).Methods("POST").Name("Updates")
-	updatePath.HandleFunc("/deviceSettings", NotImplementedHandler).Methods("POST").Name("Updates")
-	updatePath.HandleFunc("/deviceSettings/{scheduleTimeZone}", NotImplementedHandler).Methods("POST").Name("Updates")
+	updatePath.HandleFunc("/logUploadSettings/{timezone}/{scheduleTimezone}", xhttp.NotImplementedHandler).Methods("POST").Name("Updates")
+	updatePath.HandleFunc("/deviceSettings", xhttp.NotImplementedHandler).Methods("POST").Name("Updates")
+	updatePath.HandleFunc("/deviceSettings/{scheduleTimeZone}", xhttp.NotImplementedHandler).Methods("POST").Name("Updates")
 	paths = append(paths, updatePath)
 
 	updateFilterPath := r.PathPrefix("/xconfAdminService/updates/filters").Subrouter()
@@ -489,7 +434,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	amvPath.HandleFunc("", GetAmvHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	amvPath.HandleFunc("", CreateAmvHandler).Methods("POST").Name("Firmware-ActivationVersion")
 	amvPath.HandleFunc("", UpdateAmvHandler).Methods("PUT").Name("Firmware-ActivationVersion")
-	amvPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-ActivationVersion")
+	amvPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	amvPath.HandleFunc("/filtered", GetAmvFilteredHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	amvPath.HandleFunc("/importAll", ImportAllAmvHandler).Methods("POST").Name("Firmware-ActivationVersion")
 	amvPath.HandleFunc("/{id}", DeleteAmvByIdHandler).Methods("DELETE").Name("Firmware-ActivationVersion")
@@ -527,7 +472,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	modelPath.HandleFunc("/entities", PostModelEntitiesHandler).Methods("POST").Name("Models")
 	modelPath.HandleFunc("/entities", PutModelEntitiesHandler).Methods("PUT").Name("Models")
 	modelPath.HandleFunc("/filtered", PostModelFilteredHandler).Methods("POST").Name("Models")
-	modelPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Models")
+	modelPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Models")
 	// url with var has to be placed last otherwise, it gets confused with url with defined paths
 	modelPath.HandleFunc("/{id}", DeleteModelHandler).Methods("DELETE").Name("Models")
 	modelPath.HandleFunc("/{id}", GetModelByIdHandler).Methods("GET").Name("Models")
@@ -548,7 +493,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	firmwareRulePath.HandleFunc("/entities", PostFirmwareRuleEntitiesHandler).Methods("POST").Name("Firmware-Rules")
 	firmwareRulePath.HandleFunc("/entities", PutFirmwareRuleEntitiesHandler).Methods("PUT").Name("Firmware-Rules")
 	firmwareRulePath.HandleFunc("/filtered", PostFirmwareRuleFilteredHandler).Methods("POST").Name("Firmware-Rules")
-	firmwareRulePath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-Rules")
+	firmwareRulePath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-Rules")
 	// url with var has to be placed last otherwise, it gets confused with url with defined paths
 	firmwareRulePath.HandleFunc("/{id}", DeleteFirmwareRuleByIdHandler).Methods("DELETE").Name("Firmware-Rules")
 	firmwareRulePath.HandleFunc("/{id}", GetFirmwareRuleByIdHandler).Methods("GET").Name("Firmware-Rules")
@@ -569,7 +514,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	firmwareRuleTempPath.HandleFunc("/entities", PostFirmwareRuleTemplateEntitiesHandler).Methods("POST").Name("Firmware-Templates")
 	firmwareRuleTempPath.HandleFunc("/entities", PutFirmwareRuleTemplateEntitiesHandler).Methods("PUT").Name("Firmware-Templates")
 	firmwareRuleTempPath.HandleFunc("/filtered", PostFirmwareRuleTemplateFilteredHandler).Methods("POST").Name("Firmware-Templates")
-	firmwareRuleTempPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-Templates")
+	firmwareRuleTempPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-Templates")
 	// url with var has to be placed last otherwise, it gets confused with url with defined paths
 	firmwareRuleTempPath.HandleFunc("/{id}", DeleteFirmwareRuleTemplateByIdHandler).Methods("DELETE").Name("Firmware-Templates")
 	firmwareRuleTempPath.HandleFunc("/{id}", GetFirmwareRuleTemplateByIdHandler).Methods("GET").Name("Firmware-Templates")
@@ -585,7 +530,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	percentageBeanPath.HandleFunc("", GetPercentageBeanAllHandler).Methods("GET").Name("Firmware-PercentFilter")
 	percentageBeanPath.HandleFunc("", CreatePercentageBeanHandler).Methods("POST").Name("Firmware-PercentFilter")
 	percentageBeanPath.HandleFunc("", UpdatePercentageBeanHandler).Methods("PUT").Name("Firmware-PercentFilter")
-	percentageBeanPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-PercentFilter")
+	percentageBeanPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-PercentFilter")
 	percentageBeanPath.HandleFunc("/filtered", PostPercentageBeanFilteredWithParamsHandler).Methods("POST").Name("Firmware-PercentFilter")
 	percentageBeanPath.HandleFunc("/entities", PostPercentageBeanEntitiesHandler).Methods("POST").Name("Firmware-PercentFilter")
 	percentageBeanPath.HandleFunc("/entities", PutPercentageBeanEntitiesHandler).Methods("PUT").Name("Firmware-PercentFilter")
@@ -625,7 +570,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	environmentPath.HandleFunc("", GetQueriesEnvironments).Methods("GET").Name("Environments")
 	environmentPath.HandleFunc("", CreateEnvironmentHandler).Methods("POST").Name("Environments")
 	environmentPath.HandleFunc("", UpdateEnvironmentHandler).Methods("PUT").Name("Environments")
-	environmentPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Environments")
+	environmentPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Environments")
 	environmentPath.HandleFunc("/filtered", PostEnvironmentFilteredHandler).Methods("POST").Name("Environments")
 	environmentPath.HandleFunc("/entities", PostEnvironmentEntitiesHandler).Methods("POST").Name("Environments")
 	environmentPath.HandleFunc("/entities", PutEnvironmentEntitiesHandler).Methods("PUT").Name("Environments")
@@ -639,7 +584,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	nameSpacedListPath.HandleFunc("", UpdateNamespacedListHandler).Methods("PUT").Name("NameSpaced-Lists")
 	nameSpacedListPath.HandleFunc("/ids", GetNamespacedListIdsHandler).Methods("GET").Name("NameSpaced-Lists")
 	nameSpacedListPath.HandleFunc("/ipAddressGroups", GetIpAddressGroupsHandler).Methods("GET").Name("NameSpaced-Lists")
-	nameSpacedListPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("NameSpaced-Lists")
+	nameSpacedListPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("NameSpaced-Lists")
 	nameSpacedListPath.HandleFunc("/filtered", PostNamespacedListFilteredHandler).Methods("POST").Name("NameSpaced-Lists")
 	nameSpacedListPath.HandleFunc("/entities", PostNamespacedListEntitiesHandler).Methods("POST").Name("NameSpaced-Lists")
 	nameSpacedListPath.HandleFunc("/entities", PutNamespacedListEntitiesHandler).Methods("PUT").Name("NameSpaced-Lists")
@@ -664,7 +609,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	firmwareConfigPath.HandleFunc("/entities", PostFirmwareConfigEntitiesHandler).Methods("POST").Name("Firmware-Configs")
 	firmwareConfigPath.HandleFunc("/entities", PutFirmwareConfigEntitiesHandler).Methods("PUT").Name("Firmware-Configs")
 	firmwareConfigPath.HandleFunc("/filtered", PostFirmwareConfigFilteredHandler).Methods("POST").Name("Firmware-Configs")
-	firmwareConfigPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-Configs")
+	firmwareConfigPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-Configs")
 	// url with var has to be placed last otherwise, it gets confused with url with defined paths
 	firmwareConfigPath.HandleFunc("/{id}", DeleteFirmwareConfigByIdHandler).Methods("DELETE").Name("Firmware-Configs")
 	firmwareConfigPath.HandleFunc("/{id}", GetFirmwareConfigByIdHandler).Methods("GET").Name("Firmware-Configs")
@@ -675,7 +620,7 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	actMinVerPath.HandleFunc("", GetAmvHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("", CreateAmvHandler).Methods("POST").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("", UpdateAmvHandler).Methods("PUT").Name("Firmware-ActivationVersion")
-	actMinVerPath.HandleFunc("/page", NotImplementedHandler).Methods("GET").Name("Firmware-ActivationVersion")
+	actMinVerPath.HandleFunc("/page", xhttp.NotImplementedHandler).Methods("GET").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("/filtered", PostAmvFilteredHandler).Methods("POST").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("/entities", PostAmvEntitiesHandler).Methods("POST").Name("Firmware-ActivationVersion")
 	actMinVerPath.HandleFunc("/entities", PutAmvEntitiesHandler).Methods("PUT").Name("Firmware-ActivationVersion")
@@ -698,22 +643,21 @@ func setupRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 }
 
 func TestAllQueriesApis(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	//server, _ := SetupTestEnvironment()
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	table_data := []interface{}{
-		TableData{Tablename: "TABLE_ENVIRONMENT", Tablerow: `{"id":"AX061AEI","updated":1591604177484,"description":"RT1319"}`},
+		TableData{Tablename: "TABLE_ENVIRONMENTS", Tablerow: `{"id":"AX061AEI","updated":1591604177484,"description":"RT1319"}`},
 		TableData{Tablename: "TABLE_GENERIC_NS_LIST", Tablerow: ``},
-		TableData{Tablename: "TABLE_FIRMWARE_CONFIG", Tablerow: `{"id":"207dc5a5-d324-4e2e-9daf-5017ed98f8f3","updated":1558520642121,"description":"CPEAUTO_FW_AA:AA:AA:AA:AA:AA","supportedModelIds":["XCONFTESTMODEL"],"firmwareDownloadProtocol":"http","firmwareFilename":"DPC3941_3.3p17s1_DEV_sey-test","firmwareVersion":"DPC3941_3.3p17s1_DEV_sey-test","rebootImmediately":false,"applicationType":"stb"}`},
-		TableData{Tablename: "TABLE_FIRMWARE_RULE", Tablerow: `{"id":"437afab9-cbe3-4e4d-b175-220865e0f720","name":" Cisco Arris XG1","rule":{"negated":false,"compoundParts":[{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"ipAddress"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":""}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"env"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"VBN"}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"model"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"MX011ANC"}}}}}]},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"e675358b-506d-48f8-86c5-c8c8e3bb6254","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"IP_RULE","active":true}`},
-		TableData{Tablename: "TABLE_FIRMWARE_RULE", Tablerow: `{"id":"c4681132-c518-459a-99fb-9b93a1f42f37","name":"CDN-TESTING","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDN-TESTING"}}}}},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"dff46b03-be65-4f0c-804d-542d5ffec8ec","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"MAC_RULE","active":true,"applicationType":"stb"}`},
-		TableData{Tablename: "TABLE_FIRMWARE_RULE", Tablerow: `{"id":"67333656-9e8e-46a3-9a87-2f42644a35c9","name":"Arris_XG1v1_VBN_Moto-DEV","rule":{"negated":false,"compoundParts":[{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"env"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"VBN"}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"model"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"MX011ANM"}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"partnerId"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"testDEV"}}}}}]},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configEntries":[{"configId":"5de4a2df-2673-4be3-ae67-4e09648a929b","percentage":100.0,"startPercentRange":0.0,"endPercentRange":100.0}],"active":true,"firmwareCheckRequired":true,"rebootImmediately":true,"firmwareVersions":["MX011AN_3.8p3s1_VBN_sey","MX011AN_3.1p1s3_VBN_sey","MX011AN_3.2p6s1_VBN_sey-test"]},"type":"ENV_MODEL_RULE","active":true,"applicationType":"stb"}`},
-		TableData{Tablename: "TABLE_FIRMWARE_RULE", Tablerow: `{"id":"c4681132-c518-459a-99fb-9b93a1f41gf37","name":"Test_Ip_filter_device","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDN-TESTING"}}}}},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"dff46b03-be65-4f0c-804d-542d5ffec8ec","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"IP_FILTER","active":true,"applicationType":"stb"}`},
-		TableData{Tablename: "TABLE_FIRMWARE_RULE", Tablerow: `{"id":"c4681132-c518-459a-99fb-9b93a1f63534","name":"Test_Time_filter_device","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDN-TESTING"}}}}},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"dff46b03-be65-4f0c-804d-542d5ffec8ec","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"TIME_FILTER","active":true,"applicationType":"stb"}`},
-		TableData{Tablename: "TABLE_FIRMWARE_RULE", Tablerow: `{"id":"67f595ae-3e1d-418d-9b86-22b3e46816e4","name":"CPEAUTO_LF_80:f5:03:34:11:fd","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"ipAddress"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CPEAUTOIPGRP80f5033411fd"}}}}},"applicableAction":{"type":".DefinePropertiesAction","ttlMap":{},"actionType":"DEFINE_PROPERTIES","properties":{"firmwareLocation":"http://ssr.ccp.xcal.tv/cgi-bin/x1-sign-redirect.pl?K=10&F=stb_cdl","firmwareDownloadProtocol":"http","ipv6FirmwareLocation":""},"activationFirmwareVersions":{}},"type":"DOWNLOAD_LOCATION_FILTER","active":true,"applicationType":"stb"}`},
-		TableData{Tablename: "TABLE_SINGLETON_FILTER_VALUE", Tablerow: `{"type":"com.comcast.xconf.estbfirmware.DownloadLocationRoundRobinFilterValue","id":"DOWNLOAD_LOCATION_ROUND_ROBIN_FILTER_VALUE","updated":1616699042493,"applicationType":"stb","locations":[{"locationIp":"96.114.220.246","percentage":100.0},{"locationIp":"69.252.106.162","percentage":0.0}],"ipv6locations":[{"locationIp":"2600:1f18:227b:c01:b161:3d17:7a86:fe36","percentage":100.0},{"locationIp":"2001:558:1020:1:250:56ff:fe94:646f","percentage":0.0}],"httpLocation":"test.com","httpFullUrlLocation":"https://test.com/Images"}`},
-		TableData{Tablename: "TABLE_FIRMWARE_RULE", Tablerow: `{"id":"e313bc81-8a02-4087-8c91-1da6db4b3159","name":"CDL-ARRISXG1V4-QA","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDL-ARRISXG1V4-QA"}}}}},"applicableAction":{"type":".DefinePropertiesAction","ttlMap":{},"actionType":"DEFINE_PROPERTIES","properties":{"rebootImmediately":"true"},"byPassFilters":[]},"type":"REBOOT_IMMEDIATELY_FILTER","active":true}`},
+		TableData{Tablename: "TABLE_FIRMWARE_CONFIGS", Tablerow: `{"id":"207dc5a5-d324-4e2e-9daf-5017ed98f8f3","updated":1558520642121,"description":"CPEAUTO_FW_AA:AA:AA:AA:AA:AA","supportedModelIds":["XCONFTESTMODEL"],"firmwareDownloadProtocol":"http","firmwareFilename":"DPC3941_3.3p17s1_DEV_sey-test","firmwareVersion":"DPC3941_3.3p17s1_DEV_sey-test","rebootImmediately":false,"applicationType":"stb"}`},
+		TableData{Tablename: "TABLE_FIRMWARE_RULES", Tablerow: `{"id":"437afab9-cbe3-4e4d-b175-220865e0f720","name":" Cisco Arris XG1","rule":{"negated":false,"compoundParts":[{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"ipAddress"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":""}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"env"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"VBN"}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"model"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"MX011ANC"}}}}}]},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"e675358b-506d-48f8-86c5-c8c8e3bb6254","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"IP_RULE","active":true}`},
+		TableData{Tablename: "TABLE_FIRMWARE_RULES", Tablerow: `{"id":"c4681132-c518-459a-99fb-9b93a1f42f37","name":"CDN-TESTING","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDN-TESTING"}}}}},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"dff46b03-be65-4f0c-804d-542d5ffec8ec","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"MAC_RULE","active":true,"applicationType":"stb"}`},
+		TableData{Tablename: "TABLE_FIRMWARE_RULES", Tablerow: `{"id":"67333656-9e8e-46a3-9a87-2f42644a35c9","name":"Arris_XG1v1_VBN_Moto-DEV","rule":{"negated":false,"compoundParts":[{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"env"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"VBN"}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"model"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"MX011ANM"}}}}},{"negated":false,"relation":"AND","condition":{"freeArg":{"type":"STRING","name":"partnerId"},"operation":"IS","fixedArg":{"bean":{"value":{"java.lang.String":"testDEV"}}}}}]},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configEntries":[{"configId":"5de4a2df-2673-4be3-ae67-4e09648a929b","percentage":100.0,"startPercentRange":0.0,"endPercentRange":100.0}],"active":true,"firmwareCheckRequired":true,"rebootImmediately":true,"firmwareVersions":["MX011AN_3.8p3s1_VBN_sey","MX011AN_3.1p1s3_VBN_sey","MX011AN_3.2p6s1_VBN_sey-test"]},"type":"ENV_MODEL_RULE","active":true,"applicationType":"stb"}`},
+		TableData{Tablename: "TABLE_FIRMWARE_RULES", Tablerow: `{"id":"c4681132-c518-459a-99fb-9b93a1f41gf37","name":"Test_Ip_filter_device","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDN-TESTING"}}}}},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"dff46b03-be65-4f0c-804d-542d5ffec8ec","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"IP_FILTER","active":true,"applicationType":"stb"}`},
+		TableData{Tablename: "TABLE_FIRMWARE_RULES", Tablerow: `{"id":"c4681132-c518-459a-99fb-9b93a1f63534","name":"Test_Time_filter_device","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDN-TESTING"}}}}},"applicableAction":{"type":".RuleAction","ttlMap":{},"actionType":"RULE","configId":"dff46b03-be65-4f0c-804d-542d5ffec8ec","active":true,"firmwareCheckRequired":false,"rebootImmediately":false},"type":"TIME_FILTER","active":true,"applicationType":"stb"}`},
+		TableData{Tablename: "TABLE_FIRMWARE_RULES", Tablerow: `{"id":"67f595ae-3e1d-418d-9b86-22b3e46816e4","name":"CPEAUTO_LF_80:f5:03:34:11:fd","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"ipAddress"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CPEAUTOIPGRP80f5033411fd"}}}}},"applicableAction":{"type":".DefinePropertiesAction","ttlMap":{},"actionType":"DEFINE_PROPERTIES","properties":{"firmwareLocation":"http://ssr.ccp.xcal.tv/cgi-bin/x1-sign-redirect.pl?K=10&F=stb_cdl","firmwareDownloadProtocol":"http","ipv6FirmwareLocation":""},"activationFirmwareVersions":{}},"type":"DOWNLOAD_LOCATION_FILTER","active":true,"applicationType":"stb"}`},
+		TableData{Tablename: "TABLE_SINGLETON_FILTER_VALUES", Tablerow: `{"type":"com.comcast.xconf.estbfirmware.DownloadLocationRoundRobinFilterValue","id":"DOWNLOAD_LOCATION_ROUND_ROBIN_FILTER_VALUE","updated":1616699042493,"applicationType":"stb","locations":[{"locationIp":"96.114.220.246","percentage":100.0},{"locationIp":"69.252.106.162","percentage":0.0}],"ipv6locations":[{"locationIp":"2600:1f18:227b:c01:b161:3d17:7a86:fe36","percentage":100.0},{"locationIp":"2001:558:1020:1:250:56ff:fe94:646f","percentage":0.0}],"httpLocation":"test.com","httpFullUrlLocation":"https://test.com/Images"}`},
+		TableData{Tablename: "TABLE_FIRMWARE_RULES", Tablerow: `{"id":"e313bc81-8a02-4087-8c91-1da6db4b3159","name":"CDL-ARRISXG1V4-QA","rule":{"negated":false,"condition":{"freeArg":{"type":"STRING","name":"eStbMac"},"operation":"IN_LIST","fixedArg":{"bean":{"value":{"java.lang.String":"CDL-ARRISXG1V4-QA"}}}}},"applicableAction":{"type":".DefinePropertiesAction","ttlMap":{},"actionType":"DEFINE_PROPERTIES","properties":{"rebootImmediately":"true"},"byPassFilters":[]},"type":"REBOOT_IMMEDIATELY_FILTER","active":true}`},
 	}
 	err := ImportTableData(table_data)
 	assert.NilError(t, err)
@@ -724,7 +668,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -735,7 +679,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -746,7 +690,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -757,7 +701,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -768,7 +712,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -779,7 +723,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -791,7 +735,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 
@@ -804,7 +748,7 @@ func TestAllQueriesApis(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -819,7 +763,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err := ioutil.ReadAll(res.Body)
@@ -835,7 +779,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -851,7 +795,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -867,7 +811,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -883,7 +827,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -899,7 +843,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -919,7 +863,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -935,7 +879,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -951,7 +895,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -967,7 +911,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -983,7 +927,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -999,7 +943,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -1015,7 +959,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -1031,7 +975,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -1047,7 +991,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)
@@ -1066,7 +1010,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
 	body, err = ioutil.ReadAll(res.Body)
@@ -1089,7 +1033,7 @@ func TestAllQueriesApis(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	body, err = ioutil.ReadAll(res.Body)

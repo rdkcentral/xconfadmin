@@ -271,3 +271,7 @@ func addMoracideTagsAsResponseHeaders(w http.ResponseWriter) {
 		w.Header().Set(xwcommon.HeaderMoracide, moracide)
 	}
 }
+
+func NotImplementedHandler(w http.ResponseWriter, r *http.Request) {
+	WriteAdminErrorResponse(w, http.StatusNotImplemented, "")
+}

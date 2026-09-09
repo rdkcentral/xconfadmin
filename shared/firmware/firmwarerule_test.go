@@ -12,7 +12,7 @@ import (
 
 // Test GetFirmwareSortedRuleAllAsListDB with no rules
 func TestGetFirmwareSortedRuleAllAsListDB_Empty(t *testing.T) {
-	result, err := GetFirmwareSortedRuleAllAsListDB()
+	result, err := GetFirmwareSortedRuleAllAsListDB(db.GetDefaultTenantId())
 
 	// May return error or empty list depending on DB state
 	if err == nil {
@@ -28,9 +28,9 @@ func TestGetFirmwareSortedRuleAllAsListDB_SingleRule(t *testing.T) {
 		Name: "Test Single Rule",
 		Type: "FIRMWARE_RULE",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 
-	result, err := GetFirmwareSortedRuleAllAsListDB()
+	result, err := GetFirmwareSortedRuleAllAsListDB(db.GetDefaultTenantId())
 
 	// In test environment, database may not be configured
 	if err != nil {
@@ -73,11 +73,11 @@ func TestGetFirmwareSortedRuleAllAsListDB_MultipleSorted(t *testing.T) {
 		Type: "FIRMWARE_RULE",
 	}
 
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule3.ID, rule3)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, rule1.ID, rule1)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, rule2.ID, rule2)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, rule3.ID, rule3)
 
-	result, err := GetFirmwareSortedRuleAllAsListDB()
+	result, err := GetFirmwareSortedRuleAllAsListDB(db.GetDefaultTenantId())
 
 	// Handle DB not configured in test environment
 	if err != nil {
@@ -123,11 +123,11 @@ func TestGetFirmwareSortedRuleAllAsListDB_CaseInsensitive(t *testing.T) {
 		Type: "FIRMWARE_RULE",
 	}
 
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule3.ID, rule3)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, rule1.ID, rule1)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, rule2.ID, rule2)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, rule3.ID, rule3)
 
-	result, err := GetFirmwareSortedRuleAllAsListDB()
+	result, err := GetFirmwareSortedRuleAllAsListDB(db.GetDefaultTenantId())
 
 	// Handle DB not configured in test environment
 	if err != nil {
@@ -170,10 +170,10 @@ func TestGetFirmwareSortedRuleAllAsListDB_ManyRules(t *testing.T) {
 			Name: name,
 			Type: "FIRMWARE_RULE",
 		}
-		db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+		db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 	}
 
-	result, err := GetFirmwareSortedRuleAllAsListDB()
+	result, err := GetFirmwareSortedRuleAllAsListDB(db.GetDefaultTenantId())
 
 	// Handle DB not configured in test environment
 	if err != nil {
@@ -227,11 +227,11 @@ func TestGetFirmwareSortedRuleAllAsListDB_DuplicateNames(t *testing.T) {
 		Type: "FIRMWARE_RULE",
 	}
 
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule1.ID, rule1)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule2.ID, rule2)
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule3.ID, rule3)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, rule1.ID, rule1)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, rule2.ID, rule2)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, rule3.ID, rule3)
 
-	result, err := GetFirmwareSortedRuleAllAsListDB()
+	result, err := GetFirmwareSortedRuleAllAsListDB(db.GetDefaultTenantId())
 
 	// Handle DB not configured in test environment
 	if err != nil {

@@ -32,6 +32,7 @@ import (
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	taggingapi_config "github.com/rdkcentral/xconfadmin/taggingapi/config"
 	proto_generated "github.com/rdkcentral/xconfadmin/taggingapi/proto/generated"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
@@ -262,6 +263,9 @@ func TestTagHandlerConstants(t *testing.T) {
 // Test GetTagsByMemberHandler success cases
 func TestGetTagsByMemberHandler_WithValidMember(t *testing.T) {
 	setupTestEnvironment()
+	if db.GetDatabaseClient() == nil {
+		t.Skip("Skipping test - requires initialized database client")
+	}
 	req := httptest.NewRequest("GET", "/tags/by-member/test-member", nil)
 	req = mux.SetURLVars(req, map[string]string{common.Member: "test-member"})
 	w := httptest.NewRecorder()

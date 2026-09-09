@@ -28,28 +28,28 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func SetLockdownSetting(lockdownsetting *common.LockdownSettings) *common.ResponseEntity {
+func SetLockdownSetting(tenantId string, lockdownsetting *common.LockdownSettings) *common.ResponseEntity {
 	if err := lockdownsetting.Validate(); err != nil {
 		return common.NewResponseEntityWithStatus(http.StatusBadRequest, err, nil)
 	}
 
 	// Save all lockdown settings
 	if lockdownsetting.LockdownEnabled != nil {
-		if _, err := common.SetAppSetting(common.PROP_LOCKDOWN_ENABLED, *lockdownsetting.LockdownEnabled); err != nil {
+		if _, err := common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_ENABLED, *lockdownsetting.LockdownEnabled); err != nil {
 			errorStr := fmt.Sprintf("Unable to save %s: %s", common.PROP_LOCKDOWN_ENABLED, err.Error())
 			log.Error(errorStr)
 			return common.NewResponseEntityWithStatus(http.StatusInternalServerError, errors.New(errorStr), nil)
 		}
 	}
 	if lockdownsetting.LockdownStartTime != nil {
-		if _, err := common.SetAppSetting(common.PROP_LOCKDOWN_STARTTIME, *lockdownsetting.LockdownStartTime); err != nil {
+		if _, err := common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_STARTTIME, *lockdownsetting.LockdownStartTime); err != nil {
 			errorStr := fmt.Sprintf("Unable to save %s: %s", common.PROP_LOCKDOWN_STARTTIME, err.Error())
 			log.Error(errorStr)
 			return common.NewResponseEntityWithStatus(http.StatusInternalServerError, errors.New(errorStr), nil)
 		}
 	}
 	if lockdownsetting.LockdownEndTime != nil {
-		if _, err := common.SetAppSetting(common.PROP_LOCKDOWN_ENDTIME, *lockdownsetting.LockdownEndTime); err != nil {
+		if _, err := common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_ENDTIME, *lockdownsetting.LockdownEndTime); err != nil {
 			errorStr := fmt.Sprintf("Unable to save %s: %s", common.PROP_LOCKDOWN_ENDTIME, err.Error())
 			log.Error(errorStr)
 			return common.NewResponseEntityWithStatus(http.StatusInternalServerError, errors.New(errorStr), nil)
@@ -57,7 +57,7 @@ func SetLockdownSetting(lockdownsetting *common.LockdownSettings) *common.Respon
 	}
 
 	if lockdownsetting.LockdownModules != nil {
-		if _, err := common.SetAppSetting(common.PROP_LOCKDOWN_MODULES, *lockdownsetting.LockdownModules); err != nil {
+		if _, err := common.SetAppSetting(tenantId, common.PROP_LOCKDOWN_MODULES, *lockdownsetting.LockdownModules); err != nil {
 			errorStr := fmt.Sprintf("Unable to save %s: %s", common.PROP_LOCKDOWN_MODULES, err.Error())
 			log.Error(errorStr)
 			return common.NewResponseEntityWithStatus(http.StatusInternalServerError, errors.New(errorStr), nil)
@@ -67,8 +67,8 @@ func SetLockdownSetting(lockdownsetting *common.LockdownSettings) *common.Respon
 	return common.NewResponseEntityWithStatus(http.StatusNoContent, nil, nil)
 }
 
-func GetLockdownSettings() (*common.LockdownSettings, error) {
-	settings, err := common.GetAppSettings()
+func GetLockdownSettings(tenantId string) (*common.LockdownSettings, error) {
+	settings, err := common.GetAppSettings(tenantId)
 	if err != nil {
 		return nil, err
 	}

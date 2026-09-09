@@ -34,32 +34,32 @@ import (
 	"github.com/google/uuid"
 )
 
-func GetAllFeature() []*xwrfc.Feature {
-	featureList := xwrfc.GetFeatureList()
+func GetAllFeature(tenantId string) []*xwrfc.Feature {
+	featureList := xwrfc.GetFeatureList(tenantId)
 	if featureList == nil {
 		featureList = make([]*xwrfc.Feature, 0)
 	}
 	return featureList
 }
 
-func GetFeatureById(id string) *xwrfc.Feature {
-	return xwrfc.GetOneFeature(id)
+func GetFeatureById(tenantId string, id string) *xwrfc.Feature {
+	return xwrfc.GetOneFeature(tenantId, id)
 }
 
-func GetFeatureEntityById(id string) *xwrfc.FeatureEntity {
-	feature := xwrfc.GetOneFeature(id)
+func GetFeatureEntityById(tenantId string, id string) *xwrfc.FeatureEntity {
+	feature := xwrfc.GetOneFeature(tenantId, id)
 	return feature.CreateFeatureEntity()
 }
 
-func PutFeature(feature *xwrfc.Feature) (*xwrfc.Feature, error) {
-	return xrfc.SetOneFeature(feature)
+func PutFeature(tenantId string, feature *xwrfc.Feature) (*xwrfc.Feature, error) {
+	return xrfc.SetOneFeature(tenantId, feature)
 }
 
-func FeaturePost(feature *xwrfc.Feature) (*xwrfc.Feature, error) {
+func FeaturePost(tenantId string, feature *xwrfc.Feature) (*xwrfc.Feature, error) {
 	if feature.ID == "" {
 		feature.ID = uuid.New().String()
 	}
-	return xrfc.SetOneFeature(feature)
+	return xrfc.SetOneFeature(tenantId, feature)
 }
 
 func GetFeatureFiltered(searchContext map[string]string) []*xwrfc.Feature {
@@ -70,12 +70,12 @@ func GetFeatureFiltered(searchContext map[string]string) []*xwrfc.Feature {
 	return featureList
 }
 
-func DeleteFeatureById(id string) {
-	xrfc.DeleteOneFeature(id)
+func DeleteFeatureById(tenantId string, id string) {
+	xrfc.DeleteOneFeature(tenantId, id)
 }
 
-func IsFeatureUsedInFeatureRule(id string) (bool, string) {
-	featureRules := xwrfc.GetFeatureRuleList()
+func IsFeatureUsedInFeatureRule(tenantId string, id string) (bool, string) {
+	featureRules := xwrfc.GetFeatureRuleList(tenantId)
 	for _, featureRule := range featureRules {
 		for _, featureId := range featureRule.FeatureIds {
 			if featureId == id {
@@ -86,8 +86,8 @@ func IsFeatureUsedInFeatureRule(id string) (bool, string) {
 	return false, ""
 }
 
-func GetFeaturesByApplicationTypeSorted(applicationType string) []*xwrfc.Feature {
-	contextMap := map[string]string{xwcommon.APPLICATION_TYPE: applicationType}
+func GetFeaturesByApplicationTypeSorted(tenantId string, applicationType string) []*xwrfc.Feature {
+	contextMap := map[string]string{xwcommon.APPLICATION_TYPE: applicationType, xwcommon.TENANT_ID: tenantId}
 	featureList := xrfc.GetFilteredFeatureList(contextMap)
 	if featureList == nil {
 		featureList = make([]*xwrfc.Feature, 0)
@@ -98,8 +98,8 @@ func GetFeaturesByApplicationTypeSorted(applicationType string) []*xwrfc.Feature
 	return featureList
 }
 
-func GetFeatureEntityListByApplicationTypeSorted(applicationType string) []*xwrfc.FeatureEntity {
-	contextMap := map[string]string{xwcommon.APPLICATION_TYPE: applicationType}
+func GetFeatureEntityListByApplicationTypeSorted(tenantId string, applicationType string) []*xwrfc.FeatureEntity {
+	contextMap := map[string]string{xwcommon.APPLICATION_TYPE: applicationType, xwcommon.TENANT_ID: tenantId}
 	featureEntityList := xrfc.GetFilteredFeatureEntityList(contextMap)
 	if featureEntityList == nil {
 		featureEntityList = make([]*xwrfc.FeatureEntity, 0)
@@ -110,10 +110,10 @@ func GetFeatureEntityListByApplicationTypeSorted(applicationType string) []*xwrf
 	return featureEntityList
 }
 
-func GetFeaturesByIdList(featureIdList []string) []*xwrfc.Feature {
+func GetFeaturesByIdList(tenantId string, featureIdList []string) []*xwrfc.Feature {
 	features := []*xwrfc.Feature{}
 	for _, featureId := range featureIdList {
-		feature := GetFeatureById(featureId)
+		feature := GetFeatureById(tenantId, featureId)
 		if feature != nil {
 			features = append(features, feature)
 		}
@@ -121,15 +121,15 @@ func GetFeaturesByIdList(featureIdList []string) []*xwrfc.Feature {
 	return features
 }
 
-func ImportFeatureEntities(featureEntityList []*xwrfc.FeatureEntity, overwrite bool, applicationType string) map[string]xhttp.EntityMessage {
+func ImportFeatureEntities(tenantId string, featureEntityList []*xwrfc.FeatureEntity, overwrite bool, applicationType string) map[string]xhttp.EntityMessage {
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	var err error
 	for _, featureEntity := range featureEntityList {
 		feature := featureEntity.CreateFeature()
 		if overwrite {
-			err = UpdateEntity(feature, applicationType)
+			err = UpdateEntity(tenantId, feature, applicationType)
 		} else {
-			err = CreateEntity(feature, applicationType)
+			err = CreateEntity(tenantId, feature, applicationType)
 		}
 		if err != nil {
 			entityMessage := xhttp.EntityMessage{
@@ -148,11 +148,11 @@ func ImportFeatureEntities(featureEntityList []*xwrfc.FeatureEntity, overwrite b
 	return entitiesMap
 }
 
-func CreateEntity(feature *xwrfc.Feature, applicationType string) error {
+func CreateEntity(tenantId string, feature *xwrfc.Feature, applicationType string) error {
 	if feature.ID == "" {
 		feature.ID = uuid.New().String()
 	} else {
-		doesFeatureExist, appType := xrfc.DoesFeatureExistInSomeApplicationType(feature.ID)
+		doesFeatureExist, appType := xrfc.DoesFeatureExistInSomeApplicationType(tenantId, feature.ID)
 		if doesFeatureExist && feature.ApplicationType != appType {
 			return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Entity with id: %s already exists in %s", feature.ID, appType))
 		}
@@ -164,26 +164,26 @@ func CreateEntity(feature *xwrfc.Feature, applicationType string) error {
 		}
 	}
 	// TODO add call to permissionService for validateWrite
-	isValid, errorMsg := xrfc.IsValidFeature(feature)
+	isValid, errorMsg := xrfc.IsValidFeature(tenantId, feature)
 	if !isValid {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, errorMsg)
 	}
-	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherIdForApplicationType(feature, applicationType)
+	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherIdForApplicationType(tenantId, feature, applicationType)
 	if doesFeatureInstanceExist {
 		return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Feature with such featureInstance already exists: %s", feature.FeatureName))
 	}
-	feature, err := FeaturePost(feature)
+	feature, err := FeaturePost(tenantId, feature)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func UpdateEntity(feature *xwrfc.Feature, applicationType string) error {
+func UpdateEntity(tenantId string, feature *xwrfc.Feature, applicationType string) error {
 	if feature.ID == "" {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Entity id is empty")
 	}
-	doesFeatureExist, appType := xrfc.DoesFeatureExistInSomeApplicationType(feature.ID)
+	doesFeatureExist, appType := xrfc.DoesFeatureExistInSomeApplicationType(tenantId, feature.ID)
 	if !doesFeatureExist || applicationType != appType {
 		return xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf("Entity with id: %s does not exist", feature.ID))
 	}
@@ -194,15 +194,15 @@ func UpdateEntity(feature *xwrfc.Feature, applicationType string) error {
 		feature.ApplicationType = applicationType
 	}
 	// TODO add call to permissionService for validateWrite
-	isValid, errorMsg := xrfc.IsValidFeature(feature)
+	isValid, errorMsg := xrfc.IsValidFeature(tenantId, feature)
 	if !isValid {
 		return xwcommon.NewRemoteErrorAS(http.StatusBadRequest, errorMsg)
 	}
-	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherIdForApplicationType(feature, applicationType)
+	doesFeatureInstanceExist := xrfc.DoesFeatureNameExistForAnotherIdForApplicationType(tenantId, feature, applicationType)
 	if doesFeatureInstanceExist {
 		return xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Feature with such featureInstance already exists: %s", feature.FeatureName))
 	}
-	feature, err := PutFeature(feature)
+	feature, err := PutFeature(tenantId, feature)
 	if err != nil {
 		return err
 	}
@@ -226,8 +226,8 @@ func GetFeaturesWithPageNumbers(features []*xwrfc.Feature, pageNumber int, pageS
 	return featurePageList
 }
 
-func DoesFeatureInstanceExistForAnotherId(feature *xwrfc.Feature) bool {
-	all := GetAllFeature()
+func DoesFeatureInstanceExistForAnotherId(tenantId string, feature *xwrfc.Feature) bool {
+	all := GetAllFeature(tenantId)
 	for _, feature := range all {
 		if feature.ID != feature.ID && feature.ApplicationType == feature.ApplicationType && feature.FeatureName == feature.FeatureName {
 			return true
@@ -236,10 +236,10 @@ func DoesFeatureInstanceExistForAnotherId(feature *xwrfc.Feature) bool {
 	return false
 }
 
-func DoesFeatureExist(id string) bool {
+func DoesFeatureExist(tenantId string, id string) bool {
 	if id == "" {
 		return false
 	}
-	feature := xwrfc.GetOneFeature(id)
+	feature := xwrfc.GetOneFeature(tenantId, id)
 	return feature != nil
 }

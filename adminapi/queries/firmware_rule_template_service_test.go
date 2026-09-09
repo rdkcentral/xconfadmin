@@ -21,9 +21,10 @@ import (
 	"encoding/json"
 	"strconv"
 	"testing"
+	"github.com/rdkcentral/xconfadmin/shared"
 
 	"github.com/google/uuid"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	"gotest.tools/assert"
@@ -343,22 +344,20 @@ func TestAddNewFirmwareRTAndReorganize(t *testing.T) {
 
 // Test createFirmwareRT
 func TestCreateFirmwareRT_Success(t *testing.T) {
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	template := createTestFirmwareRuleTemplateService(uuid.New().String(), "TestCreate", 1, "RULE_TEMPLATE")
 
-	result, err := createFirmwareRT(*template)
+	result, err := createFirmwareRT(db.GetDefaultTenantId(), *template)
 	assert.NilError(t, err)
 	assert.Assert(t, result != nil)
 	assert.Equal(t, result.ID, template.ID)
 }
 
 func TestCreateFirmwareRT_ValidationError(t *testing.T) {
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Template with missing ApplicableAction
 	template := firmware.FirmwareRuleTemplate{
@@ -366,16 +365,15 @@ func TestCreateFirmwareRT_ValidationError(t *testing.T) {
 		Priority: 1,
 	}
 
-	result, err := createFirmwareRT(template)
+	result, err := createFirmwareRT(db.GetDefaultTenantId(), template)
 	assert.Assert(t, err != nil)
 	assert.Assert(t, result == nil)
 	assert.ErrorContains(t, err, "Missing applicable action type")
 }
 
 func TestCreateFirmwareRT_ModelReferenceDoesNotExist(t *testing.T) {
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	templateJSON := `{
 		"id": "` + uuid.New().String() + `",
@@ -403,16 +401,15 @@ func TestCreateFirmwareRT_ModelReferenceDoesNotExist(t *testing.T) {
 	err := json.Unmarshal([]byte(templateJSON), &template)
 	assert.NilError(t, err)
 
-	result, err := createFirmwareRT(template)
+	result, err := createFirmwareRT(db.GetDefaultTenantId(), template)
 	assert.Assert(t, err != nil)
 	assert.Assert(t, result == nil)
 	assert.ErrorContains(t, err, "Model does not exist")
 }
 
 func TestCreateFirmwareRT_IPListReferenceDoesNotExist(t *testing.T) {
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	templateJSON := `{
 		"id": "` + uuid.New().String() + `",
@@ -440,20 +437,19 @@ func TestCreateFirmwareRT_IPListReferenceDoesNotExist(t *testing.T) {
 	err := json.Unmarshal([]byte(templateJSON), &template)
 	assert.NilError(t, err)
 
-	result, err := createFirmwareRT(template)
+	result, err := createFirmwareRT(db.GetDefaultTenantId(), template)
 	assert.Assert(t, err != nil)
 	assert.Assert(t, result == nil)
 	assert.ErrorContains(t, err, "IP list does not exist")
 }
 
 func TestCreateFirmwareRT_DuplicateName(t *testing.T) {
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	// Create first template
 	template1 := createTestFirmwareRuleTemplateService(uuid.New().String(), "DuplicateTest", 1, "RULE_TEMPLATE")
-	SetOneInDao(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template1.ID, template1)
+	shared.SetOneInDao(db.TABLE_FIRMWARE_RULE_TEMPLATES, template1.ID, template1)
 
 	// Try to create second template with same name but different rule
 	// The function checks for duplicate names, so this should fail
@@ -482,7 +478,7 @@ func TestCreateFirmwareRT_DuplicateName(t *testing.T) {
 	var template2 firmware.FirmwareRuleTemplate
 	json.Unmarshal([]byte(templateJSON), &template2)
 
-	result, err := createFirmwareRT(template2)
+	result, err := createFirmwareRT(db.GetDefaultTenantId(), template2)
 
 	// The function may or may not check for duplicate names depending on implementation
 	// If it succeeds, that's also valid behavior
@@ -506,24 +502,21 @@ func TestGetFirmwareRuleTemplateExportName(t *testing.T) {
 
 // Test importOrUpdateAllFirmwareRTs
 func TestImportOrUpdateAllFirmwareRTs_CreateNew(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	template := createTestFirmwareRuleTemplateService(uuid.New().String(), "ImportTest1", 1, "RULE_TEMPLATE")
 	entities := []firmware.FirmwareRuleTemplate{*template}
 
-	result := importOrUpdateAllFirmwareRTs(entities, "success", "failure")
+	result := importOrUpdateAllFirmwareRTs(db.GetDefaultTenantId(), entities, "success", "failure")
 
 	assert.Assert(t, len(result["success"]) >= 1)
 	assert.Assert(t, len(result["failure"]) == 0)
 }
 
 func TestImportOrUpdateAllFirmwareRTs_EmptyName(t *testing.T) {
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	entities := []firmware.FirmwareRuleTemplate{
 		{
@@ -536,21 +529,20 @@ func TestImportOrUpdateAllFirmwareRTs_EmptyName(t *testing.T) {
 	}
 	// Don't set name
 
-	result := importOrUpdateAllFirmwareRTs(entities, "success", "failure")
+	result := importOrUpdateAllFirmwareRTs(db.GetDefaultTenantId(), entities, "success", "failure")
 
 	assert.Assert(t, len(result["failure"]) == 1)
 }
 
 func TestImportOrUpdateAllFirmwareRTs_GenerateID(t *testing.T) {
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	setupTestModels()
-	defer DeleteAllEntities()
 
 	template := createTestFirmwareRuleTemplateService("", "AutoIDTest", 1, "RULE_TEMPLATE")
 	template.ID = "" // Clear the ID
 	entities := []firmware.FirmwareRuleTemplate{*template}
 
-	result := importOrUpdateAllFirmwareRTs(entities, "success", "failure")
+	result := importOrUpdateAllFirmwareRTs(db.GetDefaultTenantId(), entities, "success", "failure")
 
 	// The function might not auto-generate IDs if they're empty
 	// Let's check both success and failure to see actual behavior
@@ -632,7 +624,7 @@ func TestValidateOneFirmwareRT_MissingApplicableAction(t *testing.T) {
 		ID: "test",
 	}
 
-	err := validateOneFirmwareRT(frt)
+	err := validateOneFirmwareRT(db.GetDefaultTenantId(), frt)
 	assert.Assert(t, err != nil)
 	assert.ErrorContains(t, err, "Missing applicable action type")
 }
@@ -663,7 +655,7 @@ func TestValidateOneFirmwareRT_InvalidActionType(t *testing.T) {
 	var frt firmware.FirmwareRuleTemplate
 	json.Unmarshal([]byte(templateJSON), &frt)
 
-	err := validateOneFirmwareRT(frt)
+	err := validateOneFirmwareRT(db.GetDefaultTenantId(), frt)
 	assert.Assert(t, err != nil)
 	assert.ErrorContains(t, err, "Invalid action type")
 }
@@ -723,6 +715,6 @@ func TestValidateRule_NoConditions(t *testing.T) {
 		ActionType: firmware.RULE_TEMPLATE,
 	}
 
-	err := validateRule(rule, action)
+	err := validateRule(db.GetDefaultTenantId(), rule, action)
 	assert.Assert(t, err != nil)
 }

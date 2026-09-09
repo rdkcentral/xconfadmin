@@ -9,8 +9,11 @@ import (
 	"testing"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
+
+var testServer *WebconfigServer
 
 func TestMain(m *testing.M) {
 	// Set required environment variables for tests
@@ -20,6 +23,22 @@ func TestMain(m *testing.M) {
 	os.Setenv("SAT_CLIENT_SECRET", "test-sat-secret")
 	os.Setenv("IDP_CLIENT_ID", "test-idp-client")
 	os.Setenv("IDP_CLIENT_SECRET", "test-idp-secret")
+
+	cfgPath := filepath.Join("..", "config", "sample_xconfadmin.conf")
+	sc, err := xwcommon.NewServerConfig(cfgPath)
+	if err != nil {
+		panic(err)
+	}
+	testServer = NewWebconfigServer(sc, true, nil, nil)
+	db.SetDatabaseClient(testServer.XW_XconfServer.DatabaseClient)
+	defer testServer.XW_XconfServer.DatabaseClient.Close()
+
+	if err := testServer.XW_XconfServer.SetUp(); err != nil {
+		panic(err)
+	}
+	if err := testServer.XW_XconfServer.TearDown(); err != nil {
+		panic(err)
+	}
 
 	os.Exit(m.Run())
 }
@@ -50,6 +69,9 @@ func TestNewWebconfigServer_Defaults(t *testing.T) {
 	}
 	if !ws.metricsEnabled {
 		t.Fatalf("metrics should be enabled by default")
+	}
+	if ws.EnableTenantHeaderForLoginToken {
+		t.Fatalf("login-token tenant header support should be disabled by default")
 	}
 }
 

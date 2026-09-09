@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 )
@@ -22,17 +23,28 @@ const (
 )
 
 func GetTagsByMemberHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanRead(r, auth.COMMON_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
 	member, found := mux.Vars(r)[common.Member]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Member)))
 		return
 	}
 
-	tags, err := GetTagsByMember(member)
+	tenantId := xhttp.GetTenantId(r)
+	audit := newOpAudit(w, OpReverseLookup, tenantId)
+
+	tags, xdasTagCount, err := GetTagsByMember(tenantId, member)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
+	audit.set("xdas_tags", xdasTagCount)
+	audit.set("num_results", len(tags))
 
 	respBytes, err := json.Marshal(tags)
 	if err != nil {
@@ -43,17 +55,28 @@ func GetTagsByMemberHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetTagsWithValuesByMemberHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := auth.CanRead(r, auth.COMMON_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
 	member, found := mux.Vars(r)[common.Member]
 	if !found {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.Member)))
 		return
 	}
 
-	tags, err := GetTagsWithValuesByMember(member)
+	tenantId := xhttp.GetTenantId(r)
+	audit := newOpAudit(w, OpReverseLookupValues, tenantId)
+
+	tags, xdasTagCount, err := GetTagsWithValuesByMember(tenantId, member)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
+	audit.set("xdas_tags", xdasTagCount)
+	audit.set("num_results", len(tags))
 
 	respBytes, err := json.Marshal(tags)
 	if err != nil {

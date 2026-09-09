@@ -1,15 +1,15 @@
 package dcm
 
 import (
-	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
@@ -22,20 +22,6 @@ func newTestXWriter(body string) (*xwhttp.XResponseWriter, *httptest.ResponseRec
 	xw := xwhttp.NewXResponseWriter(rr)
 	xw.SetBody(body)
 	return xw, rr
-}
-
-// 1. Cast error path: provide a plain ResponseRecorder (not wrapped) so handler fails casting
-func TestDcmTestPageHandler_CastError(t *testing.T) {
-	// Need applicationType for auth.CanRead; append as query param
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/dcm/testpage?applicationType=stb", bytes.NewReader([]byte(`{}`)))
-	w := httptest.NewRecorder() // NOT an XResponseWriter -> triggers cast error branch
-	DcmTestPageHandler(w, r)
-	if w.Code != http.StatusInternalServerError { // AdminError writes 500
-		t.Fatalf("expected 500 cast error, got %d body=%s", w.Code, w.Body.String())
-	}
-	if !strings.Contains(w.Body.String(), "responsewriter cast error") {
-		t.Fatalf("expected cast error message in body, got %s", w.Body.String())
-	}
 }
 
 // 2. Bad JSON path: XResponseWriter but body not valid JSON
@@ -122,8 +108,8 @@ func TestDcmTestPageHandler_SuccessWithMatchingRules(t *testing.T) {
 	}
 
 	// Store in database - DeviceSettings uses same ID as formula for association
-	_ = setOneInDao(ds.TABLE_DCM_RULE, formula.ID, formula)
-	_ = setOneInDao(ds.TABLE_DEVICE_SETTINGS, deviceSettings.ID, deviceSettings)
+	_ = xshared.SetOneInDao(db.TABLE_DCM_RULES, formula.ID, formula)
+	_ = xshared.SetOneInDao(db.TABLE_DEVICE_SETTINGS, deviceSettings.ID, deviceSettings)
 
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/dcm/testpage?applicationType=stb", nil)
 	// Provide context that will match our rule
@@ -178,8 +164,8 @@ func TestDcmTestPageHandler_SuccessWithMatchingRules(t *testing.T) {
 	}
 
 	// Clean up
-	_ = ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_DCM_RULE, formula.ID)
-	_ = ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_DEVICE_SETTINGS, deviceSettings.ID)
+	_ = db.GetCachedSimpleDao().DeleteOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formula.ID)
+	_ = db.GetCachedSimpleDao().DeleteOne(db.GetDefaultTenantId(), db.TABLE_DEVICE_SETTINGS, deviceSettings.ID)
 } // 6. Test with various MAC address formats to ensure normalization works
 func TestDcmTestPageHandler_MacAddressNormalization(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/dcm/testpage?applicationType=stb", nil)

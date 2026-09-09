@@ -17,6 +17,7 @@ func WebServerInjection(ws *xhttp.WebconfigServer) {
 
 func XconfTaggingServiceSetup(server *xhttp.WebconfigServer, r *mux.Router) {
 	WebServerInjection(server)
+	tag.RegisterTaggingMetrics()
 	routeTaggingServiceApis(r, server)
 }
 

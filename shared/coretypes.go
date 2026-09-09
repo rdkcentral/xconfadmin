@@ -23,9 +23,10 @@ import (
 	"strings"
 
 	"github.com/rdkcentral/xconfadmin/common"
+	xfw "github.com/rdkcentral/xconfadmin/shared/firmware"
 	"github.com/rdkcentral/xconfadmin/util"
-
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 )
 
@@ -129,11 +130,8 @@ const (
 )
 
 const (
-	TABLE_LOGS_KEY2_FIELD_NAME = "column1"
-	LAST_CONFIG_LOG_ID         = "0"
-)
+	LAST_CONFIG_LOG_ID = "0"
 
-const (
 	StbContextTime      = "time"
 	StbContextModel     = "model"
 	MacList             = "MAC_LIST"
@@ -333,4 +331,28 @@ func NormalizeCommonContext(contextMap map[string]string, estbMacKey string, ecm
 		}
 	}
 	return e
+}
+
+// OnboardTenant onboards a new tenant by creating it in the database,
+// initializing firmware rule templates and application settings.
+func OnboardTenant(id string, name string) (*db.Tenant, error) {
+	tenant, err := db.CreateTenant(id, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Initialize the tenant cache before cache-backed tenant setup writes.
+	db.GetCacheManager().InitTenantCache(tenant.ID)
+
+	// Initialize FirmwareRule templates
+	if err := xfw.CreateFirmwareRuleTemplates(tenant.ID); err != nil {
+		return nil, err
+	}
+
+	// Initialize other tenant-specific settings
+	if err := common.InitAppSettings(tenant.ID); err != nil {
+		return nil, err
+	}
+
+	return tenant, nil
 }
