@@ -7,3 +7,4 @@ test_main.go
 *.sh
 __debug_bin
 target/*
+.idea/*
