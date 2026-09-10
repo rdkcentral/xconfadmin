@@ -11,6 +11,7 @@ import (
 	"time"
 
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	log "github.com/sirupsen/logrus"
@@ -74,6 +75,12 @@ func TriggerTagSyncHandler(w http.ResponseWriter, r *http.Request) {
 				"owner": busy.Owner,
 			})
 			xhttp.WriteXconfResponse(w, http.StatusConflict, respBytes)
+			return
+		}
+		// A 503 means this instance has not finished starting; say so.
+		if xwcommon.GetXconfErrorStatusCode(err) == http.StatusServiceUnavailable {
+			xhttp.WriteXconfResponseWithHeaders(w, map[string]string{"Retry-After": "30"},
+				http.StatusServiceUnavailable, []byte(err.Error()))
 			return
 		}
 		xhttp.WriteXconfErrorResponse(w, err)
