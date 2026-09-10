@@ -33,7 +33,7 @@ import (
 )
 
 func GetLogs(w http.ResponseWriter, r *http.Request) {
-	_, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
+	_, err := auth.CanRead(r, auth.COMMON_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -66,7 +66,7 @@ func GetLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetEstbLastlogPath(w http.ResponseWriter, r *http.Request) {
-	_, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
+	_, err := auth.CanRead(r, auth.COMMON_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -90,7 +90,7 @@ func GetEstbLastlogPath(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetEstbChangelogsPath(w http.ResponseWriter, r *http.Request) {
-	_, err := auth.CanRead(r, auth.FIRMWARE_ENTITY)
+	_, err := auth.CanRead(r, auth.COMMON_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
