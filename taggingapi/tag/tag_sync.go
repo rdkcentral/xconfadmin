@@ -19,6 +19,7 @@ import (
 	taggingapi_config "github.com/rdkcentral/xconfadmin/taggingapi/config"
 	proto "github.com/rdkcentral/xconfadmin/taggingapi/proto/generated"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -190,10 +191,17 @@ func newTagSyncEnv() (*tagSyncEnv, error) {
 	if xhttp.WebConfServer == nil || xhttp.WebConfServer.TagSyncConfig == nil {
 		return nil, errors.New("tag sync: server not initialized")
 	}
+	tenantId := db.GetDefaultTenantId()
 	return &tagSyncEnv{
-		getAllTagIds:         GetAllTagIds,
-		getPopulatedBuckets:  getPopulatedBuckets,
-		getMembersFromBucket: getMembersFromBucket,
+		getAllTagIds: func() ([]string, error) {
+			return GetAllTagIds(tenantId)
+		},
+		getPopulatedBuckets: func(tagId string) ([]int, error) {
+			return getPopulatedBuckets(tenantId, tagId)
+		},
+		getMembersFromBucket: func(tagId string, bucketId int, lastMember string, limit int) ([]string, error) {
+			return getMembersFromBucket(tenantId, tagId, bucketId, lastMember, limit)
+		},
 		xdasGetFields: func(normalizedMember string) (map[string]string, error) {
 			hashes, err := GetGroupServiceConnector().GetGroupsMemberBelongsTo(normalizedMember)
 			if err != nil {
@@ -219,7 +227,7 @@ func newTagSyncEnv() (*tagSyncEnv, error) {
 // their cache refresh, so a cross-instance stop takes effect within about a
 // minute.
 func tagSyncKillSwitchEnabled() bool {
-	return common.GetBooleanAppSetting(common.PROP_TAGGING_SYNC_ENABLED, true)
+	return common.GetBooleanAppSetting(db.GetDefaultTenantId(), common.PROP_TAGGING_SYNC_ENABLED, true)
 }
 
 type tagSyncEngine struct {
