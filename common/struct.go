@@ -376,7 +376,7 @@ func DeleteOneEnvironment(tenantId string, id string) error {
 	return nil
 }
 
-func SetOneModel(tenantId string, model *core.Model) (*core.Model, error) {
+func SetOneModel(tenantId string, model *shared.Model) (*shared.Model, error) {
 	model.Updated = util.GetTimestamp()
 	err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_MODELS, model.ID, model)
 	if err != nil {

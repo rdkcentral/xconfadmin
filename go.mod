@@ -17,9 +17,7 @@
 //
 module github.com/rdkcentral/xconfadmin
 
-go 1.26
-
-toolchain go1.25.11
+go 1.26.5
 
 require (
 	github.com/360EntSecGroup-Skylar/excelize v1.4.1
