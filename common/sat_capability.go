@@ -36,6 +36,7 @@ var SATV2RouteMappings = []SATV2RouteDomainMapping{
 	{Prefix: "/queries", Domain: SATV2DomainCore},
 	{Prefix: "/updates", Domain: SATV2DomainCore},
 	{Prefix: "/delete", Domain: SATV2DomainCore},
+	{Prefix: "/info", Domain: SATV2DomainSystem},
 	{Prefix: "/model", Domain: SATV2DomainCore},
 	{Prefix: "/environment", Domain: SATV2DomainCore},
 	{Prefix: "/genericnamespacedlist", Domain: SATV2DomainCore},

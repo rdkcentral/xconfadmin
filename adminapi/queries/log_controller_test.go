@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -75,4 +76,58 @@ func TestLogController_InternalHelpers(t *testing.T) {
 	if len(lst) != 2 {
 		t.Fatalf("expected 2 logs got %d", len(lst))
 	}
+}
+
+func TestLogPreDisplayCleanup(t *testing.T) {
+	tests := []struct {
+		name           string
+		lastConfigLog  *estbfirmware.ConfigChangeLog
+		expectedID     string
+		expectedUpdate int64
+	}{
+		{
+			name: "Clean up non-nil log",
+			lastConfigLog: &estbfirmware.ConfigChangeLog{
+				ID:      "test-id-123",
+				Updated: 1234567890,
+			},
+			expectedID:     "",
+			expectedUpdate: 0,
+		},
+		{
+			name:           "Nil log does nothing",
+			lastConfigLog:  nil,
+			expectedID:     "",
+			expectedUpdate: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logPreDisplayCleanup(tt.lastConfigLog)
+
+			if tt.lastConfigLog != nil {
+				assert.Equal(t, tt.expectedID, tt.lastConfigLog.ID)
+				assert.Equal(t, tt.expectedUpdate, tt.lastConfigLog.Updated)
+			}
+		})
+	}
+}
+
+func TestLogPreDisplayCleanup_NilLog(t *testing.T) {
+	assert.NotPanics(t, func() {
+		logPreDisplayCleanup(nil)
+	})
+}
+
+func TestLogPreDisplayCleanup_ValidLog(t *testing.T) {
+	log := &estbfirmware.ConfigChangeLog{
+		ID:      "test-id",
+		Updated: 1234567890,
+	}
+
+	logPreDisplayCleanup(log)
+
+	assert.Equal(t, "", log.ID)
+	assert.Equal(t, int64(0), log.Updated)
 }

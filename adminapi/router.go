@@ -130,19 +130,19 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	// DataService bypass APIs
 	dsBypassPathPrefix := r.PathPrefix("/xconfAdminService/dataService").Subrouter()
 	dsBypassPathPrefix.HandleFunc("/xconf/swu/{applicationType}", dataapi.GetEstbFirmwareSwuHandler).Methods("GET").Name("DataServiceByPass")
-	dsBypassPathPrefix.HandleFunc("/estbfirmware/lastlog", dataapi.GetEstbLastlogPath).Methods("GET").Name("DataServiceByPass")
-	dsBypassPathPrefix.HandleFunc("/estbfirmware/changelogs", dataapi.GetEstbChangelogsPath).Methods("GET").Name("DataServiceByPass")
+	dsBypassPathPrefix.HandleFunc("/estbfirmware/lastlog", queries.GetEstbLastlogPath).Methods("GET").Name("DataServiceByPass")
+	dsBypassPathPrefix.HandleFunc("/estbfirmware/changelogs", queries.GetEstbChangelogsPath).Methods("GET").Name("DataServiceByPass")
 	dsBypassPathPrefix.HandleFunc("/queries/filters/percent", queries.GetQueriesFiltersPercent).Methods("GET").Name("DataServiceByPass")
 	dsBypassPathPrefix.HandleFunc("/firmwarerule/filtered", queries.GetFirmwareRuleFilteredHandler).Methods("GET").Name("DataServiceByPass")
 	paths = append(paths, dsBypassPathPrefix)
 
 	// APIs moved from DataService to AdminService
 	getEstbLastlogPath := r.Path("/xconfAdminService/estbfirmware/lastlog").Subrouter()
-	getEstbLastlogPath.HandleFunc("", dataapi.GetEstbLastlogPath).Name("Firmware-Logs")
+	getEstbLastlogPath.HandleFunc("", queries.GetEstbLastlogPath).Name("Firmware-Logs")
 	paths = append(paths, getEstbLastlogPath)
 
 	getEstbChangelogsPath := r.Path("/xconfAdminService/estbfirmware/changelogs").Subrouter()
-	getEstbChangelogsPath.HandleFunc("", dataapi.GetEstbChangelogsPath).Name("Firmware-Logs")
+	getEstbChangelogsPath.HandleFunc("", queries.GetEstbChangelogsPath).Name("Firmware-Logs")
 	paths = append(paths, getEstbChangelogsPath)
 
 	getInfoPathPrefix := r.PathPrefix("/xconfAdminService/info").Subrouter()
