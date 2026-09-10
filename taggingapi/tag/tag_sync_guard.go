@@ -64,24 +64,20 @@ const (
 // syncBreaker watches a sliding window of per-member outcomes and stops the
 // run when XDAS looks unhealthy. A transport error or 5xx must never be
 // counted as missing; enough of them in a row (or in the window) trips the
-// breaker instead. A suspiciously high missing rate does not trip by itself
-// - it raises missingHigh so the engine can confirm the members are genuinely
-// missing with a probe GET on a known-good member before continuing.
+// breaker instead. A missing member is a healthy XDAS answer, so it only
+// breaks an error streak - it never trips the breaker on its own.
 type syncBreaker struct {
-	mu                 sync.Mutex
-	window             []syncOutcome
-	idx                int
-	filled             int
-	total              int
-	errInWindow        int
-	missInWindow       int
-	consecErrors       int
-	minSample          int
-	errorRatePercent   int
-	missingRatePercent int
-	maxConsecErrors    int
-	trippedReason      string
-	missingHigh        bool
+	mu               sync.Mutex
+	window           []syncOutcome
+	idx              int
+	filled           int
+	total            int
+	errInWindow      int
+	consecErrors     int
+	minSample        int
+	errorRatePercent int
+	maxConsecErrors  int
+	trippedReason    string
 }
 
 // Fallbacks for a non-positive breaker knob, mirroring the config defaults.
@@ -90,19 +86,15 @@ type syncBreaker struct {
 const (
 	syncBreakerDefaultWindow          = 200
 	syncBreakerDefaultErrorRate       = 25
-	syncBreakerDefaultMissingRate     = 90
 	syncBreakerDefaultMaxConsecErrors = 10
 )
 
-func newSyncBreaker(window, minSample, errorRatePercent, missingRatePercent, maxConsecErrors int) *syncBreaker {
+func newSyncBreaker(window, minSample, errorRatePercent, maxConsecErrors int) *syncBreaker {
 	if window <= 0 {
 		window = syncBreakerDefaultWindow
 	}
 	if errorRatePercent <= 0 {
 		errorRatePercent = syncBreakerDefaultErrorRate
-	}
-	if missingRatePercent <= 0 {
-		missingRatePercent = syncBreakerDefaultMissingRate
 	}
 	if maxConsecErrors <= 0 {
 		maxConsecErrors = syncBreakerDefaultMaxConsecErrors
@@ -113,11 +105,10 @@ func newSyncBreaker(window, minSample, errorRatePercent, missingRatePercent, max
 		minSample = 0
 	}
 	return &syncBreaker{
-		window:             make([]syncOutcome, window),
-		minSample:          minSample,
-		errorRatePercent:   errorRatePercent,
-		missingRatePercent: missingRatePercent,
-		maxConsecErrors:    maxConsecErrors,
+		window:           make([]syncOutcome, window),
+		minSample:        minSample,
+		errorRatePercent: errorRatePercent,
+		maxConsecErrors:  maxConsecErrors,
 	}
 }
 
@@ -126,11 +117,8 @@ func (b *syncBreaker) record(o syncOutcome) {
 	defer b.mu.Unlock()
 
 	if b.filled == len(b.window) {
-		switch b.window[b.idx] {
-		case syncOutcomeError:
+		if b.window[b.idx] == syncOutcomeError {
 			b.errInWindow--
-		case syncOutcomeMissing:
-			b.missInWindow--
 		}
 	} else {
 		b.filled++
@@ -143,9 +131,6 @@ func (b *syncBreaker) record(o syncOutcome) {
 	case syncOutcomeError:
 		b.errInWindow++
 		b.consecErrors++
-	case syncOutcomeMissing:
-		b.missInWindow++
-		b.consecErrors = 0
 	default:
 		b.consecErrors = 0
 	}
@@ -157,16 +142,10 @@ func (b *syncBreaker) record(o syncOutcome) {
 		b.trippedReason = "xdas_unhealthy_consecutive_errors"
 		return
 	}
-	// Rate thresholds arm only after minSample members total; the rates
-	// themselves are computed over the sliding window (filled entries).
-	if b.total >= b.minSample {
-		if b.errInWindow*100 >= b.errorRatePercent*b.filled {
-			b.trippedReason = "xdas_unhealthy_error_rate"
-			return
-		}
-		if b.missInWindow*100 >= b.missingRatePercent*b.filled {
-			b.missingHigh = true
-		}
+	// The error rate arms only after minSample members total; the rate
+	// itself is computed over the sliding window (filled entries).
+	if b.total >= b.minSample && b.errInWindow*100 >= b.errorRatePercent*b.filled {
+		b.trippedReason = "xdas_unhealthy_error_rate"
 	}
 }
 
@@ -174,18 +153,4 @@ func (b *syncBreaker) tripped() (string, bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return b.trippedReason, b.trippedReason != ""
-}
-
-func (b *syncBreaker) missingRateHigh() bool {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.missingHigh
-}
-
-// clearMissingHigh is called after a probe confirmed the missing members are
-// real, so the high missing rate stops being treated as a suspected outage.
-func (b *syncBreaker) clearMissingHigh() {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.missingHigh = false
 }

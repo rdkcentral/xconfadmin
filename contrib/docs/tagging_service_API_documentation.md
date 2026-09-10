@@ -337,9 +337,7 @@ The job has three modes sharing the same walk:
 
 The job is **additive-only**: it never deletes anything from either store. XDAS server errors (5xx,
 transport failures) are never counted as missing — only a clean "not found" is. A circuit breaker
-aborts the run if XDAS looks unhealthy, and a suspiciously high missing rate must be confirmed by a
-probe (a known-good member that still reads back) before the run continues — see
-[Outage Guards](#outage-guards).
+aborts the run if XDAS looks unhealthy — see [Outage Guards](#outage-guards).
 
 Only **one run** can be active across the whole cluster at a time (a Cassandra lock with heartbeat
 enforces this). Progress is checkpointed continuously, so an aborted or crashed run can be resumed
@@ -396,27 +394,25 @@ Content-Type = application/json
 Authorization = Bearer {SAT token}
 ```
 
-**Request Body (JSON — an empty body runs `detect` with defaults. Every field is optional except
-`probeMember`, which a pushing `repair`/`refresh` run must supply):**
+**Request Body (JSON — an empty body runs `detect` with defaults. Every field is optional):**
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `mode` | string | `"detect"` | `detect`, `repair` or `refresh` (see table above). `refresh` is also the mode for a cross-region resync. `repair` and `refresh` require `probeMember` unless `dryRun` is set |
+| `mode` | string | `"detect"` | `detect`, `repair` or `refresh` (see table above). `refresh` is also the mode for a cross-region resync |
 | `tags` | array of strings | all tags | Restrict the walk to these tag ids; unknown ids are ignored |
 | `rate` | integer | config (100) | Maximum XDAS calls per second for the entire run. Both reads and pushes take a slot, so in `refresh` mode the effective member throughput is about `rate / 2` |
 | `workers` | integer | config (20) | Concurrent workers processing members within a chunk |
 | `chunkSize` | integer | config (5000) | Members fetched per Cassandra page. The page is walked in smaller guard batches (see [Outage Guards](#outage-guards)), which is what the checkpoint actually advances by |
 | `dryRun` | boolean | `false` | Classify and count, but never push; pushes that would have happened are reported as `wouldPush` |
 | `maxMembers` | integer | unlimited | Stop cleanly after checking this many members. The run finishes as `completed` with `limited: true` and **can be resumed** — use this to ramp up (e.g. 100k first, review, then resume). The budget is **per segment**: restating `maxMembers: 100000` on each resume walks another 100k, it does not measure against what earlier segments already checked |
-| `resume` | boolean | `false` | Continue the most recent resumable run (aborted, crashed, or completed-limited) from its checkpoint. `mode` and `tags` are taken from the resumed run (a request naming a different `mode` or `tags` filter is rejected with 400; restating the recorded ones is fine); `rate`, `workers`, `chunkSize`, `dryRun` and `maxMembers` may be set anew — note they do **not** inherit from the original run: omitted values fall back to the config defaults (so restate `dryRun: true` when resuming a dry run, or the continuation pushes for real — and a resume that turns a dry run into real pushes is rejected unless a `probeMember` is available). `probeMember` is the exception: it carries over from the original run unless overridden |
-| `probeMember` | string | none — **required** for a pushing `repair`/`refresh` run | A known-good member (one that must currently be present in XDAS). Used to tell genuine mass expiry from an XDAS outage that answers "not found" for everything, and as a preflight check before the first push. Passed per run deliberately — a probe pinned in config would itself rot away via TTL expiry. Optional for `detect` and for `dryRun`, which push nothing — but only `detect` continues (flagging `missingRateUnconfirmed`) when the missing rate crosses the threshold with no probe to confirm; a probe-less dry `repair`/`refresh` aborts there with `missing_rate_high_no_probe_available`, so pass one anyway for a dry run rehearsing a mass-expiry push |
+| `resume` | boolean | `false` | Continue the most recent resumable run (aborted, crashed, or completed-limited) from its checkpoint. `mode` and `tags` are taken from the resumed run (a request naming a different `mode` or `tags` filter is rejected with 400; restating the recorded ones is fine); `rate`, `workers`, `chunkSize`, `dryRun` and `maxMembers` may be set anew — note they do **not** inherit from the original run: omitted values fall back to the config defaults (so restate `dryRun: true` when resuming a dry run, or the continuation pushes for real) |
 
 **Example — read-only census over everything:**
 ```bash
 curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/sync' \
   --header 'Authorization: Bearer <SAT token>' \
   --header 'Content-Type: application/json' \
-  --data '{"mode": "detect", "probeMember": "AA:BB:CC:DD:EE:FF"}'
+  --data '{"mode": "detect"}'
 ```
 
 **Example — ramped repair of two tags, dry run first:**
@@ -424,7 +420,7 @@ curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/syn
 curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/sync' \
   --header 'Authorization: Bearer <SAT token>' \
   --header 'Content-Type: application/json' \
-  --data '{"mode": "repair", "tags": ["tag-a", "tag-b"], "dryRun": true, "maxMembers": 100000, "rate": 300, "probeMember": "AA:BB:CC:DD:EE:FF"}'
+  --data '{"mode": "repair", "tags": ["tag-a", "tag-b"], "dryRun": true, "maxMembers": 100000, "rate": 300}'
 ```
 
 **Example — cross-region resync of one tag, dry run first:**
@@ -432,7 +428,7 @@ curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/syn
 curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/sync' \
   --header 'Authorization: Bearer <SAT token>' \
   --header 'Content-Type: application/json' \
-  --data '{"mode": "refresh", "tags": ["tag-a"], "dryRun": true, "maxMembers": 100000, "probeMember": "AA:BB:CC:DD:EE:FF"}'
+  --data '{"mode": "refresh", "tags": ["tag-a"], "dryRun": true, "maxMembers": 100000}'
 ```
 
 **Example — resume the previous run:**
@@ -445,8 +441,11 @@ curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/syn
 
 **Response Status Codes:**
 - `202 Accepted`: run started in the background
-- `400 Bad Request`: unreadable or malformed body, invalid `mode`, or a pushing `repair`/`refresh` run with no `probeMember`
+- `400 Bad Request`: unreadable or malformed body, an invalid `mode`, or a `resume` naming a different `mode` or `tags` than the recorded run
+- `404 Not Found`: `resume: true` with no resumable run in the retained history — trigger a fresh run instead
 - `409 Conflict`: a run is already active (response includes its `runId` and `owner`), or the kill switch is off
+- `500 Internal Server Error`: the run-state store could not be read or written. The body is a generic `tag sync state store unavailable`; the driver detail is in the instance log. Check that the `TagSyncState` table exists (see [Before the first run](#before-the-first-run-create-the-state-table)) and that Cassandra is reachable
+- `503 Service Unavailable`: this instance has not finished starting. Carries `Retry-After`; retry or use another instance
 
 **Response Body (202):**
 ```json
@@ -508,7 +507,6 @@ GET /taggingService/tags/sync/status
 | `abortReason` | Why an aborted run stopped (see [Abort Reasons](#abort-reasons)) |
 | `limited` | Run stopped at `maxMembers`; resumable |
 | `resumes` | How many times this record has been resumed |
-| `missingRateUnconfirmed` | Part of the run crossed the missing-rate threshold with no probe available, or with every probe erroring in transit, so those members were counted without a health check on XDAS. Sticky once set: a later successful confirmation does not retroactively verify members already counted blind, so the numbers need manual confirmation |
 
 ---
 
@@ -579,30 +577,24 @@ counter, to decide when a re-run is worth it.
 
 ### Outage Guards
 
-An XDAS outage that answers "not found" for everything looks exactly like mass TTL expiry: a 404
-classifies as *missing*, not as an error, so neither rate breaker catches it. In a write mode that
-would mean pushing over a live population — blank values included, fanned out to every region by the
-sync connector. Two guards bound that.
+Two breakers watch XDAS health. The run aborts as `xdas_unhealthy_consecutive_errors` after
+`tag_sync_breaker_max_consec_errors` errors in a row — active from the first member — and as
+`xdas_unhealthy_error_rate` when errors exceed `tag_sync_breaker_error_rate_percent` of a sliding
+`tag_sync_breaker_window` of members, which arms only once `tag_sync_breaker_min_sample` members
+have been seen. Both are consulted before every member, so a tripped breaker stops the walk within
+about `workers` members rather than at a batch boundary.
 
-**Preflight.** Before the walk starts, a write mode reads `probeMember` back from XDAS. If it is not
-there the run aborts as `probe_member_not_readable` having pushed nothing. This is why `probeMember`
-is required for `repair` and `refresh` unless `dryRun` is set.
+The walk is nonetheless sliced into guard batches of `min(chunkSize, max(window, min_sample))`
+members — 500 at the defaults, or one batch per page when `chunkSize` is smaller. That is the
+cadence at which the run re-checks the kill switch and its lock heartbeat, and advances its
+checkpoint; a Cassandra page is never walked end to end without those checks.
 
-**Per-batch confirmation.** A preflight only speaks for the moment it ran, so an outage starting
-mid-run has to be caught as well. Each Cassandra page is walked in batches of
-`max(tag_sync_breaker_window, tag_sync_breaker_min_sample)` members — 500 at the defaults — and the
-missing-rate guard runs between batches. When the rate is over
-`tag_sync_breaker_missing_rate_percent`, the run re-reads the probe, and members it saw present
-moments ago: if one still reads back, the missing members are real and the walk continues; if XDAS
-says those are gone too, the run aborts as `missing_rate_high_probe_failed`. A probe that only
-errored in transit answers nothing — the walk continues with the numbers flagged
-`missingRateUnconfirmed`, leaving 5xx to the error breakers that own it.
-
-The batch is what bounds the exposure: an outage costs at most one batch of pushes before the guard
-fires, rather than a whole `chunkSize` page. Batching any finer would not help — the missing-rate
-threshold cannot arm before `tag_sync_breaker_min_sample` members have been seen.
-
----
+> **Known gap.** Neither breaker catches an XDAS outage that answers "not found" for everything. A
+> 404 classifies as *missing*, not as an error, and mass expiry is the exact condition `repair` and
+> `refresh` exist to fix — the two are indistinguishable from inside the walk. A pushing run against
+> an XDAS in that state will push the whole population, blank values included, fanned out to every
+> region by the sync connector. **Confirm XDAS is healthy before triggering a write mode**, and
+> prefer `dryRun` plus `maxMembers` to sample the numbers first.
 
 ### Abort Reasons
 
@@ -613,9 +605,6 @@ threshold cannot arm before `tag_sync_breaker_min_sample` members have been seen
 | `lock_heartbeat_stale` | The run could not refresh its lock for a full staleness window, so another instance may have taken it over | Check Cassandra write health; resume once one run at a time is assured |
 | `xdas_unhealthy_consecutive_errors` | Too many XDAS errors in a row | Check XDAS health, then resume |
 | `xdas_unhealthy_error_rate` | XDAS error rate over the window threshold | Check XDAS health, then resume |
-| `missing_rate_high_probe_failed` | Missing rate crossed the threshold and XDAS answered that the probe (or recently-present members) are gone too — looks like an XDAS outage, not genuine expiry. A probe that only errored in transit is not an answer and does not abort | Verify XDAS; do not trust the run's missing counts |
-| `missing_rate_high_no_probe_available` | A `dryRun` write mode crossed the missing-rate threshold with no probe to confirm (a pushing run cannot reach this — it is refused without a probe up front) | Re-trigger with a `probeMember` |
-| `probe_member_not_readable` | Write-mode preflight: the supplied probe is not present in XDAS | Pick a probe device that is verifiably in XDAS |
 | `cassandra_suspect_no_tags` | The tag census came back empty — indistinguishable from a Cassandra failure | Check Cassandra; re-trigger |
 | `cassandra_suspect_empty_bucket` | A bucket reported as populated returned no members — suspected swallowed Cassandra error (or a concurrent tag deletion) | Resume; it self-heals if the tag was genuinely deleted |
 | `cassandra_error: ...` | Explicit Cassandra error | Check Cassandra, then resume |
@@ -633,15 +622,17 @@ Server-side defaults for the trigger options and the safety guards, set in the s
 | `tag_sync_worker_count` | 20 | Worker pool size when the trigger does not pass `workers` |
 | `tag_sync_chunk_size` | 5000 | Cassandra page size when the trigger does not pass `chunkSize` |
 | `tag_sync_checkpoint_interval_secs` | 30 | How often run progress is persisted |
-| `tag_sync_breaker_window` | 200 | Sliding window (members) for the error/missing rates |
-| `tag_sync_breaker_min_sample` | 500 | Members that must be seen before the rate thresholds arm |
+| `tag_sync_breaker_window` | 200 | Sliding window (members) for the error rate |
+| `tag_sync_breaker_min_sample` | 500 | Members that must be seen before the error rate arms |
 | `tag_sync_breaker_error_rate_percent` | 25 | Error rate over the window that aborts the run |
-| `tag_sync_breaker_missing_rate_percent` | 90 | Missing rate that triggers probe confirmation |
 | `tag_sync_breaker_max_consec_errors` | 10 | Consecutive XDAS errors that abort the run |
 
-The last two rate knobs also set the guard batch: a Cassandra page is walked in slices of
-`max(window, min_sample)` members — 500 by default — so the missing-rate check runs that often
-rather than once per page. See [Outage Guards](#outage-guards).
+`window` and `min_sample` also set the guard batch, `min(chunkSize, max(window, min_sample))` — 500
+at the defaults, or the whole page when `tag_sync_chunk_size` is smaller. That is the cadence for
+the kill-switch and lock-heartbeat checks and for checkpoint advancement; the breakers themselves
+are consulted before every member. Note a smaller `chunkSize` does not make the error rate fire
+sooner — it still arms only after `min_sample` members for the run. See
+[Outage Guards](#outage-guards).
 
 ---
 
