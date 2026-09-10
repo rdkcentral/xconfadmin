@@ -45,6 +45,52 @@ func TestGetLogs_NoLogsForValidMac(t *testing.T) {
 	assert.Len(t, m, 0)
 }
 
+func TestGetEstbLastlogPath(t *testing.T) {
+	tests := []struct {
+		name       string
+		url        string
+		statusCode int
+	}{
+		{name: "missing mac", url: "/xconfAdminService/estbfirmware/lastlog", statusCode: http.StatusBadRequest},
+		{name: "invalid mac", url: "/xconfAdminService/estbfirmware/lastlog?mac=invalid", statusCode: http.StatusBadRequest},
+		{name: "empty result", url: "/xconfAdminService/estbfirmware/lastlog?mac=AA:BB:CC:00:00:11", statusCode: http.StatusOK},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			rr := httptest.NewRecorder()
+
+			GetEstbLastlogPath(rr, r)
+
+			assert.Equal(t, tt.statusCode, rr.Code)
+		})
+	}
+}
+
+func TestGetEstbChangelogsPath(t *testing.T) {
+	tests := []struct {
+		name       string
+		url        string
+		statusCode int
+	}{
+		{name: "missing mac", url: "/xconfAdminService/estbfirmware/changelogs", statusCode: http.StatusBadRequest},
+		{name: "invalid mac", url: "/xconfAdminService/estbfirmware/changelogs?mac=invalid", statusCode: http.StatusBadRequest},
+		{name: "empty result", url: "/xconfAdminService/estbfirmware/changelogs?mac=AA:BB:CC:00:00:12", statusCode: http.StatusOK},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			rr := httptest.NewRecorder()
+
+			GetEstbChangelogsPath(rr, r)
+
+			assert.Equal(t, tt.statusCode, rr.Code)
+		})
+	}
+}
+
 // To cover branch where logs exist we create an XResponseWriter environment and inject a fake last + list by temporarily
 // creating them directly via internal helpers if accessible; here we rely on package-level helpers getOneConfigChangeLog and getConfigChangeLogList if exported, else we skip.
 // We can't directly set estbfirmware cache without deeper seeding; so current coverage focuses on error and empty-success branches.
@@ -114,20 +160,3 @@ func TestLogPreDisplayCleanup(t *testing.T) {
 	}
 }
 
-func TestLogPreDisplayCleanup_NilLog(t *testing.T) {
-	assert.NotPanics(t, func() {
-		logPreDisplayCleanup(nil)
-	})
-}
-
-func TestLogPreDisplayCleanup_ValidLog(t *testing.T) {
-	log := &estbfirmware.ConfigChangeLog{
-		ID:      "test-id",
-		Updated: 1234567890,
-	}
-
-	logPreDisplayCleanup(log)
-
-	assert.Equal(t, "", log.ID)
-	assert.Equal(t, int64(0), log.Updated)
-}

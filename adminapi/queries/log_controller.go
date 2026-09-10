@@ -73,19 +73,24 @@ func GetEstbLastlogPath(w http.ResponseWriter, r *http.Request) {
 	}
 	isValid, mac, errStr := isMacPresentAndValid(r.URL.Query())
 	if !isValid {
-		xhttp.WriteXconfResponseAsText(w, 400, []byte(errStr))
-	} else {
-		mac := util.NormalizeMacAddress(mac)
-		tenantId := xhttp.GetTenantId(r)
-		lastConfigLog := estbfirmware.GetLastConfigLog(tenantId, mac)
-		if lastConfigLog != nil {
-			logPreDisplayCleanup(lastConfigLog)
-			response, _ := util.JSONMarshal(*lastConfigLog)
-			xhttp.WriteXconfResponse(w, 200, response)
-		} else {
-			log.Debugf("Last log is not found for mac %s", mac)
-			xhttp.WriteXconfResponse(w, 200, []byte(""))
+		xhttp.WriteXconfResponseAsText(w, http.StatusBadRequest, []byte(errStr))
+		return
+	}
+	mac = util.NormalizeMacAddress(mac)
+	tenantId := xhttp.GetTenantId(r)
+	lastConfigLog := estbfirmware.GetLastConfigLog(tenantId, mac)
+	if lastConfigLog != nil {
+		logPreDisplayCleanup(lastConfigLog)
+		response, err := util.JSONMarshal(*lastConfigLog)
+		if err != nil {
+			log.Errorf("json.Marshal last config log error: %v", err)
+			xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(err.Error()))
+			return
 		}
+		xhttp.WriteXconfResponse(w, http.StatusOK, response)
+	} else {
+		log.Debugf("Last log is not found for mac %s", mac)
+		xhttp.WriteXconfResponse(w, http.StatusOK, []byte(""))
 	}
 }
 
@@ -97,21 +102,26 @@ func GetEstbChangelogsPath(w http.ResponseWriter, r *http.Request) {
 	}
 	isValid, mac, errStr := isMacPresentAndValid(r.URL.Query())
 	if !isValid {
-		xhttp.WriteXconfResponseAsText(w, 400, []byte(errStr))
-	} else {
-		mac := util.NormalizeMacAddress(mac)
-		tenantId := xhttp.GetTenantId(r)
-		configChangeLogs := estbfirmware.GetConfigChangeLogsOnly(tenantId, mac)
-		if len(configChangeLogs) > 0 {
-			for _, log := range configChangeLogs {
-				logPreDisplayCleanup(log)
-			}
-		} else {
-			log.Debugf("Last log is not found for mac %s", mac)
-		}
-		response, _ := util.JSONMarshal(configChangeLogs)
-		xhttp.WriteXconfResponse(w, 200, response)
+		xhttp.WriteXconfResponseAsText(w, http.StatusBadRequest, []byte(errStr))
+		return
 	}
+	mac = util.NormalizeMacAddress(mac)
+	tenantId := xhttp.GetTenantId(r)
+	configChangeLogs := estbfirmware.GetConfigChangeLogsOnly(tenantId, mac)
+	if len(configChangeLogs) > 0 {
+		for _, log := range configChangeLogs {
+			logPreDisplayCleanup(log)
+		}
+	} else {
+		log.Debugf("Config change logs are not found for mac %s", mac)
+	}
+	response, err := util.JSONMarshal(configChangeLogs)
+	if err != nil {
+		log.Errorf("json.Marshal config change logs error: %v", err)
+		xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(err.Error()))
+		return
+	}
+	xhttp.WriteXconfResponse(w, http.StatusOK, response)
 }
 
 func logPreDisplayCleanup(lastConfigLog *estbfirmware.ConfigChangeLog) {
