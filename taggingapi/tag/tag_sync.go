@@ -19,7 +19,6 @@ import (
 	taggingapi_config "github.com/rdkcentral/xconfadmin/taggingapi/config"
 	proto "github.com/rdkcentral/xconfadmin/taggingapi/proto/generated"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	"github.com/rdkcentral/xconfwebconfig/db"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -187,11 +186,10 @@ type tagSyncEnv struct {
 	config        *taggingapi_config.TagSyncConfig
 }
 
-func newTagSyncEnv() (*tagSyncEnv, error) {
+func newTagSyncEnv(tenantId string) (*tagSyncEnv, error) {
 	if xhttp.WebConfServer == nil || xhttp.WebConfServer.TagSyncConfig == nil {
 		return nil, errors.New("tag sync: server not initialized")
 	}
-	tenantId := db.GetDefaultTenantId()
 	return &tagSyncEnv{
 		getAllTagIds: func() ([]string, error) {
 			return GetAllTagIds(tenantId)
@@ -215,9 +213,11 @@ func newTagSyncEnv() (*tagSyncEnv, error) {
 			}
 			return GetGroupServiceSyncConnector().AddMembersToTag(normalizedMember, &xdasMembers)
 		},
-		dao:         newTagSyncDao(),
-		syncEnabled: tagSyncKillSwitchEnabled,
-		config:      xhttp.WebConfServer.TagSyncConfig,
+		dao: newTagSyncDao(),
+		syncEnabled: func() bool {
+			return tagSyncKillSwitchEnabled(tenantId)
+		},
+		config: xhttp.WebConfServer.TagSyncConfig,
 	}, nil
 }
 
@@ -226,8 +226,8 @@ func newTagSyncEnv() (*tagSyncEnv, error) {
 // PUT); absent or unreadable means enabled. Other instances see a flip after
 // their cache refresh, so a cross-instance stop takes effect within about a
 // minute.
-func tagSyncKillSwitchEnabled() bool {
-	return common.GetBooleanAppSetting(db.GetDefaultTenantId(), common.PROP_TAGGING_SYNC_ENABLED, true)
+func tagSyncKillSwitchEnabled(tenantId string) bool {
+	return common.GetBooleanAppSetting(tenantId, common.PROP_TAGGING_SYNC_ENABLED, true)
 }
 
 type tagSyncEngine struct {
@@ -267,11 +267,11 @@ type tagSyncEngine struct {
 // the initial run record, so the trigger can answer with the run id before
 // the walk starts. The returned engine must be driven with Execute (which
 // releases the lock on every path).
-func PrepareTagSync(opts TagSyncOptions) (*tagSyncEngine, error) {
+func PrepareTagSync(opts TagSyncOptions, tenantId string) (*tagSyncEngine, error) {
 	if err := validateTagSyncOptions(&opts); err != nil {
 		return nil, err
 	}
-	env, err := newTagSyncEnv()
+	env, err := newTagSyncEnv(tenantId)
 	if err != nil {
 		return nil, err
 	}

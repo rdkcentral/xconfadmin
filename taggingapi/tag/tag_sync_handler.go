@@ -47,7 +47,8 @@ func TriggerTagSyncHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
 		return
 	}
-	if !tagSyncKillSwitchEnabled() {
+	tenantId := xhttp.GetTenantId(r)
+	if !tagSyncKillSwitchEnabled(tenantId) {
 		xhttp.WriteXconfResponse(w, http.StatusConflict, []byte("tag sync is disabled by the TaggingSyncEnabled app setting"))
 		return
 	}
@@ -63,7 +64,7 @@ func TriggerTagSyncHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	engine, err := PrepareTagSync(opts)
+	engine, err := PrepareTagSync(opts, tenantId)
 	if err != nil {
 		var busy *tagSyncBusyError
 		if errors.As(err, &busy) {
@@ -142,7 +143,7 @@ func TagSyncStatusHandler(w http.ResponseWriter, r *http.Request) {
 	respBytes, err := json.Marshal(map[string]interface{}{
 		"active":  active,
 		"history": history,
-		"enabled": tagSyncKillSwitchEnabled(),
+		"enabled": tagSyncKillSwitchEnabled(xhttp.GetTenantId(r)),
 	})
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
