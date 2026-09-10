@@ -59,7 +59,7 @@ func IsLower(s string) bool {
 }
 
 // func IpFiltersByApplicationType(applicationType string) ([]*IpFilter, error) {
-// 	rulelst, err := ds.GetCachedSimpleDao().GetAllAsList(ds.TABLE_FIRMWARE_RULE, 0)
+// 	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_RULES, 0)
 // 	if err != nil {
 // 		return nil, err
 // 	}
@@ -87,7 +87,7 @@ func IsLower(s string) bool {
 // }
 
 // func IpFilterByName(name string, applicationType string) (*IpFilter, error) {
-// 	rulelst, err := ds.GetCachedSimpleDao().GetAllAsList(ds.TABLE_FIRMWARE_RULE, 0)
+// 	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_RULES, 0)
 // 	if err != nil {
 // 		return nil, err
 // 	}

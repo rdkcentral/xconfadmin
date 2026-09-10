@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	common "github.com/rdkcentral/xconfadmin/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,17 +21,17 @@ func TestSetLockdownSettings(t *testing.T) {
 		LockdownEndTime:   &endTime,
 		LockdownModules:   &modules,
 	}
-	result := SetLockdownSetting(validSettings)
+	result := SetLockdownSetting(db.GetDefaultTenantId(), validSettings)
 	assert.NotEqual(t, http.StatusBadRequest, result.Status, "Validation should pass for valid lockdown settings")
 
 	invalidStartTime := "invalid-time-format"
 	validSettings.LockdownStartTime = &invalidStartTime
-	result = SetLockdownSetting(validSettings)
+	result = SetLockdownSetting(db.GetDefaultTenantId(), validSettings)
 	assert.Equal(t, http.StatusBadRequest, result.Status, "Validation should fail for invalid start time format")
 }
 
 func TestGetLockdownSettings(t *testing.T) {
-	_, err := GetLockdownSettings()
+	_, err := GetLockdownSettings(db.GetDefaultTenantId())
 	assert.Error(t, err, "Should return error when app settings are not set")
 }
 
@@ -47,7 +48,7 @@ func TestSetLockdownSetting_LockdownEnabledError(t *testing.T) {
 		LockdownEnabled: &enabled,
 	}
 
-	result := SetLockdownSetting(settings)
+	result := SetLockdownSetting(db.GetDefaultTenantId(), settings)
 
 	// In test environment without DB, SetAppSetting will fail
 	// This tests the error path: http.StatusInternalServerError for "Unable to save PROP_LOCKDOWN_ENABLED"
@@ -81,7 +82,7 @@ func TestSetLockdownSetting_LockdownStartTimeError(t *testing.T) {
 		LockdownModules:   &modules,
 	}
 
-	result := SetLockdownSetting(settings)
+	result := SetLockdownSetting(db.GetDefaultTenantId(), settings)
 
 	// Tests the error path at line 44-48: http.StatusInternalServerError for "Unable to save PROP_LOCKDOWN_STARTTIME"
 	// In test env without DB, may fail on LockdownEnabled first, but the path exists for StartTime
@@ -113,7 +114,7 @@ func TestSetLockdownSetting_LockdownEndTimeError(t *testing.T) {
 		LockdownModules:   &modules,
 	}
 
-	result := SetLockdownSetting(settings)
+	result := SetLockdownSetting(db.GetDefaultTenantId(), settings)
 
 	// Tests the error path at line 50-54: http.StatusInternalServerError for "Unable to save PROP_LOCKDOWN_ENDTIME"
 	// In test env without DB, may fail on earlier field, but the path exists for EndTime
@@ -141,7 +142,7 @@ func TestSetLockdownSetting_LockdownModulesError(t *testing.T) {
 		LockdownModules: &modules,
 	}
 
-	result := SetLockdownSetting(settings)
+	result := SetLockdownSetting(db.GetDefaultTenantId(), settings)
 
 	// Tests the error path at line 57-61: http.StatusInternalServerError for "Unable to save PROP_LOCKDOWN_MODULES"
 	// In test env without DB, may fail on earlier field, but the path exists for Modules
@@ -173,7 +174,7 @@ func TestSetLockdownSetting_AllFieldsError(t *testing.T) {
 		LockdownModules:   &modules,
 	}
 
-	result := SetLockdownSetting(settings)
+	result := SetLockdownSetting(db.GetDefaultTenantId(), settings)
 
 	// In test environment, the first field that fails to save will return error
 	// This tests that all error paths are reachable
@@ -189,7 +190,7 @@ func TestSetLockdownSetting_ValidationError(t *testing.T) {
 		LockdownStartTime: &invalidTime,
 	}
 
-	result := SetLockdownSetting(settings)
+	result := SetLockdownSetting(db.GetDefaultTenantId(), settings)
 
 	// Tests the validation error path at line 31-33
 	assert.Equal(t, http.StatusBadRequest, result.Status,
@@ -210,7 +211,7 @@ func TestSetLockdownSetting_SuccessPath(t *testing.T) {
 		LockdownEnabled: &enabled,
 	}
 
-	result := SetLockdownSetting(settings)
+	result := SetLockdownSetting(db.GetDefaultTenantId(), settings)
 
 	// Tests the success path at line 64: http.StatusNoContent
 	// In test env without DB: returns InternalServerError
@@ -279,7 +280,7 @@ func TestSetLockdownSetting_PartialFields(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := SetLockdownSetting(tc.settings)
+			result := SetLockdownSetting(db.GetDefaultTenantId(), tc.settings)
 
 			if tc.expectValidation {
 				// Should fail validation with 400 Bad Request
@@ -296,7 +297,7 @@ func TestSetLockdownSetting_PartialFields(t *testing.T) {
 
 // TestGetLockdownSettings_Error tests error handling in GetLockdownSettings
 func TestGetLockdownSettings_Error(t *testing.T) {
-	_, err := GetLockdownSettings()
+	_, err := GetLockdownSettings(db.GetDefaultTenantId())
 
 	// In test environment without DB, GetAppSettings will fail
 	assert.Error(t, err, "Should return error when DB is not configured")

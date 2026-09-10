@@ -22,7 +22,7 @@ import (
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
-func NewPercentFilterWrapper(percentFilterValue *coreef.PercentFilterValue, toHumanReadableForm bool) *coreef.PercentFilterWrapper {
+func NewPercentFilterWrapper(tenantId string, percentFilterValue *coreef.PercentFilterValue, toHumanReadableForm bool) *coreef.PercentFilterWrapper {
 	wrapper := coreef.PercentFilterWrapper{
 		ID:         percentFilterValue.ID,
 		Type:       coreef.PercentFilterWrapperClass,
@@ -33,10 +33,10 @@ func NewPercentFilterWrapper(percentFilterValue *coreef.PercentFilterValue, toHu
 		v.Name = k
 		if toHumanReadableForm {
 			if v.LastKnownGood != "" {
-				v.LastKnownGood = coreef.GetFirmwareVersion(v.LastKnownGood)
+				v.LastKnownGood = coreef.GetFirmwareVersion(tenantId, v.LastKnownGood)
 			}
 			if v.IntermediateVersion != "" {
-				v.IntermediateVersion = coreef.GetFirmwareVersion(v.IntermediateVersion)
+				v.IntermediateVersion = coreef.GetFirmwareVersion(tenantId, v.IntermediateVersion)
 			}
 		}
 		wrapper.EnvModelPercentages = append(wrapper.EnvModelPercentages, v)
@@ -384,7 +384,7 @@ type PercentageBean struct {
 
 // // GetDefaultPercentFilterValueOneDB ...  Java getRaw() in dataapi
 // func GetDefaultPercentFilterValueOneDB() (*PercentFilterValue, error) {
-// 	dbinst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_SINGLETON_FILTER_VALUE, PERCENT_FILTER_SINGLETON_ID)
+// 	dbinst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_SINGLETON_FILTER_VALUE, PERCENT_FILTER_SINGLETON_ID)
 // 	if err != nil {
 // 		log.Error(fmt.Sprintf("GetDefaultPercentFilterValueOneDB %v", err))
 // 		return nil, err
@@ -399,7 +399,7 @@ type PercentageBean struct {
 // 		filter.ID = PERCENT_FILTER_SINGLETON_ID
 // 	}
 // 	filter.Updated = util.GetTimestamp()
-// 	return ds.GetCachedSimpleDao().SetOne(ds.TABLE_SINGLETON_FILTER_VALUE, PERCENT_FILTER_SINGLETON_ID, filter)
+// 	return db.GetCachedSimpleDao().SetOne(db.TABLE_SINGLETON_FILTER_VALUE, PERCENT_FILTER_SINGLETON_ID, filter)
 // }
 
 // func validateDistributionDuplicates(configEntries []*corefw.ConfigEntry) error {

@@ -23,7 +23,8 @@ import (
 	"github.com/google/uuid"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xshared "github.com/rdkcentral/xconfadmin/shared"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	xwrfc "github.com/rdkcentral/xconfwebconfig/shared/rfc"
@@ -41,7 +42,7 @@ func makeFeatureForService(name string, app string) *xwrfc.Feature {
 		EffectiveImmediate: true,
 		ConfigData:         map[string]string{"key": "value"},
 	}
-	SetOneInDao(ds.TABLE_XCONF_FEATURE, f.ID, f)
+	xshared.SetOneInDao(db.TABLE_FEATURES, f.ID, f)
 	return f
 }
 
@@ -77,23 +78,23 @@ func makeFeatureRuleForService(featureIds []string, app string, priority int, na
 		Priority:        priority,
 		Rule:            makeRuleForService(),
 	}
-	SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr.Id, fr)
+	xshared.SetOneInDao(db.TABLE_FEATURE_CONTROL_RULES, fr.Id, fr)
 	return fr
 }
 
 func cleanupServiceTest() {
-	tables := []string{ds.TABLE_FEATURE_CONTROL_RULE, ds.TABLE_XCONF_FEATURE}
+	tables := []string{db.TABLE_FEATURE_CONTROL_RULES, db.TABLE_FEATURES}
 	for _, tbl := range tables {
-		list, _ := GetAllAsListFromDao(tbl, 0)
+		list, _ := xshared.GetAllAsListFromDao(tbl, 0)
 		for _, inst := range list {
 			switch v := inst.(type) {
 			case *xwrfc.FeatureRule:
-				DeleteOneFromDao(tbl, v.Id)
+				xshared.DeleteOneFromDao(tbl, v.Id)
 			case *xwrfc.Feature:
-				DeleteOneFromDao(tbl, v.ID)
+				xshared.DeleteOneFromDao(tbl, v.ID)
 			}
 		}
-		ds.GetCachedSimpleDao().RefreshAll(tbl)
+		db.GetCachedSimpleDao().RefreshAll(db.GetDefaultTenantId(), tbl)
 	}
 }
 
@@ -275,7 +276,6 @@ func TestAddNewFeatureRuleAndReorganize(t *testing.T) {
 
 // Test FindFeatureRuleByContext
 func TestFindFeatureRuleByContext(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	cleanupServiceTest()
 
 	f1 := makeFeatureForService("SearchFeature1", "stb")
@@ -298,10 +298,10 @@ func TestFindFeatureRuleByContext(t *testing.T) {
 		Priority:        3,
 		Rule:            ruleWithCollection,
 	}
-	SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr4.Id, fr4)
+	xshared.SetOneInDao(db.TABLE_FEATURE_CONTROL_RULES, fr4.Id, fr4)
 
 	t.Run("FilterByApplicationType_STB", func(t *testing.T) {
-		context := map[string]string{xshared.APPLICATION_TYPE: "stb"}
+		context := map[string]string{xshared.APPLICATION_TYPE: "stb", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 2)
 		for _, rule := range result {
@@ -310,7 +310,7 @@ func TestFindFeatureRuleByContext(t *testing.T) {
 	})
 
 	t.Run("FilterByApplicationType_RdkCloud", func(t *testing.T) {
-		context := map[string]string{xshared.APPLICATION_TYPE: "rdkcloud"}
+		context := map[string]string{xshared.APPLICATION_TYPE: "rdkcloud", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 		for _, rule := range result {
@@ -319,73 +319,73 @@ func TestFindFeatureRuleByContext(t *testing.T) {
 	})
 
 	t.Run("FilterByFeatureInstance", func(t *testing.T) {
-		context := map[string]string{xcommon.FEATURE_INSTANCE: "SearchFeature1"}
+		context := map[string]string{xcommon.FEATURE_INSTANCE: "SearchFeature1", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByFeatureInstance_CaseInsensitive", func(t *testing.T) {
-		context := map[string]string{xcommon.FEATURE_INSTANCE: "searchfeature1"}
+		context := map[string]string{xcommon.FEATURE_INSTANCE: "searchfeature1", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByFeatureInstance_NoMatch", func(t *testing.T) {
-		context := map[string]string{xcommon.FEATURE_INSTANCE: "NonExistentFeature"}
+		context := map[string]string{xcommon.FEATURE_INSTANCE: "NonExistentFeature", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.Equal(t, 0, len(result))
 	})
 
 	t.Run("FilterByName", func(t *testing.T) {
-		context := map[string]string{xcommon.NAME_UPPER: "SearchRule1"}
+		context := map[string]string{xcommon.NAME_UPPER: "SearchRule1", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByName_PartialMatch", func(t *testing.T) {
-		context := map[string]string{xcommon.NAME_UPPER: "search"}
+		context := map[string]string{xcommon.NAME_UPPER: "search", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByName_CaseInsensitive", func(t *testing.T) {
-		context := map[string]string{xcommon.NAME_UPPER: "searchrule"}
+		context := map[string]string{xcommon.NAME_UPPER: "searchrule", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByFreeArg", func(t *testing.T) {
-		context := map[string]string{xcommon.FREE_ARG: "model"}
+		context := map[string]string{xcommon.FREE_ARG: "model", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByFreeArg_CaseInsensitive", func(t *testing.T) {
-		context := map[string]string{xcommon.FREE_ARG: "MODEL"}
+		context := map[string]string{xcommon.FREE_ARG: "MODEL", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByFreeArg_NoMatch", func(t *testing.T) {
-		context := map[string]string{xcommon.FREE_ARG: "nonexistentkey"}
+		context := map[string]string{xcommon.FREE_ARG: "nonexistentkey", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.Equal(t, 0, len(result))
 	})
 
 	t.Run("FilterByFixedArg_StringValue", func(t *testing.T) {
-		context := map[string]string{xcommon.FIXED_ARG: "X1"}
+		context := map[string]string{xcommon.FIXED_ARG: "X1", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByFixedArg_CollectionValue", func(t *testing.T) {
-		context := map[string]string{xcommon.FIXED_ARG: "partner1"}
+		context := map[string]string{xcommon.FIXED_ARG: "partner1", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("FilterByFixedArg_CaseInsensitive", func(t *testing.T) {
-		context := map[string]string{xcommon.FIXED_ARG: "x1"}
+		context := map[string]string{xcommon.FIXED_ARG: "x1", common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
@@ -394,13 +394,14 @@ func TestFindFeatureRuleByContext(t *testing.T) {
 		context := map[string]string{
 			xshared.APPLICATION_TYPE: "stb",
 			xcommon.NAME_UPPER:       "SearchRule1",
+			common.TENANT_ID:         db.GetDefaultTenantId(),
 		}
 		result := FindFeatureRuleByContext(context)
 		assert.True(t, len(result) >= 1)
 	})
 
 	t.Run("EmptyContext", func(t *testing.T) {
-		context := map[string]string{}
+		context := map[string]string{common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		// Should return all rules sorted by priority
 		assert.True(t, len(result) >= 4)
@@ -408,7 +409,7 @@ func TestFindFeatureRuleByContext(t *testing.T) {
 
 	t.Run("NilFeatureRule_Skipped", func(t *testing.T) {
 		// This tests the nil check in the function
-		context := map[string]string{}
+		context := map[string]string{common.TENANT_ID: db.GetDefaultTenantId()}
 		result := FindFeatureRuleByContext(context)
 		assert.NotNil(t, result)
 	})
@@ -416,13 +417,12 @@ func TestFindFeatureRuleByContext(t *testing.T) {
 
 // Test ValidateFeatureRule
 func TestValidateFeatureRule(t *testing.T) {
-	SkipIfMockDatabase(t) // Requires DB validation via rfc.GetOneFeature
 	cleanupServiceTest()
 
 	f := makeFeatureForService("ValidateFeature", "stb")
 
 	t.Run("NilFeatureRule", func(t *testing.T) {
-		err := ValidateFeatureRule(nil, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), nil, "stb")
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "FeatureRule is empty")
 	})
@@ -435,7 +435,7 @@ func TestValidateFeatureRule(t *testing.T) {
 			FeatureIds:      []string{f.ID},
 			Rule:            nil,
 		}
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "Rule is empty")
 	})
@@ -448,7 +448,7 @@ func TestValidateFeatureRule(t *testing.T) {
 			FeatureIds:      []string{f.ID},
 			Rule:            makeRuleForService(),
 		}
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "FeatureRule name is blank")
 	})
@@ -461,7 +461,7 @@ func TestValidateFeatureRule(t *testing.T) {
 			FeatureIds:      []string{},
 			Rule:            makeRuleForService(),
 		}
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "Features should be specified")
 	})
@@ -480,7 +480,7 @@ func TestValidateFeatureRule(t *testing.T) {
 			FeatureIds:      featureIds,
 			Rule:            makeRuleForService(),
 		}
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "Number of Features should be up to")
 	})
@@ -493,7 +493,7 @@ func TestValidateFeatureRule(t *testing.T) {
 			FeatureIds:      []string{"nonexistent-id"},
 			Rule:            makeRuleForService(),
 		}
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "does not exist")
 	})
@@ -507,7 +507,7 @@ func TestValidateFeatureRule(t *testing.T) {
 			FeatureIds:      []string{rdkFeature.ID},
 			Rule:            makeRuleForService(),
 		}
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "Application Mismatch")
 	})
@@ -520,7 +520,7 @@ func TestValidateFeatureRule(t *testing.T) {
 			FeatureIds:      []string{f.ID},
 			Rule:            makeRuleForService(),
 		}
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 	})
 
@@ -533,7 +533,7 @@ func TestValidateFeatureRule(t *testing.T) {
 			FeatureIds:      []string{rdkFeature.ID},
 			Rule:            makeRuleForService(),
 		}
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "doesn't match with entity application type")
 	})
@@ -546,7 +546,7 @@ func TestValidateFeatureRule(t *testing.T) {
 			FeatureIds:      []string{f.ID},
 			Rule:            makeRuleWithPercentRange("-1", "50"),
 		}
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "Percent range")
 	})
@@ -559,7 +559,7 @@ func TestValidateFeatureRule(t *testing.T) {
 			FeatureIds:      []string{f.ID},
 			Rule:            makeRuleWithPercentRange("100", "101"),
 		}
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "Start range")
 	})
@@ -572,7 +572,7 @@ func TestValidateFeatureRule(t *testing.T) {
 			FeatureIds:      []string{f.ID},
 			Rule:            makeRuleWithPercentRange("0", "-1"),
 		}
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "Percent range")
 	})
@@ -585,7 +585,7 @@ func TestValidateFeatureRule(t *testing.T) {
 			FeatureIds:      []string{f.ID},
 			Rule:            makeRuleWithPercentRange("0", "101"),
 		}
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "End range")
 	})
@@ -598,7 +598,7 @@ func TestValidateFeatureRule(t *testing.T) {
 			FeatureIds:      []string{f.ID},
 			Rule:            makeRuleWithPercentRange("60", "40"),
 		}
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "Start range should be less than end range")
 	})
@@ -616,7 +616,7 @@ func TestValidateFeatureRule(t *testing.T) {
 			FeatureIds:      []string{f.ID},
 			Rule:            compound,
 		}
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "Ranges overlap")
 	})
@@ -629,13 +629,13 @@ func TestValidateFeatureRule(t *testing.T) {
 			FeatureIds:      []string{f.ID},
 			Rule:            makeRuleWithPercentRange("0", "50"),
 		}
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.Nil(t, err)
 	})
 
 	t.Run("ValidRule_Success", func(t *testing.T) {
 		fr := makeFeatureRuleForService([]string{f.ID}, "stb", 1, "ValidRule")
-		err := ValidateFeatureRule(fr, "stb")
+		err := ValidateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.Nil(t, err)
 	})
 }
@@ -690,7 +690,6 @@ func TestParsePercentRange(t *testing.T) {
 
 // Test validateAllFeatureRule
 func TestValidateAllFeatureRule(t *testing.T) {
-	SkipIfMockDatabase(t) // Requires DB validation via rfc.GetFeatureRuleListForAS
 	cleanupServiceTest()
 
 	f := makeFeatureForService("Feature1", "stb")
@@ -705,7 +704,7 @@ func TestValidateAllFeatureRule(t *testing.T) {
 			Priority:        2,
 			Rule:            makeRuleForService(),
 		}
-		err := validateAllFeatureRule(newRule)
+		err := validateAllFeatureRule(db.GetDefaultTenantId(), newRule)
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "Name is already used")
 	})
@@ -720,7 +719,7 @@ func TestValidateAllFeatureRule(t *testing.T) {
 			Priority:        1,
 			Rule:            makeRuleForService(),
 		}
-		err := validateAllFeatureRule(newRule)
+		err := validateAllFeatureRule(db.GetDefaultTenantId(), newRule)
 		assert.Nil(t, err) // Different app type, should be OK
 	})
 
@@ -733,7 +732,7 @@ func TestValidateAllFeatureRule(t *testing.T) {
 			Priority:        2,
 			Rule:            existingRule.Rule,
 		}
-		err := validateAllFeatureRule(newRule)
+		err := validateAllFeatureRule(db.GetDefaultTenantId(), newRule)
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "Rule has duplicate")
 	})
@@ -748,7 +747,7 @@ func TestValidateAllFeatureRule(t *testing.T) {
 			Priority:        1,
 			Rule:            makeRuleForService(),
 		}
-		err := validateAllFeatureRule(ruleUpdate)
+		err := validateAllFeatureRule(db.GetDefaultTenantId(), ruleUpdate)
 		assert.Nil(t, err)
 	})
 
@@ -767,7 +766,7 @@ func TestValidateAllFeatureRule(t *testing.T) {
 				),
 			},
 		}
-		err := validateAllFeatureRule(newRule)
+		err := validateAllFeatureRule(db.GetDefaultTenantId(), newRule)
 		assert.Nil(t, err)
 	})
 }
@@ -831,7 +830,6 @@ func TestGetPercentRanges(t *testing.T) {
 
 // Test UpdateFeatureRule
 func TestUpdateFeatureRule(t *testing.T) {
-	SkipIfMockDatabase(t) // Requires DB validation
 	cleanupServiceTest()
 
 	f := makeFeatureForService("UpdateFeature", "stb")
@@ -845,7 +843,7 @@ func TestUpdateFeatureRule(t *testing.T) {
 			FeatureIds:      []string{f.ID},
 			Rule:            makeRuleForService(),
 		}
-		result, err := UpdateFeatureRule(fr, "stb")
+		result, err := UpdateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Nil(t, result)
 		assert.Contains(t, err.Error(), "id is empty")
@@ -866,7 +864,7 @@ func TestUpdateFeatureRule(t *testing.T) {
 				),
 			},
 		}
-		result, err := UpdateFeatureRule(fr, "stb")
+		result, err := UpdateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Nil(t, result)
 		assert.Contains(t, err.Error(), "does not exist")
@@ -884,13 +882,13 @@ func TestUpdateFeatureRule(t *testing.T) {
 			Priority:        1,
 			Rule:            makeRuleForService(),
 		}
-		result, err := UpdateFeatureRule(fr, "rdkcloud")
+		result, err := UpdateFeatureRule(db.GetDefaultTenantId(), fr, "rdkcloud")
 		assert.NotNil(t, err)
 		assert.Nil(t, result)
 		assert.Contains(t, err.Error(), "ApplicationType cannot be changed")
 
 		// Cleanup
-		DeleteOneFromDao(ds.TABLE_XCONF_FEATURE, fRdkCloud.ID)
+		xshared.DeleteOneFromDao(db.TABLE_FEATURES, fRdkCloud.ID)
 	})
 
 	t.Run("UpdateWithSamePriority", func(t *testing.T) {
@@ -902,7 +900,7 @@ func TestUpdateFeatureRule(t *testing.T) {
 			Priority:        existingRule.Priority,
 			Rule:            makeRuleForService(),
 		}
-		result, err := UpdateFeatureRule(fr, "stb")
+		result, err := UpdateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
 		assert.Equal(t, "UpdatedName", result.Name)
@@ -912,7 +910,7 @@ func TestUpdateFeatureRule(t *testing.T) {
 		// Reset existingRule to priority 1 and save it
 		existingRule.Priority = 1
 		existingRule.Name = "UpdateRule" // Reset name in case it was changed
-		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, existingRule.Id, existingRule)
+		xshared.SetOneInDao(db.TABLE_FEATURE_CONTROL_RULES, existingRule.Id, existingRule)
 
 		// Create an additional rule at priority 2
 		fr2 := &xwrfc.FeatureRule{
@@ -929,7 +927,7 @@ func TestUpdateFeatureRule(t *testing.T) {
 				),
 			},
 		}
-		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr2.Id, fr2)
+		xshared.SetOneInDao(db.TABLE_FEATURE_CONTROL_RULES, fr2.Id, fr2)
 
 		// Now update existingRule from priority 1 to priority 2
 		// This will swap the priorities
@@ -941,7 +939,7 @@ func TestUpdateFeatureRule(t *testing.T) {
 			Priority:        2,
 			Rule:            makeRuleForService(),
 		}
-		result, err := UpdateFeatureRule(fr, "stb")
+		result, err := UpdateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
 		if result != nil {
@@ -949,7 +947,7 @@ func TestUpdateFeatureRule(t *testing.T) {
 		}
 
 		// Cleanup
-		DeleteOneFromDao(ds.TABLE_FEATURE_CONTROL_RULE, fr2.Id)
+		xshared.DeleteOneFromDao(db.TABLE_FEATURE_CONTROL_RULES, fr2.Id)
 	})
 
 	t.Run("ValidationError", func(t *testing.T) {
@@ -961,7 +959,7 @@ func TestUpdateFeatureRule(t *testing.T) {
 			Priority:        1,
 			Rule:            makeRuleForService(),
 		}
-		result, err := UpdateFeatureRule(fr, "stb")
+		result, err := UpdateFeatureRule(db.GetDefaultTenantId(), fr, "stb")
 		assert.NotNil(t, err)
 		assert.Nil(t, result)
 	})
@@ -1031,12 +1029,11 @@ func TestUpdateFeatureRuleByPriorityAndReorganize(t *testing.T) {
 
 // Test importOrUpdateAllFeatureRule
 func TestImportOrUpdateAllFeatureRule(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	cleanupServiceTest()
 
 	f := makeFeatureForService("ImportFeature", "stb")
 	existingRule := makeFeatureRuleForService([]string{f.ID}, "stb", 1, "ExistingImportRule")
-	ds.GetCacheManager().ForceSyncChanges() // Ensure test data is synchronized
+	db.GetCacheManager().ForceSyncChanges() // Ensure test data is synchronized
 
 	t.Run("ImportNewRules", func(t *testing.T) {
 		newRule1 := xwrfc.FeatureRule{
@@ -1069,7 +1066,7 @@ func TestImportOrUpdateAllFeatureRule(t *testing.T) {
 		}
 
 		rules := []xwrfc.FeatureRule{newRule1, newRule2}
-		result := importOrUpdateAllFeatureRule(rules, "stb")
+		result := importOrUpdateAllFeatureRule(db.GetDefaultTenantId(), rules, "stb")
 
 		assert.Equal(t, 2, len(result[IMPORTED]))
 		assert.Equal(t, 0, len(result[NOT_IMPORTED]))
@@ -1086,7 +1083,7 @@ func TestImportOrUpdateAllFeatureRule(t *testing.T) {
 		}
 
 		rules := []xwrfc.FeatureRule{updatedRule}
-		result := importOrUpdateAllFeatureRule(rules, "stb")
+		result := importOrUpdateAllFeatureRule(db.GetDefaultTenantId(), rules, "stb")
 
 		assert.Equal(t, 1, len(result[IMPORTED]))
 		assert.Equal(t, 0, len(result[NOT_IMPORTED]))
@@ -1118,7 +1115,7 @@ func TestImportOrUpdateAllFeatureRule(t *testing.T) {
 		}
 
 		rules := []xwrfc.FeatureRule{validRule, invalidRule}
-		result := importOrUpdateAllFeatureRule(rules, "stb")
+		result := importOrUpdateAllFeatureRule(db.GetDefaultTenantId(), rules, "stb")
 
 		assert.Equal(t, 1, len(result[IMPORTED]))
 		assert.Equal(t, 1, len(result[NOT_IMPORTED]))
@@ -1135,7 +1132,7 @@ func TestImportOrUpdateAllFeatureRule(t *testing.T) {
 		}
 
 		rules := []xwrfc.FeatureRule{invalidRule}
-		result := importOrUpdateAllFeatureRule(rules, "stb")
+		result := importOrUpdateAllFeatureRule(db.GetDefaultTenantId(), rules, "stb")
 
 		assert.Equal(t, 0, len(result[IMPORTED]))
 		assert.Equal(t, 1, len(result[NOT_IMPORTED]))
@@ -1143,7 +1140,7 @@ func TestImportOrUpdateAllFeatureRule(t *testing.T) {
 
 	t.Run("ImportEmptyList", func(t *testing.T) {
 		rules := []xwrfc.FeatureRule{}
-		result := importOrUpdateAllFeatureRule(rules, "stb")
+		result := importOrUpdateAllFeatureRule(db.GetDefaultTenantId(), rules, "stb")
 
 		assert.Equal(t, 0, len(result[IMPORTED]))
 		assert.Equal(t, 0, len(result[NOT_IMPORTED]))
@@ -1152,7 +1149,6 @@ func TestImportOrUpdateAllFeatureRule(t *testing.T) {
 
 // Test ChangeFeatureRulePriorities
 func TestChangeFeatureRulePriorities(t *testing.T) {
-	SkipIfMockDatabase(t) // Service test uses ds.GetCachedSimpleDao() directly
 	cleanupServiceTest()
 
 	f := makeFeatureForService("PriorityFeature", "stb")
@@ -1161,14 +1157,14 @@ func TestChangeFeatureRulePriorities(t *testing.T) {
 	fr3 := makeFeatureRuleForService([]string{f.ID}, "stb", 3, "PriorityRule3")
 
 	t.Run("NonExistentRule", func(t *testing.T) {
-		result, err := ChangeFeatureRulePriorities("nonexistent-id", 1, "stb")
+		result, err := ChangeFeatureRulePriorities(db.GetDefaultTenantId(), "nonexistent-id", 1, "stb")
 		assert.NotNil(t, err)
 		assert.Nil(t, result)
 		assert.Contains(t, err.Error(), "does not exist")
 	})
 
 	t.Run("ChangePriority_MoveDown", func(t *testing.T) {
-		result, err := ChangeFeatureRulePriorities(fr1.Id, 3, "stb")
+		result, err := ChangeFeatureRulePriorities(db.GetDefaultTenantId(), fr1.Id, 3, "stb")
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
 		assert.True(t, len(result) > 0)
@@ -1179,11 +1175,11 @@ func TestChangeFeatureRulePriorities(t *testing.T) {
 		fr1.Priority = 1
 		fr2.Priority = 2
 		fr3.Priority = 3
-		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr1.Id, fr1)
-		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr2.Id, fr2)
-		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr3.Id, fr3)
+		xshared.SetOneInDao(db.TABLE_FEATURE_CONTROL_RULES, fr1.Id, fr1)
+		xshared.SetOneInDao(db.TABLE_FEATURE_CONTROL_RULES, fr2.Id, fr2)
+		xshared.SetOneInDao(db.TABLE_FEATURE_CONTROL_RULES, fr3.Id, fr3)
 
-		result, err := ChangeFeatureRulePriorities(fr3.Id, 1, "stb")
+		result, err := ChangeFeatureRulePriorities(db.GetDefaultTenantId(), fr3.Id, 1, "stb")
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
 		assert.True(t, len(result) > 0)
@@ -1194,11 +1190,11 @@ func TestChangeFeatureRulePriorities(t *testing.T) {
 		fr1.Priority = 1
 		fr2.Priority = 2
 		fr3.Priority = 3
-		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr1.Id, fr1)
-		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr2.Id, fr2)
-		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr3.Id, fr3)
+		xshared.SetOneInDao(db.TABLE_FEATURE_CONTROL_RULES, fr1.Id, fr1)
+		xshared.SetOneInDao(db.TABLE_FEATURE_CONTROL_RULES, fr2.Id, fr2)
+		xshared.SetOneInDao(db.TABLE_FEATURE_CONTROL_RULES, fr3.Id, fr3)
 
-		result, err := ChangeFeatureRulePriorities(fr2.Id, 1, "stb")
+		result, err := ChangeFeatureRulePriorities(db.GetDefaultTenantId(), fr2.Id, 1, "stb")
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
 	})
@@ -1208,11 +1204,11 @@ func TestChangeFeatureRulePriorities(t *testing.T) {
 		fr1.Priority = 1
 		fr2.Priority = 2
 		fr3.Priority = 3
-		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr1.Id, fr1)
-		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr2.Id, fr2)
-		SetOneInDao(ds.TABLE_FEATURE_CONTROL_RULE, fr3.Id, fr3)
+		xshared.SetOneInDao(db.TABLE_FEATURE_CONTROL_RULES, fr1.Id, fr1)
+		xshared.SetOneInDao(db.TABLE_FEATURE_CONTROL_RULES, fr2.Id, fr2)
+		xshared.SetOneInDao(db.TABLE_FEATURE_CONTROL_RULES, fr3.Id, fr3)
 
-		result, err := ChangeFeatureRulePriorities(fr2.Id, 3, "")
+		result, err := ChangeFeatureRulePriorities(db.GetDefaultTenantId(), fr2.Id, 3, "")
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
 	})

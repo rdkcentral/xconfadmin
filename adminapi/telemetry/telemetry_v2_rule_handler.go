@@ -35,7 +35,6 @@ import (
 	core "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfadmin/shared/logupload"
 	"github.com/rdkcentral/xconfadmin/util"
-
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
@@ -53,7 +52,9 @@ func GetTelemetryTwoRulesAllExport(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, err)
 		return
 	}
-	all := GetAll()
+
+	tenantId := xhttp.GetTenantId(r)
+	all := GetAll(tenantId)
 	telemetryTwoRules := []*xwlogupload.TelemetryTwoRule{}
 	for _, entity := range all {
 		if entity.ApplicationType == applicationType {
@@ -86,7 +87,9 @@ func GetTelemetryTwoRuleById(w http.ResponseWriter, r *http.Request) {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("Id is blank"))
 		return
 	}
-	telemetryTwoRule := logupload.GetOneTelemetryTwoRule(id)
+
+	tenantId := xhttp.GetTenantId(r)
+	telemetryTwoRule := logupload.GetOneTelemetryTwoRule(tenantId, id)
 	if telemetryTwoRule == nil {
 		invalid := "Entity with id: " + id + " does not exist"
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, invalid)
@@ -134,7 +137,9 @@ func DeleteOneTelemetryTwoRuleHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponse(w, http.StatusMethodNotAllowed, nil)
 		return
 	}
-	_, err = Delete(id)
+
+	tenantId := xhttp.GetTenantId(r)
+	_, err = Delete(tenantId, id)
 	if err != nil {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
 		return
@@ -184,8 +189,9 @@ func GetTelemetryTwoRulesFilteredWithPage(w http.ResponseWriter, r *http.Request
 		}
 	}
 	contextMap[core.APPLICATION_TYPE] = applicationType
+	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r)
 
-	telemetryTwoRules := findByContext(r, contextMap)
+	telemetryTwoRules := findByContext(contextMap)
 	sort.SliceStable(telemetryTwoRules, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(telemetryTwoRules[i].Name), strings.ToLower(telemetryTwoRules[j].Name)) < 0
 	})
@@ -199,6 +205,12 @@ func GetTelemetryTwoRulesFilteredWithPage(w http.ResponseWriter, r *http.Request
 }
 
 func CreateTelemetryTwoRuleHandler(w http.ResponseWriter, r *http.Request) {
+	applicationType, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
 	// r.Body is already drained in the middleware
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
@@ -207,19 +219,14 @@ func CreateTelemetryTwoRuleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	body := xw.Body()
 	telemetry2Rule := xwlogupload.TelemetryTwoRule{}
-	err := json.Unmarshal([]byte(body), &telemetry2Rule)
+	err = json.Unmarshal([]byte(body), &telemetry2Rule)
 	if err != nil {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
 		return
 	}
 
-	applicationType, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
-	if err != nil {
-		xhttp.AdminError(w, err)
-		return
-	}
-
-	err = Create(&telemetry2Rule, applicationType)
+	tenantId := xhttp.GetTenantId(r)
+	err = Create(tenantId, &telemetry2Rule, applicationType)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -232,6 +239,11 @@ func CreateTelemetryTwoRuleHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateTelemetryTwoRulesPackageHandler(w http.ResponseWriter, r *http.Request) {
+	applicationType, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
 	xw, ok := w.(*xwhttp.XResponseWriter)
 	if !ok {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte("Unable to extract Body"))
@@ -244,16 +256,11 @@ func CreateTelemetryTwoRulesPackageHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	applicationType, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
-	if err != nil {
-		xhttp.AdminError(w, err)
-		return
-	}
-
 	entitiesMap := map[string]common.EntityMessage{}
+	tenantId := xhttp.GetTenantId(r)
 	for _, entity := range entities {
 		entity := entity
-		err := Create(&entity, applicationType)
+		err := Create(tenantId, &entity, applicationType)
 		if err == nil {
 			entityMessage := common.EntityMessage{
 				Status:  common.ENTITY_STATUS_SUCCESS,
@@ -292,7 +299,9 @@ func UpdateTelemetryTwoRuleHandler(w http.ResponseWriter, r *http.Request) {
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
 		return
 	}
-	err = Update(&telemetryTwoRule, writeApplication)
+
+	tenantId := xhttp.GetTenantId(r)
+	err = Update(tenantId, &telemetryTwoRule, writeApplication)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -322,10 +331,12 @@ func UpdateTelemetryTwoRulesPackageHandler(w http.ResponseWriter, r *http.Reques
 		xwhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(response))
 		return
 	}
+
 	entitiesMap := map[string]common.EntityMessage{}
+	tenantId := xhttp.GetTenantId(r)
 	for _, entity := range entities {
 		entity := entity
-		err := Update(&entity, writeApplication)
+		err := Update(tenantId, &entity, writeApplication)
 		if err == nil {
 			entityMessage := common.EntityMessage{
 				Status:  common.ENTITY_STATUS_SUCCESS,

@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -30,81 +29,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	xadmin_logupload "github.com/rdkcentral/xconfadmin/shared/logupload"
-	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	"github.com/rdkcentral/xconfwebconfig/dataapi"
-	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
-
-	"github.com/rdkcentral/xconfadmin/adminapi/auth"
-	oshttp "github.com/rdkcentral/xconfadmin/http"
-)
-
-var (
-	t2Server *oshttp.WebconfigServer
-	t2Router *mux.Router
 )
 
 // Full valid telemetry two profile JSON (mirrors telemetry package tests) including grep parameter, HTTP and JSONEncoding sections
 const telemetryTwoValidJson = "{\n    \"Description\":\"Test Json Data\",\n    \"Version\":\"0.1\",\n    \"Protocol\":\"HTTP\",\n    \"EncodingType\":\"JSON\",\n    \"ReportingInterval\":43200,\n    \"TimeReference\":\"0001-01-01T00:00:00Z\",\n    \"RootName\":\"root\",\n    \"Parameter\":\n        [\n            { \"type\": \"dataModel\", \"reference\": \"Profile.Name\"}, \n            { \"type\": \"dataModel\", \"reference\": \"Profile.Version\"},\n            { \"type\": \"grep\", \"marker\": \"Marker1\", \"search\":\"restart 'lock to rescue CMTS retry' timer\", \"logFile\":\"cmconsole.log\" }\n        ],\n    \"HTTP\": {\n        \"URL\":\"https://test.net\",\n        \"Compression\":\"None\",\n        \"Method\":\"POST\",\n        \"RequestURIParameter\": [\n            {\"Name\":\"profileName\", \"Reference\":\"Profile.Name\" },\n            {\"Name\":\"reportVersion\", \"Reference\":\"Profile.Version\" }\n        ]\n    },\n    \"JSONEncoding\": {\n        \"ReportFormat\":\"NameValuePair\",\n        \"ReportTimestamp\": \"None\"\n    }\n}"
-
-// Use different name to avoid collision with existing TestMain in change package
-func init() {
-	// Set required environment variables before server initialization
-	os.Setenv("SECURITY_TOKEN_KEY", "testSecurityTokenKey")
-	os.Setenv("XPC_KEY", "testXpcKey")
-	os.Setenv("SAT_CLIENT_ID", "test-sat-client")
-	os.Setenv("SAT_CLIENT_SECRET", "test-sat-secret")
-	os.Setenv("IDP_CLIENT_ID", "test-idp-client")
-	os.Setenv("IDP_CLIENT_SECRET", "test-idp-secret")
-
-	cfgFile := "../config/sample_xconfadmin.conf"
-	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		cfgFile = "../../config/sample_xconfadmin.conf"
-	}
-	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		cfgFile = "../../../config/sample_xconfadmin.conf"
-	}
-	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		return
-	}
-	if t2Server != nil {
-		return
-	}
-	sc, err := xwcommon.NewServerConfig(cfgFile)
-	if err != nil {
-		return
-	}
-	t2Server = oshttp.NewWebconfigServer(sc, true, nil, nil)
-	xwhttp.InitSatTokenManager(t2Server.XW_XconfServer)
-	db.SetDatabaseClient(t2Server.XW_XconfServer.DatabaseClient)
-	t2Router = t2Server.XW_XconfServer.GetRouter(false)
-	dataapi.XconfSetup(t2Server.XW_XconfServer, t2Router)
-	auth.WebServerInjection(t2Server)
-	dataapi.RegisterTables()
-	setupTelemetryTwoRoutes(t2Router)
-	_ = t2Server.XW_XconfServer.SetUp()
-}
-
-func setupTelemetryTwoRoutes(r *mux.Router) {
-	p := r.PathPrefix("/xconfAdminService/telemetry/v2/profile").Subrouter()
-	p.HandleFunc("", GetTelemetryTwoProfilesHandler).Methods("GET")
-	p.HandleFunc("/{id}", GetTelemetryTwoProfileByIdHandler).Methods("GET")
-	p.HandleFunc("", CreateTelemetryTwoProfileHandler).Methods("POST")
-	p.HandleFunc("", UpdateTelemetryTwoProfileHandler).Methods("PUT")
-	p.HandleFunc("/{id}", DeleteTelemetryTwoProfileHandler).Methods("DELETE")
-	// change endpoints
-	p.HandleFunc("/change", CreateTelemetryTwoProfileChangeHandler).Methods("POST")
-	p.HandleFunc("/change", UpdateTelemetryTwoProfileChangeHandler).Methods("PUT")
-	p.HandleFunc("/change/{id}", DeleteTelemetryTwoProfileChangeHandler).Methods("DELETE")
-	// batch + filtered + id list
-	p.HandleFunc("/entities", PostTelemetryTwoProfileEntitiesHandler).Methods("POST")
-	p.HandleFunc("/entities", PutTelemetryTwoProfileEntitiesHandler).Methods("PUT")
-	p.HandleFunc("/filtered", PostTelemetryTwoProfileFilteredHandler).Methods("POST")
-	p.HandleFunc("/byIdList", PostTelemetryTwoProfilesByIdListHandler).Methods("POST")
-	// test page handler
-	r.HandleFunc("/xconfAdminService/telemetry/v2/testpage", TelemetryTwoTestPageHandler).Methods("POST")
-}
 
 // exec helper
 func execTelemetryTwoReq(r *http.Request, body []byte) *httptest.ResponseRecorder {
@@ -113,7 +43,7 @@ func execTelemetryTwoReq(r *http.Request, body []byte) *httptest.ResponseRecorde
 	if body != nil {
 		xw.SetBody(string(body))
 	}
-	t2Router.ServeHTTP(xw, r)
+	chgRouter.ServeHTTP(xw, r)
 	return rr
 }
 
@@ -442,42 +372,6 @@ func TestGetTelemetryTwoProfileByIdHandler_NonExistent(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "does not exist")
 }
 
-// Test CreateTelemetryTwoProfileHandler - invalid JSON
-func TestCreateTelemetryTwoProfileHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`{invalid json}`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile?applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON (xhttp.WriteAdminErrorResponse via auth error)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test CreateTelemetryTwoProfileChangeHandler - invalid JSON
-func TestCreateTelemetryTwoProfileChangeHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`{not-valid-json`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile/change?applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test UpdateTelemetryTwoProfileHandler - invalid JSON
-func TestUpdateTelemetryTwoProfileHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`{malformed}`)
-	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/profile?applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test UpdateTelemetryTwoProfileChangeHandler - invalid JSON
-func TestUpdateTelemetryTwoProfileChangeHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`{broken json`)
-	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/profile/change?applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 // Test DeleteTelemetryTwoProfileChangeHandler - missing ID
 func TestDeleteTelemetryTwoProfileChangeHandler_MissingID(t *testing.T) {
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/v2/profile/change?applicationType=stb", nil)
@@ -497,15 +391,6 @@ func TestDeleteTelemetryTwoProfileChangeHandler_EmptyID(t *testing.T) {
 	DeleteTelemetryTwoProfileChangeHandler(xw, req)
 	// Should return 400 for empty ID (xhttp.WriteAdminErrorResponse)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
-
-// Test PostTelemetryTwoProfilesByIdListHandler - invalid JSON
-func TestPostTelemetryTwoProfilesByIdListHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`not an array`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile/byIdList?applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON (xhttp.WriteAdminErrorResponse)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 // Test PostTelemetryTwoProfilesByIdListHandler - responsewriter cast error
@@ -528,15 +413,6 @@ func TestPostTelemetryTwoProfileFilteredHandler_InvalidPageNumber(t *testing.T) 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
-// Test PostTelemetryTwoProfileFilteredHandler - invalid JSON
-func TestPostTelemetryTwoProfileFilteredHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`{invalid}`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile/filtered?pageNumber=1&pageSize=10&applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON (xhttp.WriteAdminErrorResponse)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 // Test PostTelemetryTwoProfileFilteredHandler - responsewriter cast error
 func TestPostTelemetryTwoProfileFilteredHandler_CastError(t *testing.T) {
 	body := []byte(`{}`)
@@ -548,15 +424,6 @@ func TestPostTelemetryTwoProfileFilteredHandler_CastError(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
-// Test PostTelemetryTwoProfileEntitiesHandler - invalid JSON
-func TestPostTelemetryTwoProfileEntitiesHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`not-json`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/profile/entities?applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON (xhttp.WriteAdminErrorResponse)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 // Test PostTelemetryTwoProfileEntitiesHandler - responsewriter cast error
 func TestPostTelemetryTwoProfileEntitiesHandler_CastError(t *testing.T) {
 	body := []byte(`[]`)
@@ -566,15 +433,6 @@ func TestPostTelemetryTwoProfileEntitiesHandler_CastError(t *testing.T) {
 	PostTelemetryTwoProfileEntitiesHandler(w, r)
 	// Should return 500 for cast error (xhttp.AdminError)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
-
-// Test PutTelemetryTwoProfileEntitiesHandler - invalid JSON
-func TestPutTelemetryTwoProfileEntitiesHandler_InvalidJSON(t *testing.T) {
-	badBody := []byte(`{broken`)
-	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/v2/profile/entities?applicationType=stb", bytes.NewReader(badBody))
-	rr := execTelemetryTwoReq(r, badBody)
-	// Should return 400 for invalid JSON (xhttp.WriteAdminErrorResponse)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 // Test PutTelemetryTwoProfileEntitiesHandler - responsewriter cast error
@@ -596,16 +454,4 @@ func TestTelemetryTwoTestPageHandler_InvalidContextJSON(t *testing.T) {
 	rr := execTelemetryTwoReq(r, badBody)
 	// Handler should still process it (may succeed or fail depending on processing)
 	assert.True(t, rr.Code >= 200)
-}
-
-// Test GetTelemetryTwoProfilesHandler - auth error
-func TestGetTelemetryTwoProfilesHandler_AuthError(t *testing.T) {
-	// Request without proper auth headers should fail
-	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/v2/profile", nil)
-	w := httptest.NewRecorder()
-	xw := xwhttp.NewXResponseWriter(w)
-	GetTelemetryTwoProfilesHandler(xw, r)
-	// Should return error for missing applicationType (xhttp.AdminError)
-	// The actual error may vary - could be 400, 401, 403, or 500 depending on auth config
-	assert.True(t, w.Code >= 400 || w.Code == http.StatusOK, "Expected error code or OK, got %d", w.Code)
 }

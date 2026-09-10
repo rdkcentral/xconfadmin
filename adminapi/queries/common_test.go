@@ -18,12 +18,165 @@
 package queries
 
 import (
+	"bytes"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
 	"testing"
 	"time"
 
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/stretchr/testify/assert"
 )
+
+const tenantsUrl = "/xconfAdminService/tenants"
+
+var tenantRoutesAdded bool
+
+// ensureTenantRoutes dynamically adds tenant routes if not present in test router
+func ensureTenantRoutes() {
+	if router != nil && !tenantRoutesAdded {
+		tenantsPath := router.PathPrefix(tenantsUrl).Subrouter()
+		tenantsPath.HandleFunc("", GetTenantsHandler).Methods(http.MethodGet)
+		tenantsPath.HandleFunc("", CreateTenantHandler).Methods(http.MethodPost)
+		tenantsPath.HandleFunc("/{id}", DeleteTenantHandler).Methods(http.MethodDelete)
+		tenantRoutesAdded = true
+	}
+}
+
+// createTestTenant issues a POST to create a tenant and returns the response
+func createTestTenant(t *testing.T, id, name string) *http.Response {
+	t.Helper()
+	ensureTenantRoutes()
+	body, _ := json.Marshal(db.Tenant{ID: id, Name: name})
+	req, _ := http.NewRequest(http.MethodPost, tenantsUrl, bytes.NewReader(body))
+	req.Header.Set("Accept", "application/json")
+	return xshared.ExecuteRequest(req, router).Result()
+}
+
+// deleteTestTenant issues a DELETE for the given tenant id and returns the response
+func deleteTestTenant(t *testing.T, id string) *http.Response {
+	t.Helper()
+	req, _ := http.NewRequest(http.MethodDelete, tenantsUrl+"/"+id, nil)
+	return xshared.ExecuteRequest(req, router).Result()
+}
+
+// TestCreateTenantHandler covers successful creation, idempotent re-creation and invalid input
+func TestCreateTenantHandler(t *testing.T) {
+	id := "TESTTENANTCREATE"
+	defer deleteTestTenant(t, id)
+
+	// successful create
+	res := createTestTenant(t, id, "Test Tenant")
+	if res.StatusCode != http.StatusCreated {
+		body, _ := ioutil.ReadAll(res.Body)
+		t.Fatalf("expected 201 got %d body=%s", res.StatusCode, string(body))
+	}
+	var created db.Tenant
+	body, _ := ioutil.ReadAll(res.Body)
+	if err := json.Unmarshal(body, &created); err != nil {
+		t.Fatalf("failed to unmarshal create response: %v body=%s", err, string(body))
+	}
+	if created.ID != id {
+		t.Fatalf("expected tenant id %s got %s", id, created.ID)
+	}
+
+	// re-creating the same tenant is idempotent, returns the existing tenant
+	res = createTestTenant(t, id, "Test Tenant")
+	if res.StatusCode != http.StatusCreated {
+		body, _ := ioutil.ReadAll(res.Body)
+		t.Fatalf("expected 201 on re-create got %d body=%s", res.StatusCode, string(body))
+	}
+
+	// invalid JSON body
+	req, _ := http.NewRequest(http.MethodPost, tenantsUrl, bytes.NewReader([]byte("{bad")))
+	res = xshared.ExecuteRequest(req, router).Result()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 invalid json got %d", res.StatusCode)
+	}
+
+	// invalid tenant ID fails Validate()
+	res = createTestTenant(t, "", "No Id")
+	if res.StatusCode != http.StatusBadRequest {
+		body, _ := ioutil.ReadAll(res.Body)
+		t.Fatalf("expected 400 invalid id got %d body=%s", res.StatusCode, string(body))
+	}
+}
+
+// TestGetTenantsHandler covers listing tenants and verifies a created tenant appears
+func TestGetTenantsHandler(t *testing.T) {
+	id := "TESTTENANTLIST"
+	defer deleteTestTenant(t, id)
+
+	res := createTestTenant(t, id, "List Tenant")
+	if res.StatusCode != http.StatusCreated {
+		body, _ := ioutil.ReadAll(res.Body)
+		t.Fatalf("expected 201 got %d body=%s", res.StatusCode, string(body))
+	}
+
+	req, _ := http.NewRequest(http.MethodGet, tenantsUrl, nil)
+	res = xshared.ExecuteRequest(req, router).Result()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 got %d", res.StatusCode)
+	}
+
+	var tenants []db.Tenant
+	body, _ := ioutil.ReadAll(res.Body)
+	if err := json.Unmarshal(body, &tenants); err != nil {
+		t.Fatalf("failed to unmarshal list response: %v body=%s", err, string(body))
+	}
+	found := false
+	for _, tn := range tenants {
+		if tn.ID == id {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected tenant %s to be present in list, got %+v", id, tenants)
+	}
+}
+
+// TestDeleteTenantHandler covers deleting a tenant and verifies it no longer appears in the list
+func TestDeleteTenantHandler(t *testing.T) {
+	id := "TESTTENANTDELETE"
+
+	res := createTestTenant(t, id, "Delete Tenant")
+	if res.StatusCode != http.StatusCreated {
+		body, _ := ioutil.ReadAll(res.Body)
+		t.Fatalf("expected 201 got %d body=%s", res.StatusCode, string(body))
+	}
+
+	res = deleteTestTenant(t, id)
+	if res.StatusCode != http.StatusNoContent {
+		body, _ := ioutil.ReadAll(res.Body)
+		t.Fatalf("expected 204 got %d body=%s", res.StatusCode, string(body))
+	}
+
+	req, _ := http.NewRequest(http.MethodGet, tenantsUrl, nil)
+	res = xshared.ExecuteRequest(req, router).Result()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 got %d", res.StatusCode)
+	}
+	var tenants []db.Tenant
+	body, _ := ioutil.ReadAll(res.Body)
+	if err := json.Unmarshal(body, &tenants); err != nil {
+		t.Fatalf("failed to unmarshal list response: %v body=%s", err, string(body))
+	}
+	for _, tn := range tenants {
+		if tn.ID == id {
+			t.Fatalf("expected tenant %s to be removed from list, got %+v", id, tenants)
+		}
+	}
+
+	// deleting again should still succeed (delete is not conditioned on existence)
+	res = deleteTestTenant(t, id)
+	if res.StatusCode != http.StatusNoContent {
+		body, _ := ioutil.ReadAll(res.Body)
+		t.Fatalf("expected 204 on repeat delete got %d body=%s", res.StatusCode, string(body))
+	}
+}
 
 func TestGetChangeLog(t *testing.T) {
 	// This tests the basic structure of GetChangeLog
@@ -44,7 +197,7 @@ func TestGetChangeLog(t *testing.T) {
 
 func TestGetChangedKeysMapRaw(t *testing.T) {
 	// Test basic functionality
-	result, err := GetChangedKeysMapRaw()
+	result, err := GetChangedKeysMapRaw(db.GetDefaultTenantId())
 
 	// May return error if DB not set up
 	if err != nil {

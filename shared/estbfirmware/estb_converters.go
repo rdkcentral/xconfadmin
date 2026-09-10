@@ -196,8 +196,8 @@ func ConvertModelRuleBeanToFirmwareRule(bean *coreef.EnvModelBean) *corefw.Firmw
 	return &firmwareRule
 }
 
-func RebootImmediatelyFiltersByName(applicationType string, name string) (*coreef.RebootImmediatelyFilter, error) {
-	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_RULE, 0)
+func RebootImmediatelyFiltersByName(tenantId string, applicationType string, name string) (*coreef.RebootImmediatelyFilter, error) {
+	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_FIRMWARE_RULES, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func RebootImmediatelyFiltersByName(applicationType string, name string) (*coree
 			continue
 		}
 		if frule.Name == name {
-			filter := ConvertFirmwareRuleToRebootFilter(frule)
+			filter := ConvertFirmwareRuleToRebootFilter(tenantId, frule)
 			return filter, nil
 		}
 	}
@@ -219,13 +219,13 @@ func RebootImmediatelyFiltersByName(applicationType string, name string) (*coree
 	return nil, nil
 }
 
-func ConvertFirmwareRuleToRebootFilter(firmwareRule *corefw.FirmwareRule) *coreef.RebootImmediatelyFilter {
+func ConvertFirmwareRuleToRebootFilter(tenantId string, firmwareRule *corefw.FirmwareRule) *coreef.RebootImmediatelyFilter {
 	filter := &coreef.RebootImmediatelyFilter{
 		Id:   firmwareRule.ID,
 		Name: firmwareRule.Name,
 	}
 
-	convertConditionsForRebootFilter(firmwareRule, filter)
+	convertConditionsForRebootFilter(tenantId, firmwareRule, filter)
 
 	if filter.Environments == nil {
 		filter.Environments = make([]string, 0)
@@ -238,7 +238,7 @@ func ConvertFirmwareRuleToRebootFilter(firmwareRule *corefw.FirmwareRule) *coree
 	return filter
 }
 
-func convertConditionsForRebootFilter(firmwareRule *corefw.FirmwareRule, rebootFilter *coreef.RebootImmediatelyFilter) {
+func convertConditionsForRebootFilter(tenantId string, firmwareRule *corefw.FirmwareRule, rebootFilter *coreef.RebootImmediatelyFilter) {
 	conditions := rf.ToConditions(&firmwareRule.Rule)
 	for _, condition := range conditions {
 		isLegacyIpFreeArg := coreef.IsLegacyIpFreeArg(condition.FreeArg)
@@ -246,7 +246,7 @@ func convertConditionsForRebootFilter(firmwareRule *corefw.FirmwareRule, rebootF
 			if rebootFilter.IpAddressGroup == nil {
 				rebootFilter.IpAddressGroup = make([]*shared.IpAddressGroup, 0)
 			}
-			ipAddressGroup := coreef.GetIpAddressGroup(condition)
+			ipAddressGroup := coreef.GetIpAddressGroup(tenantId, condition)
 			rebootFilter.IpAddressGroup = append(rebootFilter.IpAddressGroup, ipAddressGroup)
 		} else if isLegacyIpFreeArg || ru.RuleFactoryMAC.Equals(condition.FreeArg) {
 			if condition.FixedArg.IsCollectionValue() {

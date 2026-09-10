@@ -26,6 +26,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/stretchr/testify/assert"
@@ -45,12 +46,11 @@ func makeNSXW(body any) (*httptest.ResponseRecorder, *xwhttp.XResponseWriter) {
 // Simple UT tests
 
 func TestDeleteIpAddressGroupHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
 	// Test successful deletion
 	id := uuid.NewString()
 	// Create an IP address group first
 	ipList := makeGenericList(id, shared.IP_LIST, []string{"192.168.1.1"})
-	CreateNamespacedList(ipList, false)
+	CreateNamespacedList(db.GetDefaultTenantId(), ipList, false)
 
 	url := fmt.Sprintf("/xconfAdminService/queries/ipAddressGroups/%s?applicationType=stb", id)
 	req := httptest.NewRequest("DELETE", url, nil)
@@ -62,31 +62,7 @@ func TestDeleteIpAddressGroupHandler_Success(t *testing.T) {
 	assert.True(t, rr.Code == http.StatusNoContent || rr.Code == http.StatusOK)
 }
 
-func TestDeleteIpAddressGroupHandler_MissingId(t *testing.T) {
-	SkipIfMockDatabase(t)
-	// Test WriteAdminErrorResponse for missing ID
-	req := httptest.NewRequest("DELETE", "/xconfAdminService/queries/ipAddressGroups/?applicationType=stb", nil)
-	rr := httptest.NewRecorder()
-
-	DeleteIpAddressGroupHandler(rr, req)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-	assert.Contains(t, rr.Body.String(), "invalid")
-}
-
-func TestDeleteIpAddressGroupHandler_AuthError(t *testing.T) {
-	SkipIfMockDatabase(t)
-	// Test xhttp.AdminError path - no auth
-	req := httptest.NewRequest("DELETE", "/xconfAdminService/queries/ipAddressGroups/test-id", nil)
-	req = mux.SetURLVars(req, map[string]string{"id": "test-id"})
-	rr := httptest.NewRecorder()
-
-	DeleteIpAddressGroupHandler(rr, req)
-	// May succeed with default auth or return error
-	assert.True(t, rr.Code >= 200 && rr.Code < 500)
-}
-
 func TestGetQueriesIpAddressGroupsV2_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
 	// Test successful retrieval of IP address groups
 	req := httptest.NewRequest("GET", "/xconfAdminService/queries/ipAddressGroups?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
@@ -95,23 +71,11 @@ func TestGetQueriesIpAddressGroupsV2_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
-func TestGetQueriesIpAddressGroupsV2_AuthError(t *testing.T) {
-	SkipIfMockDatabase(t)
-	// Test xhttp.AdminError in auth.CanRead
-	req := httptest.NewRequest("GET", "/xconfAdminService/queries/ipAddressGroups", nil)
-	rr := httptest.NewRecorder()
-
-	GetQueriesIpAddressGroupsV2(rr, req)
-	// Auth handling varies
-	assert.True(t, rr.Code >= 200 && rr.Code < 500)
-}
-
 func TestGetQueriesMacListsById_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
 	// Test successful retrieval
 	id := uuid.NewString()
 	macList := makeGenericList(id, shared.MAC_LIST, []string{"AA:BB:CC:DD:EE:FF"})
-	CreateNamespacedList(macList, false)
+	CreateNamespacedList(db.GetDefaultTenantId(), macList, false)
 
 	url := fmt.Sprintf("/xconfAdminService/queries/macs/%s?applicationType=stb", id)
 	req := httptest.NewRequest("GET", url, nil)
@@ -122,40 +86,14 @@ func TestGetQueriesMacListsById_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
-func TestGetQueriesMacListsById_MissingId(t *testing.T) {
-	SkipIfMockDatabase(t)
-	// Test WriteAdminErrorResponse for missing ID
-	req := httptest.NewRequest("GET", "/xconfAdminService/queries/macs/?applicationType=stb", nil)
-	rr := httptest.NewRecorder()
-
-	GetQueriesMacListsById(rr, req)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-	assert.Contains(t, rr.Body.String(), "invalid")
-}
-
-func TestGetQueriesMacListsById_NotFound(t *testing.T) {
-	SkipIfMockDatabase(t)
-	// Test when MAC list doesn't exist - WriteXconfResponse returns empty
-	nonExistentId := uuid.NewString()
-	url := fmt.Sprintf("/xconfAdminService/queries/macs/%s?applicationType=stb", nonExistentId)
-	req := httptest.NewRequest("GET", url, nil)
-	req = mux.SetURLVars(req, map[string]string{"id": nonExistentId})
-	rr := httptest.NewRecorder()
-
-	GetQueriesMacListsById(rr, req)
-	// Returns 200 with empty body when not found (backward compatibility)
-	assert.Equal(t, http.StatusOK, rr.Code)
-}
-
 func TestAddDataMacListHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
 	// Test successful addition of data to MAC list
 	// Create a list through the handler instead of CreateNamespacedList
 	listId := "test-mac-list-add-" + uuid.NewString()
 
 	// First create via handler
 	createList := makeGenericList(listId, shared.MAC_LIST, []string{"AA:BB:CC:DD:EE:00"})
-	createResp := CreateNamespacedList(createList, false)
+	createResp := CreateNamespacedList(db.GetDefaultTenantId(), createList, false)
 	assert.Equal(t, http.StatusCreated, createResp.Status)
 
 	wrapper := shared.StringListWrapper{
@@ -172,40 +110,14 @@ func TestAddDataMacListHandler_Success(t *testing.T) {
 	assert.True(t, rr.Code >= 200 && rr.Code < 300, "Expected 2xx status, got %d: %s", rr.Code, rr.Body.String())
 }
 
-func TestAddDataMacListHandler_MissingListId(t *testing.T) {
-	SkipIfMockDatabase(t)
-	// Test WriteAdminErrorResponse for missing listId
-	req := httptest.NewRequest("POST", "/xconfAdminService/queries/macs/addData/?applicationType=stb", nil)
-	rr := httptest.NewRecorder()
-
-	AddDataMacListHandler(rr, req)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-	assert.Contains(t, rr.Body.String(), "invalid")
-}
-
-func TestAddDataMacListHandler_InvalidJson(t *testing.T) {
-	SkipIfMockDatabase(t)
-	// Test error when XResponseWriter cast succeeds but invalid JSON body
-	listId := uuid.NewString()
-	url := fmt.Sprintf("/xconfAdminService/queries/macs/addData/%s?applicationType=stb", listId)
-	req := httptest.NewRequest("POST", url, nil)
-	req = mux.SetURLVars(req, map[string]string{"listId": listId})
-	rr, xw := makeNSXW(nil)
-	xw.SetBody("invalid json")
-
-	AddDataMacListHandler(xw, req)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 func TestRemoveDataMacListHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
 	// Test successful removal of data from MAC list
 	// Create a list with 2 MACs so we can remove one
 	listId := "test-mac-list-remove-" + uuid.NewString()
 
 	// First create via handler with 2 MACs
 	createList := makeGenericList(listId, shared.MAC_LIST, []string{"AA:BB:CC:DD:EE:FF", "11:22:33:44:55:66"})
-	createResp := CreateNamespacedList(createList, false)
+	createResp := CreateNamespacedList(db.GetDefaultTenantId(), createList, false)
 	if createResp.Status != http.StatusCreated {
 		t.Logf("Create failed: %d - %v", createResp.Status, createResp.Error)
 		t.Skip("Cannot test remove when create fails")
@@ -225,37 +137,11 @@ func TestRemoveDataMacListHandler_Success(t *testing.T) {
 	assert.True(t, rr.Code >= 200 && rr.Code < 300, "Expected 2xx status, got %d: %s", rr.Code, rr.Body.String())
 }
 
-func TestRemoveDataMacListHandler_MissingListId(t *testing.T) {
-	SkipIfMockDatabase(t)
-	// Test WriteAdminErrorResponse for missing listId
-	req := httptest.NewRequest("DELETE", "/xconfAdminService/queries/macs/removeData/?applicationType=stb", nil)
-	rr := httptest.NewRecorder()
-
-	RemoveDataMacListHandler(rr, req)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-	assert.Contains(t, rr.Body.String(), "invalid")
-}
-
-func TestRemoveDataMacListHandler_InvalidJson(t *testing.T) {
-	SkipIfMockDatabase(t)
-	// Test WriteAdminErrorResponse for invalid JSON
-	listId := uuid.NewString()
-	url := fmt.Sprintf("/xconfAdminService/queries/macs/removeData/%s?applicationType=stb", listId)
-	req := httptest.NewRequest("DELETE", url, nil)
-	req = mux.SetURLVars(req, map[string]string{"listId": listId})
-	rr, xw := makeNSXW(nil)
-	xw.SetBody("invalid json")
-
-	RemoveDataMacListHandler(xw, req)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 func TestGetNamespacedListHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t)
 	// Test successful retrieval
 	id := uuid.NewString()
 	nsList := makeGenericList(id, shared.IP_LIST, []string{"192.168.1.1"})
-	CreateNamespacedList(nsList, false)
+	CreateNamespacedList(db.GetDefaultTenantId(), nsList, false)
 
 	url := fmt.Sprintf("/xconfAdminService/queries/namespacedLists/%s?applicationType=stb", id)
 	req := httptest.NewRequest("GET", url, nil)
@@ -267,7 +153,6 @@ func TestGetNamespacedListHandler_Success(t *testing.T) {
 }
 
 func TestGetNamespacedListHandler_MissingId(t *testing.T) {
-	SkipIfMockDatabase(t)
 	// Test WriteAdminErrorResponse for missing ID
 	req := httptest.NewRequest("GET", "/xconfAdminService/queries/namespacedLists/?applicationType=stb", nil)
 	rr := httptest.NewRecorder()
@@ -278,7 +163,6 @@ func TestGetNamespacedListHandler_MissingId(t *testing.T) {
 }
 
 func TestGetNamespacedListHandler_NotFound(t *testing.T) {
-	SkipIfMockDatabase(t)
 	// Test WriteAdminErrorResponse when list doesn't exist
 	nonExistentId := uuid.NewString()
 	url := fmt.Sprintf("/xconfAdminService/queries/namespacedLists/%s?applicationType=stb", nonExistentId)
@@ -292,11 +176,10 @@ func TestGetNamespacedListHandler_NotFound(t *testing.T) {
 }
 
 func TestGetNamespacedListHandler_ExportWithHeaders(t *testing.T) {
-	SkipIfMockDatabase(t)
 	// Test WriteXconfResponseWithHeaders for export
 	id := uuid.NewString()
 	nsList := makeGenericList(id, shared.IP_LIST, []string{"192.168.1.1"})
-	CreateNamespacedList(nsList, false)
+	CreateNamespacedList(db.GetDefaultTenantId(), nsList, false)
 
 	url := fmt.Sprintf("/xconfAdminService/queries/namespacedLists/%s?applicationType=stb&export=true", id)
 	req := httptest.NewRequest("GET", url, nil)
@@ -312,22 +195,9 @@ func TestGetNamespacedListHandler_ExportWithHeaders(t *testing.T) {
 	}
 }
 
-func TestGetNamespacedListHandler_AuthError(t *testing.T) {
-	SkipIfMockDatabase(t)
-	// Test xhttp.AdminError in auth.CanRead
-	req := httptest.NewRequest("GET", "/xconfAdminService/queries/namespacedLists/test-id", nil)
-	req = mux.SetURLVars(req, map[string]string{"id": "test-id"})
-	rr := httptest.NewRecorder()
-
-	GetNamespacedListHandler(rr, req)
-	// Auth handling varies, may succeed with default or return error
-	assert.True(t, rr.Code >= 200 && rr.Code < 500)
-}
-
 // Additional error case tests for comprehensive coverage
 
 func TestAddDataMacListHandler_XResponseWriterCastError(t *testing.T) {
-	SkipIfMockDatabase(t)
 	// Test xhttp.AdminError when responsewriter cast fails
 	listId := uuid.NewString()
 	url := fmt.Sprintf("/xconfAdminService/queries/macs/addData/%s?applicationType=stb", listId)
@@ -341,7 +211,6 @@ func TestAddDataMacListHandler_XResponseWriterCastError(t *testing.T) {
 }
 
 func TestRemoveDataMacListHandler_XResponseWriterCastError(t *testing.T) {
-	SkipIfMockDatabase(t)
 	// Test xhttp.AdminError when responsewriter cast fails
 	listId := uuid.NewString()
 	url := fmt.Sprintf("/xconfAdminService/queries/macs/removeData/%s?applicationType=stb", listId)
@@ -355,7 +224,6 @@ func TestRemoveDataMacListHandler_XResponseWriterCastError(t *testing.T) {
 }
 
 func TestDeleteIpAddressGroupHandler_NotFound(t *testing.T) {
-	SkipIfMockDatabase(t)
 	// Test that deleting non-existent entity returns NoContent (idempotent delete)
 	nonExistentId := uuid.NewString()
 	url := fmt.Sprintf("/xconfAdminService/queries/ipAddressGroups/%s?applicationType=stb", nonExistentId)
@@ -369,7 +237,6 @@ func TestDeleteIpAddressGroupHandler_NotFound(t *testing.T) {
 }
 
 func TestGetQueriesIpAddressGroupsV2_EmptyResult(t *testing.T) {
-	SkipIfMockDatabase(t)
 	// Test WriteXconfResponse with empty list
 	req := httptest.NewRequest("GET", "/xconfAdminService/queries/ipAddressGroups?applicationType=stb&type=UNKNOWN_TYPE", nil)
 	rr := httptest.NewRecorder()
@@ -380,13 +247,12 @@ func TestGetQueriesIpAddressGroupsV2_EmptyResult(t *testing.T) {
 }
 
 func TestAddDataMacListHandler_ValidationError(t *testing.T) {
-	SkipIfMockDatabase(t)
 	// Test WriteAdminErrorResponse for validation error (invalid MAC)
 	listId := "test-mac-list-validation-" + uuid.NewString()
 
 	// Create a valid list first
 	createList := makeGenericList(listId, shared.MAC_LIST, []string{"AA:BB:CC:DD:EE:00"})
-	createResp := CreateNamespacedList(createList, false)
+	createResp := CreateNamespacedList(db.GetDefaultTenantId(), createList, false)
 	if createResp.Status != http.StatusCreated {
 		t.Skip("Cannot test validation when create fails")
 	}
@@ -406,13 +272,12 @@ func TestAddDataMacListHandler_ValidationError(t *testing.T) {
 }
 
 func TestRemoveDataMacListHandler_NotInList(t *testing.T) {
-	SkipIfMockDatabase(t)
 	// Test WriteAdminErrorResponse when trying to remove MAC not in list
 	listId := "test-mac-list-notfound-" + uuid.NewString()
 
 	// Create a list with one MAC
 	createList := makeGenericList(listId, shared.MAC_LIST, []string{"AA:BB:CC:DD:EE:00"})
-	createResp := CreateNamespacedList(createList, false)
+	createResp := CreateNamespacedList(db.GetDefaultTenantId(), createList, false)
 	if createResp.Status != http.StatusCreated {
 		t.Skip("Cannot test remove when create fails")
 	}

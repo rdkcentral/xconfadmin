@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"testing"
 
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
@@ -30,15 +31,14 @@ import (
 
 // TestGetVodSettingExportHandler_Success tests successful export of VOD settings
 func TestGetVodSettingExportHandler_Success(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -55,16 +55,15 @@ func TestGetVodSettingExportHandler_Success(t *testing.T) {
 
 // TestGetVodSettingExportHandler_EmptyResult tests export with no data
 func TestGetVodSettingExportHandler_EmptyResult(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -81,9 +80,8 @@ func TestGetVodSettingExportHandler_EmptyResult(t *testing.T) {
 
 // TestGetVodSettingExportHandler_WithDcmFormulas tests export with DCM formulas
 func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create DCM formulas
 	formula1 := &logupload.DCMGenericRule{
@@ -92,7 +90,7 @@ func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
 		Description:     "Test Formula 1",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formula1.ID, formula1)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formula1.ID, formula1)
 
 	formula2 := &logupload.DCMGenericRule{
 		ID:              "formula-2",
@@ -100,7 +98,7 @@ func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
 		Description:     "Test Formula 2",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formula2.ID, formula2)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formula2.ID, formula2)
 
 	// Create corresponding VOD settings
 	vod1 := &logupload.VodSettings{
@@ -109,7 +107,7 @@ func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
 		LocationsURL:    "http://vod1.com",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vod1.ID, vod1)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_VOD_SETTINGS, vod1.ID, vod1)
 
 	vod2 := &logupload.VodSettings{
 		ID:              formula2.ID,
@@ -117,14 +115,14 @@ func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
 		LocationsURL:    "http://vod2.com",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vod2.ID, vod2)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_VOD_SETTINGS, vod2.ID, vod2)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -136,9 +134,8 @@ func TestGetVodSettingExportHandler_WithDcmFormulas(t *testing.T) {
 
 // TestGetVodSettingExportHandler_ApplicationTypeFilter tests that export respects application type
 func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create DCM formulas with different application types
 	formulaSTB := &logupload.DCMGenericRule{
@@ -146,14 +143,14 @@ func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 		Name:            "Formula STB",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formulaSTB.ID, formulaSTB)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formulaSTB.ID, formulaSTB)
 
 	formulaXHome := &logupload.DCMGenericRule{
 		ID:              "formula-xhome",
 		Name:            "Formula XHome",
 		ApplicationType: "xhome",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formulaXHome.ID, formulaXHome)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formulaXHome.ID, formulaXHome)
 
 	// Create corresponding VOD settings
 	vodSTB := &logupload.VodSettings{
@@ -162,7 +159,7 @@ func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 		LocationsURL:    "http://vodstb.com",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vodSTB.ID, vodSTB)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_VOD_SETTINGS, vodSTB.ID, vodSTB)
 
 	vodXHome := &logupload.VodSettings{
 		ID:              formulaXHome.ID,
@@ -170,7 +167,7 @@ func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 		LocationsURL:    "http://vodxhome.com",
 		ApplicationType: "xhome",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vodXHome.ID, vodXHome)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_VOD_SETTINGS, vodXHome.ID, vodXHome)
 
 	// Request export for stb only
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
@@ -178,7 +175,7 @@ func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -191,9 +188,8 @@ func TestGetVodSettingExportHandler_ApplicationTypeFilter(t *testing.T) {
 
 // TestGetVodSettingExportHandler_MissingVodSettings tests formulas without corresponding VOD settings
 func TestGetVodSettingExportHandler_MissingVodSettings(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create DCM formula without corresponding VOD settings
 	formula := &logupload.DCMGenericRule{
@@ -201,14 +197,14 @@ func TestGetVodSettingExportHandler_MissingVodSettings(t *testing.T) {
 		Name:            "Formula Without VOD",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formula.ID, formula)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formula.ID, formula)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -222,15 +218,14 @@ func TestGetVodSettingExportHandler_MissingVodSettings(t *testing.T) {
 
 // TestGetVodSettingExportHandler_VerifyHeaders tests that export includes correct headers
 func TestGetVodSettingExportHandler_VerifyHeaders(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -246,15 +241,14 @@ func TestGetVodSettingExportHandler_VerifyHeaders(t *testing.T) {
 
 // TestGetVodSettingExportHandler_MissingAuthCookie tests behavior when auth cookie is missing
 func TestGetVodSettingExportHandler_MissingAuthCookie(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
 	req.Header.Set("Accept", "application/json")
 	// Not adding applicationType cookie - handler will use default/empty value
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	// Handler still returns 200 but with empty application type filter
 	assert.Equal(t, http.StatusOK, res.StatusCode)
@@ -267,9 +261,8 @@ func TestGetVodSettingExportHandler_MissingAuthCookie(t *testing.T) {
 
 // TestGetVodSettingExportHandler_DifferentApplicationTypes tests export for different application types
 func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create formulas for different application types
 	apps := []string{"stb", "xhome", "rdkcloud"}
@@ -279,7 +272,7 @@ func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
 			Name:            "Formula " + app,
 			ApplicationType: app,
 		}
-		db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formula.ID, formula)
+		db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formula.ID, formula)
 
 		if i < 2 { // Create VOD settings for first 2 only
 			vod := &logupload.VodSettings{
@@ -288,7 +281,7 @@ func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
 				LocationsURL:    "http://vod" + app + ".com",
 				ApplicationType: app,
 			}
-			db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vod.ID, vod)
+			db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_VOD_SETTINGS, vod.ID, vod)
 		}
 	}
 
@@ -298,7 +291,7 @@ func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -313,7 +306,7 @@ func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
 	req2.Header.Set("Accept", "application/json")
 	req2.AddCookie(&http.Cookie{Name: "applicationType", Value: "xhome"})
 
-	res2 := ExecuteRequest(req2, router).Result()
+	res2 := xshared.ExecuteRequest(req2, router).Result()
 	defer res2.Body.Close()
 	assert.Equal(t, http.StatusOK, res2.StatusCode)
 
@@ -325,9 +318,8 @@ func TestGetVodSettingExportHandler_DifferentApplicationTypes(t *testing.T) {
 
 // TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings tests mixed scenario
 func TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create 3 formulas but only 2 VOD settings
 	for i := 1; i <= 3; i++ {
@@ -336,7 +328,7 @@ func TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings(t *testin
 			Name:            "Formula " + string(rune('0'+i)),
 			ApplicationType: "stb",
 		}
-		db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formula.ID, formula)
+		db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formula.ID, formula)
 
 		// Only create VOD settings for formulas 1 and 2
 		if i <= 2 {
@@ -346,7 +338,7 @@ func TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings(t *testin
 				LocationsURL:    "http://vod" + string(rune('0'+i)) + ".com",
 				ApplicationType: "stb",
 			}
-			db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vod.ID, vod)
+			db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_VOD_SETTINGS, vod.ID, vod)
 		}
 	}
 
@@ -355,7 +347,7 @@ func TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings(t *testin
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -376,9 +368,8 @@ func TestGetVodSettingExportHandler_MultipleFormulasPartialVodSettings(t *testin
 
 // TestGetVodSettingExportHandler_ValidateResponseStructure tests the structure of the response
 func TestGetVodSettingExportHandler_ValidateResponseStructure(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create a complete VOD setting
 	formula := &logupload.DCMGenericRule{
@@ -386,7 +377,7 @@ func TestGetVodSettingExportHandler_ValidateResponseStructure(t *testing.T) {
 		Name:            "Complete Formula",
 		ApplicationType: "stb",
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_DCM_RULE, formula.ID, formula)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formula.ID, formula)
 
 	vod := &logupload.VodSettings{
 		ID:              formula.ID,
@@ -396,14 +387,14 @@ func TestGetVodSettingExportHandler_ValidateResponseStructure(t *testing.T) {
 		IPNames:         []string{"ip1", "ip2"},
 		IPList:          []string{"192.168.1.1", "192.168.1.2"},
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_VOD_SETTINGS, vod.ID, vod)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_VOD_SETTINGS, vod.ID, vod)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/vodsettings/export", nil)
 	assert.NilError(t, err)
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 

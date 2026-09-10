@@ -28,7 +28,7 @@ import (
 	core "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfadmin/util"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	shared "github.com/rdkcentral/xconfwebconfig/shared"
 	sharedef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 
@@ -64,7 +64,7 @@ const (
 	 * DNS and thus requires an IP address.
 	 * <p>
 	 * Warning!!! Due to a bug in STB code, we have RNG150 boxes that send this parameter but they are NOT
-	 * able to do HTTP firmware downloads. To handle this situation we are implementing a hack where
+	 * able to do HTTP firmware downloadb. To handle this situation we are implementing a hack where
 	 * RNG150 boxes will always be told to do TFTP. Once we are confident that all RNG150s have been updated
 	 * to versions that actually do support HTTP, we will turn off the hack.
 	 */
@@ -116,7 +116,7 @@ func (obj *FirmwareConfig) Clone() (*FirmwareConfig, error) {
 	return cloneObj.(*FirmwareConfig), nil
 }
 
-func (obj *FirmwareConfig) Validate() error {
+func (obj *FirmwareConfig) Validate(tenantId string) error {
 	if obj == nil {
 		return errors.New("Firmware config is not present")
 	}
@@ -134,7 +134,7 @@ func (obj *FirmwareConfig) Validate() error {
 	}
 
 	for _, modelId := range obj.SupportedModelIds {
-		if !xcommon.IsExistModel(modelId) {
+		if !xcommon.IsExistModel(tenantId, modelId) {
 			return fmt.Errorf("Model: %s does not exist", modelId)
 		}
 	}
@@ -166,8 +166,8 @@ func (obj *FirmwareConfig) Validate() error {
 	return nil
 }
 
-func (obj *FirmwareConfig) ValidateName() error {
-	list, err := GetFirmwareConfigAsListDB()
+func (obj *FirmwareConfig) ValidateName(tenantId string) error {
+	list, err := GetFirmwareConfigAsListDB(tenantId)
 	if err != nil {
 		return err
 	}
@@ -612,11 +612,11 @@ func (ff *FirmwareConfigFacade) PutAll(nmap map[string]interface{}) {
 	}
 }
 
-func GetFirmwareConfigOneDB(id string) (*FirmwareConfig, error) {
+func GetFirmwareConfigOneDB(tenantId string, id string) (*FirmwareConfig, error) {
 	if len(id) == 0 {
 		return nil, errors.New("id is empty")
 	}
-	inst, err := ds.GetCachedSimpleDao().GetOne(ds.TABLE_FIRMWARE_CONFIG, id)
+	inst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_FIRMWARE_CONFIGS, id)
 	if err != nil {
 		return nil, err
 	}
@@ -630,21 +630,21 @@ func GetFirmwareConfigOneDB(id string) (*FirmwareConfig, error) {
 	return fc, nil
 }
 
-func CreateFirmwareConfigOneDB(fc *FirmwareConfig) error {
+func CreateFirmwareConfigOneDB(tenantId string, fc *FirmwareConfig) error {
 	// create record in DB
 	if util.IsBlank(fc.ID) {
 		fc.ID = uuid.New().String()
 	}
 	fc.Updated = util.GetTimestamp()
-	return ds.GetCachedSimpleDao().SetOne(ds.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	return db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 }
 
-func DeleteOneFirmwareConfig(id string) error {
-	return ds.GetCachedSimpleDao().DeleteOne(ds.TABLE_FIRMWARE_CONFIG, id)
+func DeleteOneFirmwareConfig(tenantId string, id string) error {
+	return db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_FIRMWARE_CONFIGS, id)
 }
 
-func GetFirmwareConfigAsListDB() ([]*FirmwareConfig, error) {
-	rulelst, err := ds.GetCachedSimpleDao().GetAllAsList(ds.TABLE_FIRMWARE_CONFIG, 0)
+func GetFirmwareConfigAsListDB(tenantId string) ([]*FirmwareConfig, error) {
+	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_FIRMWARE_CONFIGS, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -662,8 +662,8 @@ func GetFirmwareConfigAsListDB() ([]*FirmwareConfig, error) {
 	return lst, nil
 }
 
-func GetFirmwareConfigAsMapDB(applicationType string) (configMap map[string]sharedef.FirmwareConfig, err error) {
-	rulelst, ok := ds.GetCachedSimpleDao().GetAllAsList(ds.TABLE_FIRMWARE_CONFIG, 0)
+func GetFirmwareConfigAsMapDB(tenantId string, applicationType string) (configMap map[string]sharedef.FirmwareConfig, err error) {
+	rulelst, ok := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_FIRMWARE_CONFIGS, 0)
 	if ok != nil {
 		return nil, err
 	}
@@ -683,8 +683,8 @@ func GetFirmwareConfigAsMapDB(applicationType string) (configMap map[string]shar
 	return configMap, nil
 }
 
-func GetFirmwareVersion(id string) string {
-	fc, err := GetFirmwareConfigOneDB(id)
+func GetFirmwareVersion(tenantId string, id string) string {
+	fc, err := GetFirmwareConfigOneDB(tenantId, id)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareVersion %s: %v", id, err))
 		return ""

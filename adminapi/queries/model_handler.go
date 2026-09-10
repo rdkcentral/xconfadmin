@@ -57,10 +57,11 @@ func PostModelEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	tenantId := xhttp.GetTenantId(r)
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
-		respEntity := CreateModel(&entity)
+		respEntity := CreateModel(tenantId, &entity)
 		if respEntity.Status != http.StatusCreated {
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_FAILURE,
@@ -98,10 +99,11 @@ func PutModelEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, response)
 		return
 	}
+	tenantId := xhttp.GetTenantId(r)
 	entitiesMap := map[string]xhttp.EntityMessage{}
 	for _, entity := range entities {
 		entity := entity
-		respEntity := UpdateModel(&entity)
+		respEntity := UpdateModel(tenantId, &entity)
 		if respEntity.Status == http.StatusOK {
 			entitiesMap[entity.ID] = xhttp.EntityMessage{
 				Status:  xcommon.ENTITY_STATUS_SUCCESS,
@@ -123,7 +125,12 @@ func PutModelEntitiesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ObsoleteGetModelPageHandler(w http.ResponseWriter, r *http.Request) {
-	entries := shared.GetAllModelList()
+	if _, err := auth.CanRead(r, auth.COMMON_ENTITY); err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+	tenantId := xhttp.GetTenantId(r)
+	entries := shared.GetAllModelList(tenantId)
 	sort.Slice(entries, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(entries[i].ID), strings.ToLower(entries[j].ID)) < 0
 	})
@@ -176,7 +183,8 @@ func PostModelFilteredHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get all entries and sort them
-	entries := shared.GetAllModelList()
+	tenantId := xhttp.GetTenantId(r)
+	entries := shared.GetAllModelList(tenantId)
 	sort.Slice(entries, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(entries[i].ID), strings.ToLower(entries[j].ID)) < 0
 	})
@@ -220,7 +228,8 @@ func GetModelByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id = strings.ToUpper(id)
-	model := shared.GetOneModel(id)
+	tenantId := xhttp.GetTenantId(r)
+	model := shared.GetOneModel(tenantId, id)
 	if model == nil {
 		errorStr := fmt.Sprintf("%v not found", id)
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, errorStr)
@@ -256,7 +265,8 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	models := shared.GetAllModelList()
+	tenantId := xhttp.GetTenantId(r)
+	models := shared.GetAllModelList(tenantId)
 	sort.Slice(models, func(i, j int) bool {
 		return strings.Compare(strings.ToLower(models[i].ID), strings.ToLower(models[j].ID)) < 0
 	})

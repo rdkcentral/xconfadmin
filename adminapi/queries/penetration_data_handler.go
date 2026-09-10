@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	ccommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	util "github.com/rdkcentral/xconfadmin/util"
-
 	"github.com/rdkcentral/xconfwebconfig/db"
-
-	"github.com/gorilla/mux"
 )
 
 func GetPenetrationDataByMacHandler(w http.ResponseWriter, r *http.Request) {
@@ -28,7 +26,7 @@ func GetPenetrationDataByMacHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pr, err := db.GetDatabaseClient().GetPenetrationMetrics(normalizedMac)
+	pr, err := db.GetDatabaseClient().GetPenetrationData(normalizedMac)
 	if err != nil {
 		errorStr := fmt.Sprintf("%v not found", normalizedMac)
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, errorStr)

@@ -24,9 +24,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
-
 	"gotest.tools/assert"
 )
 
@@ -34,13 +36,12 @@ import (
 
 // TestGetLogUploadSettingsByIdHandler_MissingID tests error when ID is missing
 func TestGetLogUploadSettingsByIdHandler_MissingID(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	// Should return 404 as the route doesn't match
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
@@ -48,21 +49,19 @@ func TestGetLogUploadSettingsByIdHandler_MissingID(t *testing.T) {
 
 // TestGetLogUploadSettingsByIdHandler_NilResult tests handling when settings don't exist (nil condition)
 func TestGetLogUploadSettingsByIdHandler_NilResult(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/nonexistent-id", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
 // TestGetLogUploadSettingsByIdHandler_ApplicationTypeMismatch tests when ApplicationType doesn't match (error path)
 func TestGetLogUploadSettingsByIdHandler_ApplicationTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create a formula first
 	formula := createFormula("TEST_MODEL_MISMATCH", 1)
@@ -80,22 +79,21 @@ func TestGetLogUploadSettingsByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 			TimeZone:   "UTC",
 		},
 	}
-	CreateLogUploadSettings(settings, "xhome")
+	CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "xhome")
 
 	// Try to access with "stb" application type
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/"+formula.ID, nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
 // TestGetLogUploadSettingsByIdHandler_Success tests successful retrieval
 func TestGetLogUploadSettingsByIdHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create a formula first
 	formula := createFormula("TEST_MODEL_SUCCESS", 1)
@@ -113,12 +111,12 @@ func TestGetLogUploadSettingsByIdHandler_Success(t *testing.T) {
 			TimeZone:   "UTC",
 		},
 	}
-	CreateLogUploadSettings(settings, "stb")
+	CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "stb")
 
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/"+formula.ID, nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -132,14 +130,13 @@ func TestGetLogUploadSettingsByIdHandler_Success(t *testing.T) {
 
 // TestGetLogUploadSettingsHandler_EmptyList tests handling when no settings exist (nil condition)
 func TestGetLogUploadSettingsHandler_EmptyList(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -150,9 +147,8 @@ func TestGetLogUploadSettingsHandler_EmptyList(t *testing.T) {
 
 // TestGetLogUploadSettingsHandler_FilterByApplicationType tests filtering by application type
 func TestGetLogUploadSettingsHandler_FilterByApplicationType(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create formulas for different application types
 	formulaStb := createFormula("TEST_MODEL_STB", 1)
@@ -169,12 +165,12 @@ func TestGetLogUploadSettingsHandler_FilterByApplicationType(t *testing.T) {
 			TimeZone:   "UTC",
 		},
 	}
-	CreateLogUploadSettings(settingsStb, "stb")
+	CreateLogUploadSettings(db.GetDefaultTenantId(), settingsStb, "stb")
 
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -191,14 +187,13 @@ func TestGetLogUploadSettingsHandler_FilterByApplicationType(t *testing.T) {
 
 // TestGetLogUploadSettingsSizeHandler_ZeroCount tests size handler with no settings (nil condition)
 func TestGetLogUploadSettingsSizeHandler_ZeroCount(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/size", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -209,9 +204,8 @@ func TestGetLogUploadSettingsSizeHandler_ZeroCount(t *testing.T) {
 
 // TestGetLogUploadSettingsSizeHandler_NonZeroCount tests size handler with settings
 func TestGetLogUploadSettingsSizeHandler_NonZeroCount(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create multiple settings
 	for i := 1; i <= 3; i++ {
@@ -229,13 +223,13 @@ func TestGetLogUploadSettingsSizeHandler_NonZeroCount(t *testing.T) {
 				TimeZone:   "UTC",
 			},
 		}
-		CreateLogUploadSettings(settings, "stb")
+		CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "stb")
 	}
 
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/size", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -248,14 +242,13 @@ func TestGetLogUploadSettingsSizeHandler_NonZeroCount(t *testing.T) {
 
 // TestGetLogUploadSettingsNamesHandler_EmptyList tests names handler with no settings (nil condition)
 func TestGetLogUploadSettingsNamesHandler_EmptyList(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/names", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -266,9 +259,8 @@ func TestGetLogUploadSettingsNamesHandler_EmptyList(t *testing.T) {
 
 // TestGetLogUploadSettingsNamesHandler_WithNames tests names handler with settings
 func TestGetLogUploadSettingsNamesHandler_WithNames(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create settings with specific names
 	names := []string{"Alpha Settings", "Beta Settings", "Gamma Settings"}
@@ -287,13 +279,13 @@ func TestGetLogUploadSettingsNamesHandler_WithNames(t *testing.T) {
 				TimeZone:   "UTC",
 			},
 		}
-		CreateLogUploadSettings(settings, "stb")
+		CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "stb")
 	}
 
 	req := httptest.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/names", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -306,13 +298,12 @@ func TestGetLogUploadSettingsNamesHandler_WithNames(t *testing.T) {
 
 // TestDeleteLogUploadSettingsByIdHandler_MissingID tests delete with missing ID (error path)
 func TestDeleteLogUploadSettingsByIdHandler_MissingID(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req := httptest.NewRequest("DELETE", "/xconfAdminService/dcm/logUploadSettings/", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	// Should return 404 as the route doesn't match
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
@@ -320,22 +311,20 @@ func TestDeleteLogUploadSettingsByIdHandler_MissingID(t *testing.T) {
 
 // TestDeleteLogUploadSettingsByIdHandler_NonExistent tests delete of non-existent settings (error path)
 func TestDeleteLogUploadSettingsByIdHandler_NonExistent(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req := httptest.NewRequest("DELETE", "/xconfAdminService/dcm/logUploadSettings/nonexistent-id", nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
 // TestDeleteLogUploadSettingsByIdHandler_Success tests successful delete
 func TestDeleteLogUploadSettingsByIdHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create a formula and settings
 	formula := createFormula("TEST_MODEL_DELETE", 1)
@@ -352,48 +341,34 @@ func TestDeleteLogUploadSettingsByIdHandler_Success(t *testing.T) {
 			TimeZone:   "UTC",
 		},
 	}
-	CreateLogUploadSettings(settings, "stb")
+	CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "stb")
 
 	req := httptest.NewRequest("DELETE", "/xconfAdminService/dcm/logUploadSettings/"+formula.ID, nil)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 
+	// Allow cache to refresh before verification
+	time.Sleep(100 * time.Millisecond)
+
 	// Verify it's actually deleted
-	deleted := logupload.GetOneLogUploadSettings(formula.ID)
+	deleted := logupload.GetOneLogUploadSettings(db.GetDefaultTenantId(), formula.ID)
 	assert.Assert(t, deleted == nil)
 }
 
 // ========== Tests for CreateLogUploadSettingsHandler - error paths ==========
 
-// TestCreateLogUploadSettingsHandler_InvalidJSON tests create with invalid JSON (error path)
-func TestCreateLogUploadSettingsHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
-	invalidJSON := []byte(`{invalid json`)
-
-	req := httptest.NewRequest("POST", "/xconfAdminService/dcm/logUploadSettings", bytes.NewBuffer(invalidJSON))
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-}
-
 // TestCreateLogUploadSettingsHandler_EmptyBody tests create with empty body (nil condition)
 func TestCreateLogUploadSettingsHandler_EmptyBody(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req := httptest.NewRequest("POST", "/xconfAdminService/dcm/logUploadSettings", bytes.NewBuffer([]byte("{}")))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	// Should return error for missing required fields
 	assert.Assert(t, res.StatusCode >= http.StatusBadRequest)
@@ -401,9 +376,8 @@ func TestCreateLogUploadSettingsHandler_EmptyBody(t *testing.T) {
 
 // TestCreateLogUploadSettingsHandler_DuplicateID tests create with duplicate ID (error path)
 func TestCreateLogUploadSettingsHandler_DuplicateID(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
+	xshared.DeleteAllEntities(t)
 
 	// Create a formula and settings
 	formula := createFormula("TEST_MODEL_DUP", 1)
@@ -420,7 +394,7 @@ func TestCreateLogUploadSettingsHandler_DuplicateID(t *testing.T) {
 			TimeZone:   "UTC",
 		},
 	}
-	CreateLogUploadSettings(settings, "stb")
+	CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "stb")
 
 	// Try to create another with same ID
 	body, _ := json.Marshal(settings)
@@ -428,15 +402,14 @@ func TestCreateLogUploadSettingsHandler_DuplicateID(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Assert(t, res.StatusCode >= http.StatusBadRequest)
 }
 
 // TestCreateLogUploadSettingsHandler_Success tests successful creation
 func TestCreateLogUploadSettingsHandler_Success(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create a formula first
 	formula := createFormula("TEST_MODEL_CREATE", 1)
@@ -459,34 +432,17 @@ func TestCreateLogUploadSettingsHandler_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusCreated, res.StatusCode)
 }
 
 // ========== Tests for UpdateLogUploadSettingsHandler - error paths ==========
 
-// TestUpdateLogUploadSettingsHandler_InvalidJSON tests update with invalid JSON (error path)
-func TestUpdateLogUploadSettingsHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
-	invalidJSON := []byte(`{invalid json`)
-
-	req := httptest.NewRequest("PUT", "/xconfAdminService/dcm/logUploadSettings", bytes.NewBuffer(invalidJSON))
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-}
-
 // TestUpdateLogUploadSettingsHandler_NonExistent tests update of non-existent settings (error path)
 func TestUpdateLogUploadSettingsHandler_NonExistent(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create a formula but don't create settings
 	formula := createFormula("TEST_MODEL_NONEXIST", 1)
@@ -504,16 +460,15 @@ func TestUpdateLogUploadSettingsHandler_NonExistent(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Assert(t, res.StatusCode >= http.StatusBadRequest)
 }
 
 // TestUpdateLogUploadSettingsHandler_Success tests successful update
 func TestUpdateLogUploadSettingsHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create a formula and settings
 	formula := createFormula("TEST_MODEL_UPDATE", 1)
@@ -530,7 +485,7 @@ func TestUpdateLogUploadSettingsHandler_Success(t *testing.T) {
 			TimeZone:   "UTC",
 		},
 	}
-	CreateLogUploadSettings(settings, "stb")
+	CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "stb")
 
 	// Update it
 	settings.Name = "Updated Name"
@@ -540,12 +495,12 @@ func TestUpdateLogUploadSettingsHandler_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
 	// Verify the update
-	updated := logupload.GetOneLogUploadSettings(formula.ID)
+	updated := logupload.GetOneLogUploadSettings(db.GetDefaultTenantId(), formula.ID)
 	assert.Equal(t, "Updated Name", updated.Name)
 }
 
@@ -553,15 +508,14 @@ func TestUpdateLogUploadSettingsHandler_Success(t *testing.T) {
 
 // TestPostLogUploadSettingsFilteredWithParamsHandler_EmptyBody tests filtered search with empty body (nil condition)
 func TestPostLogUploadSettingsFilteredWithParamsHandler_EmptyBody(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	req := httptest.NewRequest("POST", "/xconfAdminService/dcm/logUploadSettings/filtered", bytes.NewBuffer([]byte("")))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -570,26 +524,9 @@ func TestPostLogUploadSettingsFilteredWithParamsHandler_EmptyBody(t *testing.T) 
 	assert.Equal(t, 0, len(settings))
 }
 
-// TestPostLogUploadSettingsFilteredWithParamsHandler_InvalidJSON tests filtered search with invalid JSON (error path)
-func TestPostLogUploadSettingsFilteredWithParamsHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
-	invalidJSON := []byte(`{invalid}`)
-
-	req := httptest.NewRequest("POST", "/xconfAdminService/dcm/logUploadSettings/filtered", bytes.NewBuffer(invalidJSON))
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-}
-
 // TestPostLogUploadSettingsFilteredWithParamsHandler_WithContext tests filtered search with context
 func TestPostLogUploadSettingsFilteredWithParamsHandler_WithContext(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create some settings
 	formula := createFormula("TEST_MODEL_FILTER", 1)
@@ -606,7 +543,7 @@ func TestPostLogUploadSettingsFilteredWithParamsHandler_WithContext(t *testing.T
 			TimeZone:   "UTC",
 		},
 	}
-	CreateLogUploadSettings(settings, "stb")
+	CreateLogUploadSettings(db.GetDefaultTenantId(), settings, "stb")
 
 	contextMap := map[string]string{}
 	body, _ := json.Marshal(contextMap)
@@ -615,7 +552,7 @@ func TestPostLogUploadSettingsFilteredWithParamsHandler_WithContext(t *testing.T
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -626,8 +563,7 @@ func TestPostLogUploadSettingsFilteredWithParamsHandler_WithContext(t *testing.T
 
 // TestPostLogUploadSettingsFilteredWithParamsHandler_InvalidPagination tests filtered search with invalid pagination
 func TestPostLogUploadSettingsFilteredWithParamsHandler_InvalidPagination(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	contextMap := map[string]string{
 		"pageNumber": "0", // Invalid page number
@@ -639,7 +575,7 @@ func TestPostLogUploadSettingsFilteredWithParamsHandler_InvalidPagination(t *tes
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }

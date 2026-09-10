@@ -28,9 +28,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func GetIpAddressGroups() []*shared.IpAddressGroup {
+func GetIpAddressGroups(tenantId string) []*shared.IpAddressGroup {
 	result := []*shared.IpAddressGroup{}
-	list, err := shared.GetGenericNamedListListsByTypeDB(shared.IP_LIST)
+	list, err := shared.GetGenericNamedListListsByTypeDB(tenantId, shared.IP_LIST)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetIpAddressGroups: %v", err))
 		return result
@@ -42,8 +42,8 @@ func GetIpAddressGroups() []*shared.IpAddressGroup {
 	return result
 }
 
-func GetIpAddressGroupByName(name string) *shared.IpAddressGroup {
-	nl, err := shared.GetGenericNamedListOneDB(name)
+func GetIpAddressGroupByName(tenantId string, name string) *shared.IpAddressGroup {
+	nl, err := shared.GetGenericNamedListOneDB(tenantId, name)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetIpAddressGroupByName: %v", err))
 		return nil
@@ -56,9 +56,9 @@ func GetIpAddressGroupByName(name string) *shared.IpAddressGroup {
 	return nl.CreateIpAddressGroupResponse()
 }
 
-func GetIpAddressGroupsByIp(ip string) []*shared.IpAddressGroup {
+func GetIpAddressGroupsByIp(tenantId string, ip string) []*shared.IpAddressGroup {
 	result := []*shared.IpAddressGroup{}
-	list, err := shared.GetGenericNamedListListsByTypeDB(shared.IP_LIST)
+	list, err := shared.GetGenericNamedListListsByTypeDB(tenantId, shared.IP_LIST)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetIpAddressGroupByIp: %v", err))
 		return result
@@ -73,14 +73,14 @@ func GetIpAddressGroupsByIp(ip string) []*shared.IpAddressGroup {
 	return result
 }
 
-func CreateIpAddressGroup(ipAddressGroup *shared.IpAddressGroup) *xwhttp.ResponseEntity {
+func CreateIpAddressGroup(tenantId string, ipAddressGroup *shared.IpAddressGroup) *xwhttp.ResponseEntity {
 	ipList := shared.ConvertFromIpAddressGroup(ipAddressGroup)
-	err := ipList.ValidateForAdminService()
+	err := ipList.ValidateForAdminService(tenantId)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
-	err = shared.CreateGenericNamedListOneDB(ipList)
+	err = shared.CreateGenericNamedListOneDB(tenantId, ipList)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -88,9 +88,9 @@ func CreateIpAddressGroup(ipAddressGroup *shared.IpAddressGroup) *xwhttp.Respons
 	return xwhttp.NewResponseEntity(http.StatusCreated, nil, resp)
 }
 
-func IsChangedIpAddressGroup(ipAddressGroup *shared.IpAddressGroup) bool {
+func IsChangedIpAddressGroup(tenantId string, ipAddressGroup *shared.IpAddressGroup) bool {
 	if ipAddressGroup != nil && !util.IsBlank(ipAddressGroup.Name) {
-		existedIpAddressGroup := getIpAddressGroup(ipAddressGroup.Name)
+		existedIpAddressGroup := getIpAddressGroup(tenantId, ipAddressGroup.Name)
 		if existedIpAddressGroup != nil {
 			s1 := []string{}
 			for _, addr := range ipAddressGroup.RawIpAddresses {

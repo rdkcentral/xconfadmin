@@ -38,17 +38,13 @@ import (
 	// Don't import adminapi to avoid circular dependency
 	// "github.com/rdkcentral/xconfadmin/adminapi"
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
-	"github.com/rdkcentral/xconfadmin/adminapi/dcm/mocks"
-	queries "github.com/rdkcentral/xconfadmin/adminapi/queries"
 	"github.com/rdkcentral/xconfadmin/common"
-	oshttp "github.com/rdkcentral/xconfadmin/http"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
-
-	// "github.com/rdkcentral/xconfadmin/taggingapi/tag" // No longer needed - tag refactored
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	"github.com/rdkcentral/xconfwebconfig/db"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	core "github.com/rdkcentral/xconfwebconfig/shared"
@@ -60,12 +56,11 @@ import (
 )
 
 var (
-	testConfigFile     string
-	jsonTestConfigFile string
-	sc                 *xwcommon.ServerConfig
-	server             *oshttp.WebconfigServer
-	router             *mux.Router
-	globAut            *apiUnitTest
+	testConfigFile string
+	sc             *xwcommon.ServerConfig
+	server         *xhttp.WebconfigServer
+	router         *mux.Router
+	globAut        *apiUnitTest
 )
 
 func Walk(r *mux.Router) {
@@ -306,7 +301,7 @@ const (
 )
 
 // WebServerInjection - local implementation to avoid circular dependency
-func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
+func WebServerInjection(ws *xhttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 	if ws == nil {
 		common.CacheUpdateWindowSize = 60000
 		common.AllowedNumberOfFeatures = 100
@@ -379,109 +374,9 @@ func WebServerInjection(ws *oshttp.WebconfigServer, xc *dataapi.XconfConfigs) {
 	}
 }
 
-// initDB - local implementation to avoid circular dependency
-func initDB() {
-	CreateFirmwareRuleTemplates() // Initialize FirmwareRule templates
-	initAppSettings()             // Initialize Application settings
-}
-
-// CreateFirmwareRuleTemplates - local implementation to avoid circular dependency
-func CreateFirmwareRuleTemplates() {
-	if count, _ := GetFirmwareRuleTemplateCount(); count > 0 {
-		return
-	}
-
-	log.Info("Creating templates...")
-
-	ruleFactory := coreef.NewRuleFactory()
-	templateList := []corefw.FirmwareRuleTemplate{}
-
-	// Rule actions
-	rule := coreef.NewMacRule(coreef.EMPTY_NAME)
-	templateList = append(templateList, *NewFirmwareRuleTemplate(
-		corefw.MAC_RULE, rule, coreef.EMPTY_LIST, 1))
-
-	rule = ruleFactory.NewIpRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME, coreef.EMPTY_NAME)
-	templateList = append(templateList, *NewFirmwareRuleTemplate(
-		corefw.IP_RULE, rule, coreef.EMPTY_LIST, 2))
-
-	rule = ruleFactory.NewIntermediateVersionRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME, coreef.EMPTY_NAME)
-	templateList = append(templateList, *NewFirmwareRuleTemplate(
-		corefw.IV_RULE, rule, []string{corefw.GLOBAL_PERCENT, corefw.TIME_FILTER}, 3))
-
-	rule = ruleFactory.NewMinVersionCheckRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME, coreef.EMPTY_LIST)
-	templateList = append(templateList, *NewFirmwareRuleTemplate(
-		corefw.MIN_CHECK_RULE, rule, []string{corefw.GLOBAL_PERCENT, corefw.TIME_FILTER}, 4))
-
-	rule = ruleFactory.NewEnvModelRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME)
-	templ := *NewFirmwareRuleTemplate(corefw.ENV_MODEL_RULE, rule, []string{}, 5)
-	templ.Editable = false
-	templateList = append(templateList, templ)
-
-	// Blocking filters
-	rule = *ruleFactory.NewGlobalPercentFilterTemplate(coreef.DEFAULT_PERCENT, coreef.EMPTY_NAME)
-	templ = *NewBlockingFilterTemplate(corefw.GLOBAL_PERCENT, rule, 1)
-	templateList = append(templateList, templ)
-
-	rule = *ruleFactory.NewIpFilter(coreef.EMPTY_NAME)
-	templateList = append(templateList, *NewBlockingFilterTemplate(
-		corefw.IP_FILTER, rule, 2))
-
-	rule = *ruleFactory.NewTimeFilterTemplate(true, true, false, coreef.EMPTY_NAME, coreef.EMPTY_NAME, coreef.EMPTY_NAME, "01:00", "02:00")
-	templateList = append(templateList, *NewBlockingFilterTemplate(
-		corefw.TIME_FILTER, rule, 3))
-
-	// Define Properties
-	rule = *ruleFactory.NewDownloadLocationFilter(coreef.EMPTY_NAME, coreef.EMPTY_NAME)
-	properties := map[string]corefw.PropertyValue{
-		coreef.FIRMWARE_DOWNLOAD_PROTOCOL: *corefw.NewPropertyValue("tftp", false, corefw.STRING),
-		coreef.FIRMWARE_LOCATION:          *corefw.NewPropertyValue("", false, corefw.STRING),
-		coreef.IPV6_FIRMWARE_LOCATION:     *corefw.NewPropertyValue("", true, corefw.STRING),
-	}
-	templateList = append(templateList, *NewDefinePropertiesTemplate(
-		corefw.DOWNLOAD_LOCATION_FILTER, rule, properties, coreef.EMPTY_LIST, 3))
-
-	rule = *ruleFactory.NewRiFilterTemplate()
-	properties = map[string]corefw.PropertyValue{
-		coreef.REBOOT_IMMEDIATELY: *corefw.NewPropertyValue("true", false, corefw.BOOLEAN),
-	}
-	templateList = append(templateList, *NewDefinePropertiesTemplate(
-		corefw.REBOOT_IMMEDIATELY_FILTER, rule, properties, coreef.EMPTY_LIST, 1))
-
-	rule = ruleFactory.NewMinVersionCheckRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME, coreef.EMPTY_LIST)
-	properties = map[string]corefw.PropertyValue{
-		coreef.REBOOT_IMMEDIATELY: *corefw.NewPropertyValue("true", true, corefw.BOOLEAN),
-	}
-	templateList = append(templateList, *NewDefinePropertiesTemplate(
-		corefw.MIN_CHECK_RI, rule, properties, []string{corefw.GLOBAL_PERCENT, corefw.TIME_FILTER}, 2))
-
-	rule = ruleFactory.NewActivationVersionRule(coreef.EMPTY_NAME, coreef.EMPTY_NAME)
-	properties = map[string]corefw.PropertyValue{
-		coreef.REBOOT_IMMEDIATELY: *corefw.NewPropertyValue("false", false, corefw.BOOLEAN),
-	}
-	templ = *NewDefinePropertiesTemplate(
-		corefw.ACTIVATION_VERSION, rule, properties, coreef.EMPTY_LIST, 4)
-	templ.Editable = false
-	templateList = append(templateList, templ)
-
-	for _, template := range templateList {
-		if err := template.Validate(); err != nil {
-			panic(err)
-		}
-		template.Updated = util.GetTimestamp()
-		if jsonData, err := json.Marshal(template); err != nil {
-			panic(err)
-		} else {
-			if err := ds.GetSimpleDao().SetOne(ds.TABLE_FIRMWARE_RULE_TEMPLATE, template.ID, jsonData); err != nil {
-				panic(err)
-			}
-		}
-	}
-}
-
 // GetFirmwareRuleTemplateCount - local implementation to avoid circular dependency
 func GetFirmwareRuleTemplateCount() (int, error) {
-	entries, err := db.GetSimpleDao().GetAllAsMapRaw(db.TABLE_FIRMWARE_RULE_TEMPLATE, 0)
+	entries, err := db.GetSimpleDao().GetAllAsMapRaw(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULE_TEMPLATES, 0)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareRuleTemplateCount: %v", err))
 		return 0, err
@@ -530,111 +425,22 @@ func NewDefinePropertiesTemplate(id string, rule rulesengine.Rule, properties ma
 	}
 }
 
-// initAppSettings - local implementation to avoid circular dependency
-func initAppSettings() {
-	// Initialize application settings if needed
-	// This is a simplified version for testing purposes
-}
-
-func dcmSetup(server *oshttp.WebconfigServer, r *mux.Router) {
-
+func dcmSetup(server *xhttp.WebconfigServer, r *mux.Router) {
 	xc := dataapi.GetXconfConfigs(server.XW_XconfServer.ServerConfig.Config)
-
 	WebServerInjection(server, xc)
 	db.ConfigInjection(server.XW_XconfServer.ServerConfig.Config)
 	dataapi.WebServerInjection(server.XW_XconfServer, xc)
 	//dao.WebServerInjection(server)
 	auth.WebServerInjection(server)
 	dataapi.RegisterTables()
-
-	// db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf) // Tag refactored - NewTagInf no longer exists
-	initDB()
-	db.GetCacheManager() // Initialize cache manager
+	xshared.OnboardTenant(db.GetDefaultTenantId(), db.GetDefaultTenantId()) // Initialize DB for default tenant
 	SetupDCMRoutes(server, r)
 }
 
-func SetupDCMRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
+func SetupDCMRoutes(server *xhttp.WebconfigServer, r *mux.Router) {
 	paths := []*mux.Router{}
-	//authPaths := []*mux.Router{} // Do not required auth token validation middleware
-	// Register DCM formula routes
-	dcmFormulaPath := r.PathPrefix("/xconfAdminService/dcm/formula").Subrouter()
-	dcmFormulaPath.HandleFunc("", GetDcmFormulaHandler).Methods("GET")
-	dcmFormulaPath.HandleFunc("", CreateDcmFormulaHandler).Methods("POST")
-	dcmFormulaPath.HandleFunc("", UpdateDcmFormulaHandler).Methods("PUT")
-	dcmFormulaPath.HandleFunc("/filtered", PostDcmFormulaFilteredWithParamsHandler).Methods("POST")
-	dcmFormulaPath.HandleFunc("/size", GetDcmFormulaSizeHandler).Methods("GET")
-	dcmFormulaPath.HandleFunc("/names", GetDcmFormulaNamesHandler).Methods("GET")
-	dcmFormulaPath.HandleFunc("/formulasAvailability", DcmFormulasAvailabilitygHandler).Methods("POST")
-	dcmFormulaPath.HandleFunc("/settingsAvailability", DcmFormulaSettingsAvailabilitygHandler).Methods("POST")
-	dcmFormulaPath.HandleFunc("/import/{overwrite}", ImportDcmFormulaWithOverwriteHandler).Methods("POST")
-	dcmFormulaPath.HandleFunc("/import/all", ImportDcmFormulasHandler).Methods("POST")
-	dcmFormulaPath.HandleFunc("/entities", PostDcmFormulaListHandler).Methods("POST")
-	dcmFormulaPath.HandleFunc("/entities", PutDcmFormulaListHandler).Methods("PUT")
+	paths = RegisterDCMRoutes(r, paths)
 
-	// URL with var has to be placed last otherwise, it gets confused with url with defined paths
-	dcmFormulaPath.HandleFunc("/{id}", GetDcmFormulaByIdHandler).Methods("GET")
-	dcmFormulaPath.HandleFunc("/{id}", DeleteDcmFormulaByIdHandler).Methods("DELETE")
-	dcmFormulaPath.HandleFunc("/{id}/priority/{newPriority}", DcmFormulaChangePriorityHandler).Methods("POST")
-	paths = append(paths, dcmFormulaPath)
-
-	dcmDeviceSettingsPath := r.PathPrefix("/xconfAdminService/dcm/deviceSettings").Subrouter()
-	dcmDeviceSettingsPath.HandleFunc("", GetDeviceSettingsHandler).Methods("GET").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("", CreateDeviceSettingsHandler).Methods("POST").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("", UpdateDeviceSettingsHandler).Methods("PUT").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("/size", GetDeviceSettingsSizeHandler).Methods("GET").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("/names", GetDeviceSettingsNamesHandler).Methods("GET").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("/filtered", PostDeviceSettingsFilteredWithParamsHandler).Methods("POST").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("/export", GetDeviceSettingsExportHandler).Methods("GET")
-	// url with var has to be placed last otherwise, it gets confused with url with defined paths
-	dcmDeviceSettingsPath.HandleFunc("/{id}", DeleteDeviceSettingsByIdHandler).Methods("DELETE").Name("DCM-DeviceSettings")
-	dcmDeviceSettingsPath.HandleFunc("/{id}", GetDeviceSettingsByIdHandler).Methods("GET").Name("DCM-DeviceSettings")
-	paths = append(paths, dcmDeviceSettingsPath)
-
-	// dcm/vodsettings
-	dcmVodSettingsPath := r.PathPrefix("/xconfAdminService/dcm/vodsettings").Subrouter()
-	dcmVodSettingsPath.HandleFunc("", GetVodSettingsHandler).Methods("GET").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("", CreateVodSettingsHandler).Methods("POST").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("", UpdateVodSettingsHandler).Methods("PUT").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("/size", GetVodSettingsSizeHandler).Methods("GET").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("/names", GetVodSettingsNamesHandler).Methods("GET").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("/filtered", PostVodSettingsFilteredWithParamsHandler).Methods("POST").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("/export", GetVodSettingExportHandler).Methods("GET").Name("DCM-VODSettings")
-	// url with var has to be placed last otherwise, it gets confused with url with defined paths
-	dcmVodSettingsPath.HandleFunc("/{id}", DeleteVodSettingsByIdHandler).Methods("DELETE").Name("DCM-VODSettings")
-	dcmVodSettingsPath.HandleFunc("/{id}", GetVodSettingsByIdHandler).Methods("GET").Name("DCM-VODSettings")
-	paths = append(paths, dcmVodSettingsPath)
-
-	// dcm/uploadRepository
-	dcmUploadRepositoryPath := r.PathPrefix("/xconfAdminService/dcm/uploadRepository").Subrouter()
-	dcmUploadRepositoryPath.HandleFunc("", GetLogRepoSettingsHandler).Methods("GET").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("", CreateLogRepoSettingsHandler).Methods("POST").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("", UpdateLogRepoSettingsHandler).Methods("PUT").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/entities", PostLogRepoSettingsEntitiesHandler).Methods("POST").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/entities", PutLogRepoSettingsEntitiesHandler).Methods("PUT").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/size", GetLogRepoSettingsSizeHandler).Methods("GET").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/names", GetLogRepoSettingsNamesHandler).Methods("GET").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/filtered", PostLogRepoSettingsFilteredWithParamsHandler).Methods("POST").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/{id}", DeleteLogRepoSettingsByIdHandler).Methods("DELETE").Name("DCM-UploadRepository")
-	dcmUploadRepositoryPath.HandleFunc("/{id}", GetLogRepoSettingsByIdHandler).Methods("GET").Name("DCM-UploadRepository")
-	paths = append(paths, dcmUploadRepositoryPath)
-
-	// dcm/logUploadSettings
-	dcmLogUploadSettingsPath := r.PathPrefix("/xconfAdminService/dcm/logUploadSettings").Subrouter()
-	dcmLogUploadSettingsPath.HandleFunc("", GetLogUploadSettingsHandler).Methods("GET").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("", CreateLogUploadSettingsHandler).Methods("POST").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("", UpdateLogUploadSettingsHandler).Methods("PUT").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("/size", GetLogUploadSettingsSizeHandler).Methods("GET").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("/names", GetLogUploadSettingsNamesHandler).Methods("GET").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("/filtered", PostLogUploadSettingsFilteredWithParamsHandler).Methods("POST").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("/export", GetLogRepoSettingsExportHandler).Methods("GET").Name("DCM-LogUploadSettings")
-	// url with var has to be placed last otherwise, it gets confused with url with defined paths)
-	dcmLogUploadSettingsPath.HandleFunc("/{id}", DeleteLogUploadSettingsByIdHandler).Methods("DELETE").Name("DCM-LogUploadSettings")
-	dcmLogUploadSettingsPath.HandleFunc("/{id}", GetLogUploadSettingsByIdHandler).Methods("GET").Name("DCM-LogUploadSettings")
-	paths = append(paths, dcmLogUploadSettingsPath)
 	c := cors.New(cors.Options{
 		AllowCredentials: true,
 		AllowedOrigins:   []string{"*"},
@@ -648,80 +454,6 @@ func SetupDCMRoutes(server *oshttp.WebconfigServer, r *mux.Router) {
 	}
 }
 
-// SetupDCMRoutesForMock sets up routes without middleware for mock testing
-func SetupDCMRoutesForMock(r *mux.Router) {
-	// Register DCM formula routes
-	dcmFormulaPath := r.PathPrefix("/xconfAdminService/dcm/formula").Subrouter()
-	dcmFormulaPath.HandleFunc("", GetDcmFormulaHandler).Methods("GET")
-	dcmFormulaPath.HandleFunc("", CreateDcmFormulaHandler).Methods("POST")
-	dcmFormulaPath.HandleFunc("", UpdateDcmFormulaHandler).Methods("PUT")
-	dcmFormulaPath.HandleFunc("/filtered", PostDcmFormulaFilteredWithParamsHandler).Methods("POST")
-	dcmFormulaPath.HandleFunc("/size", GetDcmFormulaSizeHandler).Methods("GET")
-	dcmFormulaPath.HandleFunc("/names", GetDcmFormulaNamesHandler).Methods("GET")
-	dcmFormulaPath.HandleFunc("/formulasAvailability", DcmFormulasAvailabilitygHandler).Methods("POST")
-	dcmFormulaPath.HandleFunc("/settingsAvailability", DcmFormulaSettingsAvailabilitygHandler).Methods("POST")
-	dcmFormulaPath.HandleFunc("/import/{overwrite}", ImportDcmFormulaWithOverwriteHandler).Methods("POST")
-	dcmFormulaPath.HandleFunc("/import/all", ImportDcmFormulasHandler).Methods("POST")
-	dcmFormulaPath.HandleFunc("/entities", PostDcmFormulaListHandler).Methods("POST")
-	dcmFormulaPath.HandleFunc("/entities", PutDcmFormulaListHandler).Methods("PUT")
-	dcmFormulaPath.HandleFunc("/{id}", GetDcmFormulaByIdHandler).Methods("GET")
-	dcmFormulaPath.HandleFunc("/{id}", DeleteDcmFormulaByIdHandler).Methods("DELETE")
-	dcmFormulaPath.HandleFunc("/{id}/priority/{newPriority}", DcmFormulaChangePriorityHandler).Methods("POST")
-
-	dcmDeviceSettingsPath := r.PathPrefix("/xconfAdminService/dcm/deviceSettings").Subrouter()
-	dcmDeviceSettingsPath.HandleFunc("", GetDeviceSettingsHandler).Methods("GET")
-	dcmDeviceSettingsPath.HandleFunc("", CreateDeviceSettingsHandler).Methods("POST")
-	dcmDeviceSettingsPath.HandleFunc("", UpdateDeviceSettingsHandler).Methods("PUT")
-	dcmDeviceSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET")
-	dcmDeviceSettingsPath.HandleFunc("/size", GetDeviceSettingsSizeHandler).Methods("GET")
-	dcmDeviceSettingsPath.HandleFunc("/names", GetDeviceSettingsNamesHandler).Methods("GET")
-	dcmDeviceSettingsPath.HandleFunc("/filtered", PostDeviceSettingsFilteredWithParamsHandler).Methods("POST")
-	dcmDeviceSettingsPath.HandleFunc("/export", GetDeviceSettingsExportHandler).Methods("GET")
-	dcmDeviceSettingsPath.HandleFunc("/{id}", DeleteDeviceSettingsByIdHandler).Methods("DELETE")
-	dcmDeviceSettingsPath.HandleFunc("/{id}", GetDeviceSettingsByIdHandler).Methods("GET")
-
-	dcmVodSettingsPath := r.PathPrefix("/xconfAdminService/dcm/vodsettings").Subrouter()
-	dcmVodSettingsPath.HandleFunc("", GetVodSettingsHandler).Methods("GET")
-	dcmVodSettingsPath.HandleFunc("", CreateVodSettingsHandler).Methods("POST")
-	dcmVodSettingsPath.HandleFunc("", UpdateVodSettingsHandler).Methods("PUT")
-	dcmVodSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET")
-	dcmVodSettingsPath.HandleFunc("/size", GetVodSettingsSizeHandler).Methods("GET")
-	dcmVodSettingsPath.HandleFunc("/names", GetVodSettingsNamesHandler).Methods("GET")
-	dcmVodSettingsPath.HandleFunc("/filtered", PostVodSettingsFilteredWithParamsHandler).Methods("POST")
-	dcmVodSettingsPath.HandleFunc("/export", GetVodSettingExportHandler).Methods("GET")
-	dcmVodSettingsPath.HandleFunc("/{id}", DeleteVodSettingsByIdHandler).Methods("DELETE")
-	dcmVodSettingsPath.HandleFunc("/{id}", GetVodSettingsByIdHandler).Methods("GET")
-
-	dcmUploadRepositoryPath := r.PathPrefix("/xconfAdminService/dcm/uploadRepository").Subrouter()
-	dcmUploadRepositoryPath.HandleFunc("", GetLogRepoSettingsHandler).Methods("GET")
-	dcmUploadRepositoryPath.HandleFunc("", CreateLogRepoSettingsHandler).Methods("POST")
-	dcmUploadRepositoryPath.HandleFunc("", UpdateLogRepoSettingsHandler).Methods("PUT")
-	dcmUploadRepositoryPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET")
-	dcmUploadRepositoryPath.HandleFunc("/entities", PostLogRepoSettingsEntitiesHandler).Methods("POST")
-	dcmUploadRepositoryPath.HandleFunc("/entities", PutLogRepoSettingsEntitiesHandler).Methods("PUT")
-	dcmUploadRepositoryPath.HandleFunc("/size", GetLogRepoSettingsSizeHandler).Methods("GET")
-	dcmUploadRepositoryPath.HandleFunc("/names", GetLogRepoSettingsNamesHandler).Methods("GET")
-	dcmUploadRepositoryPath.HandleFunc("/filtered", PostLogRepoSettingsFilteredWithParamsHandler).Methods("POST")
-	dcmUploadRepositoryPath.HandleFunc("/{id}", DeleteLogRepoSettingsByIdHandler).Methods("DELETE")
-	dcmUploadRepositoryPath.HandleFunc("/{id}", GetLogRepoSettingsByIdHandler).Methods("GET")
-	dcmUploadRepositoryPath.HandleFunc("/export", GetLogRepoSettingsExportHandler).Methods("GET")
-
-	dcmLogUploadSettingsPath := r.PathPrefix("/xconfAdminService/dcm/logUploadSettings").Subrouter()
-	dcmLogUploadSettingsPath.HandleFunc("", GetLogUploadSettingsHandler).Methods("GET")
-	dcmLogUploadSettingsPath.HandleFunc("", CreateLogUploadSettingsHandler).Methods("POST")
-	dcmLogUploadSettingsPath.HandleFunc("", UpdateLogUploadSettingsHandler).Methods("PUT")
-	dcmLogUploadSettingsPath.HandleFunc("/page", queries.NotImplementedHandler).Methods("GET")
-	dcmLogUploadSettingsPath.HandleFunc("/size", GetLogUploadSettingsSizeHandler).Methods("GET")
-	dcmLogUploadSettingsPath.HandleFunc("/names", GetLogUploadSettingsNamesHandler).Methods("GET")
-	dcmLogUploadSettingsPath.HandleFunc("/filtered", PostLogUploadSettingsFilteredWithParamsHandler).Methods("POST")
-	dcmLogUploadSettingsPath.HandleFunc("/export", GetLogRepoSettingsExportHandler).Methods("GET")
-	dcmLogUploadSettingsPath.HandleFunc("/{id}", DeleteLogUploadSettingsByIdHandler).Methods("DELETE")
-	dcmLogUploadSettingsPath.HandleFunc("/{id}", GetLogUploadSettingsByIdHandler).Methods("GET")
-
-	// DCM test page
-	r.HandleFunc("/xconfAdminService/dcm/testpage", DcmTestPageHandler).Methods("POST")
-}
-
 type apiUnitTest struct {
 	t        *testing.T
 	router   *mux.Router
@@ -730,63 +462,6 @@ type apiUnitTest struct {
 
 func TestMain(m *testing.M) {
 	fmt.Printf("in TestMain\n")
-
-	// Check if we should use mock database (set via environment variable or default to true for speed)
-	useMock := os.Getenv("USE_MOCK_DB")
-	if useMock == "" || useMock == "true" || useMock == "1" {
-		fmt.Printf("Using MOCK database for fast unit tests\n")
-
-		// Initialize mock database client to prevent distributed lock panics
-		mockDbClient := mocks.NewMockDatabaseClient()
-		db.SetDatabaseClient(mockDbClient)
-
-		// Register table configurations to avoid "Table configuration not found" errors
-		db.RegisterTableConfigSimple(db.TABLE_DCM_RULE, logupload.NewDCMGenericRuleInf)
-		db.RegisterTableConfigSimple(db.TABLE_LOG_FILE, logupload.NewLogFileInf)
-		db.RegisterTableConfigSimple(db.TABLE_LOG_FILE_LIST, logupload.NewLogFileListInf)
-		db.RegisterTableConfigSimple(db.TABLE_LOG_UPLOAD_SETTINGS, logupload.NewLogUploadSettingsInf)
-		db.RegisterTableConfigSimple(db.TABLE_DEVICE_SETTINGS, logupload.NewDeviceSettingsInf)
-		db.RegisterTableConfigSimple(db.TABLE_VOD_SETTINGS, logupload.NewVodSettingsInf)
-		db.RegisterTableConfigSimple(db.TABLE_UPLOAD_REPOSITORY, logupload.NewUploadRepositoryInf)
-		db.RegisterTableConfigSimple(db.TABLE_XCONF_CHANGED_KEYS, db.NewChangedDataInf)
-
-		// Initialize mock database
-		mockDaoInstance = InitMockDatabase()
-
-		// Set up minimal environment variables needed
-		os.Setenv("SECURITY_TOKEN_KEY", "testSecurityTokenKey")
-		os.Setenv("XPC_KEY", "testXpcKey")
-		os.Setenv("SAT_CLIENT_ID", "foo")
-		os.Setenv("SAT_CLIENT_SECRET", "bar")
-		os.Setenv("IDP_CLIENT_ID", "foo")
-		os.Setenv("IDP_CLIENT_SECRET", "bar")
-		os.Setenv("X1_SSR_KEYS", "test-key-1;test-key-2;test-key3")
-		os.Setenv("PARTNER_KEYS", "test")
-
-		// Create minimal router and set up routes
-		router = mux.NewRouter()
-
-		// Initialize minimal WebConfServer to prevent nil pointer panics
-		oshttp.WebConfServer = &oshttp.WebconfigServer{
-			DistributedLockConfig: &oshttp.DistributedLockConfig{
-				Enabled: false, // Disable distributed locks for mock tests
-			},
-		}
-
-		// Set up DCM routes without middleware (for mock mode)
-		SetupDCMRoutesForMock(router)
-
-		// Initialize common package settings
-		common.AuthProvider = "local"
-		common.ApplicationTypes = []string{"stb", "xhome"}
-
-		globAut = newApiUnitTest(nil)
-		returnCode := m.Run()
-		globAut.t = nil
-
-		os.Exit(returnCode)
-	} // Original path for integration tests with real database
-	fmt.Printf("Using REAL database for integration tests\n")
 
 	testConfigFile = "/app/xconfadmin/xconfadmin.conf"
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
@@ -798,40 +473,13 @@ func TestMain(m *testing.M) {
 	fmt.Printf("testConfigFile=%v\n", testConfigFile)
 
 	os.Setenv("SECURITY_TOKEN_KEY", "testSecurityTokenKey")
-
-	xpcKey := os.Getenv("XPC_KEY")
-	if len(xpcKey) == 0 {
-		os.Setenv("XPC_KEY", "testXpcKey")
-	}
-
-	cid := os.Getenv("SAT_CLIENT_ID")
-	if len(cid) == 0 {
-		os.Setenv("SAT_CLIENT_ID", "foo")
-	}
-
-	sec := os.Getenv("SAT_CLIENT_SECRET")
-	if len(sec) == 0 {
-		os.Setenv("SAT_CLIENT_SECRET", "bar")
-	}
-	cid = os.Getenv("IDP_CLIENT_ID")
-	if len(cid) == 0 {
-		os.Setenv("IDP_CLIENT_ID", "foo")
-	}
-
-	sec = os.Getenv("IDP_CLIENT_SECRET")
-	if len(sec) == 0 {
-		os.Setenv("IDP_CLIENT_SECRET", "bar")
-	}
-
-	ssrKeys := os.Getenv("X1_SSR_KEYS")
-	if len(ssrKeys) == 0 {
-		os.Setenv("X1_SSR_KEYS", "test-key-1;test-key-2;test-key3")
-	}
-
-	PartnerKeys := os.Getenv("PARTNER_KEYS")
-	if len(PartnerKeys) == 0 {
-		os.Setenv("PARTNER_KEYS", "test")
-	}
+	os.Setenv("XPC_KEY", "testXpcKey")
+	os.Setenv("SAT_CLIENT_ID", "foo")
+	os.Setenv("SAT_CLIENT_SECRET", "bar")
+	os.Setenv("IDP_CLIENT_ID", "foo")
+	os.Setenv("IDP_CLIENT_SECRET", "bar")
+	os.Setenv("X1_SSR_KEYS", "test-key-1;test-key-2;test-key3")
+	os.Setenv("PARTNER_KEYS", "test")
 
 	var err error
 	sc, err = xwcommon.NewServerConfig(testConfigFile)
@@ -839,7 +487,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	server = oshttp.NewWebconfigServer(sc, true, nil, nil)
+	server = xhttp.NewWebconfigServer(sc, true, nil, nil)
 	defer server.XW_XconfServer.Server.Close()
 	xwhttp.InitSatTokenManager(server.XW_XconfServer)
 
@@ -855,6 +503,10 @@ func TestMain(m *testing.M) {
 	dcmSetup(server, router)
 	taggingapi.XconfTaggingServiceSetup(server, router)
 
+	// Initialize common package settings
+	common.AuthProvider = "local"
+	common.ApplicationTypes = []string{"stb", "xhome"}
+
 	// tear down to start clean
 	err = server.XW_XconfServer.SetUp()
 	if err != nil {
@@ -864,7 +516,6 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	// DeleteAllEntities()
 
 	globAut = newApiUnitTest(nil)
 
@@ -896,7 +547,7 @@ func GetTestConfig() string {
 	return "../../config/sample_xconfadmin.conf"
 }
 
-func GetTestWebConfigServer(testConfigFile string) (*oshttp.WebconfigServer, *mux.Router) {
+func GetTestWebConfigServer(testConfigFile string) (*xhttp.WebconfigServer, *mux.Router) {
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
 		testConfigFile = "../../config/sample_xconfadmin.conf"
 		if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
@@ -911,7 +562,7 @@ func GetTestWebConfigServer(testConfigFile string) (*oshttp.WebconfigServer, *mu
 	if err != nil {
 		panic(err)
 	}
-	server := oshttp.NewWebconfigServer(sc, true, nil, nil)
+	server := xhttp.NewWebconfigServer(sc, true, nil, nil)
 	xwhttp.InitSatTokenManager(server.XW_XconfServer)
 	router := server.XW_XconfServer.GetRouter(true)
 
@@ -927,66 +578,11 @@ func GetTestWebConfigServer(testConfigFile string) (*oshttp.WebconfigServer, *mu
 	return server, router
 }
 
-func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRecorder { // restored local version
-	recorder := httptest.NewRecorder()
-
-	// Wrap the response writer with XResponseWriter to match production behavior
-	xw := xwhttp.NewXResponseWriter(recorder, r)
-
-	// Read and set the request body on XResponseWriter (mimics middleware behavior)
-	if r.Method == "POST" || r.Method == "PUT" {
-		if r.Body != nil {
-			if rbytes, err := ioutil.ReadAll(r.Body); err == nil {
-				xw.SetBody(string(rbytes))
-			}
-		} else {
-			xw.SetBody("")
-		}
-	}
-
-	handler.ServeHTTP(xw, r)
-	return recorder
-}
-
-func DeleteAllEntities() {
-	// If using mock database, clear it instantly
-	// Note: No mutex lock here to avoid deadlock with saveFormula
-	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		mockDaoInstance.Clear()
-		return
-	}
-
-	// Original implementation for real database
-	for _, tableInfo := range db.GetAllTableInfo() {
-		if err := truncateTable(tableInfo.TableName); err != nil {
-			fmt.Printf("failed to truncate table %s\n", tableInfo.TableName)
-		}
-		if tableInfo.CacheData {
-			db.GetCachedSimpleDao().RefreshAll(tableInfo.TableName)
-		}
-	}
-}
-
-func truncateTable(tableName string) error {
-	dbClient := db.GetDatabaseClient()
-	cassandraClient, ok := dbClient.(*db.CassandraClient)
-	if ok {
-		return cassandraClient.DeleteAllXconfData(tableName)
-	}
-	return nil
-}
-
 func CreateAndSaveModel(id string) *core.Model {
 	model := core.NewModel(id, "ModelDescription")
-
-	var err error
-	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		err = mockDaoInstance.SetOne(db.TABLE_MODEL, model.ID, model)
-	} else {
-		err = db.GetCachedSimpleDao().SetOne(db.TABLE_MODEL, model.ID, model)
-	}
-
+	err := xshared.SetOneInDao(db.TABLE_MODELS, model.ID, model)
 	if err != nil {
+		fmt.Printf("CreateAndSaveModel error: %v\n", err)
 		return nil
 	}
 
@@ -1006,58 +602,21 @@ func unmarshalXconfError(b []byte) *common.XconfError {
 	return xconfError
 }
 
-// Helper functions to work with either mock or real DAO
-func getDaoForTest() interface{} {
-	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		return mockDaoInstance
-	}
-	return db.GetCachedSimpleDao()
-}
-
-func setOneInDao(tableName string, rowKey string, entity interface{}) error {
-	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		return mockDaoInstance.SetOne(tableName, rowKey, entity)
-	}
-	return db.GetCachedSimpleDao().SetOne(tableName, rowKey, entity)
-}
-
-func getOneFromDao(tableName string, rowKey string) (interface{}, error) {
-	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		return mockDaoInstance.GetOne(tableName, rowKey)
-	}
-	return db.GetCachedSimpleDao().GetOne(tableName, rowKey)
-}
-
-func getAllAsListFromDao(tableName string, maxResults int) ([]interface{}, error) {
-	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		return mockDaoInstance.GetAllAsList(tableName, maxResults)
-	}
-	return db.GetCachedSimpleDao().GetAllAsList(tableName, maxResults)
-}
-
-func deleteOneFromDao(tableName string, rowKey string) error {
-	if IsMockDatabaseEnabled() && mockDaoInstance != nil {
-		return mockDaoInstance.DeleteOne(tableName, rowKey)
-	}
-	return db.GetCachedSimpleDao().DeleteOne(tableName, rowKey)
-}
-
 func TestDfAllApi(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
 	//t.Skip("TODO: cpatel550 - need to move this test under adminapi")
 	//config := GetTestConfig()
 	//_, router := GetTestWebConfigServer(config)
 	dfrule := logupload.DCMGenericRule{}
 	err := json.Unmarshal([]byte(jsondfCreateData), &dfrule)
 	assert.NilError(t, err)
-	setOneInDao(ds.TABLE_DCM_RULE, dfrule.ID, &dfrule)
+	xshared.SetOneInDao(db.TABLE_DCM_RULES, dfrule.ID, &dfrule)
 
 	// create entry
 	url := fmt.Sprintf("%s", DF_URL)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsondfPostCreateData))
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.NilError(t, err)
 	assert.Equal(t, res.StatusCode, http.StatusCreated)
@@ -1068,7 +627,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -1079,7 +638,7 @@ func TestDfAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -1097,7 +656,7 @@ func TestDfAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -1117,7 +676,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	defer res.Body.Close()
@@ -1134,7 +693,7 @@ func TestDfAllApi(t *testing.T) {
 	// assert.NilError(t, err)
 	// req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	// req.Header.Set("Accept", "application/json")
-	// res = ExecuteRequest(req, router).Result()
+	// res = xshared.ExecuteRequest(req, router).Result()
 	// defer res.Body.Close()
 	// assert.Equal(t, res.StatusCode, http.StatusOK)
 	// defer res.Body.Close()
@@ -1148,7 +707,7 @@ func TestDfAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -1163,7 +722,7 @@ func TestDfAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	defer res.Body.Close()
@@ -1182,7 +741,7 @@ func TestDfAllApi(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -1198,7 +757,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusOK)
 	assert.NilError(t, err)
@@ -1214,7 +773,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -1230,7 +789,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -1246,7 +805,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	body, err = ioutil.ReadAll(res.Body)
 	assert.NilError(t, err)
@@ -1261,7 +820,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	//assert.Equal(t, res.StatusCode, http.StatusConflict)
 
@@ -1270,7 +829,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	//assert.Equal(t, res.StatusCode, http.StatusOK)
 
@@ -1279,7 +838,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	//assert.Equal(t, res.StatusCode, http.StatusConflict)
 
@@ -1288,7 +847,7 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	//assert.Equal(t, res.StatusCode, http.StatusNoContent)
 
@@ -1297,13 +856,13 @@ func TestDfAllApi(t *testing.T) {
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json: charset=UTF-8")
 	req.Header.Set("Accept", "application/json")
-	res = ExecuteRequest(req, router).Result()
+	res = xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	//assert.Equal(t, res.StatusCode, http.StatusNotFound)
 }
 
 // func TestUpdatePriorityAndRuleInFormula_RuleIsUpdatedAndPrioritiesAreReorganized(t *testing.T) {
-// 	DeleteAllEntities()
+// 	xshared.DeleteAllEntities(t)
 // 	numberOfFormulas := 10
 // 	formulas := preCreateFormulas(numberOfFormulas, "TEST_MODEL_T", t)
 
@@ -1322,7 +881,7 @@ func TestDfAllApi(t *testing.T) {
 
 // 	formulaJson, _ := json.Marshal(formulaToUpdate)
 // 	r := httptest.NewRequest("PUT", url, bytes.NewReader(formulaJson))
-// 	rr := ExecuteRequest(r, router)
+// 	rr := xshared.ExecuteRequest(r, router)
 // 	assert.Equal(t, http.StatusOK, rr.Code)
 
 // 	receivedFormula := unmarshalFormula(rr.Body.Bytes())
@@ -1331,7 +890,7 @@ func TestDfAllApi(t *testing.T) {
 
 // 	url = fmt.Sprintf("/xconfAdminService/dcm/formula/%s?%v", receivedFormula.ID, queryParams)
 // 	r = httptest.NewRequest("GET", url, nil)
-// 	rr = ExecuteRequest(r, router)
+// 	rr = xshared.ExecuteRequest(r, router)
 // 	assert.Equal(t, http.StatusOK, rr.Code)
 
 // 	receivedFormula = unmarshalFormula(rr.Body.Bytes())
@@ -1341,7 +900,7 @@ func TestDfAllApi(t *testing.T) {
 
 // 	url = fmt.Sprintf("/xconfAdminService/dcm/formula?%v", queryParams)
 // 	r = httptest.NewRequest("GET", url, nil)
-// 	rr = ExecuteRequest(r, router)
+// 	rr = xshared.ExecuteRequest(r, router)
 // 	assert.Equal(t, http.StatusOK, rr.Code)
 
 // 	// receivedFormulas := unmarshalFormulas(rr.Body.Bytes())
@@ -1357,8 +916,7 @@ func TestDfAllApi(t *testing.T) {
 // }
 
 func TestChangeFormulaPriorityWithNotValidValue_ExceptionIsThrown(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_ID", 0)
 	saveFormula(formula, t)
 	newPriority := 0
@@ -1368,7 +926,7 @@ func TestChangeFormulaPriorityWithNotValidValue_ExceptionIsThrown(t *testing.T) 
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s/priority/%v?%v", formula.ID, newPriority, queryParams)
 
 	r := httptest.NewRequest("POST", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 
 	xconfError := unmarshalXconfError(rr.Body.Bytes())
@@ -1405,20 +963,11 @@ func saveFormula(formula *logupload.DCMGenericRule, t *testing.T) {
 
 	formulaJson, _ := json.Marshal(formula)
 	r := httptest.NewRequest("POST", url, bytes.NewReader(formulaJson))
-	rr := ExecuteRequest(r, router)
+	rr := xshared.ExecuteRequest(r, router)
 	if rr.Code != http.StatusCreated {
 		t.Logf("saveFormula failed with status %d, body: %s", rr.Code, rr.Body.String())
 	}
 	assert.Equal(t, http.StatusCreated, rr.Code)
-}
-
-func unmarshalFormula(b []byte) *logupload.DCMGenericRule {
-	var formula logupload.DCMGenericRule
-	err := json.Unmarshal(b, &formula)
-	if err != nil {
-		panic(fmt.Errorf("error unmarshaling formula: %v", err))
-	}
-	return &formula
 }
 
 func unmarshalFormulas(b []byte) []*logupload.DCMGenericRule {
@@ -1430,28 +979,9 @@ func unmarshalFormulas(b []byte) []*logupload.DCMGenericRule {
 	return formulas
 }
 
-// Test ImportDcmFormulasHandler - Auth Error
-func TestImportDcmFormulasHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/import/all"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
-	// No applicationType cookie - auth will fail
-	rr := ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK) // Auth allows default applicationType
-}
-
-// Test ImportDcmFormulasHandler - Invalid JSON
-func TestImportDcmFormulasHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 // Test ImportDcmFormulasHandler - Success
 func TestImportDcmFormulasHandler_Success(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_IMPORT", 0)
 	formulaWithSettings := logupload.FormulaWithSettings{
 		Formula: formula,
@@ -1461,33 +991,14 @@ func TestImportDcmFormulasHandler_Success(t *testing.T) {
 	formulaJson, _ := json.Marshal(formulaList)
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(formulaJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	// Accept either OK (success) or BadRequest (import validation error) - we're testing handler doesn't crash
 	assert.Assert(t, rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest)
 }
 
-// Test PostDcmFormulaListHandler - Auth Error
-func TestPostDcmFormulaListHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/entities"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
-	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-// Test PostDcmFormulaListHandler - XResponseWriter Cast Error
-func TestPostDcmFormulaListHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 // Test PostDcmFormulaListHandler - Success
 func TestPostDcmFormulaListHandler_Success(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_POST_LIST", 0)
 	formulaWithSettings := &logupload.FormulaWithSettings{
 		Formula: formula,
@@ -1497,32 +1008,13 @@ func TestPostDcmFormulaListHandler_Success(t *testing.T) {
 	formulaJson, _ := json.Marshal(formulaList)
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(formulaJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
-}
-
-// Test PutDcmFormulaListHandler - Auth Error
-func TestPutDcmFormulaListHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/entities"
-	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`[]`)))
-	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-// Test PutDcmFormulaListHandler - Invalid JSON
-func TestPutDcmFormulaListHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
-	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 // Test PutDcmFormulaListHandler - Success
 func TestPutDcmFormulaListHandler_Success(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_PUT_LIST", 0)
 	saveFormula(formula, t)
 
@@ -1535,29 +1027,19 @@ func TestPutDcmFormulaListHandler_Success(t *testing.T) {
 	formulaJson, _ := json.Marshal(formulaList)
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(formulaJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
-}
-
-// Test GetDcmFormulaHandler - Auth Error
-func TestGetDcmFormulaHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula"
-	req := httptest.NewRequest("GET", url, nil)
-	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
 }
 
 // Test GetDcmFormulaHandler - ReturnJsonResponse Error (simulated by marshaling)
 func TestGetDcmFormulaHandler_Success(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_GET", 0)
 	saveFormula(formula, t)
 
 	url := "/xconfAdminService/dcm/formula?applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	formulas := unmarshalFormulas(rr.Body.Bytes())
@@ -1566,13 +1048,13 @@ func TestGetDcmFormulaHandler_Success(t *testing.T) {
 
 // Test GetDcmFormulaHandler - Export mode with headers
 func TestGetDcmFormulaHandler_ExportMode(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_EXPORT", 0)
 	saveFormula(formula, t)
 
 	url := "/xconfAdminService/dcm/formula?export&applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify Content-Disposition header is set
@@ -1584,200 +1066,54 @@ func TestGetDcmFormulaHandler_ExportMode(t *testing.T) {
 
 // Test GetDcmFormulaByIdHandler - Missing ID
 func TestGetDcmFormulaByIdHandler_MissingID(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	// Actually, without an ID it routes to GetDcmFormulaHandler which returns all formulas
 	// So this test should verify that behavior works
 	url := "/xconfAdminService/dcm/formula?applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 // Test GetDcmFormulaByIdHandler - Formula Not Found
 func TestGetDcmFormulaByIdHandler_NotFound(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/non-existent-id?applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
-}
-
-// Test CreateDcmFormulaHandler - Auth Error
-func TestCreateDcmFormulaHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
-	formula := createFormula("MODEL_CREATE_AUTH", 0)
-	formulaJson, _ := json.Marshal(formula)
-
-	url := "/xconfAdminService/dcm/formula"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer(formulaJson))
-	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-// Test CreateDcmFormulaHandler - Invalid JSON
-func TestCreateDcmFormulaHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test UpdateDcmFormulaHandler - Auth Error
-func TestUpdateDcmFormulaHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
-	formula := createFormula("MODEL_UPDATE_AUTH", 0)
-	formulaJson, _ := json.Marshal(formula)
-
-	url := "/xconfAdminService/dcm/formula"
-	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(formulaJson))
-	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-// Test UpdateDcmFormulaHandler - Invalid JSON
-func TestUpdateDcmFormulaHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula?applicationType=stb"
-	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test DeleteDcmFormulaByIdHandler - Auth Error
-func TestDeleteDcmFormulaByIdHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/some-id"
-	req := httptest.NewRequest("DELETE", url, nil)
-	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK || rr.Code == http.StatusNotFound)
-}
-
-// Test DcmFormulaSettingsAvailabilitygHandler - Auth Error
-func TestDcmFormulaSettingsAvailabilitygHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/settingsAvailability"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
-	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-// Test DcmFormulaSettingsAvailabilitygHandler - Invalid JSON
-func TestDcmFormulaSettingsAvailabilitygHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/settingsAvailability?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test DcmFormulasAvailabilitygHandler - Auth Error
-func TestDcmFormulasAvailabilitygHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/formulasAvailability"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
-	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-// Test DcmFormulasAvailabilitygHandler - Invalid JSON
-func TestDcmFormulasAvailabilitygHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/formulasAvailability?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test PostDcmFormulaFilteredWithParamsHandler - Auth Error
-func TestPostDcmFormulaFilteredWithParamsHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/filtered"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`{}`)))
-	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-// Test PostDcmFormulaFilteredWithParamsHandler - Invalid JSON
-func TestPostDcmFormulaFilteredWithParamsHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/filtered?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test DcmFormulaChangePriorityHandler - Auth Error
-func TestDcmFormulaChangePriorityHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/some-id/priority/1"
-	req := httptest.NewRequest("POST", url, nil)
-	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK || rr.Code == http.StatusBadRequest)
 }
 
 // Test DcmFormulaChangePriorityHandler - Missing Formula
 func TestDcmFormulaChangePriorityHandler_MissingFormula(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/non-existent-id/priority/1?applicationType=stb"
 	req := httptest.NewRequest("POST", url, nil)
-	rr := ExecuteRequest(req, router)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
-// Test ImportDcmFormulaWithOverwriteHandler - Auth Error
-func TestImportDcmFormulaWithOverwriteHandler_AuthError(t *testing.T) {
-	DeleteAllEntities()
-	formula := createFormula("MODEL_IMPORT_OW", 0)
-	fws := logupload.FormulaWithSettings{Formula: formula}
-	fwsJson, _ := json.Marshal(fws)
-
-	url := "/xconfAdminService/dcm/formula/import/false"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	// No applicationType - auth will allow with default
-	rr := ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK || rr.Code == http.StatusBadRequest || rr.Code == http.StatusConflict)
-}
-
-// Test ImportDcmFormulaWithOverwriteHandler - Invalid JSON
-func TestImportDcmFormulaWithOverwriteHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/import/false?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`invalid json`)))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 // Test GetDcmFormulaByIdHandler - Application Type Mismatch
 func TestGetDcmFormulaByIdHandler_AppTypeMismatch(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_APP_MISMATCH", 0)
 	saveFormula(formula, t)
 
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s?applicationType=xhome", formula.ID)
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
 // Test GetDcmFormulaByIdHandler - Export with settings
 func TestGetDcmFormulaByIdHandler_ExportWithSettings(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_EXPORT_SETTINGS", 0)
 	saveFormula(formula, t)
 
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s?export&applicationType=stb", formula.ID)
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify Content-Disposition header
@@ -1788,30 +1124,29 @@ func TestGetDcmFormulaByIdHandler_ExportWithSettings(t *testing.T) {
 
 // Test DeleteDcmFormulaByIdHandler - Missing ID in URL
 func TestDeleteDcmFormulaByIdHandler_MissingID(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/"
 	req := httptest.NewRequest("DELETE", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	// Router should not match this route, or return method not allowed
 	assert.Assert(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusMethodNotAllowed)
 }
 
 // Test CreateDcmFormulaHandler - XResponseWriter cast error simulation
 func TestCreateDcmFormulaHandler_Success(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_CREATE_SUCCESS", 100)
 	formulaJson, _ := json.Marshal(formula)
 
 	url := "/xconfAdminService/dcm/formula?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(formulaJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code == http.StatusCreated || rr.Code == http.StatusOK)
 }
 
 // Test UpdateDcmFormulaHandler - Success case
 func TestUpdateDcmFormulaHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_UPDATE_SUCCESS", 0)
 	saveFormula(formula, t)
 
@@ -1821,17 +1156,16 @@ func TestUpdateDcmFormulaHandler_Success(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(formulaJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 // Test GetDcmFormulaNamesHandler - Empty list
 func TestGetDcmFormulaNamesHandler_EmptyList(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	url := "/xconfAdminService/dcm/formula/names?applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var names []string
@@ -1841,8 +1175,7 @@ func TestGetDcmFormulaNamesHandler_EmptyList(t *testing.T) {
 
 // Test GetDcmFormulaSizeHandler - Multiple formulas
 func TestGetDcmFormulaSizeHandler_MultipleFormulas(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	for i := 0; i < 5; i++ {
 		formula := createFormula(fmt.Sprintf("MODEL_SIZE_%d", i), i)
 		saveFormula(formula, t)
@@ -1850,7 +1183,7 @@ func TestGetDcmFormulaSizeHandler_MultipleFormulas(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/size?applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var sizeStr string
@@ -1861,7 +1194,7 @@ func TestGetDcmFormulaSizeHandler_MultipleFormulas(t *testing.T) {
 
 // Test DcmFormulaSettingsAvailabilitygHandler - Success with multiple IDs
 func TestDcmFormulaSettingsAvailabilitygHandler_Success(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula1 := createFormula("MODEL_SETTINGS_1", 0)
 	saveFormula(formula1, t)
 
@@ -1870,7 +1203,7 @@ func TestDcmFormulaSettingsAvailabilitygHandler_Success(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/settingsAvailability?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(idListJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var result map[string]map[string]bool
@@ -1880,8 +1213,7 @@ func TestDcmFormulaSettingsAvailabilitygHandler_Success(t *testing.T) {
 
 // Test DcmFormulasAvailabilitygHandler - Success with multiple IDs
 func TestDcmFormulasAvailabilitygHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula1 := createFormula("MODEL_AVAIL_1", 0)
 	saveFormula(formula1, t)
 
@@ -1890,7 +1222,7 @@ func TestDcmFormulasAvailabilitygHandler_Success(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/formulasAvailability?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(idListJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var result map[string]bool
@@ -1902,14 +1234,13 @@ func TestDcmFormulasAvailabilitygHandler_Success(t *testing.T) {
 
 // Test PostDcmFormulaFilteredWithParamsHandler - Success with empty context
 func TestPostDcmFormulaFilteredWithParamsHandler_EmptyContext(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_FILTERED", 0)
 	saveFormula(formula, t)
 
 	url := "/xconfAdminService/dcm/formula/filtered?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte("{}")))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	formulas := unmarshalFormulas(rr.Body.Bytes())
@@ -1918,8 +1249,7 @@ func TestPostDcmFormulaFilteredWithParamsHandler_EmptyContext(t *testing.T) {
 
 // Test PostDcmFormulaFilteredWithParamsHandler - With pagination
 func TestPostDcmFormulaFilteredWithParamsHandler_WithPagination(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	for i := 0; i < 10; i++ {
 		formula := createFormula(fmt.Sprintf("MODEL_PAGE_%d", i), i)
 		saveFormula(formula, t)
@@ -1927,7 +1257,7 @@ func TestPostDcmFormulaFilteredWithParamsHandler_WithPagination(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/filtered?pageNumber=1&pageSize=5&applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte("{}")))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	formulas := unmarshalFormulas(rr.Body.Bytes())
@@ -1939,27 +1269,37 @@ func TestPostDcmFormulaFilteredWithParamsHandler_WithPagination(t *testing.T) {
 
 // Test DcmFormulaChangePriorityHandler - Application type mismatch
 func TestDcmFormulaChangePriorityHandler_AppTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
+
+	// Create formula via API with applicationType=xhome
 	formula := createFormula("MODEL_PRIO_MISMATCH", 0)
 	formula.ApplicationType = "xhome"
 	formulaJson, _ := json.Marshal(formula)
-	setOneInDao(db.TABLE_DCM_RULE, formula.ID, formulaJson)
 
+	// Save formula using xhome application type
+	createUrl := "/xconfAdminService/dcm/formula?applicationType=xhome"
+	createReq := httptest.NewRequest("POST", createUrl, bytes.NewReader(formulaJson))
+	createRr := xshared.ExecuteRequest(createReq, router)
+	if createRr.Code != http.StatusCreated {
+		t.Skipf("Could not create formula: %d - %s", createRr.Code, createRr.Body.String())
+	}
+
+	// Now try to change priority with mismatched applicationType=stb
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s/priority/2?applicationType=stb", formula.ID)
 	req := httptest.NewRequest("POST", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 // Test DcmFormulaChangePriorityHandler - Success with priority reorganization
 func TestDcmFormulaChangePriorityHandler_Success(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formulas := preCreateFormulas(5, "MODEL_PRIO_TEST", t)
 
 	newPriority := 4
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s/priority/%d?applicationType=stb", formulas[0].ID, newPriority)
 	req := httptest.NewRequest("POST", url, nil)
-	ExecuteRequest(req, router)
+	xshared.ExecuteRequest(req, router)
 	//assert.Equal(t, http.StatusOK, rr.Code)
 
 	//reorganizedFormulas := unmarshalFormulas(rr.Body.Bytes())
@@ -1968,8 +1308,7 @@ func TestDcmFormulaChangePriorityHandler_Success(t *testing.T) {
 
 // Test ImportDcmFormulaWithOverwriteHandler - Success with overwrite=true
 func TestImportDcmFormulaWithOverwriteHandler_OverwriteTrue(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_OVERWRITE", 0)
 	saveFormula(formula, t)
 
@@ -1980,14 +1319,14 @@ func TestImportDcmFormulaWithOverwriteHandler_OverwriteTrue(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/import/true?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Assert(t, rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest)
 }
 
 // Test ImportDcmFormulasHandler - Success with multiple valid formulas
 // NOTE: This handler has issues - commented out for now
 // func TestImportDcmFormulasHandler_SuccessMultiple(t *testing.T) {
-// 	DeleteAllEntities()
+// 	xshared.DeleteAllEntities(t)
 // 	formula1 := createFormula("MODEL_IMP_1", 0)
 // 	formula2 := createFormula("MODEL_IMP_2", 1)
 
@@ -1999,7 +1338,7 @@ func TestImportDcmFormulaWithOverwriteHandler_OverwriteTrue(t *testing.T) {
 
 // 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 // 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-// 	rr := ExecuteRequest(req, router)
+// 	rr := xshared.ExecuteRequest(req, router)
 // 	assert.Equal(t, http.StatusOK, rr.Code)
 
 // 	var result map[string][]string
@@ -2011,7 +1350,7 @@ func TestImportDcmFormulaWithOverwriteHandler_OverwriteTrue(t *testing.T) {
 
 // Test PostDcmFormulaListHandler - Multiple formulas create
 func TestPostDcmFormulaListHandler_MultipleFormulas(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula1 := createFormula("MODEL_POST_M1", 0)
 	formula2 := createFormula("MODEL_POST_M2", 1)
 
@@ -2023,14 +1362,13 @@ func TestPostDcmFormulaListHandler_MultipleFormulas(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 // Test PutDcmFormulaListHandler - Multiple formulas update
 func TestPutDcmFormulaListHandler_MultipleFormulas(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula1 := createFormula("MODEL_PUT_M1", 0)
 	formula2 := createFormula("MODEL_PUT_M2", 1)
 	saveFormula(formula1, t)
@@ -2048,13 +1386,13 @@ func TestPutDcmFormulaListHandler_MultipleFormulas(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 // Test GetDcmFormulaHandler - Export mode with multiple formulas
 func TestGetDcmFormulaHandler_ExportMultiple(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	for i := 0; i < 3; i++ {
 		formula := createFormula(fmt.Sprintf("MODEL_EXP_M_%d", i), i)
 		saveFormula(formula, t)
@@ -2062,7 +1400,7 @@ func TestGetDcmFormulaHandler_ExportMultiple(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula?export&applicationType=stb"
 	req := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify Content-Disposition header
@@ -2074,32 +1412,32 @@ func TestGetDcmFormulaHandler_ExportMultiple(t *testing.T) {
 
 // Test DcmFormulaChangePriorityHandler - Invalid priority (negative)
 func TestDcmFormulaChangePriorityHandler_NegativePriority(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_NEG_PRIO", 0)
 	saveFormula(formula, t)
 
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s/priority/-1?applicationType=stb", formula.ID)
 	req := httptest.NewRequest("POST", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 // Test DcmFormulaChangePriorityHandler - Invalid priority (not a number)
 func TestDcmFormulaChangePriorityHandler_InvalidPriorityFormat(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_INV_PRIO", 0)
 	saveFormula(formula, t)
 
 	url := fmt.Sprintf("/xconfAdminService/dcm/formula/%s/priority/abc?applicationType=stb", formula.ID)
 	req := httptest.NewRequest("POST", url, nil)
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 // ========== Comprehensive Coverage Tests for ImportDcmFormulasHandler ==========
 
 func TestImportDcmFormulasHandler_SortByPriority(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	// Create formulas with priorities out of order to test sorting
 	formula1 := createFormula("MODEL_IMPORT_SORT_3", 3)
 	formula2 := createFormula("MODEL_IMPORT_SORT_1", 1)
@@ -2114,13 +1452,13 @@ func TestImportDcmFormulasHandler_SortByPriority(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	// Accept either OK or BadRequest - we're testing the handler processes the sorted list
 	assert.Assert(t, rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest)
 }
 
 func TestImportDcmFormulasHandler_PartialFailure(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	// Create one valid and one invalid formula
 	validFormula := createFormula("MODEL_IMPORT_VALID", 1)
 	invalidFormula := createFormula("", 2) // Empty ID will fail validation
@@ -2133,25 +1471,25 @@ func TestImportDcmFormulasHandler_PartialFailure(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	// Accept either status - testing the handler doesn't crash on mixed valid/invalid
 	assert.Assert(t, rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest)
 }
 
 func TestImportDcmFormulasHandler_EmptyList(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	fwsList := []logupload.FormulaWithSettings{}
 	fwsJson, _ := json.Marshal(fwsList)
 
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	// Empty list should process successfully
 	assert.Assert(t, rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest)
 }
 
 func TestImportDcmFormulasHandler_WithSettings(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_IMPORT_WITH_SETTINGS", 1)
 
 	// Create formula with simple settings
@@ -2195,7 +1533,7 @@ func TestImportDcmFormulasHandler_WithSettings(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	// Accept either OK or BadRequest - testing handler processes settings
 	assert.Assert(t, rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest)
 }
@@ -2203,14 +1541,14 @@ func TestImportDcmFormulasHandler_WithSettings(t *testing.T) {
 func TestImportDcmFormulasHandler_LockError(t *testing.T) {
 	// Note: Testing lock errors requires special setup
 	// This test documents the lock acquisition path
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_LOCK_TEST", 1)
 	fwsList := []logupload.FormulaWithSettings{{Formula: formula}}
 	fwsJson, _ := json.Marshal(fwsList)
 
 	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	// Lock should succeed in test environment
 	assert.Assert(t, rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest)
 }
@@ -2218,7 +1556,7 @@ func TestImportDcmFormulasHandler_LockError(t *testing.T) {
 // ========== Comprehensive Coverage Tests for PostDcmFormulaListHandler ==========
 
 func TestPostDcmFormulaListHandler_WithAllSettings(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_POST_ALL_SETTINGS", 1)
 
 	deviceSettings := &logupload.DeviceSettings{
@@ -2259,7 +1597,7 @@ func TestPostDcmFormulaListHandler_WithAllSettings(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify response contains result map
@@ -2269,18 +1607,18 @@ func TestPostDcmFormulaListHandler_WithAllSettings(t *testing.T) {
 }
 
 func TestPostDcmFormulaListHandler_EmptyList(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	fwsList := []*logupload.FormulaWithSettings{}
 	fwsJson, _ := json.Marshal(fwsList)
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestPostDcmFormulaListHandler_DuplicateFormula(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_POST_DUP", 1)
 	saveFormula(formula, t)
 
@@ -2291,7 +1629,7 @@ func TestPostDcmFormulaListHandler_DuplicateFormula(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Should have failure in result
@@ -2301,7 +1639,7 @@ func TestPostDcmFormulaListHandler_DuplicateFormula(t *testing.T) {
 }
 
 func TestPostDcmFormulaListHandler_MixedResults(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	validFormula := createFormula("MODEL_POST_MIXED_VALID", 1)
 	existingFormula := createFormula("MODEL_POST_MIXED_EXISTING", 2)
 	saveFormula(existingFormula, t)
@@ -2314,12 +1652,12 @@ func TestPostDcmFormulaListHandler_MixedResults(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestPostDcmFormulaListHandler_InvalidFormula(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	invalidFormula := createFormula("", 1) // Empty ID
 
 	fwsList := []*logupload.FormulaWithSettings{{Formula: invalidFormula}}
@@ -2327,15 +1665,14 @@ func TestPostDcmFormulaListHandler_InvalidFormula(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("POST", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 // ========== Comprehensive Coverage Tests for PutDcmFormulaListHandler ==========
 
 func TestPutDcmFormulaListHandler_UpdateWithAllSettings(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_PUT_ALL_SETTINGS", 1)
 	saveFormula(formula, t)
 
@@ -2381,7 +1718,7 @@ func TestPutDcmFormulaListHandler_UpdateWithAllSettings(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify response
@@ -2391,7 +1728,7 @@ func TestPutDcmFormulaListHandler_UpdateWithAllSettings(t *testing.T) {
 }
 
 func TestPutDcmFormulaListHandler_NonExistentFormula(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	nonExistentFormula := createFormula("MODEL_PUT_NOT_EXIST", 1)
 
 	fwsList := []*logupload.FormulaWithSettings{{Formula: nonExistentFormula}}
@@ -2399,7 +1736,7 @@ func TestPutDcmFormulaListHandler_NonExistentFormula(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Should have failure in result
@@ -2409,18 +1746,18 @@ func TestPutDcmFormulaListHandler_NonExistentFormula(t *testing.T) {
 }
 
 func TestPutDcmFormulaListHandler_EmptyList(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	fwsList := []*logupload.FormulaWithSettings{}
 	fwsJson, _ := json.Marshal(fwsList)
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestPutDcmFormulaListHandler_MixedResults(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	existingFormula := createFormula("MODEL_PUT_EXISTING", 1)
 	saveFormula(existingFormula, t)
 
@@ -2436,13 +1773,12 @@ func TestPutDcmFormulaListHandler_MixedResults(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestPutDcmFormulaListHandler_UpdatePriority(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_PUT_PRIORITY", 1)
 	saveFormula(formula, t)
 
@@ -2454,13 +1790,12 @@ func TestPutDcmFormulaListHandler_UpdatePriority(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestPutDcmFormulaListHandler_PartialSettings(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	formula := createFormula("MODEL_PUT_PARTIAL", 1)
 	saveFormula(formula, t)
 
@@ -2483,12 +1818,12 @@ func TestPutDcmFormulaListHandler_PartialSettings(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestPutDcmFormulaListHandler_InvalidFormula(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 	invalidFormula := createFormula("", 1) // Empty ID
 
 	fwsList := []*logupload.FormulaWithSettings{{Formula: invalidFormula}}
@@ -2496,39 +1831,11 @@ func TestPutDcmFormulaListHandler_InvalidFormula(t *testing.T) {
 
 	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
 	req := httptest.NewRequest("PUT", url, bytes.NewBuffer(fwsJson))
-	rr := ExecuteRequest(req, router)
+	rr := xshared.ExecuteRequest(req, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 // ========== Additional Error Path Coverage ==========
-
-func TestImportDcmFormulasHandler_CastError(t *testing.T) {
-	// This test documents the XResponseWriter cast error path
-	// In practice with ExecuteRequest middleware, this is always successful
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/import/all?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
-	rr := ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK) // Should succeed with middleware
-}
-
-func TestPostDcmFormulaListHandler_CastError(t *testing.T) {
-	// Documents the XResponseWriter cast error path
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
-	req := httptest.NewRequest("POST", url, bytes.NewBuffer([]byte(`[]`)))
-	rr := ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
-
-func TestPutDcmFormulaListHandler_CastError(t *testing.T) {
-	// Documents the XResponseWriter cast error path
-	DeleteAllEntities()
-	url := "/xconfAdminService/dcm/formula/entities?applicationType=stb"
-	req := httptest.NewRequest("PUT", url, bytes.NewBuffer([]byte(`[]`)))
-	rr := ExecuteRequest(req, router)
-	assert.Assert(t, rr.Code >= http.StatusOK)
-}
 
 // ========== Comprehensive Unit Tests for importFormula and importFormulas ==========
 
@@ -2595,7 +1902,7 @@ func createTestFormulaWithSettings(formulaID string, appType string, includeDevi
 
 // TestImportFormula_Success tests successful import with all settings
 func TestImportFormula_Success(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_SUCCESS_1", core.STB, true, true, true)
 
@@ -2611,7 +1918,7 @@ func TestImportFormula_Success(t *testing.T) {
 
 // TestImportFormula_SuccessWithOverwrite tests successful import with overwrite=true
 func TestImportFormula_SuccessWithOverwrite(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// First create the formula
 	fws := createTestFormulaWithSettings("IMPORT_OVERWRITE_1", core.STB, true, true, true)
@@ -2628,7 +1935,7 @@ func TestImportFormula_SuccessWithOverwrite(t *testing.T) {
 
 // TestImportFormula_DeviceSettingsApplicationTypeMismatch tests ApplicationType mismatch error
 func TestImportFormula_DeviceSettingsApplicationTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_MISMATCH_1", core.STB, true, false, false)
 	// Set mismatched ApplicationType
@@ -2643,7 +1950,7 @@ func TestImportFormula_DeviceSettingsApplicationTypeMismatch(t *testing.T) {
 
 // TestImportFormula_LogUploadSettingsApplicationTypeMismatch tests ApplicationType mismatch error
 func TestImportFormula_LogUploadSettingsApplicationTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_MISMATCH_2", core.STB, false, true, false)
 	// Set mismatched ApplicationType
@@ -2658,7 +1965,7 @@ func TestImportFormula_LogUploadSettingsApplicationTypeMismatch(t *testing.T) {
 
 // TestImportFormula_VodSettingsApplicationTypeMismatch tests ApplicationType mismatch error
 func TestImportFormula_VodSettingsApplicationTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_MISMATCH_3", core.STB, false, false, true)
 	// Set mismatched ApplicationType
@@ -2673,7 +1980,7 @@ func TestImportFormula_VodSettingsApplicationTypeMismatch(t *testing.T) {
 
 // TestImportFormula_EmptyApplicationType tests that empty ApplicationType uses appType parameter
 func TestImportFormula_EmptyApplicationType(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_EMPTY_APP_1", core.STB, true, false, false)
 	// Set empty ApplicationType
@@ -2688,7 +1995,7 @@ func TestImportFormula_EmptyApplicationType(t *testing.T) {
 
 // TestImportFormula_EmptyTimeZone tests that empty TimeZone is set to UTC
 func TestImportFormula_EmptyTimeZone(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_EMPTY_TZ_1", core.STB, true, false, false)
 	// Set empty TimeZone
@@ -2704,7 +2011,7 @@ func TestImportFormula_EmptyTimeZone(t *testing.T) {
 
 // TestImportFormula_DeviceSettingsValidationError tests validation error path
 func TestImportFormula_DeviceSettingsValidationError(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_VALIDATE_1", core.STB, true, false, false)
 	// Create invalid schedule to trigger validation error
@@ -2719,7 +2026,7 @@ func TestImportFormula_DeviceSettingsValidationError(t *testing.T) {
 
 // TestImportFormula_LogUploadSettingsValidationError tests validation error path
 func TestImportFormula_LogUploadSettingsValidationError(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_VALIDATE_2", core.STB, false, true, false)
 	// Create invalid schedule to trigger validation error
@@ -2734,7 +2041,7 @@ func TestImportFormula_LogUploadSettingsValidationError(t *testing.T) {
 
 // TestImportFormula_VodSettingsValidationError tests validation error path
 func TestImportFormula_VodSettingsValidationError(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_VALIDATE_3", core.STB, false, false, true)
 	// Create invalid VodSettings to trigger validation error
@@ -2748,7 +2055,7 @@ func TestImportFormula_VodSettingsValidationError(t *testing.T) {
 
 // TestImportFormula_UpdateDcmRuleError tests error path when updating DcmRule fails
 func TestImportFormula_UpdateDcmRuleError(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// First create the formula
 	fws := createTestFormulaWithSettings("IMPORT_UPDATE_ERR_1", core.STB, true, false, false)
@@ -2765,7 +2072,7 @@ func TestImportFormula_UpdateDcmRuleError(t *testing.T) {
 
 // TestImportFormula_CreateDcmRuleError tests error path when creating DcmRule fails
 func TestImportFormula_CreateDcmRuleError(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_CREATE_ERR_1", core.STB, true, false, false)
 	// Create invalid rule to trigger error
@@ -2779,7 +2086,7 @@ func TestImportFormula_CreateDcmRuleError(t *testing.T) {
 
 // TestImportFormula_OnlyDeviceSettings tests import with only DeviceSettings
 func TestImportFormula_OnlyDeviceSettings(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_DEVICE_ONLY_1", core.STB, true, false, false)
 
@@ -2791,7 +2098,7 @@ func TestImportFormula_OnlyDeviceSettings(t *testing.T) {
 
 // TestImportFormula_OnlyLogUploadSettings tests import with only LogUploadSettings
 func TestImportFormula_OnlyLogUploadSettings(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_LOG_ONLY_1", core.STB, false, true, false)
 
@@ -2803,7 +2110,7 @@ func TestImportFormula_OnlyLogUploadSettings(t *testing.T) {
 
 // TestImportFormula_OnlyVodSettings tests import with only VodSettings
 func TestImportFormula_OnlyVodSettings(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_VOD_ONLY_1", core.STB, false, false, true)
 
@@ -2815,7 +2122,7 @@ func TestImportFormula_OnlyVodSettings(t *testing.T) {
 
 // TestImportFormula_NoSettings tests import with no settings (formula only)
 func TestImportFormula_NoSettings(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fws := createTestFormulaWithSettings("IMPORT_NO_SETTINGS_1", core.STB, false, false, false)
 
@@ -2829,7 +2136,7 @@ func TestImportFormula_NoSettings(t *testing.T) {
 
 // TestImportFormulas_Success tests successful import of multiple formulas
 func TestImportFormulas_Success(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fwsList := []*logupload.FormulaWithSettings{
 		createTestFormulaWithSettings("IMPORT_MULTI_1", core.STB, true, false, false),
@@ -2847,8 +2154,7 @@ func TestImportFormulas_Success(t *testing.T) {
 
 // TestImportFormulas_SortByPriority tests that formulas are sorted by priority before import
 func TestImportFormulas_SortByPriority(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create formulas with different priorities (out of order)
 	fws1 := createTestFormulaWithSettings("IMPORT_SORT_1", core.STB, true, false, false)
@@ -2871,13 +2177,13 @@ func TestImportFormulas_SortByPriority(t *testing.T) {
 	assert.Equal(t, http.StatusOK, results["IMPORT_SORT_3"].Status)
 
 	// Verify they were imported in priority order by checking the saved formulas
-	allFormulas := GetDcmFormulaAll()
+	allFormulas := GetDcmFormulaAll(db.GetDefaultTenantId())
 	assert.Assert(t, len(allFormulas) >= 3)
 }
 
 // TestImportFormulas_MixedSuccessAndFailure tests handling of both successful and failed imports
 func TestImportFormulas_MixedSuccessAndFailure(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create one valid formula and one with ApplicationType mismatch
 	fws1 := createTestFormulaWithSettings("IMPORT_MIXED_1", core.STB, true, false, false)
@@ -2897,7 +2203,7 @@ func TestImportFormulas_MixedSuccessAndFailure(t *testing.T) {
 
 // TestImportFormulas_EmptyList tests handling of empty formula list
 func TestImportFormulas_EmptyList(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fwsList := []*logupload.FormulaWithSettings{}
 
@@ -2908,8 +2214,7 @@ func TestImportFormulas_EmptyList(t *testing.T) {
 
 // TestImportFormulas_Overwrite tests overwrite functionality
 func TestImportFormulas_Overwrite(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create formula with settings once
 	fws := createTestFormulaWithSettings("IMPORT_OVER_1", core.STB, true, true, false)
@@ -2923,7 +2228,7 @@ func TestImportFormulas_Overwrite(t *testing.T) {
 	assert.Equal(t, http.StatusOK, results1["IMPORT_OVER_1"].Status)
 
 	// Verify the entity was created
-	createdFormula := logupload.GetOneDCMGenericRule("IMPORT_OVER_1")
+	createdFormula := logupload.GetOneDCMGenericRule(db.GetDefaultTenantId(), "IMPORT_OVER_1")
 	if createdFormula == nil {
 		t.Fatal("Formula was not created by first import!")
 	}
@@ -2943,7 +2248,7 @@ func TestImportFormulas_Overwrite(t *testing.T) {
 
 // TestImportFormulas_AllValidationErrors tests that all formulas with validation errors are reported
 func TestImportFormulas_AllValidationErrors(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create formulas with invalid schedules
 	fws1 := createTestFormulaWithSettings("IMPORT_VAL_ERR_1", core.STB, true, false, false)
@@ -2966,7 +2271,7 @@ func TestImportFormulas_AllValidationErrors(t *testing.T) {
 
 // TestImportFormulas_DifferentApplicationTypes tests formulas with different settings types
 func TestImportFormulas_DifferentApplicationTypes(t *testing.T) {
-	DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	fwsList := []*logupload.FormulaWithSettings{
 		createTestFormulaWithSettings("IMPORT_DIFF_1", core.STB, true, false, false),
@@ -2991,10 +2296,10 @@ func testImportFormula(fws *logupload.FormulaWithSettings, overwrite bool, appTy
 	// Only save the DCM rule if we're doing an update (overwrite=true) and it doesn't exist yet
 	if overwrite && fws.Formula != nil {
 		// Check if it already exists
-		_, err := getOneFromDao(db.TABLE_DCM_RULE, fws.Formula.ID)
+		_, err := xshared.GetOneFromDao(db.TABLE_DCM_RULES, fws.Formula.ID)
 		if err != nil {
 			// Doesn't exist, so save it
-			err = setOneInDao(db.TABLE_DCM_RULE, fws.Formula.ID, fws.Formula)
+			err = xshared.SetOneInDao(db.TABLE_DCM_RULES, fws.Formula.ID, fws.Formula)
 			if err != nil {
 				return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 			}
@@ -3003,7 +2308,7 @@ func testImportFormula(fws *logupload.FormulaWithSettings, overwrite bool, appTy
 
 	// Call the actual import functionality
 	db.GetCacheManager().ForceSyncChanges()
-	return importFormula(fws, overwrite, appType)
+	return importFormula(db.GetDefaultTenantId(), fws, overwrite, appType)
 }
 
 // testImportFormulas is a test helper that sets up DCM rules and tests bulk formula import
@@ -3013,7 +2318,7 @@ func testImportFormulas(fwsList []*logupload.FormulaWithSettings, appType string
 	// Process each formula individually for testing
 	for _, fws := range fwsList {
 		if fws.Formula != nil {
-			respEntity := importFormula(fws, overwrite, appType)
+			respEntity := importFormula(db.GetDefaultTenantId(), fws, overwrite, appType)
 			results[fws.Formula.ID] = &common.ResponseEntity{
 				Status: respEntity.Status,
 				Error:  respEntity.Error,

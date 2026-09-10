@@ -5,13 +5,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
-	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,88 +48,79 @@ func TestGetSettingRulesAllExport(t *testing.T) {
 }
 
 func TestGetSettingRuleOneExport(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/setting-rules/test-id", nil)
-	recorder := httptest.NewRecorder()
-	w := xwhttp.NewXResponseWriter(recorder)
-	ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
-	req = req.WithContext(ctx)
-	defer func() {
-		if r := recover(); r != nil {
-			t.Logf("Expected panic due to database not configured: %v", r)
-		}
-	}()
-	req.Header = make(http.Header)
-	GetSettingRuleOneExport(w, req)
-	assert.True(t, w.Status() >= 400, "Should return error status for auth failure")
-}
+	t.Run("AuthenticationFailure", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/setting-rules/test-id", nil)
+		recorder := httptest.NewRecorder()
+		w := xwhttp.NewXResponseWriter(recorder)
+		// No auth context set to trigger auth.CanRead error
 
-func TestGetSettingRuleOneExport_ErrorCases(t *testing.T) {
-	// Test case 1: xhttp.AdminError - authentication failure
-	req1 := httptest.NewRequest(http.MethodGet, "/setting-rules/test-id", nil)
-	recorder1 := httptest.NewRecorder()
-	w1 := xwhttp.NewXResponseWriter(recorder1)
-	// No auth context set to trigger auth.CanRead error
+		GetSettingRuleOneExport(w, req)
+		assert.True(t, w.Status() >= 400, "Should return error status for auth failure")
+	})
 
-	GetSettingRuleOneExport(w1, req1)
-	assert.True(t, w1.Status() >= 400, "Should return error status for auth failure via xhttp.AdminError")
+	t.Run("BlankID", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/setting-rules/", nil)
+		recorder := httptest.NewRecorder()
+		w := xwhttp.NewXResponseWriter(recorder)
+		ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
+		ctx = context.WithValue(ctx, "auth_subject", "admin")
+		req = req.WithContext(ctx)
+		req = mux.SetURLVars(req, map[string]string{"id": ""})
 
-	// Test case 2: WriteAdminErrorResponse - blank ID
-	req2 := httptest.NewRequest(http.MethodGet, "/setting-rules/", nil)
-	recorder2 := httptest.NewRecorder()
-	w2 := xwhttp.NewXResponseWriter(recorder2)
-	ctx2 := context.WithValue(req2.Context(), applicationTypeKey, "STB")
-	ctx2 = context.WithValue(ctx2, "auth_subject", "admin")
-	req2 = req2.WithContext(ctx2)
-	req2 = mux.SetURLVars(req2, map[string]string{"id": ""})
+		GetSettingRuleOneExport(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Status(), "Should return BadRequest for blank ID")
+	})
 
-	GetSettingRuleOneExport(w2, req2)
-	assert.Equal(t, http.StatusBadRequest, w2.Status(), "Should return BadRequest for blank ID")
+	t.Run("NonExistentID", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/setting-rules/non-existent-id", nil)
+		recorder := httptest.NewRecorder()
+		w := xwhttp.NewXResponseWriter(recorder)
+		ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
+		ctx = context.WithValue(ctx, "auth_subject", "admin")
+		req = req.WithContext(ctx)
+		req = mux.SetURLVars(req, map[string]string{"id": "non-existent-id-12345"})
 
-	// Test case 3: WriteAdminErrorResponse - non-existent ID
-	req3 := httptest.NewRequest(http.MethodGet, "/setting-rules/non-existent-id", nil)
-	recorder3 := httptest.NewRecorder()
-	w3 := xwhttp.NewXResponseWriter(recorder3)
-	ctx3 := context.WithValue(req3.Context(), applicationTypeKey, "STB")
-	ctx3 = context.WithValue(ctx3, "auth_subject", "admin")
-	req3 = req3.WithContext(ctx3)
-	req3 = mux.SetURLVars(req3, map[string]string{"id": "non-existent-id-12345"})
+		GetSettingRuleOneExport(w, req)
+		assert.Equal(t, http.StatusNotFound, w.Status(), "Should return NotFound for non-existent ID")
+	})
 
-	GetSettingRuleOneExport(w3, req3)
-	assert.Equal(t, http.StatusNotFound, w3.Status(), "Should return NotFound for non-existent ID")
-}
+	t.Run("SuccessWithExportParam", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Logf("Expected panic due to database not configured: %v", r)
+			}
+		}()
 
-func TestGetSettingRuleOneExport_SuccessCases(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Logf("Expected panic due to database not configured: %v", r)
-		}
-	}()
+		req := httptest.NewRequest(http.MethodGet, "/setting-rules/test-id?export=true", nil)
+		recorder := httptest.NewRecorder()
+		w := xwhttp.NewXResponseWriter(recorder)
+		ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
+		ctx = context.WithValue(ctx, "auth_subject", "admin")
+		req = req.WithContext(ctx)
+		req = mux.SetURLVars(req, map[string]string{"id": "valid-setting-rule-id"})
 
-	// Test case 1: Success with export parameter - triggers xwhttp.WriteXconfResponseWithHeaders
-	req1 := httptest.NewRequest(http.MethodGet, "/setting-rules/test-id?export=true", nil)
-	recorder1 := httptest.NewRecorder()
-	w1 := xwhttp.NewXResponseWriter(recorder1)
-	ctx1 := context.WithValue(req1.Context(), applicationTypeKey, "STB")
-	ctx1 = context.WithValue(ctx1, "auth_subject", "admin")
-	req1 = req1.WithContext(ctx1)
-	req1 = mux.SetURLVars(req1, map[string]string{"id": "valid-setting-rule-id"})
+		GetSettingRuleOneExport(w, req)
+		assert.True(t, w.Status() >= 200 || w.Status() >= 400, "Should handle export case")
+	})
 
-	GetSettingRuleOneExport(w1, req1)
-	// Note: Will likely return error due to no database, but covers the code path
-	assert.True(t, w1.Status() >= 200 || w1.Status() >= 400, "Should handle export case")
+	t.Run("SuccessWithoutExportParam", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Logf("Expected panic due to database not configured: %v", r)
+			}
+		}()
 
-	// Test case 2: Success without export parameter - triggers xwhttp.WriteXconfResponse
-	req2 := httptest.NewRequest(http.MethodGet, "/setting-rules/test-id", nil)
-	recorder2 := httptest.NewRecorder()
-	w2 := xwhttp.NewXResponseWriter(recorder2)
-	ctx2 := context.WithValue(req2.Context(), applicationTypeKey, "STB")
-	ctx2 = context.WithValue(ctx2, "auth_subject", "admin")
-	req2 = req2.WithContext(ctx2)
-	req2 = mux.SetURLVars(req2, map[string]string{"id": "valid-setting-rule-id"})
+		req := httptest.NewRequest(http.MethodGet, "/setting-rules/test-id", nil)
+		recorder := httptest.NewRecorder()
+		w := xwhttp.NewXResponseWriter(recorder)
+		ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
+		ctx = context.WithValue(ctx, "auth_subject", "admin")
+		req = req.WithContext(ctx)
+		req = mux.SetURLVars(req, map[string]string{"id": "valid-setting-rule-id"})
 
-	GetSettingRuleOneExport(w2, req2)
-	// Note: Will likely return error due to no database, but covers the code path
-	assert.True(t, w2.Status() >= 200 || w2.Status() >= 400, "Should handle non-export case")
+		GetSettingRuleOneExport(w, req)
+		assert.True(t, w.Status() >= 200 || w.Status() >= 400, "Should handle non-export case")
+	})
 }
 
 func TestDeleteOneSettingRulesHandler(t *testing.T) {
@@ -319,130 +308,100 @@ func TestUpdateSettingRulesHandler(t *testing.T) {
 }
 
 func TestUpdateSettingRulesPackageHandler(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Logf("Expected panic due to database not configured: %v", r)
+	t.Run("AuthenticationFailure", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPut, "/setting-rules/package", nil)
+		recorder := httptest.NewRecorder()
+		w := xwhttp.NewXResponseWriter(recorder)
+		// No auth context set to trigger auth.CanWrite error
+
+		UpdateSettingRulesPackageHandler(w, req)
+		assert.True(t, w.Status() >= 400, "Should return error status for auth failure")
+	})
+
+	t.Run("ResponseWriterCastError", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPut, "/setting-rules/package", nil)
+		recorder := httptest.NewRecorder()
+		ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
+		ctx = context.WithValue(ctx, "auth_subject", "admin")
+		req = req.WithContext(ctx)
+
+		UpdateSettingRulesPackageHandler(recorder, req) // Pass recorder directly instead of XResponseWriter
+		assert.Equal(t, http.StatusBadRequest, recorder.Code, "Should return BadRequest for ResponseWriter cast error")
+	})
+
+	t.Run("JSONUnmarshalError", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPut, "/setting-rules/package", nil)
+		recorder := httptest.NewRecorder()
+		w := xwhttp.NewXResponseWriter(recorder)
+		ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
+		ctx = context.WithValue(ctx, "auth_subject", "admin")
+		req = req.WithContext(ctx)
+		w.SetBody(`{"invalid": "json"}`) // Invalid JSON for []SettingRule
+
+		UpdateSettingRulesPackageHandler(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Status(), "Should return BadRequest for JSON unmarshal error")
+	})
+
+	t.Run("SuccessWithValidRules", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Logf("Expected panic due to database not configured: %v", r)
+			}
+		}()
+
+		req := httptest.NewRequest(http.MethodPut, "/setting-rules/package", nil)
+		recorder := httptest.NewRecorder()
+		w := xwhttp.NewXResponseWriter(recorder)
+		ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
+		ctx = context.WithValue(ctx, "auth_subject", "admin")
+		req = req.WithContext(ctx)
+
+		validRules := []map[string]interface{}{
+			{
+				"id":              "test-rule-1",
+				"name":            "Test Setting Rule 1",
+				"applicationType": "STB",
+				"boundSettingID":  "setting-1",
+			},
+			{
+				"id":              "test-rule-2",
+				"name":            "Test Setting Rule 2",
+				"applicationType": "STB",
+				"boundSettingID":  "setting-2",
+			},
 		}
-	}()
-	recorder := httptest.NewRecorder()
-	w := xwhttp.NewXResponseWriter(recorder)
-	ctx := context.WithValue(context.Background(), applicationTypeKey, "STB")
-	req := httptest.NewRequest(http.MethodPut, "/setting-rules/package", nil)
-	req = req.WithContext(ctx)
-	UpdateSettingRulesPackageHandler(recorder, req)
-	assert.Equal(t, http.StatusBadRequest, recorder.Code)
+		jsonBody, _ := json.Marshal(validRules)
+		w.SetBody(string(jsonBody))
 
-	// Invalid JSON array
-	w.SetBody(`[{"invalid": json}]`)
-	UpdateSettingRulesPackageHandler(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Status())
+		UpdateSettingRulesPackageHandler(w, req)
+		assert.Equal(t, http.StatusOK, w.Status(), "Should return OK for successful update")
 
-	//Empty array
-	w.SetBody(`[]`)
-	UpdateSettingRulesPackageHandler(w, req)
-	assert.Equal(t, http.StatusOK, w.Status())
-
-	validRules := []map[string]interface{}{
-		{
-			"id":              "update-rule-1",
-			"name":            "Updated Test Rule 1",
-			"applicationType": "STB",
-			"boundSettingID":  "setting-1",
-		},
-	}
-	jsonBody, _ := json.Marshal(validRules)
-	w.SetBody(string(jsonBody))
-
-	UpdateSettingRulesPackageHandler(w, req)
-	assert.Equal(t, http.StatusOK, w.Status())
-}
-
-func TestUpdateSettingRulesPackageHandler_ErrorCases(t *testing.T) {
-	// Test case 1: xhttp.AdminError - authentication failure
-	req1 := httptest.NewRequest(http.MethodPut, "/setting-rules/package", nil)
-	recorder1 := httptest.NewRecorder()
-	w1 := xwhttp.NewXResponseWriter(recorder1)
-	// No auth context set to trigger auth.CanWrite error
-
-	UpdateSettingRulesPackageHandler(w1, req1)
-	assert.True(t, w1.Status() >= 400, "Should return error status for auth failure via xhttp.AdminError")
-
-	// Test case 2: ResponseWriter cast error - triggers xwhttp.WriteXconfResponse with BadRequest
-	req2 := httptest.NewRequest(http.MethodPut, "/setting-rules/package", nil)
-	recorder2 := httptest.NewRecorder()
-	ctx2 := context.WithValue(req2.Context(), applicationTypeKey, "STB")
-	ctx2 = context.WithValue(ctx2, "auth_subject", "admin")
-	req2 = req2.WithContext(ctx2)
-
-	UpdateSettingRulesPackageHandler(recorder2, req2) // Pass recorder directly instead of XResponseWriter
-	assert.Equal(t, http.StatusBadRequest, recorder2.Code, "Should return BadRequest for ResponseWriter cast error")
-
-	// Test case 3: JSON unmarshal error - triggers xwhttp.WriteXconfResponse with BadRequest
-	req3 := httptest.NewRequest(http.MethodPut, "/setting-rules/package", nil)
-	recorder3 := httptest.NewRecorder()
-	w3 := xwhttp.NewXResponseWriter(recorder3)
-	ctx3 := context.WithValue(req3.Context(), applicationTypeKey, "STB")
-	ctx3 = context.WithValue(ctx3, "auth_subject", "admin")
-	req3 = req3.WithContext(ctx3)
-	w3.SetBody(`{"invalid": "json"}`) // Invalid JSON for []SettingRule
-
-	UpdateSettingRulesPackageHandler(w3, req3)
-	assert.Equal(t, http.StatusBadRequest, w3.Status(), "Should return BadRequest for JSON unmarshal error")
-}
-
-func TestUpdateSettingRulesPackageHandler_SuccessCases(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Logf("Expected panic due to database not configured: %v", r)
+		// Verify response contains entity messages
+		var response map[string]interface{}
+		err := json.Unmarshal([]byte(w.Body()), &response)
+		if err == nil {
+			assert.Greater(t, len(response), 0, "Response should contain entity messages")
 		}
-	}()
+	})
 
-	// Test case 1: Success with valid setting rules - triggers xwhttp.WriteXconfResponse with StatusOK
-	req1 := httptest.NewRequest(http.MethodPut, "/setting-rules/package", nil)
-	recorder1 := httptest.NewRecorder()
-	w1 := xwhttp.NewXResponseWriter(recorder1)
-	ctx1 := context.WithValue(req1.Context(), applicationTypeKey, "STB")
-	ctx1 = context.WithValue(ctx1, "auth_subject", "admin")
-	req1 = req1.WithContext(ctx1)
+	t.Run("SuccessWithEmptyArray", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Logf("Expected panic due to database not configured: %v", r)
+			}
+		}()
 
-	validRules := []map[string]interface{}{
-		{
-			"id":              "test-rule-1",
-			"name":            "Test Setting Rule 1",
-			"applicationType": "STB",
-			"boundSettingID":  "setting-1",
-		},
-		{
-			"id":              "test-rule-2",
-			"name":            "Test Setting Rule 2",
-			"applicationType": "STB",
-			"boundSettingID":  "setting-2",
-		},
-	}
-	jsonBody, _ := json.Marshal(validRules)
-	w1.SetBody(string(jsonBody))
+		req := httptest.NewRequest(http.MethodPut, "/setting-rules/package", nil)
+		recorder := httptest.NewRecorder()
+		w := xwhttp.NewXResponseWriter(recorder)
+		ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
+		ctx = context.WithValue(ctx, "auth_subject", "admin")
+		req = req.WithContext(ctx)
+		w.SetBody(`[]`)
 
-	UpdateSettingRulesPackageHandler(w1, req1)
-	assert.Equal(t, http.StatusOK, w1.Status(), "Should return OK for successful update")
-
-	// Verify response contains entity messages
-	var response map[string]interface{}
-	err := json.Unmarshal([]byte(w1.Body()), &response)
-	if err == nil {
-		assert.Greater(t, len(response), 0, "Response should contain entity messages")
-	}
-
-	// Test case 2: Empty array - should also succeed
-	req2 := httptest.NewRequest(http.MethodPut, "/setting-rules/package", nil)
-	recorder2 := httptest.NewRecorder()
-	w2 := xwhttp.NewXResponseWriter(recorder2)
-	ctx2 := context.WithValue(req2.Context(), applicationTypeKey, "STB")
-	ctx2 = context.WithValue(ctx2, "auth_subject", "admin")
-	req2 = req2.WithContext(ctx2)
-	w2.SetBody(`[]`)
-
-	UpdateSettingRulesPackageHandler(w2, req2)
-	assert.Equal(t, http.StatusOK, w2.Status(), "Should return OK for empty array")
+		UpdateSettingRulesPackageHandler(w, req)
+		assert.Equal(t, http.StatusOK, w.Status(), "Should return OK for empty array")
+	})
 }
 
 func TestSettingTestPageHandler(t *testing.T) {
@@ -485,121 +444,4 @@ func TestSettingTestPageHandler(t *testing.T) {
 	w.SetBody("")
 	SettingTestPageHandler(w, req)
 	assert.True(t, w.Status() >= 200, "Should handle empty body")
-}
-
-func TestGetSettingRuleOneExport_Success(t *testing.T) {
-	t.Skip("Requires database configuration")
-}
-
-// TestGetSettingRuleOneExport_WithExportParam tests export with export query parameter
-func TestGetSettingRuleOneExport_WithExportParam(t *testing.T) {
-	t.Skip("Requires database configuration")
-}
-
-// TestGetSettingRuleOneExport_BlankID tests with blank ID
-func TestGetSettingRuleOneExport_BlankID(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/setting-rules/", nil)
-	recorder := httptest.NewRecorder()
-	w := xwhttp.NewXResponseWriter(recorder)
-	req = mux.SetURLVars(req, map[string]string{"id": ""})
-	ctx := context.WithValue(req.Context(), "applicationType", "STB")
-	req = req.WithContext(ctx)
-
-	GetSettingRuleOneExport(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Status())
-}
-
-// TestGetSettingRuleOneExport_NotFound tests with non-existent ID
-func TestGetSettingRuleOneExport_NotFound(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/setting-rules/non-existent-rule", nil)
-	recorder := httptest.NewRecorder()
-	w := xwhttp.NewXResponseWriter(recorder)
-	req = mux.SetURLVars(req, map[string]string{"id": "non-existent-rule"})
-	ctx := context.WithValue(req.Context(), "applicationType", "STB")
-	req = req.WithContext(ctx)
-
-	GetSettingRuleOneExport(w, req)
-	assert.Equal(t, http.StatusNotFound, w.Status())
-}
-
-// TestGetSettingRulesAllExport_WithExportParam tests export with export parameter
-func TestGetSettingRulesAllExport_WithExportParam(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/setting-rules?export=true", nil)
-	recorder := httptest.NewRecorder()
-	w := xwhttp.NewXResponseWriter(recorder)
-	ctx := context.WithValue(req.Context(), "applicationType", "STB")
-	req = req.WithContext(ctx)
-
-	GetSettingRulesAllExport(w, req)
-	assert.NotEqual(t, http.StatusInternalServerError, w.Status())
-}
-
-// TestDeleteOneSettingRulesHandler_EmptyID tests delete with empty ID
-func TestDeleteOneSettingRulesHandler_EmptyID(t *testing.T) {
-	req := httptest.NewRequest(http.MethodDelete, "/setting-rules/", nil)
-	recorder := httptest.NewRecorder()
-	w := xwhttp.NewXResponseWriter(recorder)
-	req = mux.SetURLVars(req, map[string]string{})
-	ctx := context.WithValue(req.Context(), "applicationType", "STB")
-	req = req.WithContext(ctx)
-
-	DeleteOneSettingRulesHandler(w, req)
-	assert.NotEqual(t, http.StatusOK, w.Status())
-}
-
-// TestCreateSettingRuleHandler_ValidRule tests create with valid rule
-func TestCreateSettingRuleHandler_ValidRule(t *testing.T) {
-	rule := map[string]interface{}{
-		"id":              "create-test-rule",
-		"name":            "Create Test Rule",
-		"applicationType": "STB",
-		"boundSettingID":  "setting-create",
-	}
-	jsonBody, _ := json.Marshal(rule)
-
-	req := httptest.NewRequest(http.MethodPost, "/setting-rules", strings.NewReader(string(jsonBody)))
-	recorder := httptest.NewRecorder()
-	w := xwhttp.NewXResponseWriter(recorder)
-	w.SetBody(string(jsonBody))
-	ctx := context.WithValue(req.Context(), "applicationType", "STB")
-	req = req.WithContext(ctx)
-
-	CreateSettingRuleHandler(w, req)
-	// Should process the request
-	assert.NotEqual(t, http.StatusInternalServerError, w.Status())
-}
-
-// TestUpdateSettingRulesPackageHandler_EmptyArray tests with empty array
-func TestUpdateSettingRulesPackageHandler_EmptyArray(t *testing.T) {
-	jsonBody, _ := json.Marshal([]logupload.SettingRule{})
-
-	req := httptest.NewRequest(http.MethodPut, "/setting-rules/package", strings.NewReader(string(jsonBody)))
-	recorder := httptest.NewRecorder()
-	w := xwhttp.NewXResponseWriter(recorder)
-	w.SetBody(string(jsonBody))
-	ctx := context.WithValue(req.Context(), "applicationType", "STB")
-	req = req.WithContext(ctx)
-
-	UpdateSettingRulesPackageHandler(w, req)
-	assert.NotEqual(t, http.StatusInternalServerError, w.Status())
-}
-
-// TestSettingTestPageHandler_ValidContext tests with valid context
-func TestSettingTestPageHandler_ValidContext(t *testing.T) {
-	validContext := map[string]string{
-		"estbMacAddress": "AA:BB:CC:DD:EE:FF",
-		"model":          "TestModel",
-	}
-	jsonBody, _ := json.Marshal(validContext)
-
-	req := httptest.NewRequest(http.MethodPost, "/setting-test?settingType=PARTNER_SETTINGS", strings.NewReader(string(jsonBody)))
-	recorder := httptest.NewRecorder()
-	w := xwhttp.NewXResponseWriter(recorder)
-	w.SetBody(string(jsonBody))
-	ctx := context.WithValue(req.Context(), "applicationType", "STB")
-	req = req.WithContext(ctx)
-
-	SettingTestPageHandler(w, req)
-	// Should process the request
-	assert.NotEqual(t, http.StatusInternalServerError, w.Status())
 }

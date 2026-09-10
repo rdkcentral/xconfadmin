@@ -25,7 +25,9 @@ import (
 	"strings"
 	"testing"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfadmin/shared"
+
+	"github.com/rdkcentral/xconfwebconfig/db"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	"github.com/rdkcentral/xconfwebconfig/util"
@@ -43,8 +45,7 @@ const (
 )
 
 func TestGetAllAmvs(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	amv := perCreateActivationVersion(strings.ToUpper(TEST_MODEL_ID), TEST_FIRMWARE_VERSION, TEST_REGEX)
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
 		{"applicationType", "stb"},
@@ -53,7 +54,7 @@ func TestGetAllAmvs(t *testing.T) {
 
 	r := httptest.NewRequest("GET", url, nil)
 
-	rr := ExecuteRequest(r, router)
+	rr := shared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	amvResponse, err := unmarshalActivationVersion(rr.Body.Bytes())
@@ -64,8 +65,7 @@ func TestGetAllAmvs(t *testing.T) {
 }
 
 func TestGetFilteredAmvHasEmptyRegExFieldIfNoValuesSet(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	amv := perCreateActivationVersion(strings.ToUpper(TEST_MODEL_ID), TEST_FIRMWARE_VERSION, "")
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
@@ -74,7 +74,7 @@ func TestGetFilteredAmvHasEmptyRegExFieldIfNoValuesSet(t *testing.T) {
 	url := fmt.Sprintf(AMV_URL_BASE, "/filtered", queryParams)
 
 	r := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := shared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	amvResponse, err := unmarshalActivationVersion(rr.Body.Bytes())
@@ -86,8 +86,7 @@ func TestGetFilteredAmvHasEmptyRegExFieldIfNoValuesSet(t *testing.T) {
 }
 
 func TestGetFilteredAmvHasEmptyFirmwareVersionsFieldIfNoValuesSet(t *testing.T) {
-	SkipIfMockDatabase(t)
-	DeleteAllEntities()
+	shared.DeleteAllEntities(t)
 	amv := perCreateActivationVersion(strings.ToUpper(TEST_MODEL_ID), "", "test regex")
 
 	queryParams, _ := util.GetURLQueryParameterString([][]string{
@@ -96,7 +95,7 @@ func TestGetFilteredAmvHasEmptyFirmwareVersionsFieldIfNoValuesSet(t *testing.T) 
 	url := fmt.Sprintf(AMV_URL_BASE, "/filtered", queryParams)
 
 	r := httptest.NewRequest("GET", url, nil)
-	rr := ExecuteRequest(r, router)
+	rr := shared.ExecuteRequest(r, router)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	amvResponse, err := unmarshalActivationVersion(rr.Body.Bytes())
@@ -126,7 +125,7 @@ func perCreateActivationVersion(modelId string, firmwareVersion string, regex st
 	// Instead of calling service (which uses ds.GetCachedSimpleDao),
 	// directly save to mock/DB using helper
 	fwRule := coreef.ConvertIntoRule(amv)
-	SetOneInDao(ds.TABLE_FIRMWARE_RULE, fwRule.ID, fwRule)
+	shared.SetOneInDao(db.TABLE_FIRMWARE_RULES, fwRule.ID, fwRule)
 
 	return amv
 }

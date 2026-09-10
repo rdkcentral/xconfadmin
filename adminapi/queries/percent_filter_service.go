@@ -36,10 +36,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func GetPercentFilterFieldValues(fieldName string, applicationType string) (map[string][]interface{}, error) {
+func GetPercentFilterFieldValues(tenantId string, fieldName string, applicationType string) (map[string][]interface{}, error) {
 	fieldValues := make(map[interface{}]struct{})
 
-	percentFilter, err := GetPercentFilter(applicationType)
+	percentFilter, err := GetPercentFilter(tenantId, applicationType)
 	if err != nil {
 		return nil, err
 	}
@@ -60,9 +60,9 @@ func GetPercentFilterFieldValues(fieldName string, applicationType string) (map[
 	return result, nil
 }
 
-func GetPercentFilter(applicationType string) (*coreef.PercentFilterValue, error) {
+func GetPercentFilter(tenantId string, applicationType string) (*coreef.PercentFilterValue, error) {
 	globalPercentageId := GetGlobalPercentageIdByApplication(applicationType)
-	globalPercentageRule, err := firmware.GetFirmwareRuleOneDB(globalPercentageId)
+	globalPercentageRule, err := firmware.GetFirmwareRuleOneDB(tenantId, globalPercentageId)
 	if err != nil {
 		log.Warn(fmt.Sprintf("GetPercentFilter %v", err))
 	}
@@ -71,25 +71,25 @@ func GetPercentFilter(applicationType string) (*coreef.PercentFilterValue, error
 		globalPercentage := coreef.ConvertIntoGlobalPercentageFirmwareRule(globalPercentageRule)
 		percentFilterValue.Percentage = globalPercentage.Percentage
 		if !util.IsBlank(globalPercentage.Whitelist) {
-			percentFilterValue.Whitelist = getIpAddressGroup(globalPercentage.Whitelist)
+			percentFilterValue.Whitelist = getIpAddressGroup(tenantId, globalPercentage.Whitelist)
 		}
 	}
 	percentFilterValue.EnvModelPercentages = make(map[string]coreef.EnvModelPercentage)
 
-	firmwareRules, err := corefw.GetEnvModelFirmwareRules(applicationType)
+	firmwareRules, err := corefw.GetEnvModelFirmwareRules(tenantId, applicationType)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetPercentFilter: %v", err))
 		return nil, err
 	}
 	for _, firmwareRule := range firmwareRules {
 		percentageBean := coreef.ConvertFirmwareRuleToPercentageBean(firmwareRule)
-		percentFilterValue.EnvModelPercentages[firmwareRule.Name] = *convertPercentageBean(percentageBean)
+		percentFilterValue.EnvModelPercentages[firmwareRule.Name] = *convertPercentageBean(tenantId, percentageBean)
 	}
 
 	return percentFilterValue, nil
 }
 
-func UpdatePercentFilter(applicationType string, filter *coreef.PercentFilterWrapper) *xwhttp.ResponseEntity {
+func UpdatePercentFilter(tenantId string, applicationType string, filter *coreef.PercentFilterWrapper) *xwhttp.ResponseEntity {
 	if err := xshared.ValidateApplicationType(applicationType); err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
@@ -98,7 +98,7 @@ func UpdatePercentFilter(applicationType string, filter *coreef.PercentFilterWra
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("Percentage should be within [0, 100]"), nil)
 	}
 
-	if filter.Whitelist != nil && IsChangedIpAddressGroup(filter.Whitelist) {
+	if filter.Whitelist != nil && IsChangedIpAddressGroup(tenantId, filter.Whitelist) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest,
 			fmt.Errorf("IP address group denoted by '%s' does not match any existing ipAddressGroup", filter.Whitelist.Name), nil)
 	}
@@ -116,7 +116,7 @@ func UpdatePercentFilter(applicationType string, filter *coreef.PercentFilterWra
 				return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("Can't set LastKnownGood when filter is not active: %s", percentage.Name), nil)
 			}
 
-			configId := GetFirmwareConfigId(percentage.LastKnownGood, applicationType)
+			configId := GetFirmwareConfigId(tenantId, percentage.LastKnownGood, applicationType)
 			if configId == "" {
 				return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("No version in firmware configs matches LastKnownGood value: %s", percentage.LastKnownGood), nil)
 			}
@@ -129,7 +129,7 @@ func UpdatePercentFilter(applicationType string, filter *coreef.PercentFilterWra
 				return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("Can't set IntermediateVersion when firmware check is disabled: %s", percentage.Name), nil)
 			}
 
-			configId := GetFirmwareConfigId(percentage.IntermediateVersion, applicationType)
+			configId := GetFirmwareConfigId(tenantId, percentage.IntermediateVersion, applicationType)
 			if configId == "" {
 				return xwhttp.NewResponseEntity(http.StatusBadRequest, fmt.Errorf("No version in firmware configs matches IntermediateVersion value: %s", percentage.IntermediateVersion), nil)
 			}
@@ -146,13 +146,13 @@ func UpdatePercentFilter(applicationType string, filter *coreef.PercentFilterWra
 
 	globalPercentage := coreef.ConvertIntoGlobalPercentage(percentFilterValue, applicationType)
 	if globalPercentage != nil {
-		err := firmware.CreateFirmwareRuleOneDB(globalPercentage)
+		err := firmware.CreateFirmwareRuleOneDB(tenantId, globalPercentage)
 		if err != nil {
 			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 		}
 	}
 
-	firmwareRules, err := corefw.GetEnvModelFirmwareRulesForAS(applicationType)
+	firmwareRules, err := corefw.GetEnvModelFirmwareRulesForAS(tenantId, applicationType)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
@@ -163,7 +163,7 @@ func UpdatePercentFilter(applicationType string, filter *coreef.PercentFilterWra
 			percentageBean := xcoreef.MigrateIntoPercentageBean(envModelPercentage, firmwareRule)
 			convertedRule := coreef.ConvertPercentageBeanToFirmwareRule(*percentageBean)
 			convertedRule.ApplicationType = applicationType
-			err := corefw.CreateFirmwareRuleOneDB(convertedRule)
+			err := corefw.CreateFirmwareRuleOneDB(tenantId, convertedRule)
 			if err != nil {
 				return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 			}
@@ -173,15 +173,15 @@ func UpdatePercentFilter(applicationType string, filter *coreef.PercentFilterWra
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, filter)
 }
 
-func getIpAddressGroup(groupId string) *shared.IpAddressGroup {
-	if list := GetNamespacedListById(groupId); list != nil {
+func getIpAddressGroup(tenantId string, groupId string) *shared.IpAddressGroup {
+	if list := GetNamespacedListById(tenantId, groupId); list != nil {
 		return shared.ConvertToIpAddressGroup(list)
 	}
 
 	return nil
 }
 
-func convertPercentageBean(bean *coreef.PercentageBean) *coreef.EnvModelPercentage {
+func convertPercentageBean(tenantId string, bean *coreef.PercentageBean) *coreef.EnvModelPercentage {
 	percentage := coreef.NewEnvModelPercentage()
 	percentage.Active = bean.Active
 	percentage.FirmwareCheckRequired = bean.FirmwareCheckRequired
@@ -190,7 +190,7 @@ func convertPercentageBean(bean *coreef.PercentageBean) *coreef.EnvModelPercenta
 	percentage.IntermediateVersion = bean.IntermediateVersion
 	percentage.RebootImmediately = bean.RebootImmediately
 	if !util.IsBlank(bean.Whitelist) {
-		percentage.Whitelist = getIpAddressGroup(bean.Whitelist)
+		percentage.Whitelist = getIpAddressGroup(tenantId, bean.Whitelist)
 	}
 	percentage.Percentage = float32(getPercentageSum(bean.Distributions))
 

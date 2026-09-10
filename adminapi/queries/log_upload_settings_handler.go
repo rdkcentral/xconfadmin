@@ -25,17 +25,15 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfadmin/shared/logupload"
 	"github.com/rdkcentral/xconfadmin/util"
-
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	log "github.com/sirupsen/logrus"
 )
 
 // This function is not being referenced in router.go. Should we delete it?
@@ -120,7 +118,9 @@ func SaveLogUploadSettings(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, "At least log file should be specified")
 		return
 	}
-	nameErrorMessage := validateName(&logUploadSettings)
+
+	tenantId := xhttp.GetTenantId(r)
+	nameErrorMessage := validateName(tenantId, &logUploadSettings)
 	if nameErrorMessage != "" {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, nameErrorMessage)
 		return
@@ -136,22 +136,23 @@ func SaveLogUploadSettings(w http.ResponseWriter, r *http.Request) {
 
 	if logUploadSettings.ModeToGetLogFiles == logupload.MODE_TO_GET_LOG_FILES_0 {
 		ids := logUploadSettings.LogFileIds
-		logFiles := getLogFilesByIds(ids)
+		logFiles := getLogFilesByIds(tenantId, ids)
 
-		oneList, err := logupload.GetOneLogFileList(logUploadSettings.ID)
-		for i, logFileInList := range oneList.Data {
+		logFileList, err := logupload.GetOneLogFileList(tenantId, logUploadSettings.ID)
+		for i, logFileInList := range logFileList.Data {
 			for _, logFile := range logFiles {
 				if logFile.ID == logFileInList.ID {
 					//remove this logFile from logFileList
-					oneList.Data = append(oneList.Data[:i], oneList.Data[i+1:]...)
+					logFileList.Data = append(logFileList.Data[:i], logFileList.Data[i+1:]...)
 					break
 				}
 			}
 		}
-		oneList.Data = append(oneList.Data, logFiles...)
-		logupload.DeleteOneLogFileList(logUploadSettings.ID)
+		logFileList.Data = append(logFileList.Data, logFiles...)
+		logupload.DeleteOneLogFileList(tenantId, logUploadSettings.ID)
 
-		err = ds.GetCachedSimpleDao().SetOne(ds.TABLE_LOG_FILE_LIST, logUploadSettings.ID, oneList)
+		logFileList.Updated = util.GetTimestamp()
+		err = db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_LOG_FILE_LISTS, logUploadSettings.ID, logFileList)
 		if err != nil {
 			log.Warn(fmt.Sprintf("error save logFileList for Id: %s", logUploadSettings.ID))
 			xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, "Failed to save logFileList")
@@ -173,7 +174,7 @@ func SaveLogUploadSettings(w http.ResponseWriter, r *http.Request) {
 		schedule.EndDate = converterDateTimeToUTC(schedule.EndDate, scheduleTimezone)
 	}
 	logUploadSettings.Schedule = schedule
-	logupload.SetOneLogUploadSettings(logUploadSettings.ID, &logUploadSettings)
+	logupload.SetOneLogUploadSettings(tenantId, logUploadSettings.ID, &logUploadSettings)
 	response, err := util.JSONMarshal(logUploadSettings)
 	if err != nil {
 		log.Error(fmt.Sprintf("json.Marshal featureRuleNew error: %v", err))
@@ -217,8 +218,8 @@ func converterDateTimeToUTC(timeStr string, sourceTZ string) string {
 	return t.UTC().Format(layout)
 }
 
-func validateName(logUploadSettings *logupload.LogUploadSettings) string {
-	logUploadSettingsList, err := logupload.GetAllLogUploadSettings(0)
+func validateName(tenantId string, logUploadSettings *logupload.LogUploadSettings) string {
+	logUploadSettingsList, err := logupload.GetAllLogUploadSettings(tenantId, 0)
 	if err != nil {
 		return ""
 	}
@@ -230,9 +231,9 @@ func validateName(logUploadSettings *logupload.LogUploadSettings) string {
 	return ""
 }
 
-func getLogFilesByIds(ids []string) []*logupload.LogFile {
+func getLogFilesByIds(tenantId string, ids []string) []*logupload.LogFile {
 	logFiles := []*logupload.LogFile{}
-	logFileList := logupload.GetLogFileList(0) //logFileList is a list of LogFiles
+	logFileList := logupload.GetLogFileList(tenantId, 0) //logFileList is a list of LogFiles
 	for _, id := range ids {
 		for _, logFile := range logFileList {
 			if logFile.ID == id {

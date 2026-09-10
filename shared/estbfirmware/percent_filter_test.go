@@ -19,6 +19,7 @@ package estbfirmware
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	shared "github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 )
@@ -63,7 +64,7 @@ func TestNewPercentFilterWrapper_BasicConversion(t *testing.T) {
 		EnvModelPercentages: map[string]coreef.EnvModelPercentage{},
 	}
 
-	wrapper := NewPercentFilterWrapper(percentFilterValue, false)
+	wrapper := NewPercentFilterWrapper(db.GetDefaultTenantId(), percentFilterValue, false)
 
 	if wrapper == nil {
 		t.Fatal("expected non-nil wrapper")
@@ -111,7 +112,7 @@ func TestNewPercentFilterWrapper_WithEnvModelPercentages_NoHumanReadable(t *test
 		EnvModelPercentages: envModelPercentages,
 	}
 
-	wrapper := NewPercentFilterWrapper(percentFilterValue, false)
+	wrapper := NewPercentFilterWrapper(db.GetDefaultTenantId(), percentFilterValue, false)
 
 	if wrapper == nil {
 		t.Fatal("expected non-nil wrapper")
@@ -172,7 +173,7 @@ func TestNewPercentFilterWrapper_EmptyEnvModelPercentages(t *testing.T) {
 		EnvModelPercentages: map[string]coreef.EnvModelPercentage{},
 	}
 
-	wrapper := NewPercentFilterWrapper(percentFilterValue, true)
+	wrapper := NewPercentFilterWrapper(db.GetDefaultTenantId(), percentFilterValue, true)
 
 	if wrapper == nil {
 		t.Fatal("expected non-nil wrapper")
@@ -191,7 +192,7 @@ func TestNewPercentFilterWrapper_NilWhitelist(t *testing.T) {
 		EnvModelPercentages: map[string]coreef.EnvModelPercentage{},
 	}
 
-	wrapper := NewPercentFilterWrapper(percentFilterValue, false)
+	wrapper := NewPercentFilterWrapper(db.GetDefaultTenantId(), percentFilterValue, false)
 
 	if wrapper == nil {
 		t.Fatal("expected non-nil wrapper")
@@ -218,7 +219,7 @@ func TestNewPercentFilterWrapper_EnvModelWithEmptyVersions(t *testing.T) {
 	}
 
 	// Test with toHumanReadableForm = true, but versions are empty
-	wrapper := NewPercentFilterWrapper(percentFilterValue, true)
+	wrapper := NewPercentFilterWrapper(db.GetDefaultTenantId(), percentFilterValue, true)
 
 	if wrapper == nil {
 		t.Fatal("expected non-nil wrapper")

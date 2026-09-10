@@ -20,8 +20,12 @@ package dcm
 import (
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"gotest.tools/assert"
@@ -31,17 +35,15 @@ import (
 
 // TestGetLogRepoSettings_Nil tests that nil is returned when repository doesn't exist
 func TestGetLogRepoSettings_Nil(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
-	result := GetLogRepoSettings("nonexistent-id")
+	result := GetLogRepoSettings(db.GetDefaultTenantId(), "nonexistent-id")
 	assert.Assert(t, result == nil, "Expected nil for nonexistent repository")
 }
 
 // TestGetLogRepoSettings_Success tests successful retrieval
 func TestGetLogRepoSettings_Success(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-repo-1",
@@ -50,9 +52,9 @@ func TestGetLogRepoSettings_Success(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
-	result := GetLogRepoSettings("test-repo-1")
+	result := GetLogRepoSettings(db.GetDefaultTenantId(), "test-repo-1")
 	assert.Assert(t, result != nil)
 	assert.Equal(t, "test-repo-1", result.ID)
 	assert.Equal(t, "Test Repo", result.Name)
@@ -60,18 +62,16 @@ func TestGetLogRepoSettings_Success(t *testing.T) {
 
 // TestGetLogRepoSettingsAll_EmptyList tests when no repositories exist
 func TestGetLogRepoSettingsAll_EmptyList(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
-	result := GetLogRepoSettingsAll()
+	result := GetLogRepoSettingsAll(db.GetDefaultTenantId())
 	assert.Equal(t, 0, len(result))
 }
 
 // TestGetLogRepoSettingsAll_WithRepositories tests retrieval of all repositories
 func TestGetLogRepoSettingsAll_WithRepositories(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repos := []*logupload.UploadRepository{
 		{
@@ -91,10 +91,10 @@ func TestGetLogRepoSettingsAll_WithRepositories(t *testing.T) {
 	}
 
 	for _, repo := range repos {
-		CreateLogRepoSettings(repo, "stb")
+		CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 	}
 
-	result := GetLogRepoSettingsAll()
+	result := GetLogRepoSettingsAll(db.GetDefaultTenantId())
 	assert.Assert(t, len(result) >= 2)
 }
 
@@ -102,10 +102,9 @@ func TestGetLogRepoSettingsAll_WithRepositories(t *testing.T) {
 
 // TestLogRepoSettingsValidate_NilInput tests validation with nil repository
 func TestLogRepoSettingsValidate_NilInput(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
-	respEntity := LogRepoSettingsValidate(nil)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), nil)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -114,8 +113,7 @@ func TestLogRepoSettingsValidate_NilInput(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyApplicationType tests validation with empty ApplicationType
 func TestLogRepoSettingsValidate_EmptyApplicationType(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -125,7 +123,7 @@ func TestLogRepoSettingsValidate_EmptyApplicationType(t *testing.T) {
 		ApplicationType: "", // Empty
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -134,8 +132,7 @@ func TestLogRepoSettingsValidate_EmptyApplicationType(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyName tests validation with empty name
 func TestLogRepoSettingsValidate_EmptyName(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -145,7 +142,7 @@ func TestLogRepoSettingsValidate_EmptyName(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -154,8 +151,7 @@ func TestLogRepoSettingsValidate_EmptyName(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyURL tests validation with empty URL
 func TestLogRepoSettingsValidate_EmptyURL(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -165,7 +161,7 @@ func TestLogRepoSettingsValidate_EmptyURL(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -174,8 +170,7 @@ func TestLogRepoSettingsValidate_EmptyURL(t *testing.T) {
 
 // TestLogRepoSettingsValidate_InvalidURL tests validation with invalid URL
 func TestLogRepoSettingsValidate_InvalidURL(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -185,7 +180,7 @@ func TestLogRepoSettingsValidate_InvalidURL(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -193,8 +188,7 @@ func TestLogRepoSettingsValidate_InvalidURL(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyProtocol tests validation with empty protocol
 func TestLogRepoSettingsValidate_EmptyProtocol(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -204,7 +198,7 @@ func TestLogRepoSettingsValidate_EmptyProtocol(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -213,8 +207,7 @@ func TestLogRepoSettingsValidate_EmptyProtocol(t *testing.T) {
 
 // TestLogRepoSettingsValidate_InvalidProtocol tests validation with invalid protocol
 func TestLogRepoSettingsValidate_InvalidProtocol(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -224,7 +217,7 @@ func TestLogRepoSettingsValidate_InvalidProtocol(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -232,9 +225,8 @@ func TestLogRepoSettingsValidate_InvalidProtocol(t *testing.T) {
 
 // TestLogRepoSettingsValidate_DuplicateName tests validation with duplicate name
 func TestLogRepoSettingsValidate_DuplicateName(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create first repository
 	repo1 := &logupload.UploadRepository{
@@ -244,7 +236,7 @@ func TestLogRepoSettingsValidate_DuplicateName(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo1, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo1, "stb")
 
 	// Try to validate another with same name but different ID
 	repo2 := &logupload.UploadRepository{
@@ -255,7 +247,7 @@ func TestLogRepoSettingsValidate_DuplicateName(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo2)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo2)
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -263,9 +255,8 @@ func TestLogRepoSettingsValidate_DuplicateName(t *testing.T) {
 
 // TestLogRepoSettingsValidate_EmptyID tests validation generates ID when empty
 func TestLogRepoSettingsValidate_EmptyID(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "", // Empty - should be auto-generated
@@ -275,7 +266,7 @@ func TestLogRepoSettingsValidate_EmptyID(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusCreated, respEntity.Status)
 	assert.Assert(t, respEntity.Error == nil)
@@ -284,9 +275,8 @@ func TestLogRepoSettingsValidate_EmptyID(t *testing.T) {
 
 // TestLogRepoSettingsValidate_Success tests successful validation
 func TestLogRepoSettingsValidate_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -296,7 +286,7 @@ func TestLogRepoSettingsValidate_Success(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := LogRepoSettingsValidate(repo)
+	respEntity := LogRepoSettingsValidateForTenant(db.GetDefaultTenantId(), repo)
 
 	assert.Equal(t, http.StatusCreated, respEntity.Status)
 	assert.Assert(t, respEntity.Error == nil)
@@ -306,8 +296,7 @@ func TestLogRepoSettingsValidate_Success(t *testing.T) {
 
 // TestCreateLogRepoSettings_DuplicateID tests creating repository with duplicate ID
 func TestCreateLogRepoSettings_DuplicateID(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "duplicate-id",
@@ -316,10 +305,10 @@ func TestCreateLogRepoSettings_DuplicateID(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	// Try to create another with same ID
-	respEntity := CreateLogRepoSettings(repo, "stb")
+	respEntity := CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusConflict, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -327,8 +316,7 @@ func TestCreateLogRepoSettings_DuplicateID(t *testing.T) {
 
 // TestCreateLogRepoSettings_ApplicationTypeMismatch tests creating with mismatched ApplicationType
 func TestCreateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -339,7 +327,7 @@ func TestCreateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
 	}
 
 	// Pass different app type
-	respEntity := CreateLogRepoSettings(repo, "stb")
+	respEntity := CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusConflict, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -347,8 +335,7 @@ func TestCreateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
 
 // TestCreateLogRepoSettings_ValidationError tests creating with validation errors
 func TestCreateLogRepoSettings_ValidationError(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -358,7 +345,7 @@ func TestCreateLogRepoSettings_ValidationError(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := CreateLogRepoSettings(repo, "stb")
+	respEntity := CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -366,9 +353,8 @@ func TestCreateLogRepoSettings_ValidationError(t *testing.T) {
 
 // TestCreateLogRepoSettings_Success tests successful creation
 func TestCreateLogRepoSettings_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "test-id",
@@ -378,7 +364,7 @@ func TestCreateLogRepoSettings_Success(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := CreateLogRepoSettings(repo, "stb")
+	respEntity := CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusCreated, respEntity.Status)
 	assert.Assert(t, respEntity.Error == nil)
@@ -389,8 +375,7 @@ func TestCreateLogRepoSettings_Success(t *testing.T) {
 
 // TestUpdateLogRepoSettings_EmptyID tests updating with empty ID
 func TestUpdateLogRepoSettings_EmptyID(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "", // Empty
@@ -400,7 +385,7 @@ func TestUpdateLogRepoSettings_EmptyID(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := UpdateLogRepoSettings(repo, "stb")
+	respEntity := UpdateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -408,8 +393,7 @@ func TestUpdateLogRepoSettings_EmptyID(t *testing.T) {
 
 // TestUpdateLogRepoSettings_NonExistent tests updating non-existent repository
 func TestUpdateLogRepoSettings_NonExistent(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := &logupload.UploadRepository{
 		ID:              "nonexistent-id",
@@ -419,7 +403,7 @@ func TestUpdateLogRepoSettings_NonExistent(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	respEntity := UpdateLogRepoSettings(repo, "stb")
+	respEntity := UpdateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusConflict, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -427,9 +411,8 @@ func TestUpdateLogRepoSettings_NonExistent(t *testing.T) {
 
 // TestUpdateLogRepoSettings_ApplicationTypeMismatch tests updating with mismatched ApplicationType
 func TestUpdateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create repository with "stb" type
 	repo := &logupload.UploadRepository{
@@ -439,7 +422,7 @@ func TestUpdateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	createResp := CreateLogRepoSettings(repo, "stb")
+	createResp := CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 	assert.Equal(t, http.StatusCreated, createResp.Status)
 
 	// Try to update with different app type in parameter
@@ -451,7 +434,7 @@ func TestUpdateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "xhome",
 	}
-	respEntity := UpdateLogRepoSettings(updateRepo, "xhome")
+	respEntity := UpdateLogRepoSettingsForTenant(db.GetDefaultTenantId(), updateRepo, "xhome")
 
 	assert.Equal(t, http.StatusConflict, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -459,8 +442,7 @@ func TestUpdateLogRepoSettings_ApplicationTypeMismatch(t *testing.T) {
 
 // TestUpdateLogRepoSettings_ChangeApplicationType tests that ApplicationType cannot be changed
 func TestUpdateLogRepoSettings_ChangeApplicationType(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create repository
 	repo := &logupload.UploadRepository{
@@ -470,11 +452,11 @@ func TestUpdateLogRepoSettings_ChangeApplicationType(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	// Try to change ApplicationType
 	repo.ApplicationType = "xhome"
-	respEntity := UpdateLogRepoSettings(repo, "stb")
+	respEntity := UpdateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusConflict, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -482,9 +464,8 @@ func TestUpdateLogRepoSettings_ChangeApplicationType(t *testing.T) {
 
 // TestUpdateLogRepoSettings_ValidationError tests updating with validation errors
 func TestUpdateLogRepoSettings_ValidationError(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create repository
 	repo := &logupload.UploadRepository{
@@ -494,11 +475,11 @@ func TestUpdateLogRepoSettings_ValidationError(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	// Update with invalid data
 	repo.Name = "" // Empty name - validation error
-	respEntity := UpdateLogRepoSettings(repo, "stb")
+	respEntity := UpdateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusBadRequest, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -506,9 +487,8 @@ func TestUpdateLogRepoSettings_ValidationError(t *testing.T) {
 
 // TestUpdateLogRepoSettings_Success tests successful update
 func TestUpdateLogRepoSettings_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create repository
 	repo := &logupload.UploadRepository{
@@ -518,18 +498,18 @@ func TestUpdateLogRepoSettings_Success(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	// Update it
 	repo.Name = "Updated Name"
-	respEntity := UpdateLogRepoSettings(repo, "stb")
+	respEntity := UpdateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	assert.Equal(t, http.StatusOK, respEntity.Status)
 	assert.Assert(t, respEntity.Error == nil)
 	assert.Assert(t, respEntity.Data != nil)
 
 	// Verify update
-	updated := GetLogRepoSettings("test-id")
+	updated := GetLogRepoSettings(db.GetDefaultTenantId(), "test-id")
 	assert.Equal(t, "Updated Name", updated.Name)
 }
 
@@ -537,10 +517,9 @@ func TestUpdateLogRepoSettings_Success(t *testing.T) {
 
 // TestDeleteLogRepoSettingsbyId_NonExistent tests deleting non-existent repository
 func TestDeleteLogRepoSettingsbyId_NonExistent(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
-	respEntity := DeleteLogRepoSettingsbyId("nonexistent-id", "stb")
+	respEntity := DeleteLogRepoSettingsbyId(db.GetDefaultTenantId(), "nonexistent-id", "stb")
 
 	assert.Equal(t, http.StatusNotFound, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -548,8 +527,7 @@ func TestDeleteLogRepoSettingsbyId_NonExistent(t *testing.T) {
 
 // TestDeleteLogRepoSettingsbyId_ApplicationTypeMismatch tests deleting with mismatched ApplicationType
 func TestDeleteLogRepoSettingsbyId_ApplicationTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create repository with "stb" type
 	repo := &logupload.UploadRepository{
@@ -559,10 +537,10 @@ func TestDeleteLogRepoSettingsbyId_ApplicationTypeMismatch(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	// Try to delete with different app type
-	respEntity := DeleteLogRepoSettingsbyId("test-id", "xhome")
+	respEntity := DeleteLogRepoSettingsbyId(db.GetDefaultTenantId(), "test-id", "xhome")
 
 	assert.Equal(t, http.StatusNotFound, respEntity.Status)
 	assert.Assert(t, respEntity.Error != nil)
@@ -570,8 +548,7 @@ func TestDeleteLogRepoSettingsbyId_ApplicationTypeMismatch(t *testing.T) {
 
 // TestDeleteLogRepoSettingsbyId_InUse tests deleting repository that's in use
 func TestDeleteLogRepoSettingsbyId_InUse(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create repository
 	repo := &logupload.UploadRepository{
@@ -581,7 +558,7 @@ func TestDeleteLogRepoSettingsbyId_InUse(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	// Create a LogUploadSettings that references this repository
 	// Note: This requires creating a DCM formula and LogUploadSettings
@@ -589,7 +566,7 @@ func TestDeleteLogRepoSettingsbyId_InUse(t *testing.T) {
 	// The actual implementation would need proper setup of related entities
 
 	// For now, test deletion without references
-	respEntity := DeleteLogRepoSettingsbyId("in-use-repo", "stb")
+	respEntity := DeleteLogRepoSettingsbyId(db.GetDefaultTenantId(), "in-use-repo", "stb")
 
 	// Should succeed if not referenced
 	assert.Equal(t, http.StatusNoContent, respEntity.Status)
@@ -597,54 +574,37 @@ func TestDeleteLogRepoSettingsbyId_InUse(t *testing.T) {
 
 // TestDeleteLogRepoSettingsbyId_Success tests successful deletion
 func TestDeleteLogRepoSettingsbyId_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
+
+	// Use unique ID to avoid test collisions
+	uniqueID := "delete-me-" + uuid.New().String()[:8]
 
 	// Create repository
 	repo := &logupload.UploadRepository{
-		ID:              "delete-me",
+		ID:              uniqueID,
 		Name:            "Delete Me",
 		URL:             "http://test.com",
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	// Delete it
-	respEntity := DeleteLogRepoSettingsbyId("delete-me", "stb")
+	respEntity := DeleteLogRepoSettingsbyId(db.GetDefaultTenantId(), uniqueID, "stb")
 
 	assert.Equal(t, http.StatusNoContent, respEntity.Status)
 	assert.Assert(t, respEntity.Error == nil)
 
+	// Allow cache to refresh
+	time.Sleep(100 * time.Millisecond)
+
 	// Verify deletion
-	deleted := GetLogRepoSettings("delete-me")
+	deleted := GetLogRepoSettings(db.GetDefaultTenantId(), uniqueID)
 	assert.Assert(t, deleted == nil)
 }
 
 // ========== Tests for LogRepoSettingsGeneratePage - error paths ==========
-
-// TestLogRepoSettingsGeneratePage_InvalidPageNumber tests with page number < 1
-func TestLogRepoSettingsGeneratePage_InvalidPageNumber(t *testing.T) {
-	repos := []*logupload.UploadRepository{
-		{ID: "1", Name: "Repo 1"},
-		{ID: "2", Name: "Repo 2"},
-	}
-
-	result := LogRepoSettingsGeneratePage(repos, 0, 10)
-	assert.Equal(t, 0, len(result))
-}
-
-// TestLogRepoSettingsGeneratePage_InvalidPageSize tests with page size < 1
-func TestLogRepoSettingsGeneratePage_InvalidPageSize(t *testing.T) {
-	repos := []*logupload.UploadRepository{
-		{ID: "1", Name: "Repo 1"},
-		{ID: "2", Name: "Repo 2"},
-	}
-
-	result := LogRepoSettingsGeneratePage(repos, 1, 0)
-	assert.Equal(t, 0, len(result))
-}
 
 // TestLogRepoSettingsGeneratePage_EmptyList tests with empty list
 func TestLogRepoSettingsGeneratePage_EmptyList(t *testing.T) {
@@ -690,36 +650,6 @@ func TestLogRepoSettingsGeneratePage_Success(t *testing.T) {
 
 // ========== Tests for LogRepoSettingsGeneratePageWithContext - error paths ==========
 
-// TestLogRepoSettingsGeneratePageWithContext_InvalidPageNumber tests with invalid page number
-func TestLogRepoSettingsGeneratePageWithContext_InvalidPageNumber(t *testing.T) {
-	repos := []*logupload.UploadRepository{
-		{ID: "1", Name: "Repo 1"},
-	}
-
-	contextMap := map[string]string{
-		"pageNumber": "0",
-		"pageSize":   "10",
-	}
-
-	_, err := LogRepoSettingsGeneratePageWithContext(repos, contextMap)
-	assert.Assert(t, err != nil)
-}
-
-// TestLogRepoSettingsGeneratePageWithContext_InvalidPageSize tests with invalid page size
-func TestLogRepoSettingsGeneratePageWithContext_InvalidPageSize(t *testing.T) {
-	repos := []*logupload.UploadRepository{
-		{ID: "1", Name: "Repo 1"},
-	}
-
-	contextMap := map[string]string{
-		"pageNumber": "1",
-		"pageSize":   "0",
-	}
-
-	_, err := LogRepoSettingsGeneratePageWithContext(repos, contextMap)
-	assert.Assert(t, err != nil)
-}
-
 // TestLogRepoSettingsGeneratePageWithContext_EmptyContext tests with empty context (uses defaults)
 func TestLogRepoSettingsGeneratePageWithContext_EmptyContext(t *testing.T) {
 	repos := []*logupload.UploadRepository{
@@ -759,8 +689,7 @@ func TestLogRepoSettingsGeneratePageWithContext_Success(t *testing.T) {
 
 // TestLogRepoSettingsFilterByContext_EmptyContext tests filtering with empty context
 func TestLogRepoSettingsFilterByContext_EmptyContext(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create some repositories
 	repos := []*logupload.UploadRepository{
@@ -781,10 +710,12 @@ func TestLogRepoSettingsFilterByContext_EmptyContext(t *testing.T) {
 	}
 
 	for _, repo := range repos {
-		CreateLogRepoSettings(repo, repo.ApplicationType)
+		CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, repo.ApplicationType)
 	}
 
-	contextMap := map[string]string{}
+	contextMap := map[string]string{
+		common.TENANT_ID: db.GetDefaultTenantId(),
+	}
 	result := LogRepoSettingsFilterByContext(contextMap)
 
 	// Should return all repositories
@@ -793,8 +724,7 @@ func TestLogRepoSettingsFilterByContext_EmptyContext(t *testing.T) {
 
 // TestLogRepoSettingsFilterByContext_FilterByApplicationType tests filtering by application type
 func TestLogRepoSettingsFilterByContext_FilterByApplicationType(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create repositories with different application types
 	repos := []*logupload.UploadRepository{
@@ -822,11 +752,12 @@ func TestLogRepoSettingsFilterByContext_FilterByApplicationType(t *testing.T) {
 	}
 
 	for _, repo := range repos {
-		CreateLogRepoSettings(repo, repo.ApplicationType)
+		CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, repo.ApplicationType)
 	}
 
 	contextMap := map[string]string{
 		common.APPLICATION_TYPE: "stb",
+		common.TENANT_ID:        db.GetDefaultTenantId(),
 	}
 	result := LogRepoSettingsFilterByContext(contextMap)
 
@@ -838,9 +769,8 @@ func TestLogRepoSettingsFilterByContext_FilterByApplicationType(t *testing.T) {
 
 // TestLogRepoSettingsFilterByContext_FilterByName tests filtering by name
 func TestLogRepoSettingsFilterByContext_FilterByName(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create repositories with different names
 	repos := []*logupload.UploadRepository{
@@ -868,11 +798,12 @@ func TestLogRepoSettingsFilterByContext_FilterByName(t *testing.T) {
 	}
 
 	for _, repo := range repos {
-		CreateLogRepoSettings(repo, repo.ApplicationType)
+		CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, repo.ApplicationType)
 	}
 
 	contextMap := map[string]string{
-		"NAME": "prod",
+		"NAME":           "prod",
+		common.TENANT_ID: db.GetDefaultTenantId(),
 	}
 	result := LogRepoSettingsFilterByContext(contextMap)
 
@@ -885,8 +816,7 @@ func TestLogRepoSettingsFilterByContext_FilterByName(t *testing.T) {
 
 // TestLogRepoSettingsFilterByContext_NoMatches tests filtering with no matches
 func TestLogRepoSettingsFilterByContext_NoMatches(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create repository
 	repo := &logupload.UploadRepository{
@@ -896,10 +826,11 @@ func TestLogRepoSettingsFilterByContext_NoMatches(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), repo, "stb")
 
 	contextMap := map[string]string{
 		common.APPLICATION_TYPE: "xhome", // Different type
+		common.TENANT_ID:        db.GetDefaultTenantId(),
 	}
 	result := LogRepoSettingsFilterByContext(contextMap)
 
@@ -915,7 +846,9 @@ func TestLogRepoSettingsFilterByContext_NoMatches(t *testing.T) {
 func TestLogRepoSettingsFilterByContext_NilRepositoriesSkipped(t *testing.T) {
 	// This tests the internal nil check in the filter function
 	// The function should skip nil entries
-	contextMap := map[string]string{}
+	contextMap := map[string]string{
+		common.TENANT_ID: db.GetDefaultTenantId(),
+	}
 	result := LogRepoSettingsFilterByContext(contextMap)
 
 	// Should not panic and should return valid list

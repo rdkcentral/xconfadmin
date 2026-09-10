@@ -26,6 +26,7 @@ import (
 
 	core "github.com/rdkcentral/xconfadmin/shared"
 
+	"github.com/rdkcentral/xconfwebconfig/common"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 
 	log "github.com/sirupsen/logrus"
@@ -40,19 +41,19 @@ func findPrioritizableById(itemId string, prioritizables []core.Prioritizable) b
 	return false
 }
 
-func ChangePrioritizablePriorities(prioritizable core.Prioritizable, newPriority int, applicationType string) ([]core.Prioritizable, error) {
+func ChangePrioritizablePriorities(tenantId string, prioritizable core.Prioritizable, newPriority int, applicationType string) ([]core.Prioritizable, error) {
 	if newPriority <= 0 {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, fmt.Sprintf("Invalid priority value %v", newPriority))
 	}
 	oldPriority := prioritizable.GetPriority()
 
-	contextMap := map[string]string{core.APPLICATION_TYPE: applicationType}
+	contextMap := map[string]string{core.APPLICATION_TYPE: applicationType, common.TENANT_ID: tenantId}
 	prioritizables := FeatureRulesToPrioritizables(FindFeatureRuleByContext(contextMap))
 	reorganizedPrioritizables := UpdatePrioritizablesPriorities(prioritizables, oldPriority, newPriority)
 	if !findPrioritizableById(prioritizable.GetID(), reorganizedPrioritizables) {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusConflict, fmt.Sprintf("Updated prioritizable '%s' is not present in reorganized prioritizables", prioritizable.GetID()))
 	}
-	if err := SaveFeatureRules(reorganizedPrioritizables); err != nil {
+	if err := SaveFeatureRules(tenantId, reorganizedPrioritizables); err != nil {
 		return nil, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, fmt.Sprintf("Failed to save prioritizable after priority reorganization: %s", err.Error()))
 	}
 	log.Info("Priority of Prioritizable " + prioritizable.GetID() + " has been changed, oldPriority=" + strconv.Itoa(oldPriority) + ", newPriority=" + strconv.Itoa(newPriority))

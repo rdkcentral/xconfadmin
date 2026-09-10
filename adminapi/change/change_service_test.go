@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	xchange "github.com/rdkcentral/xconfadmin/shared/change"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	xwchange "github.com/rdkcentral/xconfwebconfig/shared/change"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
@@ -137,19 +138,19 @@ func TestFindByContextForChanges(t *testing.T) {
 	p2 := buildPermTelemetryProfile("p2", "telemetry-beta", shared.STB)
 	c1 := buildChange("ch1", xwchange.Create, nil, p1, shared.STB, "alice")
 	c2 := buildChange("ch2", xwchange.Create, nil, p2, shared.STB, "bob")
-	if err := xchange.CreateOneChange(c1); err != nil {
+	if err := xchange.CreateOneChange(db.GetDefaultTenantId(), c1); err != nil {
 		t.Fatalf("setup: %v", err)
 	}
-	if err := xchange.CreateOneChange(c2); err != nil {
+	if err := xchange.CreateOneChange(db.GetDefaultTenantId(), c2); err != nil {
 		t.Fatalf("setup: %v", err)
 	}
 	// filter by author substring
-	res := FindByContextForChanges(map[string]string{"author": "ali"})
+	res := FindByContextForChanges(db.GetDefaultTenantId(), map[string]string{"author": "ali"})
 	if len(res) != 1 || res[0].Author != "alice" {
 		t.Fatalf("expected filter by author matched alice only")
 	}
 	// filter by profile name substring
-	res = FindByContextForChanges(map[string]string{"entity": "beta"})
+	res = FindByContextForChanges(db.GetDefaultTenantId(), map[string]string{"entity": "beta"})
 	if len(res) != 1 || res[0].NewEntity.Name != "telemetry-beta" {
 		t.Fatalf("expected beta profile filter")
 	}
@@ -159,19 +160,19 @@ func TestValidateAllChangesConflict(t *testing.T) {
 	p := buildPermTelemetryProfile("pp", "pp", shared.STB)
 	c1 := buildChange("dup1", xwchange.Create, nil, p, shared.STB, "alice")
 	c2 := buildChange("dup2", xwchange.Create, nil, p, shared.STB, "alice")
-	if err := xchange.CreateOneChange(c1); err != nil {
+	if err := xchange.CreateOneChange(db.GetDefaultTenantId(), c1); err != nil {
 		t.Fatalf("setup: %v", err)
 	}
-	if err := validateAllChanges(c2); err == nil {
+	if err := validateAllChanges(db.GetDefaultTenantId(), c2); err == nil {
 		t.Fatalf("expected conflict error for duplicate change data")
 	}
 }
 
 func TestBeforeDeleteErrors(t *testing.T) {
-	if err := beforeDelete(""); err == nil {
+	if err := beforeDelete(db.GetDefaultTenantId(), ""); err == nil {
 		t.Fatalf("expected blank id error")
 	}
-	if err := beforeDelete("nope"); err == nil {
+	if err := beforeDelete(db.GetDefaultTenantId(), "nope"); err == nil {
 		t.Fatalf("expected not found error")
 	}
 }
@@ -179,10 +180,10 @@ func TestBeforeDeleteErrors(t *testing.T) {
 func TestGetChangedEntityIds(t *testing.T) {
 	p := buildPermTelemetryProfile("ent1", "ent1", shared.STB)
 	c := buildChange("cidx", xwchange.Create, nil, p, shared.STB, "author")
-	if err := xchange.CreateOneChange(c); err != nil {
+	if err := xchange.CreateOneChange(db.GetDefaultTenantId(), c); err != nil {
 		t.Fatalf("setup: %v", err)
 	}
-	ids := GetChangedEntityIds()
+	ids := GetChangedEntityIds(db.GetDefaultTenantId())
 	if ids == nil || len(*ids) == 0 {
 		t.Fatalf("expected at least one changed entity id")
 	}
@@ -192,7 +193,7 @@ func TestApproveAndCancelSiblingChanges(t *testing.T) {
 	// create entity and two pending changes (update + delete) same entity id
 	p := buildPermTelemetryProfile("ap1", "ap1", shared.STB)
 	cCreate := buildChange("cCreate", xwchange.Create, nil, p, shared.STB, "author")
-	if err := xchange.CreateOneChange(cCreate); err != nil {
+	if err := xchange.CreateOneChange(db.GetDefaultTenantId(), cCreate); err != nil {
 		t.Fatalf("setup: %v", err)
 	}
 	// approve create should move to approved and remove pending
@@ -200,25 +201,25 @@ func TestApproveAndCancelSiblingChanges(t *testing.T) {
 	if err != nil {
 		t.Fatalf("approve error: %v", err)
 	}
-	still := xchange.GetOneChange(cCreate.ID)
+	still := xchange.GetOneChange(db.GetDefaultTenantId(), cCreate.ID)
 	if still != nil {
 		t.Fatalf("expected pending change removed after approve")
 	}
-	approved := xchange.GetOneApprovedChange(cCreate.ID)
+	approved := xchange.GetOneApprovedChange(db.GetDefaultTenantId(), cCreate.ID)
 	if approved == nil {
 		t.Fatalf("expected approved change present")
 	}
 	// now create another pending change update on same entity; approving should cancel siblings (none here) but keep approved
 	pUpdated := buildPermTelemetryProfile("ap1", "ap1-new", shared.STB)
 	cUpdate := buildChange("cUpdate", xwchange.Update, p, pUpdated, shared.STB, "author")
-	if err := xchange.CreateOneChange(cUpdate); err != nil {
+	if err := xchange.CreateOneChange(db.GetDefaultTenantId(), cUpdate); err != nil {
 		t.Fatalf("setup: %v", err)
 	}
 	_, err = Approve(dummyRequest(), cUpdate.ID)
 	if err != nil {
 		t.Fatalf("approve update: %v", err)
 	}
-	if xchange.GetOneChange(cUpdate.ID) != nil {
+	if xchange.GetOneChange(db.GetDefaultTenantId(), cUpdate.ID) != nil {
 		t.Fatalf("expected update pending removed")
 	}
 }
@@ -228,10 +229,10 @@ func TestApproveChangesBatch(t *testing.T) {
 	p2 := buildPermTelemetryProfile("bp2", "bp2", shared.STB)
 	c1 := buildChange("bc1", xwchange.Create, nil, p1, shared.STB, "author")
 	c2 := buildChange("bc2", xwchange.Create, nil, p2, shared.STB, "author")
-	if err := xchange.CreateOneChange(c1); err != nil {
+	if err := xchange.CreateOneChange(db.GetDefaultTenantId(), c1); err != nil {
 		t.Fatalf("setup: %v", err)
 	}
-	if err := xchange.CreateOneChange(c2); err != nil {
+	if err := xchange.CreateOneChange(db.GetDefaultTenantId(), c2); err != nil {
 		t.Fatalf("setup: %v", err)
 	}
 	ids := []string{c1.ID, c2.ID}
@@ -242,7 +243,8 @@ func TestApproveChangesBatch(t *testing.T) {
 	if len(m) != 0 {
 		t.Fatalf("expected no error messages")
 	}
-	if xchange.GetOneApprovedChange(c1.ID) == nil || xchange.GetOneApprovedChange(c2.ID) == nil {
+	tenantId := db.GetDefaultTenantId()
+	if xchange.GetOneApprovedChange(tenantId, c1.ID) == nil || xchange.GetOneApprovedChange(tenantId, c2.ID) == nil {
 		t.Fatalf("expected both approved")
 	}
 }
@@ -251,7 +253,7 @@ func TestRevertChangeCreate(t *testing.T) {
 	// create and approve then revert a create
 	p := buildPermTelemetryProfile("rp1", "rp1", shared.STB)
 	c := buildChange("rc1", xwchange.Create, nil, p, shared.STB, "author")
-	if err := xchange.CreateOneChange(c); err != nil {
+	if err := xchange.CreateOneChange(db.GetDefaultTenantId(), c); err != nil {
 		t.Fatalf("setup: %v", err)
 	}
 	if _, err := Approve(dummyRequest(), c.ID); err != nil {
@@ -260,7 +262,7 @@ func TestRevertChangeCreate(t *testing.T) {
 	if err := Revert(dummyRequest(), c.ID); err != nil {
 		t.Fatalf("revert: %v", err)
 	}
-	if xchange.GetOneApprovedChange(c.ID) != nil {
+	if xchange.GetOneApprovedChange(db.GetDefaultTenantId(), c.ID) != nil {
 		t.Fatalf("expected approved change deleted after revert")
 	}
 }
@@ -274,7 +276,7 @@ func TestFindByContextForApprovedChanges(t *testing.T) {
 	for _, tg := range targets {
 		p := buildPermTelemetryProfile(tg.id, tg.name, shared.STB)
 		c := buildChange("chg-"+tg.id, xwchange.Create, nil, p, shared.STB, tg.author)
-		if err := xchange.CreateOneChange(c); err != nil {
+		if err := xchange.CreateOneChange(db.GetDefaultTenantId(), c); err != nil {
 			t.Fatalf("setup: %v", err)
 		}
 		if _, err := Approve(dummyRequest(), c.ID); err != nil {
@@ -294,14 +296,14 @@ func TestFindByContextForApprovedChanges(t *testing.T) {
 func TestSaveToApprovedAndCleanUpChange(t *testing.T) {
 	p := buildPermTelemetryProfile("sacc1", "sacc1", shared.STB)
 	c := buildChange("saccCh", xwchange.Create, nil, p, shared.STB, "auth")
-	if err := xchange.CreateOneChange(c); err != nil {
+	if err := xchange.CreateOneChange(db.GetDefaultTenantId(), c); err != nil {
 		t.Fatalf("setup: %v", err)
 	}
 	ac, err := SaveToApprovedAndCleanUpChange(dummyRequest(), c)
 	if err != nil {
 		t.Fatalf("save approved: %v", err)
 	}
-	if ac == nil || xchange.GetOneChange(c.ID) != nil || xchange.GetOneApprovedChange(c.ID) == nil {
+	if ac == nil || xchange.GetOneChange(db.GetDefaultTenantId(), c.ID) != nil || xchange.GetOneApprovedChange(db.GetDefaultTenantId(), c.ID) == nil {
 		t.Fatalf("expected cleanup & approved presence")
 	}
 }
@@ -352,13 +354,12 @@ func TestJSONMarshallingApprovedChange(t *testing.T) {
 
 func TestGetApprovedAll_EmptyResult(t *testing.T) {
 	// Clean all approved changes first
-	approvedChanges := xchange.GetApprovedChangeList()
+	approvedChanges := xchange.GetApprovedChangeList(db.GetDefaultTenantId())
 	for _, ac := range approvedChanges {
-		xchange.DeleteOneApprovedChange(ac.ID)
+		xchange.DeleteOneApprovedChange(db.GetDefaultTenantId(), ac.ID)
 	}
 
-	r := httptest.NewRequest(http.MethodGet, "/?applicationType=stb", nil)
-	result, err := GetApprovedAll(r)
+	result, err := GetApprovedAll(db.GetDefaultTenantId(), shared.STB)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -369,9 +370,9 @@ func TestGetApprovedAll_EmptyResult(t *testing.T) {
 
 func TestGetApprovedAll_WithResults(t *testing.T) {
 	defer func() {
-		approvedChanges := xchange.GetApprovedChangeList()
+		approvedChanges := xchange.GetApprovedChangeList(db.GetDefaultTenantId())
 		for _, ac := range approvedChanges {
-			xchange.DeleteOneApprovedChange(ac.ID)
+			xchange.DeleteOneApprovedChange(db.GetDefaultTenantId(), ac.ID)
 		}
 	}()
 
@@ -379,12 +380,11 @@ func TestGetApprovedAll_WithResults(t *testing.T) {
 	p1 := buildPermTelemetryProfile("gaa1", "gaa1", shared.STB)
 	c1 := buildChange("gaac1", xwchange.Create, nil, p1, shared.STB, "author1")
 	ac1 := xwchange.ApprovedChange(*c1)
-	if err := xchange.SetOneApprovedChange(&ac1); err != nil {
+	if err := xchange.SetOneApprovedChange(db.GetDefaultTenantId(), &ac1); err != nil {
 		t.Fatalf("failed to create approved change: %v", err)
 	}
 
-	r := httptest.NewRequest(http.MethodGet, "/?applicationType=stb", nil)
-	result, err := GetApprovedAll(r)
+	result, err := GetApprovedAll(db.GetDefaultTenantId(), shared.STB)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -395,7 +395,7 @@ func TestGetApprovedAll_WithResults(t *testing.T) {
 
 func TestFindByContextForChanges_EmptyContext(t *testing.T) {
 	context := make(map[string]string)
-	result := FindByContextForChanges(context)
+	result := FindByContextForChanges(db.GetDefaultTenantId(), context)
 	if result == nil {
 		t.Fatalf("expected non-nil result")
 	}
@@ -403,20 +403,20 @@ func TestFindByContextForChanges_EmptyContext(t *testing.T) {
 
 func TestFindByContextForChanges_WithApplicationType(t *testing.T) {
 	defer func() {
-		changes := xchange.GetChangeList()
+		changes := xchange.GetChangeList(db.GetDefaultTenantId())
 		for _, c := range changes {
-			xchange.DeleteOneChange(c.ID)
+			xchange.DeleteOneChange(db.GetDefaultTenantId(), c.ID)
 		}
 	}()
 
 	p := buildPermTelemetryProfile("fbc1", "fbc1", shared.STB)
 	c := buildChange("fbcc1", xwchange.Create, nil, p, shared.STB, "testauthor")
-	if err := xchange.CreateOneChange(c); err != nil {
+	if err := xchange.CreateOneChange(db.GetDefaultTenantId(), c); err != nil {
 		t.Fatalf("failed to create change: %v", err)
 	}
 
 	context := map[string]string{"applicationType": shared.STB}
-	result := FindByContextForChanges(context)
+	result := FindByContextForChanges(db.GetDefaultTenantId(), context)
 	if len(result) == 0 {
 		t.Fatalf("expected results")
 	}
@@ -432,16 +432,16 @@ func TestFindByContextForApprovedChanges_EmptyContext(t *testing.T) {
 
 func TestFindByContextForApprovedChanges_WithApplicationType(t *testing.T) {
 	defer func() {
-		approvedChanges := xchange.GetApprovedChangeList()
+		approvedChanges := xchange.GetApprovedChangeList(db.GetDefaultTenantId())
 		for _, ac := range approvedChanges {
-			xchange.DeleteOneApprovedChange(ac.ID)
+			xchange.DeleteOneApprovedChange(db.GetDefaultTenantId(), ac.ID)
 		}
 	}()
 
 	p := buildPermTelemetryProfile("fbac1", "fbac1", shared.STB)
 	c := buildChange("fbacc1", xwchange.Create, nil, p, shared.STB, "testauthor")
 	ac := xwchange.ApprovedChange(*c)
-	if err := xchange.SetOneApprovedChange(&ac); err != nil {
+	if err := xchange.SetOneApprovedChange(db.GetDefaultTenantId(), &ac); err != nil {
 		t.Fatalf("failed to create approved change: %v", err)
 	}
 
@@ -454,7 +454,7 @@ func TestFindByContextForApprovedChanges_WithApplicationType(t *testing.T) {
 
 func TestGetChangesByEntityIds_EmptyList(t *testing.T) {
 	ids := []string{}
-	result, err := GetChangesByEntityIds(&ids)
+	result, err := GetChangesByEntityIds(db.GetDefaultTenantId(), &ids)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -465,7 +465,7 @@ func TestGetChangesByEntityIds_EmptyList(t *testing.T) {
 
 func TestGetChangesByEntityIds_NonExistent(t *testing.T) {
 	ids := []string{"nonexistent1", "nonexistent2"}
-	_, err := GetChangesByEntityIds(&ids)
+	_, err := GetChangesByEntityIds(db.GetDefaultTenantId(), &ids)
 	if err == nil {
 		t.Fatalf("expected error for nonexistent entities")
 	}

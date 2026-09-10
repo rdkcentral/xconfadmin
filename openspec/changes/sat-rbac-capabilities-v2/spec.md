@@ -213,6 +213,7 @@ Returned when:
 - Xerxes token validation fails
 - SAT token signature validation fails
 - SAT token is expired
+- SAT token is missing required claims (such as allowedResources.allowedPartners, as enforced by the validator)
 
 Response body SHALL include an error code and message suitable for debugging.
 

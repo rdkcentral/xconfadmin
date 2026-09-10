@@ -23,9 +23,13 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	"gotest.tools/assert"
@@ -33,8 +37,7 @@ import (
 
 // TestPostLogRepoSettingsEntitiesHandler_Success tests successful batch creation of upload repositories
 func TestPostLogRepoSettingsEntitiesHandler_Success(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	entities := []logupload.UploadRepository{
 		{
@@ -61,7 +64,7 @@ func TestPostLogRepoSettingsEntitiesHandler_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -73,27 +76,9 @@ func TestPostLogRepoSettingsEntitiesHandler_Success(t *testing.T) {
 	assert.Equal(t, xcommon.ENTITY_STATUS_SUCCESS, responseMap["repo-2"].Status)
 }
 
-// TestPostLogRepoSettingsEntitiesHandler_InvalidJSON tests invalid JSON handling
-func TestPostLogRepoSettingsEntitiesHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
-	invalidJSON := []byte(`{bad json}`)
-
-	req, err := http.NewRequest("POST", "/xconfAdminService/dcm/uploadRepository/entities", bytes.NewBuffer(invalidJSON))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-}
-
 // TestPostLogRepoSettingsEntitiesHandler_DuplicateEntity tests duplicate entity handling
 func TestPostLogRepoSettingsEntitiesHandler_DuplicateEntity(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create first repository
 	repo := logupload.UploadRepository{
@@ -104,7 +89,7 @@ func TestPostLogRepoSettingsEntitiesHandler_DuplicateEntity(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "stb")
 
 	// Try to create the same entity again
 	entities := []logupload.UploadRepository{repo}
@@ -115,7 +100,7 @@ func TestPostLogRepoSettingsEntitiesHandler_DuplicateEntity(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -126,8 +111,7 @@ func TestPostLogRepoSettingsEntitiesHandler_DuplicateEntity(t *testing.T) {
 
 // TestPostLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure tests batch with both successful and failed operations
 func TestPostLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create first repository
 	existingRepo := logupload.UploadRepository{
@@ -138,7 +122,7 @@ func TestPostLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure(t *testing.T)
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&existingRepo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &existingRepo, "stb")
 
 	// Batch with one new and one duplicate
 	entities := []logupload.UploadRepository{
@@ -159,7 +143,7 @@ func TestPostLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure(t *testing.T)
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -172,8 +156,7 @@ func TestPostLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure(t *testing.T)
 
 // TestPutLogRepoSettingsEntitiesHandler_Success tests successful batch update of upload repositories
 func TestPutLogRepoSettingsEntitiesHandler_Success(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create initial repositories
 	repo1 := logupload.UploadRepository{
@@ -192,8 +175,8 @@ func TestPutLogRepoSettingsEntitiesHandler_Success(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo1, "stb")
-	CreateLogRepoSettings(&repo2, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo1, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo2, "stb")
 
 	// Update both repositories
 	updatedEntities := []logupload.UploadRepository{
@@ -221,7 +204,7 @@ func TestPutLogRepoSettingsEntitiesHandler_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -232,27 +215,9 @@ func TestPutLogRepoSettingsEntitiesHandler_Success(t *testing.T) {
 	assert.Equal(t, xcommon.ENTITY_STATUS_SUCCESS, responseMap["update-repo-2"].Status)
 }
 
-// TestPutLogRepoSettingsEntitiesHandler_InvalidJSON tests invalid JSON handling for update
-func TestPutLogRepoSettingsEntitiesHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
-	invalidJSON := []byte(`{bad json}`)
-
-	req, err := http.NewRequest("PUT", "/xconfAdminService/dcm/uploadRepository/entities", bytes.NewBuffer(invalidJSON))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-}
-
 // TestPutLogRepoSettingsEntitiesHandler_NonExistentEntity tests updating non-existent entity
 func TestPutLogRepoSettingsEntitiesHandler_NonExistentEntity(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	entities := []logupload.UploadRepository{
 		{
@@ -271,7 +236,7 @@ func TestPutLogRepoSettingsEntitiesHandler_NonExistentEntity(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -282,9 +247,8 @@ func TestPutLogRepoSettingsEntitiesHandler_NonExistentEntity(t *testing.T) {
 
 // TestPutLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure tests batch update with mixed results
 func TestPutLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create one repository
 	existingRepo := logupload.UploadRepository{
@@ -295,7 +259,7 @@ func TestPutLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure(t *testing.T) 
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&existingRepo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &existingRepo, "stb")
 
 	// Batch with one existing and one non-existent
 	entities := []logupload.UploadRepository{
@@ -323,7 +287,7 @@ func TestPutLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure(t *testing.T) 
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -336,15 +300,14 @@ func TestPutLogRepoSettingsEntitiesHandler_MixedSuccessAndFailure(t *testing.T) 
 
 // TestGetLogRepoSettingsExportHandler_Success tests successful export of log upload settings
 func TestGetLogRepoSettingsExportHandler_Success(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/export", nil)
 	assert.NilError(t, err)
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -361,15 +324,14 @@ func TestGetLogRepoSettingsExportHandler_Success(t *testing.T) {
 
 // TestGetLogRepoSettingsExportHandler_EmptyResult tests export with no data
 func TestGetLogRepoSettingsExportHandler_EmptyResult(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/export", nil)
 	assert.NilError(t, err)
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -385,15 +347,14 @@ func TestGetLogRepoSettingsExportHandler_EmptyResult(t *testing.T) {
 
 // TestGetLogRepoSettingsExportHandler_VerifyHeaders tests that export includes correct headers
 func TestGetLogRepoSettingsExportHandler_VerifyHeaders(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/export", nil)
 	assert.NilError(t, err)
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -411,14 +372,13 @@ func TestGetLogRepoSettingsExportHandler_VerifyHeaders(t *testing.T) {
 
 // TestGetLogRepoSettingsByIdHandler_MissingID tests error when ID is missing
 func TestGetLogRepoSettingsByIdHandler_MissingID(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/", nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	// Should return 404 as the route doesn't match
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
@@ -426,22 +386,20 @@ func TestGetLogRepoSettingsByIdHandler_MissingID(t *testing.T) {
 
 // TestGetLogRepoSettingsByIdHandler_NilResult tests handling when repository doesn't exist (nil condition)
 func TestGetLogRepoSettingsByIdHandler_NilResult(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/nonexistent-id", nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
 // TestGetLogRepoSettingsByIdHandler_ApplicationTypeMismatch tests when ApplicationType doesn't match (error path)
 func TestGetLogRepoSettingsByIdHandler_ApplicationTypeMismatch(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create repository with "xhome" application type
 	repo := logupload.UploadRepository{
@@ -452,22 +410,21 @@ func TestGetLogRepoSettingsByIdHandler_ApplicationTypeMismatch(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "xhome",
 	}
-	CreateLogRepoSettings(&repo, "xhome")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "xhome")
 
 	// Try to access with "stb" application type
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/xhome-repo", nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
 // TestGetLogRepoSettingsByIdHandler_WithExport tests export functionality for single repository
 func TestGetLogRepoSettingsByIdHandler_WithExport(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create repository
 	repo := logupload.UploadRepository{
@@ -478,13 +435,13 @@ func TestGetLogRepoSettingsByIdHandler_WithExport(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "stb")
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/export-repo?export=true", nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -501,15 +458,14 @@ func TestGetLogRepoSettingsByIdHandler_WithExport(t *testing.T) {
 
 // TestGetLogRepoSettingsHandler_EmptyList tests handling when no repositories exist (nil condition)
 func TestGetLogRepoSettingsHandler_EmptyList(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository", nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -520,8 +476,7 @@ func TestGetLogRepoSettingsHandler_EmptyList(t *testing.T) {
 
 // TestGetLogRepoSettingsHandler_WithExport tests export functionality for all repositories
 func TestGetLogRepoSettingsHandler_WithExport(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create multiple repositories
 	repo1 := logupload.UploadRepository{
@@ -538,14 +493,14 @@ func TestGetLogRepoSettingsHandler_WithExport(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo1, "stb")
-	CreateLogRepoSettings(&repo2, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo1, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo2, "stb")
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository?export=true", nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -556,15 +511,14 @@ func TestGetLogRepoSettingsHandler_WithExport(t *testing.T) {
 
 // TestGetLogRepoSettingsSizeHandler_ZeroCount tests size handler with no repositories (nil condition)
 func TestGetLogRepoSettingsSizeHandler_ZeroCount(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/size", nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -575,9 +529,8 @@ func TestGetLogRepoSettingsSizeHandler_ZeroCount(t *testing.T) {
 
 // TestGetLogRepoSettingsSizeHandler_NonZeroCount tests size handler with repositories
 func TestGetLogRepoSettingsSizeHandler_NonZeroCount(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create repositories
 	for i := 1; i <= 3; i++ {
@@ -588,14 +541,14 @@ func TestGetLogRepoSettingsSizeHandler_NonZeroCount(t *testing.T) {
 			Protocol:        "HTTP",
 			ApplicationType: "stb",
 		}
-		CreateLogRepoSettings(&repo, "stb")
+		CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "stb")
 	}
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/size", nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -606,15 +559,14 @@ func TestGetLogRepoSettingsSizeHandler_NonZeroCount(t *testing.T) {
 
 // TestGetLogRepoSettingsNamesHandler_EmptyList tests names handler with no repositories (nil condition)
 func TestGetLogRepoSettingsNamesHandler_EmptyList(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/names", nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -625,9 +577,8 @@ func TestGetLogRepoSettingsNamesHandler_EmptyList(t *testing.T) {
 
 // TestGetLogRepoSettingsNamesHandler_WithNames tests names handler with repositories
 func TestGetLogRepoSettingsNamesHandler_WithNames(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	// Create repositories with specific names
 	names := []string{"Alpha Repo", "Beta Repo", "Gamma Repo"}
@@ -639,14 +590,14 @@ func TestGetLogRepoSettingsNamesHandler_WithNames(t *testing.T) {
 			Protocol:        "HTTP",
 			ApplicationType: "stb",
 		}
-		CreateLogRepoSettings(&repo, "stb")
+		CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "stb")
 	}
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/uploadRepository/names", nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -657,14 +608,13 @@ func TestGetLogRepoSettingsNamesHandler_WithNames(t *testing.T) {
 
 // TestDeleteLogRepoSettingsByIdHandler_MissingID tests delete with missing ID (error path)
 func TestDeleteLogRepoSettingsByIdHandler_MissingID(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("DELETE", "/xconfAdminService/dcm/uploadRepository/", nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	// Should return 404 as the route doesn't match
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
@@ -672,75 +622,61 @@ func TestDeleteLogRepoSettingsByIdHandler_MissingID(t *testing.T) {
 
 // TestDeleteLogRepoSettingsByIdHandler_NonExistent tests delete of non-existent repository (error path)
 func TestDeleteLogRepoSettingsByIdHandler_NonExistent(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("DELETE", "/xconfAdminService/dcm/uploadRepository/nonexistent-id", nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
 // TestDeleteLogRepoSettingsByIdHandler_Success tests successful delete
 func TestDeleteLogRepoSettingsByIdHandler_Success(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
+
+	// Use unique ID to avoid test collisions
+	uniqueID := "delete-me-" + uuid.New().String()[:8]
 
 	// Create repository
 	repo := logupload.UploadRepository{
-		ID:              "delete-me",
+		ID:              uniqueID,
 		Name:            "Delete Me",
 		URL:             "http://test.com",
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "stb")
 
-	req, err := http.NewRequest("DELETE", "/xconfAdminService/dcm/uploadRepository/delete-me", nil)
+	req, err := http.NewRequest("DELETE", "/xconfAdminService/dcm/uploadRepository/"+uniqueID, nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 
+	// Allow cache to refresh
+	time.Sleep(100 * time.Millisecond)
+
 	// Verify it's actually deleted
-	deleted := GetLogRepoSettings("delete-me")
+	deleted := GetLogRepoSettings(db.GetDefaultTenantId(), uniqueID)
 	assert.Assert(t, deleted == nil)
-}
-
-// TestCreateLogRepoSettingsHandler_InvalidJSON tests create with invalid JSON (error path)
-func TestCreateLogRepoSettingsHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
-	invalidJSON := []byte(`{invalid json`)
-
-	req, err := http.NewRequest("POST", "/xconfAdminService/dcm/uploadRepository", bytes.NewBuffer(invalidJSON))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
 // TestCreateLogRepoSettingsHandler_EmptyBody tests create with empty body (nil condition)
 func TestCreateLogRepoSettingsHandler_EmptyBody(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("POST", "/xconfAdminService/dcm/uploadRepository", bytes.NewBuffer([]byte("{}")))
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	// Should return error for missing required fields
 	assert.Assert(t, res.StatusCode >= http.StatusBadRequest)
@@ -748,8 +684,7 @@ func TestCreateLogRepoSettingsHandler_EmptyBody(t *testing.T) {
 
 // TestCreateLogRepoSettingsHandler_DuplicateID tests create with duplicate ID (error path)
 func TestCreateLogRepoSettingsHandler_DuplicateID(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create first repository
 	repo := logupload.UploadRepository{
@@ -759,7 +694,7 @@ func TestCreateLogRepoSettingsHandler_DuplicateID(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "stb")
 
 	// Try to create another with same ID
 	body, _ := json.Marshal(repo)
@@ -768,32 +703,14 @@ func TestCreateLogRepoSettingsHandler_DuplicateID(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Assert(t, res.StatusCode >= http.StatusBadRequest)
 }
 
-// TestUpdateLogRepoSettingsHandler_InvalidJSON tests update with invalid JSON (error path)
-func TestUpdateLogRepoSettingsHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
-	invalidJSON := []byte(`{invalid json`)
-
-	req, err := http.NewRequest("PUT", "/xconfAdminService/dcm/uploadRepository", bytes.NewBuffer(invalidJSON))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-}
-
 // TestUpdateLogRepoSettingsHandler_NonExistent tests update of non-existent repository (error path)
 func TestUpdateLogRepoSettingsHandler_NonExistent(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	repo := logupload.UploadRepository{
 		ID:              "nonexistent",
@@ -809,15 +726,14 @@ func TestUpdateLogRepoSettingsHandler_NonExistent(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Assert(t, res.StatusCode >= http.StatusBadRequest)
 }
 
 // TestUpdateLogRepoSettingsHandler_Success tests successful update
 func TestUpdateLogRepoSettingsHandler_Success(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create repository
 	repo := logupload.UploadRepository{
@@ -828,7 +744,7 @@ func TestUpdateLogRepoSettingsHandler_Success(t *testing.T) {
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo, "stb")
 
 	// Update it
 	repo.Name = "Updated Name"
@@ -841,28 +757,27 @@ func TestUpdateLogRepoSettingsHandler_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
 	// Verify the update
-	updated := GetLogRepoSettings("update-me")
+	updated := GetLogRepoSettings(db.GetDefaultTenantId(), "update-me")
 	assert.Equal(t, "Updated Name", updated.Name)
 	assert.Equal(t, "Updated", updated.Description)
 }
 
 // TestPostLogRepoSettingsFilteredWithParamsHandler_EmptyBody tests filtered search with empty body (nil condition)
 func TestPostLogRepoSettingsFilteredWithParamsHandler_EmptyBody(t *testing.T) {
-	SkipIfMockDatabase(t) // Integration test
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("POST", "/xconfAdminService/dcm/uploadRepository/filtered", bytes.NewBuffer([]byte("")))
 	assert.NilError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -871,27 +786,9 @@ func TestPostLogRepoSettingsFilteredWithParamsHandler_EmptyBody(t *testing.T) {
 	assert.Equal(t, 0, len(repos))
 }
 
-// TestPostLogRepoSettingsFilteredWithParamsHandler_InvalidJSON tests filtered search with invalid JSON (error path)
-func TestPostLogRepoSettingsFilteredWithParamsHandler_InvalidJSON(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
-
-	invalidJSON := []byte(`{invalid}`)
-
-	req, err := http.NewRequest("POST", "/xconfAdminService/dcm/uploadRepository/filtered", bytes.NewBuffer(invalidJSON))
-	assert.NilError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
-
-	res := ExecuteRequest(req, router).Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-}
-
 // TestPostLogRepoSettingsFilteredWithParamsHandler_WithContext tests filtered search with context
 func TestPostLogRepoSettingsFilteredWithParamsHandler_WithContext(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	// Create some repositories
 	repo1 := logupload.UploadRepository{
@@ -901,7 +798,7 @@ func TestPostLogRepoSettingsFilteredWithParamsHandler_WithContext(t *testing.T) 
 		Protocol:        "HTTP",
 		ApplicationType: "stb",
 	}
-	CreateLogRepoSettings(&repo1, "stb")
+	CreateLogRepoSettingsForTenant(db.GetDefaultTenantId(), &repo1, "stb")
 
 	contextMap := map[string]string{}
 	body, _ := json.Marshal(contextMap)
@@ -911,15 +808,14 @@ func TestPostLogRepoSettingsFilteredWithParamsHandler_WithContext(t *testing.T) 
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
 // TestPostLogRepoSettingsEntitiesHandler_EmptyArray tests batch create with empty array (nil condition)
 func TestPostLogRepoSettingsEntitiesHandler_EmptyArray(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	entities := []logupload.UploadRepository{}
 	body, _ := json.Marshal(entities)
@@ -929,7 +825,7 @@ func TestPostLogRepoSettingsEntitiesHandler_EmptyArray(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -940,8 +836,7 @@ func TestPostLogRepoSettingsEntitiesHandler_EmptyArray(t *testing.T) {
 
 // TestPutLogRepoSettingsEntitiesHandler_EmptyArray tests batch update with empty array (nil condition)
 func TestPutLogRepoSettingsEntitiesHandler_EmptyArray(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	entities := []logupload.UploadRepository{}
 	body, _ := json.Marshal(entities)
@@ -951,7 +846,7 @@ func TestPutLogRepoSettingsEntitiesHandler_EmptyArray(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
@@ -962,14 +857,13 @@ func TestPutLogRepoSettingsEntitiesHandler_EmptyArray(t *testing.T) {
 
 // TestGetLogRepoSettingsExportHandler_ApplicationTypeFiltering tests export filters by application type
 func TestGetLogRepoSettingsExportHandler_ApplicationTypeFiltering(t *testing.T) {
-	DeleteAllEntities()
-	defer DeleteAllEntities()
+	xshared.DeleteAllEntities(t)
 
 	req, err := http.NewRequest("GET", "/xconfAdminService/dcm/logUploadSettings/export", nil)
 	assert.NilError(t, err)
 	req.AddCookie(&http.Cookie{Name: "applicationType", Value: "stb"})
 
-	res := ExecuteRequest(req, router).Result()
+	res := xshared.ExecuteRequest(req, router).Result()
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 

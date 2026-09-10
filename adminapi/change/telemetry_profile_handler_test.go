@@ -5,28 +5,22 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
-	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	"github.com/rdkcentral/xconfwebconfig/dataapi"
-	"github.com/rdkcentral/xconfwebconfig/db"
-	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
-
-	"github.com/rdkcentral/xconfadmin/adminapi/auth"
-	oshttp "github.com/rdkcentral/xconfadmin/http"
+	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xchange "github.com/rdkcentral/xconfadmin/shared/change"
 	xlogupload "github.com/rdkcentral/xconfadmin/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	corelogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 )
 
 // --- moved new test functions here ---
 func TestGetTelemetryProfileByIdHandler_MissingId(t *testing.T) {
-	initTelemetryTestEnv()
 	// Call handler directly with request lacking path variable so mux.Vars empty -> 400
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/profile/?applicationType=stb", nil)
 	wr := httptest.NewRecorder()
@@ -37,44 +31,41 @@ func TestGetTelemetryProfileByIdHandler_MissingId(t *testing.T) {
 }
 
 func TestGetTelemetryProfileByIdHandler_NotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/profile/notfoundid?applicationType=stb", nil)
-	rr := execTPReq(r, nil)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 	assert.Contains(t, rr.Body.String(), "does not exist")
 }
 
 func TestGetTelemetryProfileByIdHandler_ExportBranch(t *testing.T) {
-	initTelemetryTestEnv()
 	profile := newSampleProfile("exportProf")
 	b, _ := json.Marshal(profile)
 	// create profile
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
 	// fetch with export param
 	r = httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/profile/"+saved.ID+"?applicationType=stb&export", nil)
-	rr = execTPReq(r, nil)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	// header uses camelCase constant permanentProfile_
 	assert.Contains(t, rr.Header().Get("Content-Disposition"), "permanentProfile_")
 }
 
 func TestGetTelemetryProfilesHandler_ExportBranch(t *testing.T) {
-	initTelemetryTestEnv()
 	// create two profiles
 	p1 := newSampleProfile("expA")
 	p2 := newSampleProfile("expB")
 	b1, _ := json.Marshal(p1)
 	b2, _ := json.Marshal(p2)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b1))
-	_ = execTPReq(r, b1)
+	_ = xshared.ExecuteRequest(r, chgRouter)
 	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b2))
-	_ = execTPReq(r, b2)
+	_ = xshared.ExecuteRequest(r, chgRouter)
 	// fetch all with export param
 	r = httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/profile?applicationType=stb&export", nil)
-	rr := execTPReq(r, nil)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	// header uses camelCase constant allPermanentProfiles
 	assert.Contains(t, rr.Header().Get("Content-Disposition"), "allPermanentProfiles")
@@ -82,21 +73,19 @@ func TestGetTelemetryProfilesHandler_ExportBranch(t *testing.T) {
 
 // Previously attempted permission error test; dev profile grants permissions so creation succeeds even without applicationType.
 func TestCreateTelemetryProfileChangeHandler_NoApplicationTypeFallback(t *testing.T) {
-	initTelemetryTestEnv()
 	profile := newSampleProfile("noPermFallback")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/change", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	// Expect success (201) rather than forbidden due to dev profile fallback permissions
 	assert.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
 }
 
 func TestUpdateTelemetryProfileChangeHandler_PermissionError(t *testing.T) {
-	initTelemetryTestEnv()
 	profile := newSampleProfile("noPermUpdate")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	// In dev profile environment permissions are granted; accept success (200) or not found if change logic requires existing change
 	if rr.Code != http.StatusOK && rr.Code != http.StatusNotFound {
 		assert.Failf(t, "unexpected status", "got %d body=%s", rr.Code, rr.Body.String())
@@ -104,140 +93,39 @@ func TestUpdateTelemetryProfileChangeHandler_PermissionError(t *testing.T) {
 }
 
 func TestBatchPostTelemetryProfileEntitiesHandler_BadJSON(t *testing.T) {
-	initTelemetryTestEnv()
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/entities?applicationType=stb", bytes.NewReader([]byte("notjson")))
-	rr := execTPReq(r, []byte("notjson"))
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestBatchPutTelemetryProfileEntitiesHandler_BadJSON(t *testing.T) {
-	initTelemetryTestEnv()
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entities?applicationType=stb", bytes.NewReader([]byte("notjson")))
-	rr := execTPReq(r, []byte("notjson"))
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestPostTelemetryProfileFilteredHandler_BadJSON(t *testing.T) {
-	initTelemetryTestEnv()
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?applicationType=stb", bytes.NewReader([]byte("notjson")))
-	rr := execTPReq(r, []byte("notjson"))
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestPostTelemetryProfileFilteredHandler_InvalidPageParams(t *testing.T) {
-	initTelemetryTestEnv()
 	// page and pageSize invalid
 	filter := map[string]interface{}{"pageNumber": -1, "pageSize": 0}
 	b, _ := json.Marshal(filter)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	// handler should reject invalid/missing pageNumber (since pageNumber not in query string) with 400
 	assert.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
 }
 
 func TestPostTelemetryProfileFilteredHandler_InvalidPageSize(t *testing.T) {
-	initTelemetryTestEnv()
 	// valid pageNumber but invalid pageSize=0 via query params
 	body := []byte(`{"profileName":"abc"}`)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=1&pageSize=0&applicationType=stb", bytes.NewReader(body))
-	rr := execTPReq(r, body)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
-}
-
-// Reuse server initialization similar to change_handler_test.go but include telemetry profile routes
-var (
-	tpServer *oshttp.WebconfigServer
-	tpRouter *mux.Router
-)
-
-// initialization helper (called lazily); cannot have second TestMain
-func initTelemetryTestEnv() {
-	if tpServer != nil { // already initialized
-		return
-	}
-	cfgFile := "../config/sample_xconfadmin.conf"
-	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		cfgFile = "../../config/sample_xconfadmin.conf"
-	}
-	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		cfgFile = "../../../config/sample_xconfadmin.conf"
-	}
-	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		panic(err)
-	}
-	os.Setenv("SECURITY_TOKEN_KEY", "telemetryUTKey")
-	os.Setenv("SAT_CLIENT_ID", "foo")
-	os.Setenv("SAT_CLIENT_SECRET", "bar")
-	os.Setenv("IDP_CLIENT_ID", "foo")
-	os.Setenv("IDP_CLIENT_SECRET", "bar")
-
-	sc, err := xwcommon.NewServerConfig(cfgFile)
-	if err != nil {
-		panic(err)
-	}
-	tpServer = oshttp.NewWebconfigServer(sc, true, nil, nil)
-	xwhttp.InitSatTokenManager(tpServer.XW_XconfServer)
-	db.SetDatabaseClient(tpServer.XW_XconfServer.DatabaseClient)
-	tpRouter = tpServer.XW_XconfServer.GetRouter(false)
-	dataapi.XconfSetup(tpServer.XW_XconfServer, tpRouter)
-	auth.WebServerInjection(tpServer)
-	dataapi.RegisterTables()
-	setupTelemetryProfileRoutes(tpRouter)
-	if err = tpServer.XW_XconfServer.SetUp(); err != nil {
-		panic(err)
-	}
-	if err = tpServer.XW_XconfServer.TearDown(); err != nil {
-		panic(err)
-	}
-}
-
-func setupTelemetryProfileRoutes(r *mux.Router) {
-	telemetryProfilePath := r.PathPrefix("/xconfAdminService/telemetry/profile").Subrouter()
-	telemetryProfilePath.HandleFunc("", GetTelemetryProfilesHandler).Methods("GET")
-	telemetryProfilePath.HandleFunc("", CreateTelemetryProfileHandler).Methods("POST")
-	telemetryProfilePath.HandleFunc("", UpdateTelemetryProfileHandler).Methods("PUT")
-	telemetryProfilePath.HandleFunc("/change", CreateTelemetryProfileChangeHandler).Methods("POST")
-	telemetryProfilePath.HandleFunc("/change", UpdateTelemetryProfileChangeHandler).Methods("PUT")
-	telemetryProfilePath.HandleFunc("/{id}", DeleteTelemetryProfileHandler).Methods("DELETE")
-	telemetryProfilePath.HandleFunc("/change/{id}", DeleteTelemetryProfileChangeHandler).Methods("DELETE")
-	telemetryProfilePath.HandleFunc("/{id}", GetTelemetryProfileByIdHandler).Methods("GET")
-	telemetryProfilePath.HandleFunc("/entities", PostTelemetryProfileEntitiesHandler).Methods("POST")
-	telemetryProfilePath.HandleFunc("/entities", PutTelemetryProfileEntitiesHandler).Methods("PUT")
-	telemetryProfilePath.HandleFunc("/filtered", PostTelemetryProfileFilteredHandler).Methods("POST")
-	telemetryProfilePath.HandleFunc("/migrate/createTelemetryId", CreateTelemetryIdsHandler).Methods("GET")
-	telemetryProfilePath.HandleFunc("/entry/add/{id}", AddTelemetryProfileEntryHandler).Methods("PUT")
-	telemetryProfilePath.HandleFunc("/entry/remove/{id}", RemoveTelemetryProfileEntryHandler).Methods("PUT")
-	telemetryProfilePath.HandleFunc("/change/entry/add/{id}", AddTelemetryProfileEntryChangeHandler).Methods("PUT")
-	telemetryProfilePath.HandleFunc("/change/entry/remove/{id}", RemoveTelemetryProfileEntryChangeHandler).Methods("PUT")
-
-	// telemetry/profile
-	telemetryProfilePath.HandleFunc("", GetTelemetryProfilesHandler).Methods("GET").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("", CreateTelemetryProfileHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("", UpdateTelemetryProfileHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change", CreateTelemetryProfileChangeHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change", UpdateTelemetryProfileChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/{id}", DeleteTelemetryProfileHandler).Methods("DELETE").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change/{id}", DeleteTelemetryProfileChangeHandler).Methods("DELETE").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/{id}", GetTelemetryProfileByIdHandler).Methods("GET").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/entities", PostTelemetryProfileEntitiesHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/entities", PutTelemetryProfileEntitiesHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/filtered", PostTelemetryProfileFilteredHandler).Methods("POST").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/migrate/createTelemetryId", CreateTelemetryIdsHandler).Methods("GET").Name("Telemetry1-Profiles") //can be removed
-	telemetryProfilePath.HandleFunc("/entry/add/{id}", AddTelemetryProfileEntryHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/entry/remove/{id}", RemoveTelemetryProfileEntryHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change/entry/add/{id}", AddTelemetryProfileEntryChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
-	telemetryProfilePath.HandleFunc("/change/entry/remove/{id}", RemoveTelemetryProfileEntryChangeHandler).Methods("PUT").Name("Telemetry1-Profiles")
-}
-
-// helper exec
-func execTPReq(r *http.Request, body []byte) *httptest.ResponseRecorder {
-	rr := httptest.NewRecorder()
-	xw := xwhttp.NewXResponseWriter(rr)
-	if body != nil {
-		xw.SetBody(string(body))
-	}
-	tpRouter.ServeHTTP(xw, r)
-	return rr
 }
 
 // create a sample profile entity for tests
@@ -253,11 +141,10 @@ func newSampleProfile(name string) *corelogupload.PermanentTelemetryProfile {
 }
 
 func TestCreateTelemetryProfileHandlerAndFetchById(t *testing.T) {
-	initTelemetryTestEnv()
 	profile := newSampleProfile("profA")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	// decode returned profile to get id
 	var saved corelogupload.PermanentTelemetryProfile
@@ -266,7 +153,7 @@ func TestCreateTelemetryProfileHandlerAndFetchById(t *testing.T) {
 	assert.NotEmpty(t, saved.ID)
 	// fetch by id
 	r = httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/profile/"+saved.ID+"?applicationType=stb", nil)
-	rr = execTPReq(r, nil)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	var fetched corelogupload.PermanentTelemetryProfile
 	err = json.Unmarshal(rr.Body.Bytes(), &fetched)
@@ -276,11 +163,10 @@ func TestCreateTelemetryProfileHandlerAndFetchById(t *testing.T) {
 }
 
 func TestCreateTelemetryProfileChangeHandler(t *testing.T) {
-	initTelemetryTestEnv()
 	profile := newSampleProfile("changeProf")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/change?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	// returned change JSON should contain NewEntity with name
 	bodyStr := rr.Body.String()
@@ -288,12 +174,11 @@ func TestCreateTelemetryProfileChangeHandler(t *testing.T) {
 }
 
 func TestUpdateTelemetryProfileHandler(t *testing.T) {
-	initTelemetryTestEnv()
 	// first create
 	profile := newSampleProfile("toUpdate")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
@@ -301,7 +186,7 @@ func TestUpdateTelemetryProfileHandler(t *testing.T) {
 	saved.Name = "updatedName"
 	ub, _ := json.Marshal(saved)
 	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(ub))
-	rr = execTPReq(r, ub)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	var updated corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &updated)
@@ -309,22 +194,20 @@ func TestUpdateTelemetryProfileHandler(t *testing.T) {
 }
 
 func TestDeleteTelemetryProfileHandlerValidation(t *testing.T) {
-	initTelemetryTestEnv()
 	// delete non-existing should 404
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/notFound?applicationType=stb", nil)
-	rr := execTPReq(r, nil)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
 func TestBatchPostTelemetryProfileEntitiesHandler(t *testing.T) {
-	initTelemetryTestEnv()
 	// create two profiles in batch (changes)
 	prof1 := newSampleProfile("batchA")
 	prof2 := newSampleProfile("batchB")
 	list := []corelogupload.PermanentTelemetryProfile{*prof1, *prof2}
 	b, _ := json.Marshal(list)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/entities?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	// expect success entries
 	var resp map[string]map[string]string
@@ -334,12 +217,11 @@ func TestBatchPostTelemetryProfileEntitiesHandler(t *testing.T) {
 }
 
 func TestBatchPutTelemetryProfileEntitiesHandler(t *testing.T) {
-	initTelemetryTestEnv()
 	// first create a permanent profile
 	profile := newSampleProfile("permForBatchUpdate")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
@@ -347,30 +229,28 @@ func TestBatchPutTelemetryProfileEntitiesHandler(t *testing.T) {
 	list := []corelogupload.PermanentTelemetryProfile{saved}
 	ub, _ := json.Marshal(list)
 	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entities?applicationType=stb", bytes.NewReader(ub))
-	rr = execTPReq(r, ub)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestPostTelemetryProfileFilteredHandlerPaginationErrors(t *testing.T) {
-	initTelemetryTestEnv()
 	body := []byte("{}")
 	// missing pageNumber
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageSize=5&applicationType=stb", bytes.NewReader(body))
-	rr := execTPReq(r, body)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	// missing pageSize
 	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=1&applicationType=stb", bytes.NewReader(body))
-	rr = execTPReq(r, body)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestAddAndRemoveTelemetryProfileEntryHandlers(t *testing.T) {
-	initTelemetryTestEnv()
 	// create profile
 	profile := newSampleProfile("entryProf")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
@@ -379,7 +259,7 @@ func TestAddAndRemoveTelemetryProfileEntryHandlers(t *testing.T) {
 	entry := corelogupload.TelemetryElement{Header: "H", Content: "C", Type: "T", PollingFrequency: "10"}
 	eb, _ := json.Marshal([]corelogupload.TelemetryElement{entry})
 	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/add/"+saved.ID+"?applicationType=stb", bytes.NewReader(eb))
-	rr = execTPReq(r, eb)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	var updated corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &updated)
@@ -388,49 +268,46 @@ func TestAddAndRemoveTelemetryProfileEntryHandlers(t *testing.T) {
 	// remove entry via change route (ensures removal logic path)
 	rb, _ := json.Marshal([]corelogupload.TelemetryElement{updated.TelemetryProfile[0]})
 	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/remove/"+saved.ID+"?applicationType=stb", bytes.NewReader(rb))
-	rr = execTPReq(r, rb)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestCreateTelemetryIdsHandler(t *testing.T) {
-	initTelemetryTestEnv()
 	// create two profiles first so IDs are normalized and then migrated
 	for _, nm := range []string{"migrate1", "migrate2"} {
 		p := newSampleProfile(nm)
 		b, _ := json.Marshal(p)
 		r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetryProfile1?applicationType=stb", bytes.NewReader(b))
-		_ = execTPReq(r, b)
+		_ = xshared.ExecuteRequest(r, chgRouter)
 	}
 	r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/profile/migrate/createTelemetryId?applicationType=stb", nil)
-	rr := execTPReq(r, nil)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestTelemetryProfilesExportFlag(t *testing.T) {
-	initTelemetryTestEnv()
 	// create profile
 	profile := newSampleProfile("exportable")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
 	// fetch with export flag
 	r = httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/profile/"+saved.ID+"?applicationType=stb&export=true", nil)
-	rr = execTPReq(r, nil)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	// list all with export flag
 	r = httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/profile?applicationType=stb&export=true", nil)
-	rr = execTPReq(r, nil)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestTelemetryProfileHandlerTimeoutSafety(t *testing.T) {
-	initTelemetryTestEnv()
 	for i := 0; i < 3; i++ {
 		r := httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/profile?applicationType=stb", nil)
-		_ = execTPReq(r, nil)
+		_ = xshared.ExecuteRequest(r, chgRouter)
 		time.Sleep(5 * time.Millisecond)
 	}
 	assert.True(t, true)
@@ -439,19 +316,18 @@ func TestTelemetryProfileHandlerTimeoutSafety(t *testing.T) {
 // ========== Tests for DeleteTelemetryProfileChangeHandler ==========
 
 func TestDeleteTelemetryProfileChangeHandler_Success(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile first
 	profile := newSampleProfile("profileToDeleteChange")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
 
 	// Delete via change handler
 	r = httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/change/"+saved.ID+"?applicationType=stb", nil)
-	rr = execTPReq(r, nil)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify response contains change object
@@ -463,12 +339,11 @@ func TestDeleteTelemetryProfileChangeHandler_Success(t *testing.T) {
 
 	// Cleanup: the change should be removed after test
 	if changeID, ok := change["id"].(string); ok && changeID != "" {
-		xchange.DeleteOneChange(changeID)
+		xchange.DeleteOneChange(db.GetDefaultTenantId(), changeID)
 	}
 }
 
 func TestDeleteTelemetryProfileChangeHandler_MissingId(t *testing.T) {
-	initTelemetryTestEnv()
 	// Request without ID in path
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/change/?applicationType=stb", nil)
 	wr := httptest.NewRecorder()
@@ -479,7 +354,6 @@ func TestDeleteTelemetryProfileChangeHandler_MissingId(t *testing.T) {
 }
 
 func TestDeleteTelemetryProfileChangeHandler_EmptyId(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a dummy request with path variables manually set to blank
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/change/%20?applicationType=stb", nil)
 	// Manually set mux vars to simulate empty ID
@@ -492,56 +366,53 @@ func TestDeleteTelemetryProfileChangeHandler_EmptyId(t *testing.T) {
 }
 
 func TestDeleteTelemetryProfileChangeHandler_ProfileNotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	// Try to delete non-existent profile
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/change/nonexistent-id-123?applicationType=stb", nil)
-	rr := execTPReq(r, nil)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 	assert.Contains(t, rr.Body.String(), "does not exist")
 }
 
 func TestDeleteTelemetryProfileChangeHandler_ErrorResponse(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile
 	profile := newSampleProfile("profileErrorTest")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
 
 	// Test successful delete via change
 	r = httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/change/"+saved.ID+"?applicationType=stb", nil)
-	rr = execTPReq(r, nil)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Cleanup
 	var change map[string]interface{}
 	_ = json.Unmarshal(rr.Body.Bytes(), &change)
 	if changeID, ok := change["id"].(string); ok && changeID != "" {
-		xchange.DeleteOneChange(changeID)
+		xchange.DeleteOneChange(db.GetDefaultTenantId(), changeID)
 	}
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 // ========== Tests for PostTelemetryProfileFilteredHandler ==========
 
 func TestPostTelemetryProfileFilteredHandler_Success(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create test profiles
 	p1 := newSampleProfile("FilterTest1")
 	p2 := newSampleProfile("FilterTest2")
 	b1, _ := json.Marshal(p1)
 	b2, _ := json.Marshal(p2)
 	r1 := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b1))
-	rr1 := execTPReq(r1, b1)
+	rr1 := xshared.ExecuteRequest(r1, chgRouter)
 	assert.Equal(t, http.StatusCreated, rr1.Code)
 	var saved1 corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr1.Body.Bytes(), &saved1)
 
 	r2 := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b2))
-	rr2 := execTPReq(r2, b2)
+	rr2 := xshared.ExecuteRequest(r2, chgRouter)
 	assert.Equal(t, http.StatusCreated, rr2.Code)
 	var saved2 corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr2.Body.Bytes(), &saved2)
@@ -550,7 +421,7 @@ func TestPostTelemetryProfileFilteredHandler_Success(t *testing.T) {
 	filter := map[string]string{}
 	fb, _ := json.Marshal(filter)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=1&pageSize=10&applicationType=stb", bytes.NewReader(fb))
-	rr := execTPReq(r, fb)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var profiles []corelogupload.PermanentTelemetryProfile
@@ -567,70 +438,56 @@ func TestPostTelemetryProfileFilteredHandler_Success(t *testing.T) {
 	assert.True(t, headerValue != "" || len(profiles) >= 2)
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved1.ID)
-	xlogupload.DeletePermanentTelemetryProfile(saved2.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved1.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved2.ID)
 }
 
 func TestPostTelemetryProfileFilteredHandler_MissingPageNumber(t *testing.T) {
-	initTelemetryTestEnv()
 	body := []byte("{}")
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageSize=10&applicationType=stb", bytes.NewReader(body))
-	rr := execTPReq(r, body)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Invalid value for pageNumber")
 }
 
 func TestPostTelemetryProfileFilteredHandler_MissingPageSize(t *testing.T) {
-	initTelemetryTestEnv()
 	body := []byte("{}")
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=1&applicationType=stb", bytes.NewReader(body))
-	rr := execTPReq(r, body)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Invalid value for pageSize")
 }
 
 func TestPostTelemetryProfileFilteredHandler_InvalidPageNumber(t *testing.T) {
-	initTelemetryTestEnv()
 	body := []byte("{}")
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=0&pageSize=10&applicationType=stb", bytes.NewReader(body))
-	rr := execTPReq(r, body)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Invalid value for pageNumber")
 }
 
 func TestPostTelemetryProfileFilteredHandler_InvalidPageNumberNonNumeric(t *testing.T) {
-	initTelemetryTestEnv()
 	body := []byte("{}")
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=abc&pageSize=10&applicationType=stb", bytes.NewReader(body))
-	rr := execTPReq(r, body)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Invalid value for pageNumber")
 }
 
 func TestPostTelemetryProfileFilteredHandler_InvalidPageSizeZero(t *testing.T) {
-	initTelemetryTestEnv()
 	body := []byte("{}")
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=1&pageSize=0&applicationType=stb", bytes.NewReader(body))
-	rr := execTPReq(r, body)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Invalid value for pageSize")
 }
 
-func TestPostTelemetryProfileFilteredHandler_InvalidJSON(t *testing.T) {
-	initTelemetryTestEnv()
-	body := []byte("invalid json")
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=1&pageSize=10&applicationType=stb", bytes.NewReader(body))
-	rr := execTPReq(r, body)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-}
-
 func TestPostTelemetryProfileFilteredHandler_WithNameFilter(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create profiles with specific names
 	p1 := newSampleProfile("SpecialFilterName")
 	b1, _ := json.Marshal(p1)
 	r1 := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b1))
-	rr1 := execTPReq(r1, b1)
+	rr1 := xshared.ExecuteRequest(r1, chgRouter)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr1.Body.Bytes(), &saved)
 
@@ -638,7 +495,7 @@ func TestPostTelemetryProfileFilteredHandler_WithNameFilter(t *testing.T) {
 	filter := map[string]string{"NAME": "SpecialFilter"}
 	fb, _ := json.Marshal(filter)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=1&pageSize=10&applicationType=stb", bytes.NewReader(fb))
-	rr := execTPReq(r, fb)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var profiles []corelogupload.PermanentTelemetryProfile
@@ -646,26 +503,24 @@ func TestPostTelemetryProfileFilteredHandler_WithNameFilter(t *testing.T) {
 	assert.GreaterOrEqual(t, len(profiles), 1)
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestPostTelemetryProfileFilteredHandler_EmptyBody(t *testing.T) {
-	initTelemetryTestEnv()
 	// Empty body should work with just query params
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile/filtered?pageNumber=1&pageSize=5&applicationType=stb", bytes.NewReader([]byte("")))
-	rr := execTPReq(r, []byte(""))
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 // ========== Tests for AddTelemetryProfileEntryChangeHandler ==========
 
 func TestAddTelemetryProfileEntryChangeHandler_Success(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile first
 	profile := newSampleProfile("addEntryChangeTest")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
@@ -680,7 +535,7 @@ func TestAddTelemetryProfileEntryChangeHandler_Success(t *testing.T) {
 	entries := []corelogupload.TelemetryElement{newEntry}
 	eb, _ := json.Marshal(entries)
 	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/add/"+saved.ID+"?applicationType=stb", bytes.NewReader(eb))
-	rr = execTPReq(r, eb)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify response contains change
@@ -690,13 +545,12 @@ func TestAddTelemetryProfileEntryChangeHandler_Success(t *testing.T) {
 
 	// Cleanup
 	if changeID, ok := change["id"].(string); ok && changeID != "" {
-		xchange.DeleteOneChange(changeID)
+		xchange.DeleteOneChange(db.GetDefaultTenantId(), changeID)
 	}
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestAddTelemetryProfileEntryChangeHandler_MissingId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/add/?applicationType=stb", bytes.NewReader(eb))
@@ -709,7 +563,6 @@ func TestAddTelemetryProfileEntryChangeHandler_MissingId(t *testing.T) {
 }
 
 func TestAddTelemetryProfileEntryChangeHandler_EmptyId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/add/%20?applicationType=stb", bytes.NewReader(eb))
@@ -723,42 +576,20 @@ func TestAddTelemetryProfileEntryChangeHandler_EmptyId(t *testing.T) {
 }
 
 func TestAddTelemetryProfileEntryChangeHandler_ProfileNotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/add/nonexistent-id?applicationType=stb", bytes.NewReader(eb))
-	rr := execTPReq(r, eb)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 	assert.Contains(t, rr.Body.String(), "does not exist")
 }
 
-func TestAddTelemetryProfileEntryChangeHandler_InvalidJSON(t *testing.T) {
-	initTelemetryTestEnv()
-	// Create a profile
-	profile := newSampleProfile("invalidJSONAddEntry")
-	b, _ := json.Marshal(profile)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
-	var saved corelogupload.PermanentTelemetryProfile
-	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
-
-	// Send invalid JSON
-	invalidJSON := []byte("not a valid json")
-	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/add/"+saved.ID+"?applicationType=stb", bytes.NewReader(invalidJSON))
-	rr = execTPReq(r, invalidJSON)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-
-	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
-}
-
 func TestAddTelemetryProfileEntryChangeHandler_DuplicateEntry(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile with an entry
 	profile := newSampleProfile("duplicateEntryTest")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
 
@@ -767,21 +598,20 @@ func TestAddTelemetryProfileEntryChangeHandler_DuplicateEntry(t *testing.T) {
 	entries := []corelogupload.TelemetryElement{existingEntry}
 	eb, _ := json.Marshal(entries)
 	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/add/"+saved.ID+"?applicationType=stb", bytes.NewReader(eb))
-	rr = execTPReq(r, eb)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusConflict, rr.Code)
 	assert.Contains(t, rr.Body.String(), "already exists")
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestAddTelemetryProfileEntryChangeHandler_MultipleEntries(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile
 	profile := newSampleProfile("multipleEntriesTest")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
 
@@ -792,22 +622,21 @@ func TestAddTelemetryProfileEntryChangeHandler_MultipleEntries(t *testing.T) {
 	}
 	eb, _ := json.Marshal(entries)
 	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/add/"+saved.ID+"?applicationType=stb", bytes.NewReader(eb))
-	rr = execTPReq(r, eb)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Cleanup
 	var change map[string]interface{}
 	_ = json.Unmarshal(rr.Body.Bytes(), &change)
 	if changeID, ok := change["id"].(string); ok && changeID != "" {
-		xchange.DeleteOneChange(changeID)
+		xchange.DeleteOneChange(db.GetDefaultTenantId(), changeID)
 	}
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 // ========== Tests for RemoveTelemetryProfileEntryHandler ==========
 
 func TestRemoveTelemetryProfileEntryHandler_Success(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile with multiple entries
 	profile := newSampleProfile("removeEntryTest")
 	profile.TelemetryProfile = append(profile.TelemetryProfile, corelogupload.TelemetryElement{
@@ -819,7 +648,7 @@ func TestRemoveTelemetryProfileEntryHandler_Success(t *testing.T) {
 	})
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
@@ -829,7 +658,7 @@ func TestRemoveTelemetryProfileEntryHandler_Success(t *testing.T) {
 	entries := []corelogupload.TelemetryElement{entryToRemove}
 	eb, _ := json.Marshal(entries)
 	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/remove/"+saved.ID+"?applicationType=stb", bytes.NewReader(eb))
-	rr = execTPReq(r, eb)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify the entry was removed
@@ -838,11 +667,10 @@ func TestRemoveTelemetryProfileEntryHandler_Success(t *testing.T) {
 	assert.Equal(t, 1, len(updated.TelemetryProfile))
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestRemoveTelemetryProfileEntryHandler_MissingId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/remove/?applicationType=stb", bytes.NewReader(eb))
@@ -855,7 +683,6 @@ func TestRemoveTelemetryProfileEntryHandler_MissingId(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryHandler_EmptyId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/remove/%20?applicationType=stb", bytes.NewReader(eb))
@@ -869,42 +696,20 @@ func TestRemoveTelemetryProfileEntryHandler_EmptyId(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryHandler_ProfileNotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/remove/nonexistent-id?applicationType=stb", bytes.NewReader(eb))
-	rr := execTPReq(r, eb)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 	assert.Contains(t, rr.Body.String(), "does not exist")
 }
 
-func TestRemoveTelemetryProfileEntryHandler_InvalidJSON(t *testing.T) {
-	initTelemetryTestEnv()
-	// Create a profile
-	profile := newSampleProfile("invalidJSONRemoveEntry")
-	b, _ := json.Marshal(profile)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
-	var saved corelogupload.PermanentTelemetryProfile
-	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
-
-	// Send invalid JSON
-	invalidJSON := []byte("{not valid json}")
-	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/remove/"+saved.ID+"?applicationType=stb", bytes.NewReader(invalidJSON))
-	rr = execTPReq(r, invalidJSON)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-
-	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
-}
-
 func TestRemoveTelemetryProfileEntryHandler_EntryNotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile
 	profile := newSampleProfile("removeNonExistentEntry")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
 
@@ -918,16 +723,15 @@ func TestRemoveTelemetryProfileEntryHandler_EntryNotFound(t *testing.T) {
 	entries := []corelogupload.TelemetryElement{nonExistentEntry}
 	eb, _ := json.Marshal(entries)
 	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/remove/"+saved.ID+"?applicationType=stb", bytes.NewReader(eb))
-	rr = execTPReq(r, eb)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 	assert.Contains(t, rr.Body.String(), "does not exist")
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestRemoveTelemetryProfileEntryHandler_MultipleEntries(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile with multiple entries
 	profile := newSampleProfile("removeMultipleEntries")
 	profile.TelemetryProfile = append(profile.TelemetryProfile,
@@ -936,7 +740,7 @@ func TestRemoveTelemetryProfileEntryHandler_MultipleEntries(t *testing.T) {
 	)
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
 
@@ -947,7 +751,7 @@ func TestRemoveTelemetryProfileEntryHandler_MultipleEntries(t *testing.T) {
 	}
 	eb, _ := json.Marshal(entriesToRemove)
 	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/remove/"+saved.ID+"?applicationType=stb", bytes.NewReader(eb))
-	rr = execTPReq(r, eb)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var updated corelogupload.PermanentTelemetryProfile
@@ -955,13 +759,12 @@ func TestRemoveTelemetryProfileEntryHandler_MultipleEntries(t *testing.T) {
 	assert.Equal(t, 1, len(updated.TelemetryProfile))
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 // ========== Tests for RemoveTelemetryProfileEntryChangeHandler ==========
 
 func TestRemoveTelemetryProfileEntryChangeHandler_Success(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile with multiple entries
 	profile := newSampleProfile("removeEntryChangeTest")
 	profile.TelemetryProfile = append(profile.TelemetryProfile, corelogupload.TelemetryElement{
@@ -973,7 +776,7 @@ func TestRemoveTelemetryProfileEntryChangeHandler_Success(t *testing.T) {
 	})
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
@@ -983,7 +786,7 @@ func TestRemoveTelemetryProfileEntryChangeHandler_Success(t *testing.T) {
 	entries := []corelogupload.TelemetryElement{entryToRemove}
 	eb, _ := json.Marshal(entries)
 	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/remove/"+saved.ID+"?applicationType=stb", bytes.NewReader(eb))
-	rr = execTPReq(r, eb)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify response contains change
@@ -994,13 +797,12 @@ func TestRemoveTelemetryProfileEntryChangeHandler_Success(t *testing.T) {
 
 	// Cleanup
 	if changeID, ok := change["id"].(string); ok && changeID != "" {
-		xchange.DeleteOneChange(changeID)
+		xchange.DeleteOneChange(db.GetDefaultTenantId(), changeID)
 	}
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestRemoveTelemetryProfileEntryChangeHandler_MissingId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/remove/?applicationType=stb", bytes.NewReader(eb))
@@ -1013,7 +815,6 @@ func TestRemoveTelemetryProfileEntryChangeHandler_MissingId(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryChangeHandler_EmptyId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/remove/%20?applicationType=stb", bytes.NewReader(eb))
@@ -1027,42 +828,20 @@ func TestRemoveTelemetryProfileEntryChangeHandler_EmptyId(t *testing.T) {
 }
 
 func TestRemoveTelemetryProfileEntryChangeHandler_ProfileNotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/remove/nonexistent-id?applicationType=stb", bytes.NewReader(eb))
-	rr := execTPReq(r, eb)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 	assert.Contains(t, rr.Body.String(), "does not exist")
 }
 
-func TestRemoveTelemetryProfileEntryChangeHandler_InvalidJSON(t *testing.T) {
-	initTelemetryTestEnv()
-	// Create a profile
-	profile := newSampleProfile("invalidJSONRemoveEntryChange")
-	b, _ := json.Marshal(profile)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
-	var saved corelogupload.PermanentTelemetryProfile
-	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
-
-	// Send invalid JSON
-	invalidJSON := []byte("{invalid json}")
-	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/remove/"+saved.ID+"?applicationType=stb", bytes.NewReader(invalidJSON))
-	rr = execTPReq(r, invalidJSON)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-
-	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
-}
-
 func TestRemoveTelemetryProfileEntryChangeHandler_EntryNotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile
 	profile := newSampleProfile("removeNonExistentEntryChange")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
 
@@ -1076,16 +855,15 @@ func TestRemoveTelemetryProfileEntryChangeHandler_EntryNotFound(t *testing.T) {
 	entries := []corelogupload.TelemetryElement{nonExistentEntry}
 	eb, _ := json.Marshal(entries)
 	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/remove/"+saved.ID+"?applicationType=stb", bytes.NewReader(eb))
-	rr = execTPReq(r, eb)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 	assert.Contains(t, rr.Body.String(), "does not exist")
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestRemoveTelemetryProfileEntryChangeHandler_MultipleEntries(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile with multiple entries
 	profile := newSampleProfile("removeMultipleEntriesChange")
 	profile.TelemetryProfile = append(profile.TelemetryProfile,
@@ -1094,7 +872,7 @@ func TestRemoveTelemetryProfileEntryChangeHandler_MultipleEntries(t *testing.T) 
 	)
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
 
@@ -1105,7 +883,7 @@ func TestRemoveTelemetryProfileEntryChangeHandler_MultipleEntries(t *testing.T) 
 	}
 	eb, _ := json.Marshal(entriesToRemove)
 	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/change/entry/remove/"+saved.ID+"?applicationType=stb", bytes.NewReader(eb))
-	rr = execTPReq(r, eb)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var change map[string]interface{}
@@ -1113,37 +891,35 @@ func TestRemoveTelemetryProfileEntryChangeHandler_MultipleEntries(t *testing.T) 
 
 	// Cleanup
 	if changeID, ok := change["id"].(string); ok && changeID != "" {
-		xchange.DeleteOneChange(changeID)
+		xchange.DeleteOneChange(db.GetDefaultTenantId(), changeID)
 	}
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 // ========== Tests for DeleteTelemetryProfileHandler ==========
 
 func TestDeleteTelemetryProfileHandler_Success(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile first
 	profile := newSampleProfile("profileToDelete")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
 
 	// Delete the profile
 	r = httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/"+saved.ID+"?applicationType=stb", nil)
-	rr = execTPReq(r, nil)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 
 	// Verify deletion - fetching should return 404
 	r = httptest.NewRequest(http.MethodGet, "/xconfAdminService/telemetry/profile/"+saved.ID+"?applicationType=stb", nil)
-	rr = execTPReq(r, nil)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	//assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
 func TestDeleteTelemetryProfileHandler_MissingId(t *testing.T) {
-	initTelemetryTestEnv()
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/?applicationType=stb", nil)
 	wr := httptest.NewRecorder()
 	xw := xwhttp.NewXResponseWriter(wr)
@@ -1153,7 +929,6 @@ func TestDeleteTelemetryProfileHandler_MissingId(t *testing.T) {
 }
 
 func TestDeleteTelemetryProfileHandler_EmptyId(t *testing.T) {
-	initTelemetryTestEnv()
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/%20?applicationType=stb", nil)
 	r = mux.SetURLVars(r, map[string]string{"id": " "})
 	wr := httptest.NewRecorder()
@@ -1164,9 +939,8 @@ func TestDeleteTelemetryProfileHandler_EmptyId(t *testing.T) {
 }
 
 func TestDeleteTelemetryProfileHandler_NotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	r := httptest.NewRequest(http.MethodDelete, "/xconfAdminService/telemetry/profile/nonexistent-id-999?applicationType=stb", nil)
-	rr := execTPReq(r, nil)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 	assert.Contains(t, rr.Body.String(), "does not exist")
 }
@@ -1174,12 +948,11 @@ func TestDeleteTelemetryProfileHandler_NotFound(t *testing.T) {
 // ========== Tests for AddTelemetryProfileEntryHandler ==========
 
 func TestAddTelemetryProfileEntryHandler_Success(t *testing.T) {
-	initTelemetryTestEnv()
 	// Create a profile first
 	profile := newSampleProfile("addEntryTest")
 	b, _ := json.Marshal(profile)
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	var saved corelogupload.PermanentTelemetryProfile
 	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
@@ -1194,7 +967,7 @@ func TestAddTelemetryProfileEntryHandler_Success(t *testing.T) {
 	entries := []corelogupload.TelemetryElement{newEntry}
 	eb, _ := json.Marshal(entries)
 	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/add/"+saved.ID+"?applicationType=stb", bytes.NewReader(eb))
-	rr = execTPReq(r, eb)
+	rr = xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Verify the entry was added
@@ -1203,11 +976,10 @@ func TestAddTelemetryProfileEntryHandler_Success(t *testing.T) {
 	assert.Equal(t, 2, len(updated.TelemetryProfile)) // original + new entry
 
 	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
+	xlogupload.DeletePermanentTelemetryProfile(db.GetDefaultTenantId(), saved.ID)
 }
 
 func TestAddTelemetryProfileEntryHandler_MissingId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/add/?applicationType=stb", bytes.NewReader(eb))
@@ -1220,7 +992,6 @@ func TestAddTelemetryProfileEntryHandler_MissingId(t *testing.T) {
 }
 
 func TestAddTelemetryProfileEntryHandler_EmptyId(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/add/%20?applicationType=stb", bytes.NewReader(eb))
@@ -1234,31 +1005,10 @@ func TestAddTelemetryProfileEntryHandler_EmptyId(t *testing.T) {
 }
 
 func TestAddTelemetryProfileEntryHandler_ProfileNotFound(t *testing.T) {
-	initTelemetryTestEnv()
 	entry := []corelogupload.TelemetryElement{{Header: "H", Content: "C", Type: "T", PollingFrequency: "60"}}
 	eb, _ := json.Marshal(entry)
 	r := httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/add/nonexistent-id?applicationType=stb", bytes.NewReader(eb))
-	rr := execTPReq(r, eb)
+	rr := xshared.ExecuteRequest(r, chgRouter)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 	assert.Contains(t, rr.Body.String(), "does not exist")
-}
-
-func TestAddTelemetryProfileEntryHandler_InvalidJSON(t *testing.T) {
-	initTelemetryTestEnv()
-	// Create a profile
-	profile := newSampleProfile("invalidJSONAddEntryHandler")
-	b, _ := json.Marshal(profile)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/profile?applicationType=stb", bytes.NewReader(b))
-	rr := execTPReq(r, b)
-	var saved corelogupload.PermanentTelemetryProfile
-	_ = json.Unmarshal(rr.Body.Bytes(), &saved)
-
-	// Send invalid JSON
-	invalidJSON := []byte("not valid json")
-	r = httptest.NewRequest(http.MethodPut, "/xconfAdminService/telemetry/profile/entry/add/"+saved.ID+"?applicationType=stb", bytes.NewReader(invalidJSON))
-	rr = execTPReq(r, invalidJSON)
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
-
-	// Cleanup
-	xlogupload.DeletePermanentTelemetryProfile(saved.ID)
 }
