@@ -26,7 +26,6 @@ import (
 )
 
 func TestTaggingApiConfig_Struct(t *testing.T) {
-	// Test struct creation with values
 	config := &TaggingApiConfig{
 		BatchLimit:  5000,
 		WorkerCount: 20,
@@ -37,7 +36,6 @@ func TestTaggingApiConfig_Struct(t *testing.T) {
 }
 
 func TestTaggingApiConfig_ZeroValues(t *testing.T) {
-	// Test struct with zero values
 	config := &TaggingApiConfig{}
 
 	assert.Equal(t, 0, config.BatchLimit, "BatchLimit should default to zero")
@@ -45,7 +43,6 @@ func TestTaggingApiConfig_ZeroValues(t *testing.T) {
 }
 
 func TestNewTaggingApiConfig_WithConfig(t *testing.T) {
-	// Test with mock configuration that has the required keys
 	configStr := `
 		webconfig {
 			xconf {
@@ -64,7 +61,6 @@ func TestNewTaggingApiConfig_WithConfig(t *testing.T) {
 }
 
 func TestNewTaggingApiConfig_WithDefaults(t *testing.T) {
-	// Test with empty configuration (should use defaults)
 	configStr := `{}`
 
 	conf := configuration.ParseString(configStr)
@@ -76,7 +72,6 @@ func TestNewTaggingApiConfig_WithDefaults(t *testing.T) {
 }
 
 func TestNewTaggingApiConfig_WithPartialConfig(t *testing.T) {
-	// Test with configuration that has only one of the required keys
 	configStr := `
 		webconfig {
 			xconf {
@@ -112,7 +107,6 @@ func TestNewTaggingApiConfig_WithOtherPartialConfig(t *testing.T) {
 }
 
 func TestNewTaggingApiConfig_WithExtremeValues(t *testing.T) {
-	// Test with extreme values
 	configStr := `
 		webconfig {
 			xconf {
@@ -131,7 +125,6 @@ func TestNewTaggingApiConfig_WithExtremeValues(t *testing.T) {
 }
 
 func TestNewTaggingApiConfig_WithZeroValues(t *testing.T) {
-	// Test with zero values in config
 	configStr := `
 		webconfig {
 			xconf {
@@ -150,11 +143,9 @@ func TestNewTaggingApiConfig_WithZeroValues(t *testing.T) {
 }
 
 func TestNewTaggingApiConfig_DefaultValues(t *testing.T) {
-	// Test that default values are correct as per function implementation
 	emptyConfig := configuration.ParseString("{}")
 	result := NewTaggingApiConfig(emptyConfig)
 
-	// These are the default values from the function
 	expectedBatchLimit := 2000
 	expectedWorkerCount := 20
 
@@ -163,7 +154,6 @@ func TestNewTaggingApiConfig_DefaultValues(t *testing.T) {
 }
 
 func TestTaggingApiConfig_FieldTypes(t *testing.T) {
-	// Test that fields are of correct type
 	config := &TaggingApiConfig{
 		BatchLimit:  100,
 		WorkerCount: 5,
@@ -174,10 +164,7 @@ func TestTaggingApiConfig_FieldTypes(t *testing.T) {
 }
 
 func TestNewTaggingApiConfig_NilHandling(t *testing.T) {
-	// Test that function doesn't panic with nil config
-	// This might panic depending on the configuration library implementation
 	assert.NotPanics(t, func() {
-		// This may panic, but we're testing that our function handles it
 		defer func() {
 			if r := recover(); r != nil {
 				// Panic is acceptable for nil config
@@ -188,7 +175,6 @@ func TestNewTaggingApiConfig_NilHandling(t *testing.T) {
 }
 
 func TestTaggingApiConfig_Modification(t *testing.T) {
-	// Test that config values can be modified after creation
 	config := &TaggingApiConfig{
 		BatchLimit:  1000,
 		WorkerCount: 5,
@@ -203,7 +189,6 @@ func TestTaggingApiConfig_Modification(t *testing.T) {
 }
 
 func TestNewTaggingApiConfig_ConfigKeys(t *testing.T) {
-	// Test that the function uses the correct configuration keys
 	configStr := `
 		webconfig {
 			xconf {
@@ -217,7 +202,6 @@ func TestNewTaggingApiConfig_ConfigKeys(t *testing.T) {
 	conf := configuration.ParseString(configStr)
 	result := NewTaggingApiConfig(conf)
 
-	// Should only read the specific keys we care about
 	assert.Equal(t, 1234, result.BatchLimit, "Should read tag_members_batch_limit")
 	assert.Equal(t, 5678, result.WorkerCount, "Should read tag_update_worker_count")
 	// other_unrelated_key should be ignored

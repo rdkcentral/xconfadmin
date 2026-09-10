@@ -59,6 +59,9 @@ func NewGroupServiceConnector(conf *configuration.Config, tlsConfig *tls.Config)
 		log.Error("getAllGroupsTemplate is required")
 	}
 
+	mustBeValidTemplate(host, "getGroupsMembersTemplate", getGroupsMembersTemplate, 2)
+	mustBeValidTemplate(host, "getAllGroupsTemplate", getAllGroupsTemplate, 1)
+
 	return &GroupServiceConnector{
 		BaseURL:                  host,
 		Client:                   NewHttpClient(conf, groupServiceName, tlsConfig),
@@ -72,7 +75,12 @@ func (c *GroupServiceConnector) DoRequest(method string, url string, headers map
 	return rbytes, err
 }
 
+// GetGroupsMemberBelongsTo reverse-looks-up the tags of a member. Device (mac)
+// and account members share one XDAS keyspace.
 func (c *GroupServiceConnector) GetGroupsMemberBelongsTo(memberId string) (*proto2.XdasHashes, error) {
+	if util.IsBlank(c.getGroupsMembersTemplate) {
+		return nil, fmt.Errorf("getGroupsMembersTemplate is not configured")
+	}
 	url := fmt.Sprintf(c.getGroupsMembersTemplate, c.GetGroupServiceHost(), memberId)
 	rbytes, err := c.DoRequest(HttpGet, url, protobufHeaders(), nil)
 	if err != nil {

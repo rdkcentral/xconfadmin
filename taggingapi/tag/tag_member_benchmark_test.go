@@ -48,7 +48,7 @@ func BenchmarkGenerateBucketedCursor(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		generateBucketedCursor(i%BucketCount, fmt.Sprintf("member-%d", i), i)
+		generateBucketedCursor(i%BucketCount, fmt.Sprintf("member-%d", i))
 	}
 }
 
@@ -56,13 +56,13 @@ func BenchmarkParseBucketedCursor(b *testing.B) {
 	// Pre-generate cursors
 	cursors := make([]string, 1000)
 	for i := 0; i < 1000; i++ {
-		cursors[i] = generateBucketedCursor(i%BucketCount, fmt.Sprintf("member-%d", i), i)
+		cursors[i] = generateBucketedCursor(i%BucketCount, fmt.Sprintf("member-%d", i))
 	}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		parseBucketedCursor(cursors[i%1000])
+		parseBucketedCursor(cursors[i%1000]) //nolint:errcheck // benchmark only measures parse cost
 	}
 }
 
@@ -107,12 +107,9 @@ func BenchmarkAddMembersV2(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		// This would require proper database setup
-		// In a real benchmark, you'd set up a test database here
 		b.StartTimer()
 
 		// AddMembers(tagId, members)
-		// Placeholder - actual implementation would call the function
 		_ = tagId
 		_ = members
 	}
@@ -129,7 +126,6 @@ func BenchmarkAddMembersV2Small(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		// This would require proper database setup
 		b.StartTimer()
 
 		// AddMembers(tagId, members)
@@ -149,7 +145,6 @@ func BenchmarkAddMembersV2Large(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		// This would require proper database setup
 		b.StartTimer()
 
 		// AddMembers(tagId, members)
@@ -169,7 +164,6 @@ func BenchmarkRemoveMembersV2(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		// This would require proper database setup and pre-populated data
 		b.StartTimer()
 
 		// RemoveMembers(tagId, members)
@@ -188,7 +182,6 @@ func BenchmarkGetMembersV2Paginated(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		// This would require proper database setup and pre-populated data
 		b.StartTimer()
 
 		// GetMembersPaginated(tagId, 500, "")
@@ -202,12 +195,11 @@ func BenchmarkGetMembersV2PaginatedWithCursor(b *testing.B) {
 	}
 
 	tagId := "benchmark-tag-pagination-cursor"
-	cursor := generateBucketedCursor(100, "member-12345", 500)
+	cursor := generateBucketedCursor(100, "member-12345")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		// This would require proper database setup and pre-populated data
 		b.StartTimer()
 
 		// GetMembersPaginated(tagId, 500, cursor)
@@ -216,7 +208,6 @@ func BenchmarkGetMembersV2PaginatedWithCursor(b *testing.B) {
 	}
 }
 
-// Benchmark memory allocation patterns
 func BenchmarkMemberSliceAllocation(b *testing.B) {
 	b.ResetTimer()
 

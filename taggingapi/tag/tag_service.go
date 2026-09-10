@@ -28,26 +28,32 @@ func GetGroupServiceConnector() *http.GroupServiceConnector {
 	return http.WebConfServer.GroupServiceConnector
 }
 
-func GetTagsByMember(member string) ([]string, error) {
-	member = ToNormalizedEcm(member)
+func GetTagsByMember(member string, tagType string) ([]string, error) {
+	member, err := NormalizeMember(member, tagType)
+	if err != nil {
+		return []string{}, err
+	}
 	tagsAsHashes, err := GetGroupServiceConnector().GetGroupsMemberBelongsTo(member)
 	if err != nil {
 		log.Errorf("xdas error getting members by %s group: %s", member, err.Error())
 		return []string{}, err
 	}
 	tagsMap := util.StringMap(tagsAsHashes.GetFields())
-	return filterTagEntriesByPrefix(tagsMap.Keys()), err
+	return filterTagEntriesByPrefix(tagsMap.Keys()), nil
 }
 
-func GetTagsWithValuesByMember(member string) (map[string]string, error) {
-	member = ToNormalizedEcm(member)
+func GetTagsWithValuesByMember(member string, tagType string) (map[string]string, error) {
+	member, err := NormalizeMember(member, tagType)
+	if err != nil {
+		return map[string]string{}, err
+	}
 	tagsAsHashes, err := GetGroupServiceConnector().GetGroupsMemberBelongsTo(member)
 	if err != nil {
 		log.Errorf("xdas error getting members by %s group: %s", member, err.Error())
 		return map[string]string{}, err
 	}
 	tagsMap := util.StringMap(tagsAsHashes.GetFields())
-	return filterTagEntriesWithValuesByPrefix(tagsMap), err
+	return filterTagEntriesWithValuesByPrefix(tagsMap), nil
 }
 
 func filterTagEntriesByPrefix(ftEntries []string) []string {
@@ -70,8 +76,12 @@ func filterTagEntriesWithValuesByPrefix(entries util.StringMap) map[string]strin
 	return result
 }
 
-func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<- string, wg *sync.WaitGroup, tagValue string) {
+// Per-member errors go to the aggregator rather than one log line each — an
+// XDAS outage during a 5000-member batch must not emit 5000 error lines.
+func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<- string, wg *sync.WaitGroup, tagValue string, tagType string, agg *errorAggregator) {
 	defer wg.Done()
+	// Per worker, not shared: proto.Marshal writes to the message's internal
+	// state, so one shared instance would be a data race.
 	xdasMembers := proto.XdasHashes{
 		Fields: map[string]string{id: tagValue},
 	}
@@ -80,49 +90,63 @@ func storeTagMembersInXdas(id string, members <-chan string, savedMembers chan<-
 	failCount := 0
 
 	for member := range members {
-		normalizedEcm := ToNormalizedEcm(member)
-		err := GetGroupServiceSyncConnector().AddMembersToTag(normalizedEcm, &xdasMembers)
+		normalized, err := NormalizeMember(member, tagType)
 		if err != nil {
 			failCount++
-			log.Errorf("xdas error adding member to %s group: ecm=%s, error=%s", id, normalizedEcm, err.Error())
+			agg.add(err)
+			continue
+		}
+		err = GetGroupServiceSyncConnector().AddMembersToTag(normalized, &xdasMembers)
+		if err != nil {
+			failCount++
+			agg.add(err)
 		} else {
 			successCount++
-			savedMembers <- member
+			savedMembers <- storedMemberForm(member, normalized, tagType)
 		}
 	}
 
-	// Worker summary log (one line per worker)
-	if failCount > 0 {
-		log.Warnf("XDAS worker completed for tag %s: success=%d, failed=%d", id, successCount, failCount)
-	} else {
-		log.Debugf("XDAS worker completed for tag %s: success=%d", id, successCount)
-	}
+	log.Debugf("XDAS worker completed for tag %s: success=%d, failed=%d", id, successCount, failCount)
 }
 
-func removeTagMembersFromXdas(id string, members <-chan string, removedMembers chan<- string, wg *sync.WaitGroup) {
+func removeTagMembersFromXdas(id string, members <-chan string, removedMembers chan<- string, wg *sync.WaitGroup, tagType string, agg *errorAggregator) {
 	defer wg.Done()
 
 	successCount := 0
 	failCount := 0
 
 	for member := range members {
-		normalizedEcm := ToNormalizedEcm(member)
-		err := GetGroupServiceSyncConnector().RemoveGroupMembers(normalizedEcm, id)
+		normalized, err := NormalizeMember(member, tagType)
 		if err != nil {
 			failCount++
-			log.Errorf("xdas error removing member from %s group: ecm=%s, error=%s", id, normalizedEcm, err.Error())
+			agg.add(err)
+			continue
+		}
+		err = GetGroupServiceSyncConnector().RemoveGroupMembers(normalized, id)
+		if err != nil {
+			failCount++
+			agg.add(err)
 		} else {
 			successCount++
-			removedMembers <- member
+			removedMembers <- storedMemberForm(member, normalized, tagType)
 		}
 	}
 
-	// Worker summary log (one line per worker)
-	if failCount > 0 {
-		log.Warnf("XDAS remove worker completed for tag %s: success=%d, failed=%d", id, successCount, failCount)
-	} else {
-		log.Debugf("XDAS remove worker completed for tag %s: success=%d", id, successCount)
+	log.Debugf("XDAS remove worker completed for tag %s: success=%d, failed=%d", id, successCount, failCount)
+}
+
+// storedMemberForm picks which form of a member is persisted to Cassandra.
+//
+// Account tags store the normalized id so Cassandra and XDAS agree and a later
+// delete computes the same FNV bucket; a padded member would otherwise land in a
+// different bucket and become undeletable. Mac and legacy tags keep the raw
+// member deliberately: GetEcmMacAddress is not idempotent, so normalizing would
+// shift every one of the 43M existing rows into a different bucket.
+func storedMemberForm(raw string, normalized string, tagType string) string {
+	if IsAccountTag(tagType) {
+		return normalized
 	}
+	return raw
 }
 
 func CheckBatchSizeExceeded(batchSize int) error {

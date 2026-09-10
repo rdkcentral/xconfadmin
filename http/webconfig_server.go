@@ -350,6 +350,19 @@ func getHeadersForLogAsMap(header http.Header, notLoggedHeaders []string) map[st
 	return loggedHeaders
 }
 
+// isBulkTagMemberPayload matches the tagging endpoints whose request body is a
+// bulk member list (PUT/DELETE /taggingService/tags/{tag}/members).
+//
+// The method is part of the match so an unrouted request that merely lands on
+// the same path shape does not get its body suppressed.
+func isBulkTagMemberPayload(r *http.Request) bool {
+	if r.Method != http.MethodPut && r.Method != http.MethodDelete {
+		return false
+	}
+	return strings.HasPrefix(r.URL.Path, "/taggingService/tags/") &&
+		strings.HasSuffix(r.URL.Path, "/members")
+}
+
 func (s *WebconfigServer) logRequestStarts(w http.ResponseWriter, r *http.Request) *xhttp.XResponseWriter {
 	// extract the token from the header
 	authorization := r.Header.Get("Authorization")
@@ -422,7 +435,11 @@ func (s *WebconfigServer) logRequestStarts(w http.ResponseWriter, r *http.Reques
 			body = string(b)
 		}
 		xwriter.SetBody(body)
-		fields["body"] = body
+		if isBulkTagMemberPayload(r) {
+			fields["body"] = fmt.Sprintf("[suppressed %d-byte tag member payload]", len(body))
+		} else {
+			fields["body"] = body
+		}
 		// ctx = log.SetContext(ctx, "body", body)
 
 		contentType := r.Header.Get("Content-type")

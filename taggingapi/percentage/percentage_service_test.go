@@ -91,15 +91,12 @@ func TestCalculateHashAndPercent(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			hash, percent := CalculateHashAndPercent(tc.input)
 
-			// Test hash value is within expected range
 			assert.GreaterOrEqual(t, hash, tc.expectedHashRange[0], "Hash should be >= 0")
 			assert.LessOrEqual(t, hash, tc.expectedHashRange[1], "Hash should be <= max range")
 
-			// Test percent value is within expected range
 			assert.GreaterOrEqual(t, percent, tc.expectedPercentRange[0], "Percent should be >= 0")
 			assert.LessOrEqual(t, percent, tc.expectedPercentRange[1], "Percent should be <= 100")
 
-			// Test that hash and percent are consistent
 			vrange := float64(math.MaxInt64*2 + 1)
 			expectedPercent := (hash / vrange) * 100
 			assert.InDelta(t, expectedPercent, percent, 0.0001, "Percent calculation should be correct")
@@ -150,14 +147,11 @@ func TestCalculatePercent(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			result := CalculatePercent(tc.input)
 
-			// Test result is within expected range
 			assert.GreaterOrEqual(t, result, tc.minVal, "Percent should be >= 0")
 			assert.LessOrEqual(t, result, tc.maxVal, "Percent should be <= 100")
 
-			// Test that result is an integer
 			assert.IsType(t, int(0), result, "Result should be an integer")
 
-			// Test consistency with CalculateHashAndPercent
 			_, floatPercent := CalculateHashAndPercent(tc.input)
 			expectedInt := int(math.Round(floatPercent))
 			assert.Equal(t, expectedInt, result, "CalculatePercent should match rounded CalculateHashAndPercent")
@@ -166,7 +160,6 @@ func TestCalculatePercent(t *testing.T) {
 }
 
 func TestCalculateHashAndPercent_Deterministic(t *testing.T) {
-	// Test that the function is deterministic (same input -> same output)
 	testInputs := []string{
 		"test-input-1",
 		"test-input-2",
@@ -187,7 +180,6 @@ func TestCalculateHashAndPercent_Deterministic(t *testing.T) {
 }
 
 func TestCalculatePercent_Deterministic(t *testing.T) {
-	// Test that the function is deterministic (same input -> same output)
 	testInputs := []string{
 		"test-input-1",
 		"test-input-2",
@@ -207,7 +199,6 @@ func TestCalculatePercent_Deterministic(t *testing.T) {
 }
 
 func TestCalculateHashAndPercent_Distribution(t *testing.T) {
-	// Test that different inputs produce different results (good distribution)
 	inputs := []string{
 		"input1", "input2", "input3", "input4", "input5",
 		"device-1", "device-2", "device-3", "device-4", "device-5",
@@ -220,24 +211,20 @@ func TestCalculateHashAndPercent_Distribution(t *testing.T) {
 	for _, input := range inputs {
 		hash, percent := CalculateHashAndPercent(input)
 
-		// Check if we've seen this hash before
 		if prevInput, exists := results[hash]; exists {
 			t.Errorf("Hash collision: inputs '%s' and '%s' produced same hash %f", input, prevInput, hash)
 		} else {
 			results[hash] = input
 		}
 
-		// Store percent results for analysis
 		percentResults[percent] = input
 
-		// Verify hash and percent are valid numbers
 		assert.False(t, math.IsNaN(hash), "Hash should not be NaN for input: %s", input)
 		assert.False(t, math.IsInf(hash, 0), "Hash should not be Inf for input: %s", input)
 		assert.False(t, math.IsNaN(percent), "Percent should not be NaN for input: %s", input)
 		assert.False(t, math.IsInf(percent, 0), "Percent should not be Inf for input: %s", input)
 	}
 
-	// We should have unique results for different inputs
 	assert.Equal(t, len(inputs), len(results), "All inputs should produce unique hash values")
 }
 
@@ -280,11 +267,9 @@ func TestCalculatePercent_EdgeCases(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			result := CalculatePercent(tc.input)
 
-			// Test basic constraints
 			assert.GreaterOrEqual(t, result, 0, "Percent should be >= 0")
 			assert.LessOrEqual(t, result, 100, "Percent should be <= 100")
 
-			// Test that it doesn't panic or return invalid values
 			assert.NotPanics(t, func() {
 				CalculatePercent(tc.input)
 			}, "CalculatePercent should not panic")
@@ -293,24 +278,19 @@ func TestCalculatePercent_EdgeCases(t *testing.T) {
 }
 
 func TestCalculateHashAndPercent_MathematicalProperties(t *testing.T) {
-	// Test mathematical properties of the hash function
 	testInput := "test-mathematical-properties"
 
 	hash, percent := CalculateHashAndPercent(testInput)
 
-	// Test offset calculation
 	voffset := float64(math.MaxInt64 + 1)
 	vrange := float64(math.MaxInt64*2 + 1)
 
-	// Hash should be properly offset
 	assert.GreaterOrEqual(t, hash, 0.0, "Hash should be >= 0 after offset")
 	assert.LessOrEqual(t, hash, vrange, "Hash should be <= vrange")
 
-	// Percent calculation verification
 	expectedPercent := (hash / vrange) * 100
 	assert.InDelta(t, expectedPercent, percent, 0.0001, "Percent calculation should be mathematically correct")
 
-	// Verify the range calculations are correct
 	assert.Equal(t, float64(math.MaxInt64)+1, voffset, "Offset calculation should be correct")
 	assert.Equal(t, float64(math.MaxInt64*2)+1, vrange, "Range calculation should be correct")
 }

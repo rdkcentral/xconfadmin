@@ -43,6 +43,15 @@ var (
 
 	alnumRe    = regexp.MustCompile("[^a-zA-Z0-9]+")
 	validMacRe = regexp.MustCompile(`^([0-9a-fA-F]{12}$)|([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9A-Fa-f]{4}[.]){2}([0-9A-Fa-f]{4})$`)
+
+	// validAccountIdRe matches an XBO account id: digits only, both ends anchored.
+	//
+	// Deliberately NOT expressed in terms of validMacRe. A 12-digit account id
+	// matches validMacRe's first alternation branch, so treating it as a MAC
+	// would send it through GetEcmMacAddress, which parses it as hex and
+	// subtracts 2 — silently writing tags against a different account. Account
+	// ids must never touch the MAC normalization path.
+	validAccountIdRe = regexp.MustCompile(`^[0-9]{1,25}$`)
 )
 
 func ToAlphaNumericString(str string) string {
@@ -187,6 +196,25 @@ func ValidateAndNormalizeMacAddress(macaddr string) (string, error) {
 
 func IsValidMacAddress(macaddr string) bool {
 	_, err := MACAddressValidator(macaddr)
+	return err == nil
+}
+
+// AccountIdValidator validates an XBO account id. Account ids are numeric
+// strings, typically 18-19 digits (e.g. 2846573900878987927).
+//
+// The bound is deliberately loose rather than a hard 18-19 window: account-id
+// length is an external contract, and pinning it would turn any future 17- or
+// 20-digit id into a rejected request.
+func AccountIdValidator(accountId string) (bool, error) {
+	if validAccountIdRe.MatchString(accountId) {
+		return true, nil
+	}
+
+	return false, errors.New("Invalid account id")
+}
+
+func IsValidAccountId(accountId string) bool {
+	_, err := AccountIdValidator(accountId)
 	return err == nil
 }
 

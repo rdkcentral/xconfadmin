@@ -28,11 +28,21 @@ func GetTagsByMemberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tags, err := GetTagsByMember(member)
+	tagType, err := getTagTypeFromRequest(r)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
+
+	audit := newOpAudit(w, OpReverseLookup)
+	audit.setTagType(tagType)
+
+	tags, err := GetTagsByMember(member, tagType)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+	audit.set("num_results", len(tags))
 
 	respBytes, err := json.Marshal(tags)
 	if err != nil {
@@ -49,11 +59,21 @@ func GetTagsWithValuesByMemberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tags, err := GetTagsWithValuesByMember(member)
+	tagType, err := getTagTypeFromRequest(r)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
 	}
+
+	audit := newOpAudit(w, OpReverseLookupValues)
+	audit.setTagType(tagType)
+
+	tags, err := GetTagsWithValuesByMember(member, tagType)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+	audit.set("num_results", len(tags))
 
 	respBytes, err := json.Marshal(tags)
 	if err != nil {

@@ -185,6 +185,7 @@ const (
 const (
 	Member     = "member"
 	Tag        = "tag"
+	TagType    = "tagType"
 	TagValue   = "value"
 	StartRange = "startRange"
 	EndRange   = "endRange"

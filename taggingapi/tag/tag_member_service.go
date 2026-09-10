@@ -7,8 +7,8 @@ import (
 	"hash/fnv"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
@@ -36,22 +36,28 @@ const (
 	QueryAddMemberBucketed       = `INSERT INTO "TagMembersBucketed" (tag_id, bucket_id, member, created) VALUES (?, ?, ?, ?)`
 	QueryRemoveMemberBucketed    = `DELETE FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ? AND member = ?`
 	QueryGetMembersByBucket      = `SELECT member FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ? AND member > ? LIMIT ?`
-	QueryGetMembersCountByBucket = `SELECT count(*) FROM "TagMembersBucketed" WHERE tag_id = ? and bucket_id = ?`
 	QueryGetMembersByBucketFirst = `SELECT member FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ? LIMIT ?`
 
-	QueryGetPopulatedBuckets  = `SELECT bucket_id FROM "TagBucketMetadata" WHERE tag_id = ?`
-	QueryAddBucketMetadata    = `INSERT INTO "TagBucketMetadata" (tag_id, bucket_id) VALUES (?, ?)`
-	QueryGetAllTagIds         = `SELECT tag_id FROM "TagBucketMetadata"`
-	QueryDeleteBucketMembers  = `DELETE FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ?`
-	QueryDeleteBucketMetadata = `DELETE FROM "TagBucketMetadata" WHERE tag_id = ? AND bucket_id = ?`
+	QueryGetPopulatedBuckets = `SELECT bucket_id FROM "TagBucketMetadata" WHERE tag_id = ?`
+	QueryAddBucketMetadata   = `INSERT INTO "TagBucketMetadata" (tag_id, bucket_id) VALUES (?, ?)`
+	QueryGetAllTagIds        = `SELECT tag_id FROM "TagBucketMetadata"`
 
-	CountMembersCassandraResp = "count"
+	// Typed variants, used only when tag_type_column_enabled. Kept separate so the
+	// binary can run against a cluster without the ALTER applied: these share an
+	// UnloggedBatch with the member inserts, so naming a missing column would fail
+	// every add, not just account ones.
+	QueryAddBucketMetadataTyped = `INSERT INTO "TagBucketMetadata" (tag_id, bucket_id, tag_type) VALUES (?, ?, ?)`
+	QueryGetAllTagIdsTyped      = `SELECT tag_id, tag_type FROM "TagBucketMetadata"`
+	QueryGetTagMetadataTyped    = `SELECT bucket_id, tag_type FROM "TagBucketMetadata" WHERE tag_id = ?`
+	QueryDeleteBucketMembers    = `DELETE FROM "TagMembersBucketed" WHERE tag_id = ? AND bucket_id = ?`
+	QueryDeleteBucketMetadata   = `DELETE FROM "TagBucketMetadata" WHERE tag_id = ? AND bucket_id = ?`
+
+	InvalidCursorErrorMsg = "invalid pagination cursor"
 )
 
 type BucketedCursor struct {
-	BucketId       int    `json:"bucketId"`
-	LastMember     string `json:"lastMember,omitempty"`
-	TotalCollected int    `json:"totalCollected"`
+	BucketId   int    `json:"bucketId"`
+	LastMember string `json:"lastMember,omitempty"`
 }
 
 type PaginatedMembersResponse struct {
@@ -65,7 +71,6 @@ type PaginationParams struct {
 	Cursor string `json:"cursor,omitempty"`
 }
 
-// bucketFetchResult holds the result of fetching members from a single bucket
 type bucketFetchResult struct {
 	bucketIndex int
 	members     []string
@@ -75,19 +80,23 @@ type bucketFetchResult struct {
 func getBucketId(member string) int {
 	hash := fnv.New32a()
 	hash.Write([]byte(member))
-	return int(hash.Sum32()) % BucketCount
+	// Modulo in uint32 space — an int conversion first would go negative on
+	// 32-bit platforms. The member→bucket mapping is recomputed against stored
+	// rows on every read and write, so it must be identical everywhere.
+	return int(hash.Sum32() % BucketCount)
 }
 
-func AddMembers(tagId string, members []string) error {
+// AddMembers writes members to the bucketed Cassandra tables. Returns the
+// number of members stored and the number of buckets touched.
+func AddMembers(tagId string, members []string, tagType string) (int, int, error) {
 	if len(members) > MaxBatchSizeV2 {
-		return fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
+		return 0, 0, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
 
 	if len(members) == 0 {
-		return fmt.Errorf("member list is empty")
+		return 0, 0, fmt.Errorf("member list is empty")
 	}
 
-	// Group by bucket for efficient batching
 	bucketGroups := make(map[int][]string)
 	for _, member := range members {
 		bucketId := getBucketId(member)
@@ -95,14 +104,12 @@ func AddMembers(tagId string, members []string) error {
 	}
 
 	created := strconv.FormatInt(util.GetTimestamp(), 10)
-	var allErrors []string
+	agg := &errorAggregator{}
 	successCount := 0
 
 	for bucketId, bucketMembers := range bucketGroups {
-		if err := addMembersToBucket(tagId, bucketId, bucketMembers, created); err != nil {
-			allErrors = append(allErrors, fmt.Sprintf("bucket %d: %v", bucketId, err))
-			log.Errorf("Failed to add %d members to bucket %d for tag %s: %v",
-				len(bucketMembers), bucketId, tagId, err)
+		if err := addMembersToBucket(tagId, bucketId, bucketMembers, created, tagType); err != nil {
+			agg.add(fmt.Errorf("bucket %d: %w", bucketId, err))
 		} else {
 			successCount += len(bucketMembers)
 			log.Debugf("Successfully added %d members to bucket %d for tag %s",
@@ -110,100 +117,86 @@ func AddMembers(tagId string, members []string) error {
 		}
 	}
 
-	if len(allErrors) > 0 {
-		return fmt.Errorf("failed to add %d/%d members: %s",
-			len(members)-successCount, len(members), strings.Join(allErrors, "; "))
+	// One aggregate ERROR line per call — a batch can span 1000 buckets, and an
+	// outage must not emit an error line per bucket.
+	if failedBuckets, firstError := agg.summary(); failedBuckets > 0 {
+		log.Errorf("Failed to add members to %d/%d buckets for tag %s (first error: %s)",
+			failedBuckets, len(bucketGroups), tagId, firstError)
+		return successCount, len(bucketGroups), fmt.Errorf("failed to add %d/%d members (%d/%d buckets failed; first error: %s)",
+			len(members)-successCount, len(members), failedBuckets, len(bucketGroups), firstError)
 	}
 
-	return nil
+	return successCount, len(bucketGroups), nil
 }
 
-func addMembersToBucket(tagId string, bucketId int, members []string, created string) error {
+func addMembersToBucket(tagId string, bucketId int, members []string, created string, tagType string) error {
 	batch := ds.GetSimpleDao().NewBatch(UnloggedBatch)
 
-	// Add member records
+	// Deliberately no tag_type on member rows: a text cell per member on the
+	// hottest write path with no reader. The type belongs to the metadata row.
 	for _, member := range members {
 		batch.Query(QueryAddMemberBucketed, tagId, strconv.Itoa(bucketId), member, created)
 	}
 
-	// Add metadata record for this bucket (will be ignored if already exists)
-	batch.Query(QueryAddBucketMetadata, tagId, strconv.Itoa(bucketId))
+	if tagTypeColumnEnabled() {
+		// Stored type domain is {"", "account"}: mac and legacy are one
+		// equivalence class everywhere, so storing "mac" would only mint a third
+		// value that every reader collapses anyway.
+		if tagType == TagTypeMac {
+			tagType = TagTypeLegacy
+		}
+		batch.Query(QueryAddBucketMetadataTyped, tagId, strconv.Itoa(bucketId), tagType)
+	} else {
+		batch.Query(QueryAddBucketMetadata, tagId, strconv.Itoa(bucketId))
+	}
 
 	return ds.GetSimpleDao().ExecuteBatch(batch)
 }
 
-func RemoveMembers(tagId string, members []string) error {
+// RemoveMembers deletes members from the bucketed Cassandra tables. Returns
+// the number of members removed and the number of buckets touched.
+func RemoveMembers(tagId string, members []string) (int, int, error) {
 	if len(members) > MaxBatchSizeV2 {
-		return fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
+		return 0, 0, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
 
 	if len(members) == 0 {
-		return fmt.Errorf("member list is empty")
+		return 0, 0, fmt.Errorf("member list is empty")
 	}
 
-	// Group by bucket for efficient batching
 	bucketGroups := make(map[int][]string)
 	for _, member := range members {
 		bucketId := getBucketId(member)
 		bucketGroups[bucketId] = append(bucketGroups[bucketId], member)
 	}
 
-	var allErrors []string
+	agg := &errorAggregator{}
 	successCount := 0
 
+	// Deliberately no empty-bucket metadata cleanup: deleting a metadata row on a
+	// zero count races a concurrent add (which writes member + metadata in one
+	// batch), orphaning members that no metadata row points to — invisible to
+	// reads and to DeleteTag. Empty metadata rows are harmless: reads skip them
+	// and DeleteTag reaps them.
 	for bucketId, bucketMembers := range bucketGroups {
 		if err := removeMembersFromBucket(tagId, bucketId, bucketMembers); err != nil {
-			allErrors = append(allErrors, fmt.Sprintf("bucket %d: %v", bucketId, err))
-			log.Errorf("Failed to remove %d members from bucket %d for tag %s: %v",
-				len(bucketMembers), bucketId, tagId, err)
-		} else {
-			successCount += len(bucketMembers)
-			log.Debugf("Successfully removed %d members from bucket %d for tag %s",
-				len(bucketMembers), bucketId, tagId)
-		}
-		// Clean up bucket metadata if bucket is now empty
-		membersCount, err := getMembersCountOfBucket(tagId, bucketId)
-		if err != nil {
-			log.Warnf("Failed to check bucket %d count for tag %s: %v (skipping cleanup)", bucketId, tagId, err)
+			agg.add(fmt.Errorf("bucket %d: %w", bucketId, err))
 			continue
 		}
-		if membersCount == 0 {
-			err = ds.GetSimpleDao().Modify(QueryDeleteBucketMetadata, tagId, strconv.Itoa(bucketId))
-			if err != nil {
-				log.Warnf("Failed to delete empty bucket %d metadata for tag %s: %v", bucketId, tagId, err)
-			} else {
-				log.Infof("Deleted empty bucket %d metadata for tag %s", bucketId, tagId)
-			}
-		}
+		successCount += len(bucketMembers)
+		log.Debugf("Successfully removed %d members from bucket %d for tag %s",
+			len(bucketMembers), bucketId, tagId)
 	}
 
-	if len(allErrors) > 0 {
-		return fmt.Errorf("failed to remove %d/%d members: %s",
-			len(members)-successCount, len(members), strings.Join(allErrors, "; "))
+	// One aggregate ERROR line per call — see AddMembers.
+	if failedBuckets, firstError := agg.summary(); failedBuckets > 0 {
+		log.Errorf("Failed to remove members from %d/%d buckets for tag %s (first error: %s)",
+			failedBuckets, len(bucketGroups), tagId, firstError)
+		return successCount, len(bucketGroups), fmt.Errorf("failed to remove %d/%d members (%d/%d buckets failed; first error: %s)",
+			len(members)-successCount, len(members), failedBuckets, len(bucketGroups), firstError)
 	}
 
-	return nil
-}
-
-func getMembersCountOfBucket(tagId string, bucketId int) (int, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryGetMembersCountByBucket, tagId, strconv.Itoa(bucketId))
-	if err != nil {
-		return 0, err
-	}
-	if len(rows) == 0 {
-		return 0, nil
-	}
-	countVal, exists := rows[0][CountMembersCassandraResp]
-	if !exists || countVal == nil {
-		log.Errorf("Count result missing for bucket %d, tag %s", bucketId, tagId)
-		return 0, fmt.Errorf("count result missing")
-	}
-	count, ok := countVal.(int64)
-	if !ok {
-		log.Errorf("Failed to parse count for bucket %d, tag %s: unexpected type %T", bucketId, tagId, countVal)
-		return 0, fmt.Errorf("failed to parse count result")
-	}
-	return int(count), nil
+	return successCount, len(bucketGroups), nil
 }
 
 func removeMembersFromBucket(tagId string, bucketId int, members []string) error {
@@ -216,23 +209,163 @@ func removeMembersFromBucket(tagId string, bucketId int, members []string) error
 	return ds.GetSimpleDao().ExecuteBatch(batch)
 }
 
-func getPopulatedBuckets(tagId string) ([]int, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryGetPopulatedBuckets, tagId)
+// tagTypeColumnEnabled reports whether the tag_type column may be referenced.
+// False when config is absent, so tests and partially-migrated clusters take
+// the untyped path.
+func tagTypeColumnEnabled() bool {
+	config := GetTagApiConfig()
+	return config != nil && config.TagTypeColumnEnabled
+}
+
+// getPopulatedBuckets resolves a tag's populated buckets, scoped to the
+// requested type. A type mismatch reports no buckets, which callers surface as
+// 404 — the id is absent from that namespace, matching the listing filter. An
+// untyped requestedType matches everything.
+func getPopulatedBuckets(tagId string, requestedType string) ([]int, error) {
+	buckets, storedType, err := getTagMeta(tagId)
 	if err != nil {
 		return nil, err
 	}
+	if !matchesTagTypeFilter(storedType, requestedType) {
+		return nil, nil
+	}
+	return buckets, nil
+}
+
+// getTagMeta reads a tag's metadata partition once, returning both its populated
+// buckets and its resolved type, so callers needing the type pay no second round
+// trip. A tag with no metadata rows does not exist yet: empty buckets and
+// TagTypeLegacy, which callers treat as "unclaimed".
+func getTagMeta(tagId string) ([]int, string, error) {
+	typed := tagTypeColumnEnabled()
+	query := QueryGetPopulatedBuckets
+	if typed {
+		query = QueryGetTagMetadataTyped
+	}
+
+	rows, err := ds.GetSimpleDao().Query(query, tagId)
+	if err != nil {
+		return nil, TagTypeLegacy, err
+	}
 
 	buckets := make([]int, 0, len(rows))
+	rowTypes := make([]string, 0, len(rows))
 	for _, row := range rows {
 		if bucketId, ok := row["bucket_id"].(int); ok {
 			buckets = append(buckets, bucketId)
 		}
+		if typed {
+			rowTypes = append(rowTypes, tagTypeFromRow(row))
+		}
 	}
 
-	return buckets, nil
+	return buckets, resolveTagType(rowTypes), nil
 }
 
-func GetMembersPaginated(tagId string, limit int, cursor string) (*PaginatedMembersResponse, error) {
+// tagTypeFromRow reads tag_type from a Cassandra row. A NULL text column comes
+// back as a missing key or an empty string; both mean legacy.
+func tagTypeFromRow(row map[string]interface{}) string {
+	if value, ok := row["tag_type"].(string); ok {
+		return value
+	}
+	return TagTypeLegacy
+}
+
+// resolveTagType collapses one tag's per-bucket tag_type values into a single
+// answer. Rows can disagree when two concurrent first-ever adds of the same id
+// claim different types; account wins, so the tag reads consistently and the
+// next mac write gets a clean conflict instead of flapping. Anything
+// non-account reads as legacy, including a stored "mac" from rows written
+// before addMembersToBucket normalized it away.
+func resolveTagType(rowTypes []string) string {
+	for _, rowType := range rowTypes {
+		if rowType == TagTypeAccount {
+			return TagTypeAccount
+		}
+	}
+	return TagTypeLegacy
+}
+
+// ensureTagTypeCompatible rejects writes that would give one tag id two types.
+// tag_id is the Cassandra partition key, so a mac and an account tag sharing an
+// id would share partitions, and reads, pagination and deletes would each
+// operate on a mixture of MACs and account ids. Legacy requests never conflict:
+// effectiveWriteTagType resolves them to the stored type before calling this.
+func ensureTagTypeCompatible(tagId string, requestedType string) error {
+	if requestedType == TagTypeLegacy || !tagTypeColumnEnabled() {
+		return nil
+	}
+
+	buckets, existing, err := getTagMeta(tagId)
+	if err != nil {
+		// Fail closed: an unreadable type is not permission to overwrite it.
+		return err
+	}
+
+	// No metadata rows means the tag does not exist, so any write may claim the
+	// id. Decided on the bucket count, not the type: a stored legacy type and an
+	// absent tag are the same empty string, and conflating them rejects every
+	// first write of a new account tag as a conflict with a tag never there.
+	if len(buckets) == 0 {
+		return nil
+	}
+
+	return checkTagTypeCompatible(tagId, existing, requestedType)
+}
+
+// checkTagTypeCompatible is the comparison half of ensureTagTypeCompatible,
+// split out so callers that already resolved the stored type (the delete
+// handler) do not re-read the same partition. existing must be a resolveTagType
+// result for a tag that exists.
+func checkTagTypeCompatible(tagId string, existing string, requestedType string) error {
+	if existing == requestedType {
+		return nil
+	}
+	// Mac and legacy are the same equivalence class, so a mac write adopts a
+	// legacy tag.
+	if existing == TagTypeLegacy && requestedType == TagTypeMac {
+		return nil
+	}
+	// Untyped rows on an existing tag mean a mac tag predating the type column,
+	// so its members are MACs.
+	if existing == TagTypeLegacy && requestedType == TagTypeAccount {
+		return xwcommon.NewRemoteErrorAS(http.StatusConflict,
+			fmt.Sprintf("tag '%s' already exists as a mac tag and cannot be reused as an account tag", tagId))
+	}
+	return xwcommon.NewRemoteErrorAS(http.StatusConflict,
+		fmt.Sprintf("tag '%s' already exists with type '%s'", tagId, existing))
+}
+
+// effectiveWriteTagType decides which type a member write executes as: the
+// requested type for typed routes (after the compatibility check), the stored
+// type for untyped ones.
+//
+// Adopting the stored type keeps an untyped write to an account tag from
+// mis-normalizing its members — the MAC path corrupts a 12-digit numeric id
+// (it parses as hex and gets ECM-shifted), so the member would land under a
+// different XDAS key and Cassandra row than the account path stores, and
+// DeleteTag would then wedge on the mixture. Untyped writes to mac/legacy tags
+// and to tags that do not exist resolve to legacy, so untyped behavior is
+// unchanged; the cost is one metadata read per untyped batch.
+func effectiveWriteTagType(tagId string, requestedType string) (string, error) {
+	if !tagTypeColumnEnabled() {
+		return requestedType, nil
+	}
+	if requestedType != TagTypeLegacy {
+		return requestedType, ensureTagTypeCompatible(tagId, requestedType)
+	}
+	_, stored, err := getTagMeta(tagId)
+	if err != nil {
+		// Fail closed: an unreadable type must not silently run the write as
+		// legacy — account members would go through the MAC normalizer.
+		return requestedType, err
+	}
+	return stored, nil
+}
+
+// GetMembersPaginated returns one page of members plus the Cassandra cost of
+// producing it (for the request log).
+func GetMembersPaginated(tagId string, limit int, cursor string, tagType string) (*PaginatedMembersResponse, ReadStats, error) {
 	if limit > MaxPageSizeV2 {
 		limit = MaxPageSizeV2
 	}
@@ -240,86 +373,114 @@ func GetMembersPaginated(tagId string, limit int, cursor string) (*PaginatedMemb
 		limit = DefaultPageSizeV2
 	}
 
-	log.Debugf("Getting paginated members for tag %s, limit %d, cursor %s", tagId, limit, cursor)
+	stats := ReadStats{}
+	queries := &atomic.Int64{}
 
-	populatedBuckets, err := getPopulatedBuckets(tagId)
+	state, err := parseBucketedCursor(cursor)
+	if err != nil {
+		return nil, stats, err
+	}
+
+	populatedBuckets, err := getPopulatedBuckets(tagId, tagType)
+	queries.Add(1)
+	stats.Queries = int(queries.Load())
 	if err != nil {
 		log.Errorf("Error getting populated buckets for tag %s: %v", tagId, err)
+		return nil, stats, fmt.Errorf("failed to get populated buckets: %w", err)
 	}
 
 	if len(populatedBuckets) == 0 {
-		return nil, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf(NotFoundErrorMsg, tagId))
+		return nil, stats, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf(NotFoundErrorMsg, tagId))
 	}
+	stats.Buckets = len(populatedBuckets)
 
-	log.Debugf("Found %d populated buckets for tag %s", len(populatedBuckets), tagId)
-
-	state := parseBucketedCursor(cursor)
 	var allMembers []string
 
-	startIndex := 0
+	// First populated bucket at or after the cursor. If none exists (buckets
+	// emptied since the previous page), enumeration is complete — never wrap.
+	startIndex := -1
 	for i, bucketId := range populatedBuckets {
 		if bucketId >= state.BucketId {
 			startIndex = i
 			break
 		}
 	}
+	if startIndex == -1 {
+		return &PaginatedMembersResponse{
+			Data:    []string{},
+			HasMore: false,
+		}, stats, nil
+	}
 
-	// Build work items for remaining buckets (apply cursor's lastMember to first bucket only)
 	workers := getReadWorkerCount()
 	remainingBuckets := populatedBuckets[startIndex:]
 
-	workItems := make([]bucketWorkItem, len(remainingBuckets))
-	for idx, bucketId := range remainingBuckets {
-		lm := ""
-		if idx == 0 && bucketId == state.BucketId {
-			lm = state.LastMember
-		}
-		workItems[idx] = bucketWorkItem{
-			bucketId:   bucketId,
-			lastMember: lm,
-			limit:      limit + 1,
-		}
-	}
-
-	orderedResults := fetchBucketsConcurrent(tagId, workItems, workers)
-
-	// Merge in bucket order, building cursor at the truncation point
+	// Fetch in windows of `workers` buckets, in order, stopping once the page is
+	// full — building work items for every remaining bucket up front cost ~N
+	// queries per page even when the first bucket satisfied it. The cursor's
+	// lastMember applies only to the bucket the cursor points into.
 	lastProcessedBucketIndex := startIndex - 1
-	for idx, result := range orderedResults {
-		if result.err != nil || len(result.members) == 0 {
-			lastProcessedBucketIndex = startIndex + idx
-			continue
+	for windowStart := 0; windowStart < len(remainingBuckets) && len(allMembers) < limit; windowStart += workers {
+		window := remainingBuckets[windowStart:min(windowStart+workers, len(remainingBuckets))]
+		workItems := make([]bucketWorkItem, len(window))
+		for idx, bucketId := range window {
+			lm := ""
+			if windowStart == 0 && idx == 0 && bucketId == state.BucketId {
+				lm = state.LastMember
+			}
+			workItems[idx] = bucketWorkItem{
+				bucketId:   bucketId,
+				lastMember: lm,
+				// One over the remaining space, so an overfull bucket is
+				// detectable for mid-bucket cursor placement.
+				limit: limit - len(allMembers) + 1,
+			}
 		}
 
-		currentBucketId := remainingBuckets[idx]
-		needed := limit - len(allMembers)
+		orderedResults := fetchBucketsConcurrent(tagId, workItems, workers, queries)
+		stats.Queries = int(queries.Load())
 
-		if len(result.members) > needed {
-			allMembers = append(allMembers, result.members[:needed]...)
-			nextCursor := generateBucketedCursor(currentBucketId, result.members[needed-1], len(allMembers))
-			log.Debugf("Returning %d members for tag %s with more data in bucket %d",
-				len(allMembers), tagId, currentBucketId)
-			return &PaginatedMembersResponse{
-				Data:       allMembers,
-				NextCursor: nextCursor,
-				HasMore:    true,
-			}, nil
-		}
+		// Merge in bucket order, building the cursor at the truncation point. A
+		// failed bucket fails the whole page: partial data would let the cursor
+		// advance past it and silently drop its members from the enumeration.
+		for idx, result := range orderedResults {
+			if result.err != nil {
+				return nil, stats, fmt.Errorf("failed to fetch members from bucket %d: %w", window[idx], result.err)
+			}
+			if len(result.members) == 0 {
+				lastProcessedBucketIndex = startIndex + windowStart + idx
+				continue
+			}
 
-		allMembers = append(allMembers, result.members...)
-		lastProcessedBucketIndex = startIndex + idx
+			currentBucketId := window[idx]
+			needed := limit - len(allMembers)
 
-		if len(allMembers) >= limit {
-			break
+			if len(result.members) > needed {
+				allMembers = append(allMembers, result.members[:needed]...)
+				nextCursor := generateBucketedCursor(currentBucketId, result.members[needed-1])
+				log.Debugf("Returning %d members for tag %s with more data in bucket %d",
+					len(allMembers), tagId, currentBucketId)
+				return &PaginatedMembersResponse{
+					Data:       allMembers,
+					NextCursor: nextCursor,
+					HasMore:    true,
+				}, stats, nil
+			}
+
+			allMembers = append(allMembers, result.members...)
+			lastProcessedBucketIndex = startIndex + windowStart + idx
+
+			if len(allMembers) >= limit {
+				break
+			}
 		}
 	}
 
-	// Check if we have more populated buckets to process
 	hasMore := lastProcessedBucketIndex+1 < len(populatedBuckets)
 	var nextCursor string
 	if hasMore {
 		nextBucketId := populatedBuckets[lastProcessedBucketIndex+1]
-		nextCursor = generateBucketedCursor(nextBucketId, "", 0)
+		nextCursor = generateBucketedCursor(nextBucketId, "")
 	}
 
 	log.Debugf("Returning %d members for tag %s, hasMore: %v", len(allMembers), tagId, hasMore)
@@ -327,7 +488,7 @@ func GetMembersPaginated(tagId string, limit int, cursor string) (*PaginatedMemb
 		Data:       allMembers,
 		NextCursor: nextCursor,
 		HasMore:    hasMore,
-	}, nil
+	}, stats, nil
 }
 
 func getMembersFromBucket(tagId string, bucketId int, lastMember string, limit int) ([]string, error) {
@@ -357,12 +518,10 @@ func getMembersFromBucket(tagId string, bucketId int, lastMember string, limit i
 	return members, nil
 }
 
-// Cursor management functions
-func generateBucketedCursor(bucketId int, lastMember string, totalCollected int) string {
+func generateBucketedCursor(bucketId int, lastMember string) string {
 	cursor := BucketedCursor{
-		BucketId:       bucketId,
-		LastMember:     lastMember,
-		TotalCollected: totalCollected,
+		BucketId:   bucketId,
+		LastMember: lastMember,
 	}
 
 	data, err := json.Marshal(cursor)
@@ -373,47 +532,28 @@ func generateBucketedCursor(bucketId int, lastMember string, totalCollected int)
 	return base64.URLEncoding.EncodeToString(data)
 }
 
-func parseBucketedCursor(cursor string) BucketedCursor {
+func parseBucketedCursor(cursor string) (BucketedCursor, error) {
 	if cursor == "" {
-		return BucketedCursor{BucketId: 0}
+		return BucketedCursor{BucketId: 0}, nil
 	}
 
 	data, err := base64.URLEncoding.DecodeString(cursor)
 	if err != nil {
-		log.Errorf("Error decoding cursor: %v", err)
-		return BucketedCursor{BucketId: 0}
+		return BucketedCursor{}, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, InvalidCursorErrorMsg)
 	}
 
 	var state BucketedCursor
 	if err := json.Unmarshal(data, &state); err != nil {
-		log.Errorf("Error unmarshaling cursor: %v", err)
-		return BucketedCursor{BucketId: 0}
+		return BucketedCursor{}, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, InvalidCursorErrorMsg)
 	}
 
-	// Validate cursor values
 	if state.BucketId < 0 || state.BucketId >= BucketCount {
-		log.Warnf("Invalid bucket ID in cursor: %d, resetting to 0", state.BucketId)
-		return BucketedCursor{BucketId: 0}
+		return BucketedCursor{}, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, InvalidCursorErrorMsg)
 	}
 
-	return state
+	return state, nil
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-// getReadWorkerCount returns the worker count for concurrent read operations
 func getReadWorkerCount() int {
 	config := GetTagApiConfig()
 	if config != nil && config.WorkerCount > 0 {
@@ -422,8 +562,23 @@ func getReadWorkerCount() int {
 	return 1
 }
 
-// fetchBucketMembersWithLimit fetches all members from a single bucket in chunks
-func fetchBucketMembersWithLimit(tagId string, bucketId int, lastMember string, limit int) ([]string, error) {
+// getWriteWorkerCount sizes the concurrent XDAS write phase: the configured
+// count, scaled up for large batches (one worker per 100 members), capped at
+// MaxWorkersV2 and the batch size, floored at one. The floor is load-bearing —
+// with zero workers nothing drains the member channel, so the write reports
+// XdasOk=0/XdasFail=0 and the request becomes a silent no-op 202.
+func getWriteWorkerCount(memberCount int) int {
+	config := GetTagApiConfig()
+	if config == nil {
+		return 1
+	}
+	scaledWorkers := min(max(memberCount/100, config.WorkerCount), MaxWorkersV2)
+	return max(1, min(scaledWorkers, memberCount))
+}
+
+// fetchBucketMembersWithLimit fetches a single bucket's members in chunks,
+// counting issued queries into the shared counter.
+func fetchBucketMembersWithLimit(tagId string, bucketId int, lastMember string, limit int, queries *atomic.Int64) ([]string, error) {
 	collected := make([]string, 0)
 
 	for {
@@ -433,6 +588,7 @@ func fetchBucketMembersWithLimit(tagId string, bucketId int, lastMember string, 
 		}
 
 		chunkLimit := min(MemberFetchChunkSize, remainingCapacity)
+		queries.Add(1)
 		chunk, err := getMembersFromBucket(tagId, bucketId, lastMember, chunkLimit)
 		if err != nil {
 			return collected, err
@@ -454,16 +610,15 @@ func fetchBucketMembersWithLimit(tagId string, bucketId int, lastMember string, 
 	return collected, nil
 }
 
-// bucketWorkItem represents a single bucket fetch task
 type bucketWorkItem struct {
 	bucketId   int
 	lastMember string
 	limit      int
 }
 
-// fetchBucketsConcurrent fetches members from multiple buckets using a worker pool
-// Returns ordered results (one per bucket) without merging
-func fetchBucketsConcurrent(tagId string, workItems []bucketWorkItem, workers int) []bucketFetchResult {
+// fetchBucketsConcurrent fetches multiple buckets through a worker pool and
+// returns ordered results (one per bucket) without merging.
+func fetchBucketsConcurrent(tagId string, workItems []bucketWorkItem, workers int, queries *atomic.Int64) []bucketFetchResult {
 	if len(workItems) == 0 {
 		return nil
 	}
@@ -484,7 +639,7 @@ func fetchBucketsConcurrent(tagId string, workItems []bucketWorkItem, workers in
 			defer wg.Done()
 			for idx := range workChan {
 				work := workItems[idx]
-				members, err := fetchBucketMembersWithLimit(tagId, work.bucketId, work.lastMember, work.limit)
+				members, err := fetchBucketMembersWithLimit(tagId, work.bucketId, work.lastMember, work.limit, queries)
 				resultsChan <- bucketFetchResult{
 					bucketIndex: idx,
 					members:     members,
@@ -511,126 +666,175 @@ func fetchBucketsConcurrent(tagId string, workItems []bucketWorkItem, workers in
 	return orderedResults
 }
 
-// fetchMembersFromBucketsConcurrent fetches members from multiple buckets concurrently
-// and returns a merged, truncated result
-func fetchMembersFromBucketsConcurrent(tagId string, bucketIds []int, totalLimit int, workers int) ([]string, bool, error) {
+// fetchMembersFromBucketsConcurrent fetches buckets in windows of `workers`, in
+// bucket order, and returns a merged, truncated result. The windowing is
+// load-bearing: fetching every populated bucket eagerly buffered a whole tag in
+// memory — gigabytes of heap per request — before the merge truncated it.
+// Dispatch stops once the response is full, over-fetching at most one window.
+func fetchMembersFromBucketsConcurrent(tagId string, bucketIds []int, totalLimit int, workers int, queries *atomic.Int64) ([]string, bool, error) {
 	if len(bucketIds) == 0 {
 		return nil, false, nil
 	}
-
-	// Build work items (all with empty lastMember for fresh fetch)
-	workItems := make([]bucketWorkItem, len(bucketIds))
-	for idx, bucketId := range bucketIds {
-		workItems[idx] = bucketWorkItem{
-			bucketId:   bucketId,
-			lastMember: "",
-			limit:      totalLimit,
-		}
+	if workers < 1 {
+		// The window advances by `workers`; a non-positive count would loop forever.
+		workers = 1
 	}
 
-	orderedResults := fetchBucketsConcurrent(tagId, workItems, workers)
-
-	// Merge in bucket order, stop at totalLimit
+	// Merge in bucket order, stopping at totalLimit. A failed bucket fails the
+	// whole read — a partial result would silently under-report membership.
+	// Errors past the fill point are irrelevant, the response is already full.
 	collected := make([]string, 0)
-	for _, result := range orderedResults {
-		if result.err != nil || len(result.members) == 0 {
-			continue
-		}
-		space := totalLimit - len(collected)
-		if space <= 0 {
+	for windowStart := 0; windowStart < len(bucketIds); windowStart += workers {
+		remaining := totalLimit - len(collected)
+		if remaining <= 0 {
 			return collected, true, nil
 		}
-		if len(result.members) > space {
-			collected = append(collected, result.members[:space]...)
-			return collected, true, nil
+
+		window := bucketIds[windowStart:min(windowStart+workers, len(bucketIds))]
+		workItems := make([]bucketWorkItem, len(window))
+		for idx, bucketId := range window {
+			// Any one bucket may have to supply the whole rest of the response.
+			workItems[idx] = bucketWorkItem{
+				bucketId:   bucketId,
+				lastMember: "",
+				limit:      remaining,
+			}
 		}
-		collected = append(collected, result.members...)
+
+		orderedResults := fetchBucketsConcurrent(tagId, workItems, workers, queries)
+
+		for idx, result := range orderedResults {
+			space := totalLimit - len(collected)
+			if space <= 0 {
+				return collected, true, nil
+			}
+			if result.err != nil {
+				return nil, false, fmt.Errorf("failed to fetch members from bucket %d: %w", window[idx], result.err)
+			}
+			if len(result.members) == 0 {
+				continue
+			}
+			if len(result.members) > space {
+				collected = append(collected, result.members[:space]...)
+				return collected, true, nil
+			}
+			collected = append(collected, result.members...)
+		}
 	}
 
 	wasTruncated := len(collected) >= totalLimit
 	return collected, wasTruncated, nil
 }
 
-// AddMembersWithXdas adds members to both XDAS and Cassandra (XDAS-first approach)
-// Returns the count of members actually stored to Cassandra.
-func AddMembersWithXdas(tagId string, members []string, tagValue string) (int, error) {
-	startTime := time.Now()
+// AddMembersWithXdas adds members to XDAS first, then Cassandra. The returned
+// WriteStats carry per-store outcome counts for the request log, on error paths
+// too; they land on the framework "request ends" line.
+func AddMembersWithXdas(tagId string, members []string, tagValue string, tagType string) (WriteStats, error) {
+	stats := WriteStats{Requested: len(members)}
 
 	if len(members) == 0 {
-		return 0, fmt.Errorf("member list is empty")
+		return stats, fmt.Errorf("member list is empty")
 	}
 
 	if len(members) > MaxBatchSizeV2 {
-		return 0, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
+		return stats, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
 
-	savedToXdasMembers, err := addMembersToXdas(tagId, members, tagValue)
+	// Must run before the XDAS phase. A conflict detected afterwards would leave
+	// members in XDAS with no Cassandra record pointing at them, and XDAS cannot
+	// be enumerated to find them again.
+	tagType, err := effectiveWriteTagType(tagId, tagType)
 	if err != nil {
-		return 0, fmt.Errorf("XDAS operation failed: %w", err)
+		return stats, err
+	}
+	stats.TagType = tagType
+
+	savedToXdasMembers, xdasFail, firstError := addMembersToXdas(tagId, members, tagValue, tagType)
+	stats.XdasOk = len(savedToXdasMembers)
+	stats.XdasFail = xdasFail
+	stats.FirstError = firstError
+
+	// Every XDAS write failed. Falling through to a 202 with stored=0 would make
+	// a misconfigured XDAS look like a healthy API that stored nothing.
+	if stats.XdasOk == 0 && stats.XdasFail > 0 {
+		return stats, xwcommon.NewRemoteErrorAS(http.StatusBadGateway,
+			fmt.Sprintf("all %d XDAS writes failed: %s", stats.XdasFail, firstError))
 	}
 
-	xdasAccepted := len(savedToXdasMembers)
-	cassandraStored := 0
-
-	if xdasAccepted > 0 {
-		if err := AddMembers(tagId, savedToXdasMembers); err != nil {
-			duration := time.Since(startTime)
-			log.Errorf("Critical: XDAS succeeded but Cassandra V2 failed for tag %s: %v", tagId, err)
-			log.Infof("AddMembers summary for tag '%s': requested=%d, xdasAccepted=%d, cassandraStored=%d, duration=%v", tagId, len(members), xdasAccepted, cassandraStored, duration)
-			return cassandraStored, fmt.Errorf("cassandra V2 storage failed after XDAS success: %w", err)
+	if stats.XdasOk > 0 {
+		stored, buckets, err := AddMembers(tagId, savedToXdasMembers, tagType)
+		stats.CassandraOk = stored
+		stats.CassandraFail = stats.XdasOk - stored
+		stats.Buckets = buckets
+		if err != nil {
+			if stats.FirstError == "" {
+				stats.FirstError = err.Error()
+			}
+			logDivergence(OpAddMembers, tagId, err)
+			return stats, fmt.Errorf("cassandra V2 storage failed after XDAS success: %w", err)
 		}
-		cassandraStored = xdasAccepted
 	}
 
-	duration := time.Since(startTime)
-	log.Infof("AddMembers summary for tag '%s': requested=%d, xdasAccepted=%d, cassandraStored=%d, duration=%v", tagId, len(members), xdasAccepted, cassandraStored, duration)
-	return cassandraStored, nil
+	return stats, nil
 }
 
-// RemoveMembersWithXdas removes members from both XDAS and Cassandra (XDAS-first approach)
-// Returns the count of members actually removed from Cassandra.
-func RemoveMembersWithXdas(tagId string, members []string) (int, error) {
-	startTime := time.Now()
+// RemoveMembersWithXdas removes members from XDAS first, then Cassandra. See
+// AddMembersWithXdas for the stats contract.
+func RemoveMembersWithXdas(tagId string, members []string, tagType string) (WriteStats, error) {
+	stats := WriteStats{Requested: len(members)}
 
 	if len(members) == 0 {
-		return 0, fmt.Errorf("member list is empty")
+		return stats, fmt.Errorf("member list is empty")
 	}
 
 	if len(members) > MaxBatchSizeV2 {
-		return 0, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
+		return stats, fmt.Errorf("batch size %d exceeds maximum %d", len(members), MaxBatchSizeV2)
 	}
 
-	successfulRemovals, err := removeMembersFromXDAS(tagId, members)
+	// Without this, DELETE /tags/account/{macTag}/members would validate the
+	// tag's MAC members as account ids and fail every removal, and the reverse
+	// direction would ECM-shift numeric ids and miss the real XDAS entries.
+	tagType, err := effectiveWriteTagType(tagId, tagType)
 	if err != nil {
-		return 0, fmt.Errorf("XDAS removal failed: %w", err)
+		return stats, err
+	}
+	stats.TagType = tagType
+
+	successfulRemovals, xdasFail, firstError := removeMembersFromXDAS(tagId, members, tagType)
+	stats.XdasOk = len(successfulRemovals)
+	stats.XdasFail = xdasFail
+	stats.FirstError = firstError
+
+	if stats.XdasOk == 0 && stats.XdasFail > 0 {
+		return stats, xwcommon.NewRemoteErrorAS(http.StatusBadGateway,
+			fmt.Sprintf("all %d XDAS removals failed: %s", stats.XdasFail, firstError))
 	}
 
-	xdasRemoved := len(successfulRemovals)
-	cassandraRemoved := 0
-
-	if xdasRemoved > 0 {
-		if err := RemoveMembers(tagId, successfulRemovals); err != nil {
-			duration := time.Since(startTime)
-			log.Errorf("Critical: XDAS removal succeeded but Cassandra V2 failed for tag %s: %v", tagId, err)
-			log.Infof("RemoveMembers summary for tag '%s': requested=%d, xdasRemoved=%d, cassandraRemoved=%d, duration=%v", tagId, len(members), xdasRemoved, cassandraRemoved, duration)
-			return cassandraRemoved, fmt.Errorf("cassandra V2 removal failed after XDAS success: %w", err)
+	if stats.XdasOk > 0 {
+		removed, buckets, err := RemoveMembers(tagId, successfulRemovals)
+		stats.CassandraOk = removed
+		stats.CassandraFail = stats.XdasOk - removed
+		stats.Buckets = buckets
+		if err != nil {
+			if stats.FirstError == "" {
+				stats.FirstError = err.Error()
+			}
+			logDivergence(OpRemoveMembers, tagId, err)
+			return stats, fmt.Errorf("cassandra V2 removal failed after XDAS success: %w", err)
 		}
-		cassandraRemoved = xdasRemoved
 	}
 
-	duration := time.Since(startTime)
-	log.Infof("RemoveMembers summary for tag '%s': requested=%d, xdasRemoved=%d, cassandraRemoved=%d, duration=%v", tagId, len(members), xdasRemoved, cassandraRemoved, duration)
-	return cassandraRemoved, nil
+	return stats, nil
 }
 
-// RemoveMemberWithXdas removes a single member from both XDAS and Cassandra V2
-func RemoveMemberWithXdas(tagId string, member string) error {
-	_, err := RemoveMembersWithXdas(tagId, []string{member})
-	return err
+func RemoveMemberWithXdas(tagId string, member string, tagType string) (WriteStats, error) {
+	return RemoveMembersWithXdas(tagId, []string{member}, tagType)
 }
 
-// addMembersToXdas adds members to Xdas using concurrent workers (similar to V1 pattern)
-func addMembersToXdas(tagId string, members []string, tagValue string) ([]string, error) {
+// addMembersToXdas adds members through concurrent workers, returning the saved
+// members, the failure count and the first error message. Partial failure is
+// reported through the counts, not an error — the caller decides how to surface it.
+func addMembersToXdas(tagId string, members []string, tagValue string, tagType string) ([]string, int, string) {
 	tagId = SetTagPrefix(tagId)
 
 	membersChannel := make(chan string, len(members))
@@ -643,17 +847,12 @@ func addMembersToXdas(tagId string, members []string, tagValue string) ([]string
 
 	wg := &sync.WaitGroup{}
 	savedMembersChannel := make(chan string, len(members))
+	errAgg := &errorAggregator{}
 
-	config := GetTagApiConfig()
-	numOfWorkers := 1
-	if config != nil {
-		baseWorkers := config.WorkerCount
-		scaledWorkers := min(max(len(members)/100, baseWorkers), MaxWorkersV2)
-		numOfWorkers = min(scaledWorkers, len(members)) // Never spawn more workers than members
-	}
+	numOfWorkers := getWriteWorkerCount(len(members))
 	for i := 0; i < numOfWorkers; i++ {
 		wg.Add(1)
-		go storeTagMembersInXdas(tagId, membersChannel, savedMembersChannel, wg, tagValue)
+		go storeTagMembersInXdas(tagId, membersChannel, savedMembersChannel, wg, tagValue, tagType, errAgg)
 	}
 
 	go func() {
@@ -666,15 +865,13 @@ func addMembersToXdas(tagId string, members []string, tagValue string) ([]string
 		savedMembers = append(savedMembers, savedMember)
 	}
 
-	if len(savedMembers) != len(members) {
-		log.Warnf("XDAS: %d/%d members successfully added to tag %s", len(savedMembers), len(members), tagId)
-	}
-
-	return savedMembers, nil
+	failCount, firstError := errAgg.summary()
+	return savedMembers, failCount, firstError
 }
 
-// removeMembersFromXDAS removes members from XDAS using concurrent workers
-func removeMembersFromXDAS(tagId string, members []string) ([]string, error) {
+// removeMembersFromXDAS removes members from XDAS using concurrent workers.
+// See addMembersToXdas for the return contract.
+func removeMembersFromXDAS(tagId string, members []string, tagType string) ([]string, int, string) {
 	tagId = SetTagPrefix(tagId)
 
 	membersChannel := make(chan string, len(members))
@@ -687,17 +884,12 @@ func removeMembersFromXDAS(tagId string, members []string) ([]string, error) {
 
 	wg := &sync.WaitGroup{}
 	removedMembersChannel := make(chan string, len(members))
+	agg := &errorAggregator{}
 
-	config := GetTagApiConfig()
-	numOfWorkers := 1
-	if config != nil {
-		baseWorkers := config.WorkerCount
-		scaledWorkers := min(max(len(members)/100, baseWorkers), MaxWorkersV2)
-		numOfWorkers = min(scaledWorkers, len(members)) // Never spawn more workers than members
-	}
+	numOfWorkers := getWriteWorkerCount(len(members))
 	for i := 0; i < numOfWorkers; i++ {
 		wg.Add(1)
-		go removeTagMembersFromXdas(tagId, membersChannel, removedMembersChannel, wg)
+		go removeTagMembersFromXdas(tagId, membersChannel, removedMembersChannel, wg, tagType, agg)
 	}
 
 	go func() {
@@ -710,67 +902,111 @@ func removeMembersFromXDAS(tagId string, members []string) ([]string, error) {
 		removedMembers = append(removedMembers, member)
 	}
 
-	if len(removedMembers) != len(members) {
-		log.Warnf("XDAS: %d/%d members successfully removed from tag %s", len(removedMembers), len(members), tagId)
-	}
-
-	return removedMembers, nil
+	failCount, firstError := agg.summary()
+	return removedMembers, failCount, firstError
 }
 
-// GetAllTagIds returns all tag IDs from V2 tables
-func GetAllTagIds() ([]string, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryGetAllTagIds)
+// GetAllTagIds lists distinct tag ids; an empty tagTypeFilter returns every tag.
+// Filtering happens in Go over the existing full-table scan: tag_type has two
+// distinct values across ~105K rows, so a secondary index would hotspot two
+// partitions and ALLOW FILTERING would be worse than the scan we already pay.
+func GetAllTagIds(tagTypeFilter string) ([]string, error) {
+	typed := tagTypeColumnEnabled()
+	query := QueryGetAllTagIds
+	if typed {
+		query = QueryGetAllTagIdsTyped
+	}
+
+	rows, err := ds.GetSimpleDao().Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tag IDs: %w", err)
 	}
 
-	log.Debugf("Scanned %d rows from TagBucketMetadata", len(rows))
-
-	tagIdSet := make(map[string]bool)
+	// One row per (tag_id, bucket_id), so a tag appears up to BucketCount times
+	// and its per-row types must be collapsed before filtering.
+	rowTypes := make(map[string][]string)
 	for _, row := range rows {
-		if tagId, ok := row["tag_id"].(string); ok {
-			cleanTagId := RemovePrefixFromTag(tagId)
-			tagIdSet[cleanTagId] = true
+		tagId, ok := row["tag_id"].(string)
+		if !ok {
+			continue
+		}
+		if typed {
+			rowTypes[tagId] = append(rowTypes[tagId], tagTypeFromRow(row))
+		} else if _, seen := rowTypes[tagId]; !seen {
+			rowTypes[tagId] = nil
 		}
 	}
 
-	tagIds := make([]string, 0, len(tagIdSet))
-	for tagId := range tagIdSet {
-		tagIds = append(tagIds, tagId)
+	tagIds := make([]string, 0, len(rowTypes))
+	for tagId, types := range rowTypes {
+		if matchesTagTypeFilter(resolveTagType(types), tagTypeFilter) {
+			tagIds = append(tagIds, tagId)
+		}
 	}
 
-	log.Infof("Retrieved %d unique tag IDs from V2 storage", len(tagIds))
+	log.Debugf("Retrieved %d unique tag IDs from V2 storage (filter=%q)", len(tagIds), tagTypeFilter)
 	return tagIds, nil
 }
 
+// matchesTagTypeFilter reports whether a resolved tag type satisfies a filter.
+// A mac filter also matches legacy rows: legacy tags are mac tags that predate
+// the type column.
+func matchesTagTypeFilter(resolved string, filter string) bool {
+	switch filter {
+	case TagTypeLegacy:
+		return true
+	case TagTypeMac:
+		return resolved == TagTypeLegacy || resolved == TagTypeMac
+	default:
+		return resolved == filter
+	}
+}
+
 // GetTagById retrieves a tag with up to MaxMembersInTagResponse members
-func GetTagById(tagId string) ([]string, bool, error) {
-	populatedBuckets, err := getPopulatedBuckets(tagId)
+func GetTagById(tagId string, tagType string) ([]string, bool, ReadStats, error) {
+	stats := ReadStats{}
+	queries := &atomic.Int64{}
+
+	populatedBuckets, err := getPopulatedBuckets(tagId, tagType)
+	queries.Add(1)
+	stats.Queries = int(queries.Load())
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to get populated buckets: %w", err)
+		return nil, false, stats, fmt.Errorf("failed to get populated buckets: %w", err)
 	}
 
 	if len(populatedBuckets) == 0 {
-		return nil, false, fmt.Errorf("tag not found")
+		return nil, false, stats, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf(NotFoundErrorMsg, tagId))
 	}
-
-	log.Infof("Fetching tag '%s' with %d populated buckets", tagId, len(populatedBuckets))
+	stats.Buckets = len(populatedBuckets)
 
 	workers := getReadWorkerCount()
 	collected, wasTruncated, err := fetchMembersFromBucketsConcurrent(
-		tagId, populatedBuckets, MaxMembersInTagResponse, workers)
+		tagId, populatedBuckets, MaxMembersInTagResponse, workers, queries)
+	stats.Queries = int(queries.Load())
 	if err != nil {
-		return nil, false, err
+		return nil, false, stats, err
 	}
 
-	log.Infof("Tag '%s': retrieved %d members, truncated=%v", tagId, len(collected), wasTruncated)
-	return collected, wasTruncated, nil
+	log.Debugf("Tag '%s': retrieved %d members, truncated=%v", tagId, len(collected), wasTruncated)
+	return collected, wasTruncated, stats, nil
 }
 
-// DeleteTag deletes a tag completely from V2 storage (XDAS and Cassandra)
-// Uses memory-safe chunked deletion to handle tags with millions of members
-func DeleteTag(tagId string) error {
-	populatedBuckets, err := getPopulatedBuckets(tagId)
+// DeleteTag deletes a tag from XDAS and Cassandra in memory-safe chunks, for
+// tags with millions of members. Runs in a background goroutine, so it logs its
+// own start/progress/end lines carrying the queuing request's audit_id.
+func DeleteTag(tagId string, auditId string) error {
+	fields := log.Fields{
+		"audit_id": auditId,
+		"op":       OpDeleteTag,
+		"tag":      tagId,
+	}
+
+	// Type resolved from storage, never from the request: deleting an account tag
+	// through the untyped route must still normalize its members as account ids —
+	// a 12-digit id would otherwise go through the MAC path and be ECM-shifted to
+	// a different XDAS key, so the Cassandra rows would go while the real XDAS
+	// entries stay orphaned beyond recovery.
+	populatedBuckets, tagType, err := getTagMeta(tagId)
 	if err != nil {
 		return fmt.Errorf("failed to get populated buckets: %w", err)
 	}
@@ -778,38 +1014,40 @@ func DeleteTag(tagId string) error {
 	if len(populatedBuckets) == 0 {
 		return fmt.Errorf("tag not found")
 	}
-
-	log.Infof("Deleting tag '%s' with %d populated buckets", tagId, len(populatedBuckets))
-
-	deletedBuckets := []int{}
-	totalMembersDeleted := 0
-
-	// Process each bucket: fetch members in chunks, delete from XDAS, then delete from Cassandra
-	for _, bucketId := range populatedBuckets {
-		log.Debugf("Processing bucket %d for tag '%s'", bucketId, tagId)
-
-		membersDeleted, err := deleteBucketMembers(tagId, bucketId)
-		if err != nil {
-			log.Errorf("Failed to delete bucket %d for tag '%s': %v", bucketId, tagId, err)
-			// Return error with partial progress saved
-			return fmt.Errorf("partial deletion: %d/%d buckets deleted, %d members removed: %w",
-				len(deletedBuckets), len(populatedBuckets), totalMembersDeleted, err)
-		}
-
-		totalMembersDeleted += membersDeleted
-		deletedBuckets = append(deletedBuckets, bucketId)
-		log.Debugf("Successfully deleted bucket %d for tag '%s' (%d members)",
-			bucketId, tagId, membersDeleted)
+	if tagType != TagTypeLegacy {
+		fields["tag_type"] = tagType
 	}
 
-	log.Infof("Successfully deleted tag '%s': %d members removed from %d buckets",
-		tagId, totalMembersDeleted, len(deletedBuckets))
+	startTime := time.Now()
+	log.WithFields(fields).Infof("tag deletion started: %d buckets", len(populatedBuckets))
+
+	deletedBuckets := 0
+	totalMembersDeleted := 0
+
+	for _, bucketId := range populatedBuckets {
+		membersDeleted, err := deleteBucketMembers(tagId, bucketId, tagType)
+		totalMembersDeleted += membersDeleted
+		if err != nil {
+			return fmt.Errorf("partial deletion: %d/%d buckets deleted, %d members removed: %w",
+				deletedBuckets, len(populatedBuckets), totalMembersDeleted, err)
+		}
+
+		deletedBuckets++
+		if deletedBuckets%50 == 0 && deletedBuckets < len(populatedBuckets) {
+			log.WithFields(fields).Infof("tag deletion progress: %d/%d buckets, %d members deleted",
+				deletedBuckets, len(populatedBuckets), totalMembersDeleted)
+		}
+	}
+
+	membersProcessed.WithLabelValues(OpDeleteTag).Add(float64(totalMembersDeleted))
+	log.WithFields(fields).Infof("tag deletion completed: %d members removed from %d buckets in %v",
+		totalMembersDeleted, deletedBuckets, time.Since(startTime).Round(time.Millisecond))
 	return nil
 }
 
-// deleteBucketMembers deletes all members from a single bucket (XDAS first, then Cassandra)
-// Returns number of members deleted
-func deleteBucketMembers(tagId string, bucketId int) (int, error) {
+// deleteBucketMembers deletes a bucket's members, XDAS first, and returns how
+// many were deleted.
+func deleteBucketMembers(tagId string, bucketId int, tagType string) (int, error) {
 	totalDeleted := 0
 	lastMember := ""
 
@@ -826,23 +1064,22 @@ func deleteBucketMembers(tagId string, bucketId int) (int, error) {
 		log.Debugf("Fetched %d members from bucket %d for tag '%s' (total deleted so far: %d)",
 			len(chunk), bucketId, tagId, totalDeleted)
 
-		removedFromXdas, err := removeMembersFromXDAS(tagId, chunk)
-		if err != nil {
-			return totalDeleted, fmt.Errorf("XDAS deletion failed: %w", err)
-		}
+		removedFromXdas, _, firstError := removeMembersFromXDAS(tagId, chunk, tagType)
 
 		if len(removedFromXdas) > 0 {
-			// Delete successfully removed members from Cassandra
-			if err := RemoveMembers(tagId, removedFromXdas); err != nil {
-				log.Errorf("Critical: XDAS deletion succeeded but Cassandra V2 deletion failed for tag %s: %v", tagId, err)
+			removed, _, err := RemoveMembers(tagId, removedFromXdas)
+			totalDeleted += removed
+			if err != nil {
+				logDivergence(OpDeleteTag, tagId, err)
 				return totalDeleted, fmt.Errorf("cassandra deletion failed after XDAS success: %w", err)
 			}
-			totalDeleted += len(removedFromXdas)
 		}
 
 		if len(removedFromXdas) < len(chunk) {
-			log.Warnf("partial XDAS deletion: %d/%d members removed", len(removedFromXdas), len(chunk))
-			return totalDeleted, nil
+			// Partial XDAS failure fails the bucket: reporting success would let
+			// DeleteTag claim completion while members remain in both stores.
+			return totalDeleted, fmt.Errorf("partial XDAS deletion in bucket %d: %d/%d members removed (first error: %s)",
+				bucketId, len(removedFromXdas), len(chunk), firstError)
 		}
 
 		if len(chunk) < MaxBatchSizeV2 {
@@ -852,7 +1089,6 @@ func deleteBucketMembers(tagId string, bucketId int) (int, error) {
 		lastMember = chunk[len(chunk)-1]
 	}
 
-	// All members deleted from this bucket, now delete bucket metadata
 	if err := deleteBucketFromCassandra(tagId, bucketId); err != nil {
 		return totalDeleted, fmt.Errorf("failed to delete bucket metadata: %w", err)
 	}
@@ -860,7 +1096,6 @@ func deleteBucketMembers(tagId string, bucketId int) (int, error) {
 	return totalDeleted, nil
 }
 
-// deleteBucketFromCassandra deletes a bucket's metadata from Cassandra
 func deleteBucketFromCassandra(tagId string, bucketId int) error {
 	batch := ds.GetSimpleDao().NewBatch(UnloggedBatch)
 
@@ -875,27 +1110,32 @@ func deleteBucketFromCassandra(tagId string, bucketId int) error {
 	return nil
 }
 
-// GetMembersNonPaginated retrieves tag members for non-paginated response (V1 compatibility)
-// Returns up to MaxMembersInTagResponse (100k) members as a plain array
-func GetMembersNonPaginated(tagId string) ([]string, bool, error) {
-	populatedBuckets, err := getPopulatedBuckets(tagId)
+// GetMembersNonPaginated returns up to MaxMembersInTagResponse members as a
+// plain array (V1 compatibility).
+func GetMembersNonPaginated(tagId string, tagType string) ([]string, bool, ReadStats, error) {
+	stats := ReadStats{}
+	queries := &atomic.Int64{}
+
+	populatedBuckets, err := getPopulatedBuckets(tagId, tagType)
+	queries.Add(1)
+	stats.Queries = int(queries.Load())
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to get populated buckets: %w", err)
+		return nil, false, stats, fmt.Errorf("failed to get populated buckets: %w", err)
 	}
 
 	if len(populatedBuckets) == 0 {
-		return nil, false, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf(NotFoundErrorMsg, tagId))
+		return nil, false, stats, xwcommon.NewRemoteErrorAS(http.StatusNotFound, fmt.Sprintf(NotFoundErrorMsg, tagId))
 	}
-
-	log.Infof("Fetching tag members for '%s' (non-paginated) with %d populated buckets", tagId, len(populatedBuckets))
+	stats.Buckets = len(populatedBuckets)
 
 	workers := getReadWorkerCount()
 	collected, wasTruncated, err := fetchMembersFromBucketsConcurrent(
-		tagId, populatedBuckets, MaxMembersInTagResponse, workers)
+		tagId, populatedBuckets, MaxMembersInTagResponse, workers, queries)
+	stats.Queries = int(queries.Load())
 	if err != nil {
-		return nil, false, err
+		return nil, false, stats, err
 	}
 
-	log.Infof("Tag '%s': retrieved %d members (non-paginated), truncated=%v", tagId, len(collected), wasTruncated)
-	return collected, wasTruncated, nil
+	log.Debugf("Tag '%s': retrieved %d members (non-paginated), truncated=%v", tagId, len(collected), wasTruncated)
+	return collected, wasTruncated, stats, nil
 }
