@@ -100,6 +100,7 @@ func DeleteDeviceSettingsbyId(id string, app string) *xwhttp.ResponseEntity {
 
 	err = DeleteOneDeviceSettings(id)
 	if err != nil {
+		log.WithFields(log.Fields{"entity_id": id, "error": err}).Error("failed to delete device settings")
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
@@ -181,6 +182,7 @@ func CreateDeviceSettings(dset *logupload.DeviceSettings, app string) *xwhttp.Re
 
 	dset.Updated = util.GetTimestamp()
 	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DEVICE_SETTINGS, dset.ID, dset); err != nil {
+		log.WithFields(log.Fields{"entity_id": dset.ID, "error": err}).Error("failed to create device settings")
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
@@ -207,6 +209,7 @@ func UpdateDeviceSettings(dset *logupload.DeviceSettings, app string) *xwhttp.Re
 
 	dset.Updated = util.GetTimestamp()
 	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_DEVICE_SETTINGS, dset.ID, dset); err != nil {
+		log.WithFields(log.Fields{"entity_id": dset.ID, "error": err}).Error("failed to update device settings")
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 	return xwhttp.NewResponseEntity(http.StatusOK, nil, dset)

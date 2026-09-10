@@ -78,6 +78,7 @@ func DeleteLogUploadSettingsbyId(id string, app string) *xwhttp.ResponseEntity {
 	}
 	err := DeleteOneLogUploadSettings(id)
 	if err != nil {
+		log.WithFields(log.Fields{"entity_id": id, "error": err}).Error("failed to delete log upload settings")
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
@@ -169,6 +170,7 @@ func CreateLogUploadSettings(lu *logupload.LogUploadSettings, app string) *xwhtt
 
 	lu.Updated = util.GetTimestamp()
 	if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_LOG_UPLOAD_SETTINGS, lu.ID, lu); err != nil {
+		log.WithFields(log.Fields{"entity_id": lu.ID, "error": err}).Error("failed to create log upload settings")
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
@@ -195,6 +197,7 @@ func UpdateLogUploadSettings(lu *logupload.LogUploadSettings, app string) *xwhtt
 
 	lu.Updated = util.GetTimestamp()
 	if err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_LOG_UPLOAD_SETTINGS, lu.ID, lu); err != nil {
+		log.WithFields(log.Fields{"entity_id": lu.ID, "error": err}).Error("failed to update log upload settings")
 		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 	}
 
