@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/stretchr/testify/assert"
@@ -46,6 +47,8 @@ func TestGetLogs_NoLogsForValidMac(t *testing.T) {
 }
 
 func TestGetEstbLastlogPath(t *testing.T) {
+	setSATDisabledForLogHandlerTest(t)
+
 	tests := []struct {
 		name       string
 		url        string
@@ -69,6 +72,8 @@ func TestGetEstbLastlogPath(t *testing.T) {
 }
 
 func TestGetEstbChangelogsPath(t *testing.T) {
+	setSATDisabledForLogHandlerTest(t)
+
 	tests := []struct {
 		name       string
 		url        string
@@ -89,6 +94,15 @@ func TestGetEstbChangelogsPath(t *testing.T) {
 			assert.Equal(t, tt.statusCode, rr.Code)
 		})
 	}
+}
+
+func setSATDisabledForLogHandlerTest(t *testing.T) {
+	t.Helper()
+	previousSatOn := xcommon.SatOn
+	xcommon.SatOn = false
+	t.Cleanup(func() {
+		xcommon.SatOn = previousSatOn
+	})
 }
 
 // To cover branch where logs exist we create an XResponseWriter environment and inject a fake last + list by temporarily

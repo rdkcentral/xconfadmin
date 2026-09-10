@@ -109,8 +109,8 @@ func GetEstbChangelogsPath(w http.ResponseWriter, r *http.Request) {
 	tenantId := xhttp.GetTenantId(r)
 	configChangeLogs := estbfirmware.GetConfigChangeLogsOnly(tenantId, mac)
 	if len(configChangeLogs) > 0 {
-		for _, log := range configChangeLogs {
-			logPreDisplayCleanup(log)
+		for _, configChangeLog := range configChangeLogs {
+			logPreDisplayCleanup(configChangeLog)
 		}
 	} else {
 		log.Debugf("Config change logs are not found for mac %s", mac)
@@ -132,15 +132,8 @@ func logPreDisplayCleanup(lastConfigLog *estbfirmware.ConfigChangeLog) {
 }
 
 func isMacPresentAndValid(queryParams url.Values) (bool, string, string) {
-	var mac string
+	mac := queryParams.Get(common.MAC)
 	var errorStr string
-	if len(queryParams) > 0 {
-		for k, v := range queryParams {
-			if k == common.MAC {
-				mac = v[0]
-			}
-		}
-	}
 	if mac == "" {
 		errorStr = fmt.Sprintf("Required String parameter '%s' is not present", common.MAC)
 		return false, mac, errorStr
