@@ -503,6 +503,17 @@ func TestClassifySATv2DomainDcmCore(t *testing.T) {
 	}
 }
 
+// /xconfAdminService/info/statistics should map to system domain
+func TestClassifySATv2DomainInfoSystem(t *testing.T) {
+	domain, found := classifySATv2Domain("/xconfAdminService/info/statistics")
+	if !found {
+		t.Fatalf("expected /xconfAdminService/info/statistics to be classified")
+	}
+	if domain != owcommon.SATV2DomainSystem {
+		t.Fatalf("expected system domain for /xconfAdminService/info/statistics, got: %s", domain)
+	}
+}
+
 // /xconfAdminService/lockdownsettings should map to system domain
 func TestClassifySATv2DomainLockdownSystem(t *testing.T) {
 	domain, found := classifySATv2Domain("/xconfAdminService/lockdownsettings")

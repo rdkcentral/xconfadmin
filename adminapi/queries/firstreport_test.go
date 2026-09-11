@@ -23,8 +23,8 @@ import (
 	"time"
 
 	"github.com/360EntSecGroup-Skylar/excelize"
-	xestb "github.com/rdkcentral/xconfadmin/shared/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/db"
+	xestb "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/stretchr/testify/assert"
 )
 

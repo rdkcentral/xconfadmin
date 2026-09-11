@@ -24,9 +24,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rdkcentral/xconfadmin/shared/estbfirmware"
-
 	"github.com/360EntSecGroup-Skylar/excelize"
+	estbfirmware "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 )
 
 func nextChar(ch rune) rune {
