@@ -183,6 +183,9 @@ Tenant auto-creation SHALL follow these rules:
 
 - SAT RBAC v2 requests MAY auto-create a missing tenant only when the
 	SAT capabilities include `xconf:system:readwrite`.
+- Before a SAT RBAC v2 request onboards a missing tenant, the system SHALL
+	verify that `allowedResources.allowedPartners` contains the resolved
+	`tenantId`.
 - Legacy SAT requests SHALL NOT auto-create tenants.
 - Login-token/Xerxes requests SHALL NOT auto-create tenants, regardless
 	of the login-token tenant-header feature flag.
@@ -202,6 +205,9 @@ For an authenticated request whose tenant cannot be used:
 	permitted or the required SAT capability is absent.
 - The response body SHOULD identify whether the tenant was not found or
 	whether tenant onboarding was not authorized.
+- When the resolved tenant is not in `allowedResources.allowedPartners`,
+	the system SHALL return `403 Forbidden` and SHALL NOT invoke tenant
+	onboarding.
 
 ### SAT RBAC v2 Deny-By-Default
 
