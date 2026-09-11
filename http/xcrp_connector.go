@@ -81,7 +81,7 @@ func (c *XcrpConnector) SetXcrpHosts(hosts []string) {
 	c.hosts = hosts
 }
 
-func (c *XcrpConnector) PostRecook(m, p []string, bbytes []byte, fields log.Fields) error {
+func (c *XcrpConnector) PostRecook(tenantId string, m, p []string, bbytes []byte, fields log.Fields) error {
 	models := strings.Join(m, ",")
 	partners := strings.Join(p, ",")
 	var url string
@@ -97,6 +97,7 @@ func (c *XcrpConnector) PostRecook(m, p []string, bbytes []byte, fields log.Fiel
 		}
 		headers := map[string]string{
 			common.HeaderUserAgent: common.HeaderXconfAdminService,
+			common.HeaderTenantID:  tenantId,
 		}
 
 		_, err := c.DoWithRetries("POST", url, headers, bbytes, fields, xcrpServiceName)
@@ -110,12 +111,13 @@ func (c *XcrpConnector) PostRecook(m, p []string, bbytes []byte, fields log.Fiel
 	return nil
 }
 
-func (c *XcrpConnector) GetRecookingStatusFromCanaryMgr(module string, fields log.Fields) (bool, error) {
+func (c *XcrpConnector) GetRecookingStatusFromCanaryMgr(tenantId string, module string, fields log.Fields) (bool, error) {
 	var url string
 	for _, host := range c.XcrpHosts() {
 		url = fmt.Sprintf(c.precookStatusPathTemplate, host, module)
 		headers := map[string]string{
 			common.HeaderUserAgent: common.HeaderXconfAdminService,
+			common.HeaderTenantID:  tenantId,
 		}
 		response, err := c.DoWithRetries("GET", url, headers, nil, nil, xcrpServiceName)
 		if err != nil {

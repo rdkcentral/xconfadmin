@@ -103,7 +103,7 @@ func PostRecookingLockdownSettingsHandler(w http.ResponseWriter, r *http.Request
 	log.Infof("Precook lockdown settings in EDT, lockdownStartTime: %v, lockdownEndTime: %v, lockdownModules: %v, lockdownEnabled: %v", lockdownStartTime, lockdownEndTime, lockdownModules, lockdownEnabled)
 
 	go CheckRecookingStatus(tenantId, time.Second*time.Duration(common.LockDuration), "rfc", fields)
-	err = GetXcrpConnector().PostRecook(models, partners, nil, fields)
+	err = GetXcrpConnector().PostRecook(tenantId, models, partners, nil, fields)
 	if err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -164,7 +164,7 @@ func CheckRecookingStatus(tenantId string, lockDuration time.Duration, module st
 	var state bool
 	var updatedTime time.Time
 	var err error
-	state, err = GetXcrpConnector().GetRecookingStatusFromCanaryMgr(module, fields)
+	state, err = GetXcrpConnector().GetRecookingStatusFromCanaryMgr(tenantId, module, fields)
 	if err != nil {
 		log.Errorf("Error checking recooking status from CanaryMgr: %v", err)
 		return

@@ -113,7 +113,7 @@ func TestXcrpConnector_PostRecook_WithModelsAndPartners(t *testing.T) {
 	partners := []string{"comcast", "cox"}
 	requestBody := []byte(`{"test":"data"}`)
 
-	err := connector.PostRecook(models, partners, requestBody, log.Fields{})
+	err := connector.PostRecook("testtenant", models, partners, requestBody, log.Fields{})
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -151,7 +151,7 @@ func TestXcrpConnector_PostRecook_WithModelsOnly(t *testing.T) {
 	partners := []string{}
 	requestBody := []byte(`{"test":"data"}`)
 
-	err := connector.PostRecook(models, partners, requestBody, log.Fields{})
+	err := connector.PostRecook("testtenant", models, partners, requestBody, log.Fields{})
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -189,7 +189,7 @@ func TestXcrpConnector_PostRecook_WithPartnersOnly(t *testing.T) {
 	partners := []string{"comcast"}
 	requestBody := []byte(`{"test":"data"}`)
 
-	err := connector.PostRecook(models, partners, requestBody, log.Fields{})
+	err := connector.PostRecook("testtenant", models, partners, requestBody, log.Fields{})
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -220,7 +220,7 @@ func TestXcrpConnector_PostRecook_NoParams(t *testing.T) {
 	partners := []string{}
 	requestBody := []byte(`{"test":"data"}`)
 
-	err := connector.PostRecook(models, partners, requestBody, log.Fields{})
+	err := connector.PostRecook("testtenant", models, partners, requestBody, log.Fields{})
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -246,7 +246,7 @@ func TestXcrpConnector_PostRecook_Error(t *testing.T) {
 	partners := []string{"comcast"}
 	requestBody := []byte(`{"test":"data"}`)
 
-	err := connector.PostRecook(models, partners, requestBody, log.Fields{})
+	err := connector.PostRecook("testtenant", models, partners, requestBody, log.Fields{})
 
 	if err == nil {
 		t.Fatal("expected error but got none")
@@ -282,7 +282,7 @@ func TestXcrpConnector_PostRecook_MultipleHosts(t *testing.T) {
 	partners := []string{"comcast"}
 	requestBody := []byte(`{"test":"data"}`)
 
-	err := connector.PostRecook(models, partners, requestBody, log.Fields{})
+	err := connector.PostRecook("testtenant", models, partners, requestBody, log.Fields{})
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -330,7 +330,7 @@ func TestXcrpConnector_GetRecookingStatusFromCanaryMgr_Completed(t *testing.T) {
 		precookStatusPathTemplate: "%s/path/%s",
 	}
 
-	completed, err := connector.GetRecookingStatusFromCanaryMgr("rfc", log.Fields{})
+	completed, err := connector.GetRecookingStatusFromCanaryMgr("testtenant", "rfc", log.Fields{})
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -368,7 +368,7 @@ func TestXcrpConnector_GetRecookingStatusFromCanaryMgr_Pending(t *testing.T) {
 		precookStatusPathTemplate: "%s/dummy/%s",
 	}
 
-	completed, err := connector.GetRecookingStatusFromCanaryMgr("rfc", log.Fields{})
+	completed, err := connector.GetRecookingStatusFromCanaryMgr("testtenant", "rfc", log.Fields{})
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -394,7 +394,7 @@ func TestXcrpConnector_GetRecookingStatusFromCanaryMgr_Error(t *testing.T) {
 		hosts:      []string{server.URL},
 	}
 
-	_, err := connector.GetRecookingStatusFromCanaryMgr("rfc", log.Fields{})
+	_, err := connector.GetRecookingStatusFromCanaryMgr("testtenant", "rfc", log.Fields{})
 
 	if err == nil {
 		t.Fatal("expected error but got none")
@@ -417,7 +417,7 @@ func TestXcrpConnector_GetRecookingStatusFromCanaryMgr_InvalidJSON(t *testing.T)
 		hosts:      []string{server.URL},
 	}
 
-	_, err := connector.GetRecookingStatusFromCanaryMgr("rfc", log.Fields{})
+	_, err := connector.GetRecookingStatusFromCanaryMgr("testtenant", "rfc", log.Fields{})
 
 	if err == nil {
 		t.Fatal("expected error for invalid JSON but got none")
