@@ -287,6 +287,9 @@ func TestCanOnboardTenantRequiresAllowedPartnerMatch(t *testing.T) {
 	if canOnboardMissingTenant(AUTH_TYPE_SAT_V2, "COMCAST", []string{"xconf:system:readwrite"}, []string{"acme"}) {
 		t.Fatal("expected tenant outside allowedPartners to be denied")
 	}
+	if canOnboardMissingTenant(AUTH_TYPE_SAT_V2, "COMCAST", []string{"xconf:system:readwrite"}, []string{}) {
+		t.Fatal("expected empty allowedPartners to deny onboarding")
+	}
 	if canOnboardMissingTenant(AUTH_TYPE_SAT_V2, "COMCAST", []string{"xconf:system:readonly"}, []string{"comcast"}) {
 		t.Fatal("expected system-readonly capability to deny onboarding")
 	}

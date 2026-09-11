@@ -24,14 +24,8 @@ SAT capability requirements, or general SAT RBAC v2 tenant-scope enforcement.
 
 ## Security Considerations
 
-The bypass disables a provisioning authorization check and is intended only as
-a temporary red-environment diagnostic control. It must default to disabled,
-must not be enabled in production, and should be removed after token and
-tenant behavior is understood.
-
-## Open Question
-
-The auth contract already requires SAT RBAC v2 tenant-scope authorization
-against `allowedPartners` for scoped requests. Implementation must confirm the
-ordering and scope of that existing gate so the onboarding-specific bypass has
-the intended effect and does not weaken general tenant authorization.
+Tenant onboarding is a provisioning side effect and is allowed only when the
+resolved tenant is included in the SAT token's `allowedResources.allowedPartners` 
+claim and the caller has `xconf:system:readwrite`. If the partner check fails, 
+the request returns `403 Forbidden` and tenant onboarding is not invoked. 
+Existing-tenant authorization behavior is unchanged.
