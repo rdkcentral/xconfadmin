@@ -17,9 +17,7 @@
 //
 module github.com/rdkcentral/xconfadmin
 
-go 1.25.0
-
-toolchain go1.25.11
+go 1.26.5
 
 require (
 	github.com/360EntSecGroup-Skylar/excelize v1.4.1
@@ -32,7 +30,7 @@ require (
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.18.0
-	github.com/rdkcentral/xconfwebconfig v0.0.0-20260815220426-81500b0f7ddb
+	github.com/rdkcentral/xconfwebconfig v0.0.0-20260903144221-b37d8df9225b
 	github.com/sirupsen/logrus v1.9.3
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.uber.org/automaxprocs v1.5.3
