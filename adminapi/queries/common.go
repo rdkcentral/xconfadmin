@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	//"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/gorilla/mux"
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	xcommon "github.com/rdkcentral/xconfadmin/common"

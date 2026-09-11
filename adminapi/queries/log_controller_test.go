@@ -7,7 +7,9 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+	xcommon "github.com/rdkcentral/xconfadmin/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,6 +46,65 @@ func TestGetLogs_NoLogsForValidMac(t *testing.T) {
 	assert.Len(t, m, 0)
 }
 
+func TestGetEstbLastlogPath(t *testing.T) {
+	setSATDisabledForLogHandlerTest(t)
+
+	tests := []struct {
+		name       string
+		url        string
+		statusCode int
+	}{
+		{name: "missing mac", url: "/xconfAdminService/estbfirmware/lastlog", statusCode: http.StatusBadRequest},
+		{name: "invalid mac", url: "/xconfAdminService/estbfirmware/lastlog?mac=invalid", statusCode: http.StatusBadRequest},
+		{name: "empty result", url: "/xconfAdminService/estbfirmware/lastlog?mac=AA:BB:CC:00:00:11", statusCode: http.StatusOK},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			rr := httptest.NewRecorder()
+
+			GetEstbLastlogPath(rr, r)
+
+			assert.Equal(t, tt.statusCode, rr.Code)
+		})
+	}
+}
+
+func TestGetEstbChangelogsPath(t *testing.T) {
+	setSATDisabledForLogHandlerTest(t)
+
+	tests := []struct {
+		name       string
+		url        string
+		statusCode int
+	}{
+		{name: "missing mac", url: "/xconfAdminService/estbfirmware/changelogs", statusCode: http.StatusBadRequest},
+		{name: "invalid mac", url: "/xconfAdminService/estbfirmware/changelogs?mac=invalid", statusCode: http.StatusBadRequest},
+		{name: "empty result", url: "/xconfAdminService/estbfirmware/changelogs?mac=AA:BB:CC:00:00:12", statusCode: http.StatusOK},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			rr := httptest.NewRecorder()
+
+			GetEstbChangelogsPath(rr, r)
+
+			assert.Equal(t, tt.statusCode, rr.Code)
+		})
+	}
+}
+
+func setSATDisabledForLogHandlerTest(t *testing.T) {
+	t.Helper()
+	previousSatOn := xcommon.SatOn
+	xcommon.SatOn = false
+	t.Cleanup(func() {
+		xcommon.SatOn = previousSatOn
+	})
+}
+
 // To cover branch where logs exist we create an XResponseWriter environment and inject a fake last + list by temporarily
 // creating them directly via internal helpers if accessible; here we rely on package-level helpers getOneConfigChangeLog and getConfigChangeLogList if exported, else we skip.
 // We can't directly set estbfirmware cache without deeper seeding; so current coverage focuses on error and empty-success branches.
@@ -76,3 +137,40 @@ func TestLogController_InternalHelpers(t *testing.T) {
 		t.Fatalf("expected 2 logs got %d", len(lst))
 	}
 }
+
+func TestLogPreDisplayCleanup(t *testing.T) {
+	tests := []struct {
+		name           string
+		lastConfigLog  *estbfirmware.ConfigChangeLog
+		expectedID     string
+		expectedUpdate int64
+	}{
+		{
+			name: "Clean up non-nil log",
+			lastConfigLog: &estbfirmware.ConfigChangeLog{
+				ID:      "test-id-123",
+				Updated: 1234567890,
+			},
+			expectedID:     "",
+			expectedUpdate: 0,
+		},
+		{
+			name:           "Nil log does nothing",
+			lastConfigLog:  nil,
+			expectedID:     "",
+			expectedUpdate: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logPreDisplayCleanup(tt.lastConfigLog)
+
+			if tt.lastConfigLog != nil {
+				assert.Equal(t, tt.expectedID, tt.lastConfigLog.ID)
+				assert.Equal(t, tt.expectedUpdate, tt.lastConfigLog.Updated)
+			}
+		})
+	}
+}
+
