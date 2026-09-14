@@ -337,13 +337,14 @@ func (s *WebconfigServer) AuthValidationMiddleware(next http.Handler) http.Handl
 		}
 		if tenant == nil {
 			capabilities, _ := ctx.Value(CTX_KEY_CAPABILITIES).([]string)
+			allowedPartners, _ := ctx.Value(CTX_KEY_ALLOWED_PARTNERS).([]string)
 			if authType != AUTH_TYPE_SAT_V2 {
 				log.WithFields(log.Fields{"tenantId": tenantId}).Error("tenant not found")
 				http.Error(w, "tenant not found", http.StatusForbidden)
 				return
 			}
-			if !canAutoCreateTenant(authType, capabilities) {
-				log.WithFields(log.Fields{"tenantId": tenantId}).Error("tenant onboarding requires xconf:system:readwrite capability")
+			if !canOnboardMissingTenant(authType, tenantId, capabilities, allowedPartners) {
+				log.WithFields(log.Fields{"tenantId": tenantId}).Error("tenant onboarding requires xconf:system:readwrite capability and allowedPartners membership")
 				http.Error(w, "tenant onboarding is not authorized", http.StatusForbidden)
 				return
 			}
@@ -380,6 +381,16 @@ func resolveTenantID(authType AuthType, headerTenantID string, defaultTenantID s
 
 func canAutoCreateTenant(authType AuthType, capabilities []string) bool {
 	return authType == AUTH_TYPE_SAT_V2 && xcommon.HasSATV2Capability(capabilities, string(xcommon.SATV2DomainSystem), xcommon.SATV2AccessReadWrite)
+}
+
+func canOnboardMissingTenant(authType AuthType, tenantId string, capabilities []string, allowedPartners []string) bool {
+	if !canAutoCreateTenant(authType, capabilities) {
+		return false
+	}
+	if len(allowedPartners) == 0 {
+		return false
+	}
+	return util.CaseInsensitiveContains(allowedPartners, tenantId)
 }
 
 func (s *WebconfigServer) MetricsEnabled() bool {
