@@ -1,16 +1,20 @@
 package queries
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/gorilla/mux"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // We will stub estbfirmware functions via simple in-package variable indirection if needed.
@@ -44,6 +48,40 @@ func TestGetLogs_NoLogsForValidMac(t *testing.T) {
 	m := map[string]any{}
 	_ = json.Unmarshal(rr.Body.Bytes(), &m)
 	assert.Len(t, m, 0)
+}
+
+func TestIsMacPresentAndValid(t *testing.T) {
+	// no query params
+	queryParamsStr := ""
+	queryParams, _ := url.ParseQuery(queryParamsStr)
+	isValid, mac, errorStr := isMacPresentAndValid(queryParams)
+	assert.Equal(t, isValid, false)
+	assert.Equal(t, mac, "")
+	assert.Equal(t, errorStr, "Required String parameter 'mac' is not present")
+
+	// missing mac query param
+	queryParamsStr = "macAddress=1234"
+	queryParams, _ = url.ParseQuery(queryParamsStr)
+	isValid, mac, errorStr = isMacPresentAndValid(queryParams)
+	assert.Equal(t, isValid, false)
+	assert.Equal(t, mac, "")
+	assert.Equal(t, errorStr, "Required String parameter 'mac' is not present")
+
+	// invalid mac
+	queryParamsStr = "macAddress=1234&mac=4321"
+	queryParams, _ = url.ParseQuery(queryParamsStr)
+	isValid, mac, errorStr = isMacPresentAndValid(queryParams)
+	assert.Equal(t, isValid, false)
+	assert.Equal(t, mac, "4321")
+	assert.Equal(t, errorStr, "Mac is invalid: 4321")
+
+	// valid mac
+	queryParamsStr = "macAddress=1234&mac=00:1B:44:11:3A:B7&query=param"
+	queryParams, _ = url.ParseQuery(queryParamsStr)
+	isValid, mac, errorStr = isMacPresentAndValid(queryParams)
+	assert.Equal(t, isValid, true)
+	assert.Equal(t, mac, "00:1B:44:11:3A:B7")
+	assert.Equal(t, errorStr, "")
 }
 
 func TestGetEstbLastlogPath(t *testing.T) {
@@ -94,6 +132,89 @@ func TestGetEstbChangelogsPath(t *testing.T) {
 			assert.Equal(t, tt.statusCode, rr.Code)
 		})
 	}
+}
+
+func TestGetEstbLastlogPath_TenantIDMismatch(t *testing.T) {
+	setSATDisabledForLogHandlerTest(t)
+	const (
+		macAddress = "AA:BB:CC:00:00:21"
+		tenantID   = "tenant-a"
+	)
+	stubLogGetters(t, func(string, string) *estbfirmware.ConfigChangeLog {
+		return &estbfirmware.ConfigChangeLog{TenantId: "tenant-b"}
+	}, nil)
+
+	r := logRequestWithTenant("/xconfAdminService/estbfirmware/lastlog?mac="+macAddress, tenantID)
+	rr := httptest.NewRecorder()
+	GetEstbLastlogPath(rr, r)
+
+	assert.Equal(t, http.StatusForbidden, rr.Code)
+	assert.Contains(t, rr.Body.String(), "tenant ID mismatch")
+}
+
+func TestGetEstbChangelogsPath_FiltersTenantLogs(t *testing.T) {
+	setSATDisabledForLogHandlerTest(t)
+	const (
+		macAddress = "AA:BB:CC:00:00:22"
+		tenantID   = "tenant-a"
+	)
+	stubLogGetters(t, nil, func(string, string) []*estbfirmware.ConfigChangeLog {
+		return []*estbfirmware.ConfigChangeLog{
+			{ID: "tenant-a-log", Updated: 1, TenantId: tenantID},
+			{ID: "tenant-b-log", Updated: 2, TenantId: "tenant-b"},
+		}
+	})
+
+	r := logRequestWithTenant("/xconfAdminService/estbfirmware/changelogs?mac="+macAddress, tenantID)
+	rr := httptest.NewRecorder()
+	GetEstbChangelogsPath(rr, r)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	var logs []*estbfirmware.ConfigChangeLog
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &logs))
+	require.Len(t, logs, 1)
+	assert.Equal(t, tenantID, logs[0].TenantId)
+	assert.Empty(t, logs[0].ID)
+	assert.Zero(t, logs[0].Updated)
+}
+
+func TestGetEstbChangelogsPath_TenantIDMismatch(t *testing.T) {
+	setSATDisabledForLogHandlerTest(t)
+	const (
+		macAddress = "AA:BB:CC:00:00:23"
+		tenantID   = "tenant-a"
+	)
+	stubLogGetters(t, nil, func(string, string) []*estbfirmware.ConfigChangeLog {
+		return []*estbfirmware.ConfigChangeLog{{TenantId: "tenant-b"}}
+	})
+
+	r := logRequestWithTenant("/xconfAdminService/estbfirmware/changelogs?mac="+macAddress, tenantID)
+	rr := httptest.NewRecorder()
+	GetEstbChangelogsPath(rr, r)
+
+	assert.Equal(t, http.StatusForbidden, rr.Code)
+	assert.Contains(t, rr.Body.String(), "tenant ID mismatch")
+}
+
+func logRequestWithTenant(target, tenantID string) *http.Request {
+	r := httptest.NewRequest(http.MethodGet, target, nil)
+	return r.WithContext(context.WithValue(r.Context(), xhttp.CTX_KEY_TENANT_ID, tenantID))
+}
+
+func stubLogGetters(t *testing.T, lastConfigLog func(string, string) *estbfirmware.ConfigChangeLog, configChangeLogs func(string, string) []*estbfirmware.ConfigChangeLog) {
+	t.Helper()
+	originalLastConfigLog := getLastConfigLog
+	originalConfigChangeLogs := getConfigChangeLogsOnly
+	if lastConfigLog != nil {
+		getLastConfigLog = lastConfigLog
+	}
+	if configChangeLogs != nil {
+		getConfigChangeLogsOnly = configChangeLogs
+	}
+	t.Cleanup(func() {
+		getLastConfigLog = originalLastConfigLog
+		getConfigChangeLogsOnly = originalConfigChangeLogs
+	})
 }
 
 func setSATDisabledForLogHandlerTest(t *testing.T) {
@@ -173,4 +294,3 @@ func TestLogPreDisplayCleanup(t *testing.T) {
 		})
 	}
 }
-
