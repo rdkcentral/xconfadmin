@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
@@ -31,6 +32,9 @@ import (
 	estbfirmware "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	log "github.com/sirupsen/logrus"
 )
+
+var getLastConfigLog = estbfirmware.GetLastConfigLog
+var getConfigChangeLogsOnly = estbfirmware.GetConfigChangeLogsOnly
 
 func GetLogs(w http.ResponseWriter, r *http.Request) {
 	_, err := auth.CanRead(r, auth.COMMON_ENTITY)
@@ -52,9 +56,9 @@ func GetLogs(w http.ResponseWriter, r *http.Request) {
 
 	result := make(map[string]interface{}, 2)
 	tenantId := xhttp.GetTenantId(r)
-	last := estbfirmware.GetLastConfigLog(tenantId, macAddress) //*ConfigChangeLog
+	last := getLastConfigLog(tenantId, macAddress) //*ConfigChangeLog
 	if last != nil {
-		configChangeLogList := estbfirmware.GetConfigChangeLogsOnly(tenantId, macAddress) //[]*ConfigChangeLog
+		configChangeLogList := getConfigChangeLogsOnly(tenantId, macAddress) //[]*ConfigChangeLog
 		result["lastConfigLog"] = last
 		result["configChangeLog"] = configChangeLogList
 	}
@@ -78,8 +82,13 @@ func GetEstbLastlogPath(w http.ResponseWriter, r *http.Request) {
 	}
 	mac = util.NormalizeMacAddress(mac)
 	tenantId := xhttp.GetTenantId(r)
-	lastConfigLog := estbfirmware.GetLastConfigLog(tenantId, mac)
+	lastConfigLog := getLastConfigLog(tenantId, mac)
 	if lastConfigLog != nil {
+		if !strings.EqualFold(lastConfigLog.TenantId, tenantId) {
+			log.Errorf("Tenant ID mismatch: expected %s, got %s", tenantId, lastConfigLog.TenantId)
+			xhttp.WriteXconfResponse(w, http.StatusForbidden, []byte("tenant ID mismatch"))
+			return
+		}
 		logPreDisplayCleanup(lastConfigLog)
 		response, err := util.JSONMarshal(*lastConfigLog)
 		if err != nil {
@@ -107,15 +116,26 @@ func GetEstbChangelogsPath(w http.ResponseWriter, r *http.Request) {
 	}
 	mac = util.NormalizeMacAddress(mac)
 	tenantId := xhttp.GetTenantId(r)
-	configChangeLogs := estbfirmware.GetConfigChangeLogsOnly(tenantId, mac)
+	configChangeLogs := getConfigChangeLogsOnly(tenantId, mac)
+	cleanedConfigChangeLogs := make([]*estbfirmware.ConfigChangeLog, 0, len(configChangeLogs))
 	if len(configChangeLogs) > 0 {
 		for _, configChangeLog := range configChangeLogs {
-			logPreDisplayCleanup(configChangeLog)
+			// Only include config change logs that belong to the current tenant
+			if strings.EqualFold(configChangeLog.TenantId, tenantId) {
+				logPreDisplayCleanup(configChangeLog)
+				cleanedConfigChangeLogs = append(cleanedConfigChangeLogs, configChangeLog)
+			}
+		}
+		// if config change logs are found, but none belong to the current tenant, return a 403
+		if len(cleanedConfigChangeLogs) == 0 {
+			log.Debugf("Config change logs are not found for mac %s", mac)
+			xhttp.WriteXconfResponse(w, http.StatusForbidden, []byte("tenant ID mismatch"))
+			return
 		}
 	} else {
 		log.Debugf("Config change logs are not found for mac %s", mac)
 	}
-	response, err := util.JSONMarshal(configChangeLogs)
+	response, err := util.JSONMarshal(cleanedConfigChangeLogs)
 	if err != nil {
 		log.Errorf("json.Marshal config change logs error: %v", err)
 		xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(err.Error()))
