@@ -23,13 +23,12 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfadmin/util"
-
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
-
-	"github.com/golang-jwt/jwt/v4"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -70,6 +69,10 @@ func getAuthProvider() string {
 }
 
 func BasicAuthHandler(w http.ResponseWriter, r *http.Request) {
+	if common.AuthProvider != "acl" {
+		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusForbidden, "auth provider is not acl"))
+		return
+	}
 
 	type AuthRequest struct {
 		Username string `json:"login"`
