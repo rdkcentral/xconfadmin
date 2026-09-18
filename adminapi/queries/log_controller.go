@@ -86,7 +86,7 @@ func GetEstbLastlogPath(w http.ResponseWriter, r *http.Request) {
 	if lastConfigLog != nil {
 		if !strings.EqualFold(lastConfigLog.TenantId, tenantId) {
 			log.Errorf("Tenant ID mismatch: expected %s, got %s", tenantId, lastConfigLog.TenantId)
-			xhttp.WriteXconfResponse(w, http.StatusForbidden, []byte("tenant ID mismatch"))
+			xhttp.WriteXconfResponseAsText(w, http.StatusForbidden, []byte("tenant ID mismatch"))
 			return
 		}
 		logPreDisplayCleanup(lastConfigLog)
