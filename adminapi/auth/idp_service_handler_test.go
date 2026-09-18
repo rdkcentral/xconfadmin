@@ -27,6 +27,7 @@ import (
 	"strings"
 	"testing"
 
+	common "github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 )
@@ -109,6 +110,18 @@ func runHandler(h func(http.ResponseWriter, *http.Request), req *http.Request) *
 	rr := httptest.NewRecorder()
 	h(rr, req)
 	return rr
+}
+
+func TestBasicAuthHandler_RequiresACLProvider(t *testing.T) {
+	previous := common.AuthProvider
+	common.AuthProvider = "local"
+	defer func() { common.AuthProvider = previous }()
+
+	req := httptest.NewRequest("POST", "/xconfAdminService/auth/basic", strings.NewReader(`{"login":"admin","password":"admin"}`))
+	rr := runHandler(BasicAuthHandler, req)
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 when auth provider is not acl, got %d body=%s", rr.Code, rr.Body.String())
+	}
 }
 
 func TestGetAdminUIUrlFromCookies_FallbackAndSuccess(t *testing.T) {

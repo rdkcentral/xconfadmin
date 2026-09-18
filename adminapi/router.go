@@ -34,6 +34,7 @@ import (
 	"github.com/rdkcentral/xconfadmin/adminapi/setting"
 	"github.com/rdkcentral/xconfadmin/adminapi/telemetry"
 	"github.com/rdkcentral/xconfadmin/adminapi/xcrp"
+	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfadmin/taggingapi"
@@ -81,6 +82,7 @@ func TrailingSlashRemover(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
 func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	paths := []*mux.Router{}
 	authPaths := []*mux.Router{} // Do not required auth token validation middleware
@@ -94,18 +96,20 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	authInfoPath.HandleFunc("", auth.AuthInfoHandler).Methods("GET").Name("Auth-Uncategorized")
 	paths = append(paths, authInfoPath)
 
-	basicAuthpath := r.PathPrefix("/xconfAdminService/auth/basic").Subrouter()
-	basicAuthpath.HandleFunc("", auth.BasicAuthHandler).Methods("POST").Name("Auth-Basic")
-	authPaths = append(authPaths, basicAuthpath)
+	if common.AuthProvider == "acl" {
+		basicAuthpath := r.PathPrefix("/xconfAdminService/auth/basic").Subrouter()
+		basicAuthpath.HandleFunc("", auth.BasicAuthHandler).Methods("POST").Name("Auth-Basic")
+		authPaths = append(authPaths, basicAuthpath)
 
-	// Backward-compatible ACL aliases expected by some admin UI builds.
-	aclAuthPath := r.PathPrefix("/xconfAdminService/acl/auth").Subrouter()
-	aclAuthPath.HandleFunc("", auth.BasicAuthHandler).Methods("POST").Name("Auth-Basic")
-	authPaths = append(authPaths, aclAuthPath)
+		// Backward-compatible ACL aliases expected by some admin UI builds.
+		aclAuthPath := r.PathPrefix("/xconfAdminService/acl/auth").Subrouter()
+		aclAuthPath.HandleFunc("", auth.BasicAuthHandler).Methods("POST").Name("Auth-Basic")
+		authPaths = append(authPaths, aclAuthPath)
 
-	aclLogoutPath := r.Path("/xconfAdminService/acl/logout").Subrouter()
-	aclLogoutPath.HandleFunc("", auth.AclLogoutHandler).Methods("GET").Name("Auth-Basic")
-	authPaths = append(authPaths, aclLogoutPath)
+		aclLogoutPath := r.Path("/xconfAdminService/acl/logout").Subrouter()
+		aclLogoutPath.HandleFunc("", auth.AclLogoutHandler).Methods("GET").Name("Auth-Basic")
+		authPaths = append(authPaths, aclLogoutPath)
+	}
 
 	loginPath := r.Path("/xconfAdminService" + s.IdpLoginPath).Subrouter()
 	loginPath.HandleFunc("", auth.LoginUrlHandler).Methods("GET").Name("Auth-Xerxes")
