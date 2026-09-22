@@ -689,8 +689,9 @@ func TestSATv2UnclassifiedRouteReturns403(t *testing.T) {
 	}
 }
 
-// Dev profile must not grant permissions without an authenticated context.
-func TestGetPermissionsDevProfileRequiresAuthenticatedContext(t *testing.T) {
+// Dev profile permissions include VIEW_TOOLS and WRITE_TOOLS so that TOOL_ENTITY
+// endpoints (e.g. penetration metrics) pass CanRead/CanWrite checks without a SAT token.
+func TestGetPermissionsDevProfileIncludesToolPermissions(t *testing.T) {
 	oldActive := owcommon.ActiveAuthProfiles
 	oldDefault := owcommon.DefaultAuthProfiles
 	owcommon.ActiveAuthProfiles = "dev"
@@ -703,13 +704,22 @@ func TestGetPermissionsDevProfileRequiresAuthenticatedContext(t *testing.T) {
 	r := httptest.NewRequest("GET", "/xconfAdminService/penetrationdata/AA:BB:CC:DD:EE:FF", nil)
 	permissions := GetPermissionsFunc(r)
 
-	if len(permissions) != 0 {
-		t.Fatalf("expected no permissions without authentication; got: %v", permissions)
+	for _, required := range []string{VIEW_TOOLS, WRITE_TOOLS} {
+		found := false
+		for _, permission := range permissions {
+			if permission == required {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("dev profile permissions missing %q; got: %v", required, permissions)
+		}
 	}
 }
 
-// TOOL_ENTITY CanRead is denied under dev profile without a SAT token when SAT_ON=true.
-func TestCanReadToolEntityDeniedInDevProfileWithoutSAT(t *testing.T) {
+// TOOL_ENTITY CanRead succeeds under dev profile without a SAT token when SAT_ON=true.
+func TestCanReadToolEntitySucceedsInDevProfileWithSATOn(t *testing.T) {
 	oldSatOn := owcommon.SatOn
 	oldActive := owcommon.ActiveAuthProfiles
 	oldDefault := owcommon.DefaultAuthProfiles
@@ -726,7 +736,7 @@ func TestCanReadToolEntityDeniedInDevProfileWithoutSAT(t *testing.T) {
 	r := httptest.NewRequest("GET", "/xconfAdminService/penetrationdata/AA:BB:CC:DD:EE:FF", nil)
 
 	_, err := CanRead(r, TOOL_ENTITY)
-	if err == nil {
-		t.Fatal("expected CanRead to deny TOOL_ENTITY without authentication in dev profile")
+	if err != nil {
+		t.Fatalf("expected CanRead to succeed for TOOL_ENTITY in dev profile with SAT_ON=true, got: %v", err)
 	}
 }
