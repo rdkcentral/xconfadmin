@@ -86,7 +86,7 @@ func GetEstbLastlogPath(w http.ResponseWriter, r *http.Request) {
 	if lastConfigLog != nil {
 		if !strings.EqualFold(lastConfigLog.TenantId, tenantId) {
 			log.Errorf("Tenant ID mismatch: expected %s, got %s", tenantId, lastConfigLog.TenantId)
-			xhttp.WriteXconfResponseAsText(w, http.StatusForbidden, []byte("tenant ID mismatch"))
+			xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "Tenant ID mismatch")
 			return
 		}
 		logPreDisplayCleanup(lastConfigLog)
@@ -129,7 +129,7 @@ func GetEstbChangelogsPath(w http.ResponseWriter, r *http.Request) {
 		// if config change logs are found, but none belong to the current tenant, return a 403
 		if len(cleanedConfigChangeLogs) == 0 {
 			log.Debugf("Config change logs are not found for mac %s", mac)
-			xhttp.WriteXconfResponse(w, http.StatusForbidden, []byte("tenant ID mismatch"))
+			xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "Tenant ID mismatch")
 			return
 		}
 	} else {

@@ -20,24 +20,20 @@ package firmware
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	xutil "github.com/rdkcentral/xconfadmin/util"
 
-	ef "github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
-
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xshared "github.com/rdkcentral/xconfadmin/shared"
-
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	ef "github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	xwshared "github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/util"
-
-	"github.com/rdkcentral/xconfadmin/adminapi/auth"
-	xhttp "github.com/rdkcentral/xconfadmin/http"
-
-	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -64,8 +60,6 @@ func GetFirmwareTestPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantId := xhttp.GetTenantId(r)
-
 	// Extract the search parameters from query params
 	context := make(map[string]string)
 	xutil.AddQueryParamsToContextMap(r, context)
@@ -75,6 +69,15 @@ func GetFirmwareTestPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xhttp.GetTenantId(r)
+	if context[xwcommon.PARTNER_ID] != "" {
+		tenantIdFromPartner := xwhttp.ResolveTenantIdFromPartner(context[xwcommon.PARTNER_ID])
+		if !strings.EqualFold(tenantId, tenantIdFromPartner) {
+			log.Errorf("Tenant ID mismatch: expected %s, got %s from partnerId", tenantId, tenantIdFromPartner)
+			xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "Tenant ID mismatch")
+			return
+		}
+	}
 	context[xwcommon.TENANT_ID] = tenantId
 
 	// If input has any of these search-paramters, validate their values

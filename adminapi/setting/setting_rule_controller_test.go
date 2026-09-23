@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/stretchr/testify/assert"
@@ -405,43 +407,88 @@ func TestUpdateSettingRulesPackageHandler(t *testing.T) {
 }
 
 func TestSettingTestPageHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "/setting-test", nil)
-	recorder := httptest.NewRecorder()
-	w := xwhttp.NewXResponseWriter(recorder)
-	ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
-	req = req.WithContext(ctx)
+	t.Run("MissingSettingType", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/setting-test", nil)
+		recorder := httptest.NewRecorder()
+		w := xwhttp.NewXResponseWriter(recorder)
+		ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
+		req = req.WithContext(ctx)
 
-	defer func() {
-		if r := recover(); r != nil {
-			t.Logf("Expected panic due to database not configured: %v", r)
+		SettingTestPageHandler(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Status())
+	})
+
+	t.Run("ResponseWriterCastError", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/setting-test?settingType=PARTNER_SETTINGS", nil)
+		recorder := httptest.NewRecorder()
+		ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
+		req = req.WithContext(ctx)
+
+		SettingTestPageHandler(recorder, req)
+		assert.Equal(t, http.StatusInternalServerError, recorder.Code)
+	})
+
+	t.Run("InvalidJSON", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/setting-test?settingType=PARTNER_SETTINGS", nil)
+		recorder := httptest.NewRecorder()
+		w := xwhttp.NewXResponseWriter(recorder)
+		ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
+		req = req.WithContext(ctx)
+		w.SetBody(`{"invalid": json}`)
+
+		SettingTestPageHandler(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Status())
+	})
+
+	t.Run("InvalidMACContext", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/setting-test?settingType=PARTNER_SETTINGS", nil)
+		recorder := httptest.NewRecorder()
+		w := xwhttp.NewXResponseWriter(recorder)
+		ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
+		req = req.WithContext(ctx)
+
+		invalidContext := map[string]string{
+			"estbMacAddress": "invalid-mac-format",
 		}
-	}()
-	SettingTestPageHandler(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Status())
+		jsonBody, _ := json.Marshal(invalidContext)
+		w.SetBody(string(jsonBody))
 
-	// ResponseWriter cast error
-	req = httptest.NewRequest(http.MethodPost, "/setting-test?settingType=PARTNER_SETTINGS", nil)
-	req = req.WithContext(ctx)
-	SettingTestPageHandler(recorder, req)
-	assert.Equal(t, http.StatusBadRequest, recorder.Code)
+		SettingTestPageHandler(w, req)
+		assert.True(t, w.Status() >= 400)
+	})
 
-	// Invalid JSON
-	w.SetBody(`{"invalid": json}`)
-	SettingTestPageHandler(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Status())
+	t.Run("TenantIDMismatch", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/setting-test?settingType=PARTNER_SETTINGS", nil)
+		recorder := httptest.NewRecorder()
+		w := xwhttp.NewXResponseWriter(recorder)
+		ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
+		ctx = context.WithValue(ctx, xhttp.CTX_KEY_TENANT_ID, "NON_DEFAULT_TENANT")
+		req = req.WithContext(ctx)
 
-	// Set context with invalid MAC address format to trigger normalization error
-	invalidContext := map[string]string{
-		"estbMacAddress": "invalid-mac-format",
-	}
-	jsonBody4, _ := json.Marshal(invalidContext)
-	w.SetBody(string(jsonBody4))
+		mismatchContext := map[string]string{xwcommon.PARTNER_ID: "some-partner-without-tenant-match"}
+		jsonBody, _ := json.Marshal(mismatchContext)
+		w.SetBody(string(jsonBody))
 
-	SettingTestPageHandler(w, req)
-	assert.True(t, w.Status() >= 400)
+		SettingTestPageHandler(w, req)
+		assert.Equal(t, http.StatusForbidden, w.Status())
+		assert.True(t, strings.Contains(recorder.Body.String(), "Tenant ID mismatch"))
+	})
 
-	// Empty body
-	w.SetBody("")
-	SettingTestPageHandler(w, req)
-	assert.True(t, w.Status() >= 200, "Should handle empty body")
+	t.Run("EmptyBody", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Logf("Expected panic due to database not configured: %v", r)
+			}
+		}()
+
+		req := httptest.NewRequest(http.MethodPost, "/setting-test?settingType=PARTNER_SETTINGS", nil)
+		recorder := httptest.NewRecorder()
+		w := xwhttp.NewXResponseWriter(recorder)
+		ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
+		req = req.WithContext(ctx)
+		w.SetBody("")
+
+		SettingTestPageHandler(w, req)
+		assert.True(t, w.Status() >= 200, "Should handle empty body")
+	})
 }

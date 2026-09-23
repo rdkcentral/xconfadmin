@@ -21,19 +21,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-
-	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-	dcmlogupload "github.com/rdkcentral/xconfwebconfig/dataapi/dcm/logupload"
+	"strings"
 
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	"github.com/rdkcentral/xconfwebconfig/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/dataapi"
+	dcmlogupload "github.com/rdkcentral/xconfwebconfig/dataapi/dcm/logupload"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	logupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/rdkcentral/xconfwebconfig/util"
-
-	"github.com/rdkcentral/xconfwebconfig/dataapi"
-	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -49,22 +47,34 @@ func DcmTestPageHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusInternalServerError, "responsewriter cast error"))
 		return
 	}
-	searchContext := make(map[string]string)
-	if err := json.Unmarshal([]byte(xw.Body()), &searchContext); err != nil {
-		response := "Unable to extract searchContext from json file:" + err.Error()
-		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(response))
+
+	contextMap := make(map[string]string)
+	if err := json.Unmarshal([]byte(xw.Body()), &contextMap); err != nil {
+		response := "Unable to extract context from json file:" + err.Error()
+		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
-	dataapi.NormalizeCommonContext(searchContext, common.ESTB_MAC_ADDRESS, common.ECM_MAC_ADDRESS)
+	dataapi.NormalizeCommonContext(contextMap, common.ESTB_MAC_ADDRESS, common.ECM_MAC_ADDRESS)
 
-	searchContext[xwcommon.APPLICATION_TYPE] = applicationType
+	tenantId := xhttp.GetTenantId(r)
+	if contextMap[xwcommon.PARTNER_ID] != "" {
+		tenantIdFromPartner := xwhttp.ResolveTenantIdFromPartner(contextMap[xwcommon.PARTNER_ID])
+		if !strings.EqualFold(tenantId, tenantIdFromPartner) {
+			log.Errorf("Tenant ID mismatch: expected %s, got %s from partnerId", tenantId, tenantIdFromPartner)
+			xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "Tenant ID mismatch")
+			return
+		}
+	}
+	contextMap[xwcommon.TENANT_ID] = tenantId
+	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
+
 	fields := log.Fields{}
 	logUploadRuleBase := dcmlogupload.NewLogUploadRuleBase()
-	eval := logUploadRuleBase.Eval(searchContext, fields)
+	eval := logUploadRuleBase.Eval(contextMap, fields)
 
 	allSettings := make(map[string]interface{})
-	allSettings["context"] = searchContext
+	allSettings["context"] = contextMap
 	if eval == nil || eval.RuleIDs == nil || len(eval.RuleIDs) == 0 {
 		response, err := util.JSONMarshal(allSettings)
 		if err != nil {
