@@ -199,40 +199,53 @@ func ValidateAndGetLoginToken(authToken string) (*LoginToken, error) {
 	if authToken == "" {
 		return nil, errors.New("auth token is empty")
 	}
-	var publicKey *rsa.PublicKey
-	var token *jwt.Token
-	var err error
-	// first parse without validation to get the public key information
-	jwtToken, _ := jwt.Parse(authToken, nil)
-	if jwtToken == nil {
-		return nil, errors.New("error parsing auth token")
-	}
 	if common.AuthProvider != "acl" {
-		publicKey = getPublicKey(jwtToken.Header)
-		if publicKey == nil {
-			return nil, errors.New("error getting public key")
+		if WebConfServer == nil || WebConfServer.IdpServiceConnector == nil {
+			return nil, errors.New("trusted IdP JWT configuration is missing")
 		}
-		// parse and validate
-		token, err = jwt.Parse(authToken, func(token *jwt.Token) (interface{}, error) {
+		idpConfig := WebConfServer.IdpServiceConnector.GetIdpServiceConfig()
+		if idpConfig == nil ||
+			idpConfig.JWKSURL == "" ||
+			idpConfig.Issuer == "" ||
+			idpConfig.Audience == "" ||
+			len(idpConfig.AllowedAlgs) == 0 {
+			return nil, errors.New("trusted IdP JWT configuration is missing")
+		}
+
+		token, err := jwt.Parse(authToken, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+				return nil, errors.New("JWT signing method is not RSA")
+			}
+			publicKey := getPublicKey(token.Header)
+			if publicKey == nil {
+				return nil, errors.New("error getting public key")
+			}
 			return publicKey, nil
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error parsing auth token with public key: %s", err.Error())
 		}
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok || !token.Valid {
+			return nil, errors.New("error getting claims from auth token")
+		}
+		if !claims.VerifyIssuer(idpConfig.Issuer, true) || !claims.VerifyAudience(idpConfig.Audience, true) {
+			return nil, errors.New("auth token issuer or audience is not trusted")
+		}
+		return NewLoginToken(claims), nil
 	} else {
-		token, err = jwt.Parse(authToken, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.Parse(authToken, func(token *jwt.Token) (interface{}, error) {
 			return []byte("xconf"), nil
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error parsing auth token with public key: %s", err.Error())
 		}
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok || !token.Valid {
+			return nil, errors.New("error getting claims from auth token")
+		}
+		return NewLoginToken(claims), nil
 	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || !token.Valid {
-		return nil, errors.New("error getting claims from auth token")
-	}
-	return NewLoginToken(claims), nil
 }
 
 func NewLoginToken(claims jwt.MapClaims) *LoginToken {
@@ -411,27 +424,29 @@ func getSubjectAndCapabilitiesFromSatToken(token string, verifyStageHost bool) (
 
 func getJsonWebKey(header map[string]interface{}) *JsonWebKey {
 	var kid string
-	if val, ok := header["kid"]; ok {
-		kid = val.(string)
+	if val, ok := header["kid"].(string); ok {
+		kid = val
 	} else {
 		log.Errorf("kid attribute not found")
 		return nil
 	}
 
-	if val, ok := WebConfServer.IdpServiceConnector.GetIdpServiceConfig().KidMap.Load(kid); ok {
-		log.Debugf("kid=%s, fetched=cached", kid)
-		jsonWebKey := val.(JsonWebKey)
-		return &jsonWebKey
-	}
-	// if kid not in KidMap, try to get public key url from jku in header
-	var url string
-	if val, ok := header["jku"]; ok {
-		url = val.(string)
-	} else {
-		log.Errorf("jku attribute not found")
+	idpConfig := WebConfServer.IdpServiceConnector.GetIdpServiceConfig()
+	if idpConfig == nil || idpConfig.JWKSURL == "" {
+		log.Errorf("trusted JWKS URL is not configured")
 		return nil
 	}
-	jsonWebKeyResponse := WebConfServer.IdpServiceConnector.GetJsonWebKeyResponse(url)
+
+	// todo remove the code since we don't want to store in cache
+	// if val, ok := idpConfig.KidMap.Load(kid); ok {
+	// 	log.Debugf("kid=%s, fetched=cached", kid)
+	// 	jsonWebKey, ok := val.(JsonWebKey)
+	// 	if ok {
+	// 		return &jsonWebKey
+	// 	}
+	// }
+
+	jsonWebKeyResponse := WebConfServer.IdpServiceConnector.GetJsonWebKeyResponse(idpConfig.JWKSURL)
 	if jsonWebKeyResponse != nil {
 		jsonWebKeyList := jsonWebKeyResponse.Keys
 		for _, jsonWebKey := range jsonWebKeyList {
@@ -443,7 +458,7 @@ func getJsonWebKey(header map[string]interface{}) *JsonWebKey {
 		}
 	}
 
-	log.Errorf("kid=%s, not found in cache or url", kid)
+	log.Errorf("kid=%s, not found in url", kid)
 	return nil
 }
 
