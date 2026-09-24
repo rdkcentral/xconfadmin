@@ -97,6 +97,7 @@ type TagMissingStat struct {
 // TagSyncRun is the persisted record of one run, saved every checkpoint
 // interval so it doubles as the status endpoint's progress view.
 type TagSyncRun struct {
+	TenantId        string            `json:"tenantId"`
 	RunId           string            `json:"runId"`
 	Mode            TagSyncMode       `json:"mode"`
 	State           string            `json:"state"`
@@ -119,8 +120,9 @@ type TagSyncRun struct {
 
 // tagSyncBusyError maps to 409 at the trigger endpoint.
 type tagSyncBusyError struct {
-	RunId string
-	Owner string
+	TenantId string
+	RunId    string
+	Owner    string
 }
 
 func (e *tagSyncBusyError) Error() string {
@@ -149,6 +151,7 @@ func tagSyncStoreError(op string, err error) error {
 
 // tagSyncEnv is the seam tests swap fakes into.
 type tagSyncEnv struct {
+	tenantId             string
 	getAllTagIds         func() ([]string, error)
 	getPopulatedBuckets  func(tagId string) ([]int, error)
 	getMembersFromBucket func(tagId string, bucketId int, lastMember string, limit int) ([]string, error)
@@ -166,6 +169,7 @@ func newTagSyncEnv(tenantId string) (*tagSyncEnv, error) {
 			"tag sync: server not initialized")
 	}
 	return &tagSyncEnv{
+		tenantId: tenantId,
 		getAllTagIds: func() ([]string, error) {
 			return GetAllTagIds(tenantId)
 		},
@@ -236,6 +240,10 @@ func PrepareTagSync(opts TagSyncOptions, tenantId string) (*tagSyncEngine, error
 	if err := validateTagSyncOptions(&opts); err != nil {
 		return nil, err
 	}
+	tenantId = strings.TrimSpace(tenantId)
+	if tenantId == "" {
+		return nil, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "tenantId is required")
+	}
 	env, err := newTagSyncEnv(tenantId)
 	if err != nil {
 		return nil, err
@@ -295,7 +303,7 @@ func prepareTagSync(opts TagSyncOptions, env *tagSyncEnv) (*tagSyncEngine, error
 
 	var run *TagSyncRun
 	if opts.Resume {
-		resumed, err := findResumableRun(env.dao)
+		resumed, err := findResumableRun(env.dao, env.tenantId)
 		if err != nil {
 			return nil, err
 		}
@@ -311,6 +319,7 @@ func prepareTagSync(opts TagSyncOptions, env *tagSyncEnv) (*tagSyncEngine, error
 				fmt.Sprintf("tags filter cannot change on resume: run %s recorded %v", resumed.RunId, resumed.Options.Tags))
 		}
 		run = resumed
+		run.TenantId = env.tenantId
 		run.State = TagSyncStateRunning
 		run.AbortReason = ""
 		run.CompletedAt = nil
@@ -331,6 +340,7 @@ func prepareTagSync(opts TagSyncOptions, env *tagSyncEnv) (*tagSyncEngine, error
 	} else {
 		now := time.Now().UTC()
 		run = &TagSyncRun{
+			TenantId:  env.tenantId,
 			RunId:     fmt.Sprintf("%s-%s", now.Format("20060102-150405"), uuid.New().String()[:8]),
 			Mode:      opts.Mode,
 			State:     TagSyncStateRunning,
@@ -341,11 +351,11 @@ func prepareTagSync(opts TagSyncOptions, env *tagSyncEnv) (*tagSyncEngine, error
 		}
 	}
 
-	if err := acquireTagSyncLock(env.dao, owner, run.RunId); err != nil {
+	if err := acquireTagSyncLock(env.dao, env.tenantId, owner, run.RunId); err != nil {
 		return nil, err
 	}
-	if err := env.dao.saveRun(run); err != nil {
-		releaseTagSyncLock(env.dao, owner, run.RunId)
+	if err := env.dao.saveRun(env.tenantId, run); err != nil {
+		releaseTagSyncLock(env.dao, env.tenantId, owner, run.RunId)
 		return nil, tagSyncStoreError("run save", err)
 	}
 
@@ -364,9 +374,9 @@ func prepareTagSync(opts TagSyncOptions, env *tagSyncEnv) (*tagSyncEngine, error
 	}, nil
 }
 
-func findResumableRun(dao tagSyncDao) (*TagSyncRun, error) {
+func findResumableRun(dao tagSyncDao, tenantId string) (*TagSyncRun, error) {
 	// A resumable run stays resumable while its record survives pruning.
-	runs, err := dao.listRuns(tagSyncRunHistoryKeep)
+	runs, err := dao.listRuns(tenantId, tagSyncRunHistoryKeep)
 	if err != nil {
 		return nil, tagSyncStoreError("run list", err)
 	}
@@ -383,15 +393,15 @@ func findResumableRun(dao tagSyncDao) (*TagSyncRun, error) {
 		"no resumable tag sync run to resume")
 }
 
-func acquireTagSyncLock(dao tagSyncDao, owner string, runId string) error {
+func acquireTagSyncLock(dao tagSyncDao, tenantId string, owner string, runId string) error {
 	existing, err := dao.getLock()
 	if err != nil {
 		return tagSyncStoreError("lock read", err)
 	}
 	if existing != nil && !existing.Released && time.Since(existing.HeartbeatAt) < tagSyncLockStaleAfter {
-		return &tagSyncBusyError{RunId: existing.RunId, Owner: existing.Owner}
+		return &tagSyncBusyError{TenantId: existing.TenantId, RunId: existing.RunId, Owner: existing.Owner}
 	}
-	mine := &TagSyncLock{Owner: owner, RunId: runId, HeartbeatAt: time.Now().UTC()}
+	mine := &TagSyncLock{TenantId: tenantId, Owner: owner, RunId: runId, HeartbeatAt: time.Now().UTC()}
 	if err := dao.saveLock(mine); err != nil {
 		return tagSyncStoreError("lock write", err)
 	}
@@ -404,7 +414,7 @@ func acquireTagSyncLock(dao tagSyncDao, owner string, runId string) error {
 		return errors.New("tag sync lock vanished after write")
 	}
 	if current.Owner != owner || current.RunId != runId {
-		return &tagSyncBusyError{RunId: current.RunId, Owner: current.Owner}
+		return &tagSyncBusyError{TenantId: current.TenantId, RunId: current.RunId, Owner: current.Owner}
 	}
 	return nil
 }
@@ -412,7 +422,7 @@ func acquireTagSyncLock(dao tagSyncDao, owner string, runId string) error {
 // Releases only a lock this run still holds: the row is one cell every
 // instance overwrites, so releasing after a takeover would hand a third run a
 // free pass over a walk still in progress.
-func releaseTagSyncLock(dao tagSyncDao, owner string, runId string) {
+func releaseTagSyncLock(dao tagSyncDao, tenantId string, owner string, runId string) {
 	current, err := dao.getLock()
 	if err != nil {
 		log.Errorf("tag sync lock read before release failed (goes stale in %v): %v", tagSyncLockStaleAfter, err)
@@ -422,7 +432,7 @@ func releaseTagSyncLock(dao tagSyncDao, owner string, runId string) {
 		log.Warnf("tag sync lock is held by runId=%s owner=%s; runId=%s leaves it alone", current.RunId, current.Owner, runId)
 		return
 	}
-	if err := dao.saveLock(&TagSyncLock{Owner: owner, RunId: runId, HeartbeatAt: time.Now().UTC(), Released: true}); err != nil {
+	if err := dao.saveLock(&TagSyncLock{TenantId: tenantId, Owner: owner, RunId: runId, HeartbeatAt: time.Now().UTC(), Released: true}); err != nil {
 		log.Errorf("tag sync lock release failed (goes stale in %v): %v", tagSyncLockStaleAfter, err)
 	}
 }
@@ -439,7 +449,7 @@ func (e *tagSyncEngine) Execute(ctx context.Context) *TagSyncRun {
 		// resurrects the lock as live-unreleased.
 		close(hbStop)
 		<-hbDone
-		releaseTagSyncLock(e.env.dao, e.run.Owner, e.run.RunId)
+		releaseTagSyncLock(e.env.dao, e.run.TenantId, e.run.Owner, e.run.RunId)
 		tagSyncRunningGauge.Set(0)
 		tagSyncRunDurationSeconds.Set(time.Since(start).Seconds())
 	}()
@@ -558,7 +568,7 @@ func (e *tagSyncEngine) heartbeatLoop(stop <-chan struct{}, done chan<- struct{}
 				e.mu.Unlock()
 				return
 			}
-			lock := &TagSyncLock{Owner: e.run.Owner, RunId: e.run.RunId, HeartbeatAt: time.Now().UTC()}
+			lock := &TagSyncLock{TenantId: e.run.TenantId, Owner: e.run.Owner, RunId: e.run.RunId, HeartbeatAt: time.Now().UTC()}
 			if err := e.env.dao.saveLock(lock); err != nil {
 				// checkAbort stops the walk once these span a full window.
 				e.logf(log.WarnLevel, "tag sync heartbeat save failed: %v", err)
@@ -973,7 +983,7 @@ func (e *tagSyncEngine) saveRun() TagSyncRun {
 	e.mu.Unlock()
 
 	tagSyncMissingRate.Set(snapshot.MissingRate)
-	if err := e.env.dao.saveRun(&snapshot); err != nil {
+	if err := e.env.dao.saveRun(snapshot.TenantId, &snapshot); err != nil {
 		e.logf(log.WarnLevel, "tag sync run save failed: %v", err)
 	}
 	return snapshot
@@ -1051,7 +1061,7 @@ func (e *tagSyncEngine) finalize(state string, abortReason string, limited bool)
 
 	snapshot := e.saveRun()
 	// Run ids are time-prefixed, so lexical pruning keeps the newest.
-	if err := e.env.dao.pruneRuns(tagSyncRunHistoryKeep); err != nil {
+	if err := e.env.dao.pruneRuns(snapshot.TenantId, tagSyncRunHistoryKeep); err != nil {
 		e.logf(log.WarnLevel, "tag sync run history prune failed: %v", err)
 	}
 	return snapshot
