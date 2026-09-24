@@ -1,6 +1,7 @@
 package queries
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -213,6 +214,23 @@ func TestFilteredWithPageAndTestPageHandlers(t *testing.T) {
 	xwTP.SetBody(string(cb))
 	FeatureRuleTestPageHandler(xwTP, rTP)
 	assert.Equal(t, http.StatusOK, rrTPNative.Code)
+}
+
+func TestFeatureRuleTestPageHandler_TenantIDMismatch(t *testing.T) {
+	rTP := httptest.NewRequest("POST", "/featureRules/testPage?applicationType=stb", nil)
+	ctx := context.WithValue(rTP.Context(), xhttp.CTX_KEY_TENANT_ID, "NON_DEFAULT_TENANT")
+	rTP = rTP.WithContext(ctx)
+
+	ctxBody := map[string]string{"partnerId": "some-partner-without-tenant-match"}
+	cb, _ := json.Marshal(ctxBody)
+	rrTPNative := httptest.NewRecorder()
+	xwTP := xwhttp.NewXResponseWriter(rrTPNative)
+	xwTP.SetBody(string(cb))
+
+	FeatureRuleTestPageHandler(xwTP, rTP)
+
+	assert.Equal(t, http.StatusForbidden, rrTPNative.Code)
+	assert.Contains(t, rrTPNative.Body.String(), "Tenant ID mismatch")
 }
 
 func TestPackFeaturePriorities(t *testing.T) {
