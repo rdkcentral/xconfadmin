@@ -123,20 +123,22 @@ func NewAuthResponse(r *http.Request) *AuthResponse {
 
 func NewErasedAuthTokenCookie() *http.Cookie {
 	c := &http.Cookie{
-		Name:   AUTH_TOKEN,
-		Value:  "",
-		Path:   "/",
-		MaxAge: 0,
+		Name:     AUTH_TOKEN,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   0,
+		SameSite: http.SameSiteStrictMode, // CSRF (CWE-352): withhold cookie from cross-site requests
 	}
 	return c
 }
 
 func NewAuthTokenCookie(token string) *http.Cookie {
 	c := &http.Cookie{
-		Name:   AUTH_TOKEN,
-		Value:  token,
-		Path:   "/",
-		MaxAge: math.MaxInt32,
+		Name:     AUTH_TOKEN,
+		Value:    token,
+		Path:     "/",
+		MaxAge:   math.MaxInt32,
+		SameSite: http.SameSiteStrictMode, // CSRF (CWE-352): withhold cookie from cross-site requests
 	}
 	return c
 }
