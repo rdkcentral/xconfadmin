@@ -4,15 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/rdkcentral/xconfadmin/util"
 
-	"github.com/rdkcentral/xconfwebconfig/db"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
-	core "github.com/rdkcentral/xconfwebconfig/shared"
 	shared "github.com/rdkcentral/xconfwebconfig/shared"
 
 	log "github.com/sirupsen/logrus"
@@ -72,7 +71,7 @@ func SetAppSetting(key string, value interface{}) (*shared.AppSetting, error) {
 		Value:   value,
 	}
 
-	err := db.GetCachedSimpleDao().SetOne(db.TABLE_APP_SETTINGS, setting.ID, &setting)
+	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_APP_SETTINGS, setting.ID, &setting)
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +90,37 @@ func GetBooleanAppSetting(key string, vargs ...bool) bool {
 		return defaultVal
 	}
 
-	setting := inst.(*shared.AppSetting)
-	return setting.Value.(bool)
+	setting, ok := inst.(*shared.AppSetting)
+	if !ok {
+		log.Warn(fmt.Sprintf("AppSetting %s has an unexpected record type; using default %v", key, defaultVal))
+		return defaultVal
+	}
+	return coerceBoolSetting(key, setting.Value, defaultVal)
+}
+
+// coerceBoolSetting tolerates the JSON types operators actually send for a
+// boolean setting: a real bool, a string like "true"/"false", or the numbers
+// 1 and 0. Anything else falls back to the default instead of panicking or
+// being ignored.
+func coerceBoolSetting(key string, value interface{}, defaultVal bool) bool {
+	switch v := value.(type) {
+	case bool:
+		return v
+	case string:
+		if parsed, err := strconv.ParseBool(strings.TrimSpace(v)); err == nil {
+			return parsed
+		}
+	case float64:
+		// encoding/json decodes every JSON number into float64 when the target
+		// is an interface{}, so an operator PUTing 1 or 0 arrives here. Only
+		// those two carry a boolean meaning; any other number is a typo rather
+		// than an intent to flip the setting.
+		if v == 0 || v == 1 {
+			return v == 1
+		}
+	}
+	log.Warn(fmt.Sprintf("AppSetting %s has a non-boolean value %v; using default %v", key, value, defaultVal))
+	return defaultVal
 }
 
 type ResponseEntity struct {
@@ -307,7 +335,7 @@ func DeleteOneEnvironment(id string) error {
 	return nil
 }
 
-func SetOneModel(model *core.Model) (*core.Model, error) {
+func SetOneModel(model *shared.Model) (*shared.Model, error) {
 	model.Updated = util.GetTimestamp()
 	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_MODEL, model.ID, model)
 	if err != nil {
