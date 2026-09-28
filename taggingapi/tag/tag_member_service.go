@@ -186,7 +186,7 @@ func RemoveMembers(tagId string, members []string) error {
 }
 
 func getMembersCountOfBucket(tagId string, bucketId int) (int, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryGetMembersCountByBucket, tagId, strconv.Itoa(bucketId))
+	rows, err := queryRows(QueryGetMembersCountByBucket, tagId, strconv.Itoa(bucketId))
 	if err != nil {
 		return 0, err
 	}
@@ -217,7 +217,7 @@ func removeMembersFromBucket(tagId string, bucketId int, members []string) error
 }
 
 func getPopulatedBuckets(tagId string) ([]int, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryGetPopulatedBuckets, tagId)
+	rows, err := queryRows(QueryGetPopulatedBuckets, tagId)
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +342,7 @@ func getMembersFromBucket(tagId string, bucketId int, lastMember string, limit i
 		args = []string{tagId, strconv.Itoa(bucketId), lastMember, strconv.Itoa(limit)}
 	}
 
-	rows, err := ds.GetSimpleDao().Query(query, args...)
+	rows, err := queryRows(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -719,7 +719,7 @@ func removeMembersFromXDAS(tagId string, members []string) ([]string, error) {
 
 // GetAllTagIds returns all tag IDs from V2 tables
 func GetAllTagIds() ([]string, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryGetAllTagIds)
+	rows, err := queryRows(QueryGetAllTagIds)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tag IDs: %w", err)
 	}

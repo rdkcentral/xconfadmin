@@ -502,6 +502,7 @@ GET /taggingService/tags/sync/status
 | `counts.xdasErrors` | 5xx/transport errors — never counted as missing |
 | `counts.xdasOnlyFieldsSeen` | Distinct XDAS tag fields with no Cassandra counterpart (reported only, never deleted) |
 | `tagsTotal`, `tagsDone`, `tagsWithMissing` | Walk progress by tag |
+| `emptyBuckets` | Buckets listed in `TagBucketMetadata` that had no members when read (a metadata row that outlived its members, or a tag being deleted). They are skipped, and each one is logged with its tag and bucket id |
 | `topMissingTags` | Up to 100 tags with the most missing members, with per-tag checked/missing/pushed counts; refreshed on every checkpoint save |
 | `missingRate` | `(missingField + missingKey) / checked`, refreshed on every checkpoint save so it is live during a run |
 | `abortReason` | Why an aborted run stopped (see [Abort Reasons](#abort-reasons)) |
@@ -606,8 +607,7 @@ checkpoint; a Cassandra page is never walked end to end without those checks.
 | `xdas_unhealthy_consecutive_errors` | Too many XDAS errors in a row | Check XDAS health, then resume |
 | `xdas_unhealthy_error_rate` | XDAS error rate over the window threshold | Check XDAS health, then resume |
 | `cassandra_suspect_no_tags` | The tag census came back empty — indistinguishable from a Cassandra failure | Check Cassandra; re-trigger |
-| `cassandra_suspect_empty_bucket` | A bucket reported as populated returned no members — suspected swallowed Cassandra error (or a concurrent tag deletion) | Resume; it self-heals if the tag was genuinely deleted |
-| `cassandra_error: ...` | Explicit Cassandra error | Check Cassandra, then resume |
+| `cassandra_error: ...` | A Cassandra read failed. The reason carries the driver error, e.g. a timeout | Check Cassandra, then resume |
 
 ---
 
