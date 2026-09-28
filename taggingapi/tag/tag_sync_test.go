@@ -1181,8 +1181,8 @@ func TestTagSyncRunHistoryPruned(t *testing.T) {
 }
 
 func TestTagSyncNoTagsAborts(t *testing.T) {
-	// An empty tag census is indistinguishable from a swallowed Cassandra
-	// failure: abort loudly instead of recording a missingRate=0 all-clear.
+	// An empty tag census is a Cassandra problem: abort loudly instead of
+	// recording a missingRate=0 all-clear.
 	env := newTestEnv(map[string][]string{}, newFakeXdas(), newFakeTagSyncDao())
 	run := execute(t, TagSyncOptions{Mode: TagSyncModeDetect}, env)
 
@@ -1190,22 +1190,49 @@ func TestTagSyncNoTagsAborts(t *testing.T) {
 	assert.Equal(t, "cassandra_suspect_no_tags", run.AbortReason)
 }
 
-func TestTagSyncEmptyPopulatedBucketAborts(t *testing.T) {
-	// getPopulatedBuckets reported members but the first page comes back
-	// empty: that smells like a swallowed Cassandra error reading as
-	// end-of-bucket, so the run aborts instead of skipping the bucket.
-	cass := map[string][]string{"tag1": {"M0"}}
+func TestTagSyncSkipsEmptyPopulatedBucket(t *testing.T) {
+	// A metadata row that outlived its members must not block the tag: the
+	// bucket is skipped and counted, the rest of the tag is still walked.
+	all := members("M", 20)
+	cass := map[string][]string{"tag1": all}
 	xdas := newFakeXdas()
-	xdas.records["M0"] = map[string]string{"t_tag1": ""}
+	used := make(map[int]bool)
+	for _, m := range all {
+		xdas.records[m] = map[string]string{"t_tag1": ""}
+		used[getBucketId(m)] = true
+	}
+	stale := 0
+	for used[stale] {
+		stale++
+	}
 
 	env := newTestEnv(cass, xdas, newFakeTagSyncDao())
+	listed := env.getPopulatedBuckets
+	env.getPopulatedBuckets = func(tagId string) ([]int, error) {
+		buckets, err := listed(tagId)
+		return append(buckets, stale), err
+	}
+	run := execute(t, TagSyncOptions{Mode: TagSyncModeDetect}, env)
+
+	assert.Equal(t, TagSyncStateCompleted, run.State)
+	assert.Equal(t, 1, run.EmptyBuckets)
+	assert.Equal(t, int64(20), run.Counts.Checked)
+}
+
+func TestTagSyncBucketReadErrorAborts(t *testing.T) {
+	// A failed read aborts with the driver's error, so it is never mistaken
+	// for an empty bucket and skipped.
+	cass := map[string][]string{"tag1": members("M", 20)}
+	env := newTestEnv(cass, newFakeXdas(), newFakeTagSyncDao())
 	env.getMembersFromBucket = func(tagId string, bucketId int, lastMember string, limit int) ([]string, error) {
-		return nil, nil
+		return nil, errors.New("gocql: no response received from cassandra within timeout period")
 	}
 	run := execute(t, TagSyncOptions{Mode: TagSyncModeDetect}, env)
 
 	assert.Equal(t, TagSyncStateAborted, run.State)
-	assert.Equal(t, "cassandra_suspect_empty_bucket", run.AbortReason)
+	assert.Contains(t, run.AbortReason, "cassandra_error: members of tag tag1 bucket")
+	assert.Contains(t, run.AbortReason, "within timeout period")
+	assert.Equal(t, 0, run.EmptyBuckets)
 }
 
 func TestTagSyncHeartbeatIndependentOfChunkPace(t *testing.T) {

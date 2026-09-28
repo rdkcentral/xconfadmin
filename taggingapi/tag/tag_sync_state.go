@@ -70,7 +70,7 @@ func (tagSyncDaoImpl) saveRun(run *TagSyncRun) error {
 }
 
 func (tagSyncDaoImpl) getRun(runId string) (*TagSyncRun, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryTagSyncStateGet, tagSyncRunKey, runId)
+	rows, err := queryRows(QueryTagSyncStateGet, tagSyncRunKey, runId)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (tagSyncDaoImpl) getRun(runId string) (*TagSyncRun, error) {
 }
 
 func (tagSyncDaoImpl) listRuns(limit int) ([]*TagSyncRun, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryTagSyncStateListNewest, tagSyncRunKey, strconv.Itoa(limit))
+	rows, err := queryRows(QueryTagSyncStateListNewest, tagSyncRunKey, strconv.Itoa(limit))
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (tagSyncDaoImpl) listRuns(limit int) ([]*TagSyncRun, error) {
 // pruneRuns works on raw column1 ids (not unmarshalled records) so corrupt
 // rows are pruned too instead of surviving forever.
 func (tagSyncDaoImpl) pruneRuns(keep int) error {
-	rows, err := ds.GetSimpleDao().Query(QueryTagSyncStateList, tagSyncRunKey)
+	rows, err := queryRows(QueryTagSyncStateList, tagSyncRunKey)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (tagSyncDaoImpl) pruneRuns(keep int) error {
 }
 
 func (tagSyncDaoImpl) getLock() (*TagSyncLock, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryTagSyncStateGet, tagSyncControlKey, tagSyncLockColumn)
+	rows, err := queryRows(QueryTagSyncStateGet, tagSyncControlKey, tagSyncLockColumn)
 	if err != nil {
 		return nil, err
 	}
