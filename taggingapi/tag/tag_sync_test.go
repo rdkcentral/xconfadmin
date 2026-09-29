@@ -29,6 +29,7 @@ type fakeTagSyncDao struct {
 	lock       *TagSyncLock
 	lockWrites []time.Time
 	getLockErr error
+	getRunErr  error
 }
 
 func newFakeTagSyncDao() *fakeTagSyncDao {
@@ -46,6 +47,9 @@ func (s *fakeTagSyncDao) saveRun(run *TagSyncRun) error {
 func (s *fakeTagSyncDao) getRun(runId string) (*TagSyncRun, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.getRunErr != nil {
+		return nil, s.getRunErr
+	}
 	if run, ok := s.runs[runId]; ok {
 		copied := *run
 		return &copied, nil
@@ -597,6 +601,36 @@ func TestTagSyncStatusDoesNotLeakDriverDetail(t *testing.T) {
 	dao.getLockErr = errors.New("gocql: no hosts available in the pool: 10.0.0.7:9042 keyspace ApplicationsDiscoveryDataService")
 
 	_, _, err := loadTagSyncStatus(dao)
+
+	if assert.Error(t, err) {
+		assert.Equal(t, "tag sync state store unavailable", err.Error())
+		assert.NotContains(t, err.Error(), "10.0.0.7")
+		assert.Equal(t, http.StatusInternalServerError, xwcommon.GetXconfErrorStatusCode(err))
+	}
+}
+
+func TestTagSyncRunStatusByRunId(t *testing.T) {
+	dao := newFakeTagSyncDao()
+	dao.saveRun(&TagSyncRun{RunId: "20260817-153012-aaaa", State: TagSyncStateCompleted})
+	dao.saveRun(&TagSyncRun{RunId: "20260818-090000-bbbb", State: TagSyncStateAborted})
+
+	run, err := loadTagSyncRun(dao, "20260817-153012-aaaa")
+	assert.NoError(t, err)
+	if assert.NotNil(t, run) {
+		assert.Equal(t, "20260817-153012-aaaa", run.RunId)
+		assert.Equal(t, TagSyncStateCompleted, run.State)
+	}
+
+	run, err = loadTagSyncRun(dao, "20260101-000000-none")
+	assert.NoError(t, err)
+	assert.Nil(t, run)
+}
+
+func TestTagSyncRunStatusDoesNotLeakDriverDetail(t *testing.T) {
+	dao := newFakeTagSyncDao()
+	dao.getRunErr = errors.New("gocql: no hosts available in the pool: 10.0.0.7:9042 keyspace ApplicationsDiscoveryDataService")
+
+	_, err := loadTagSyncRun(dao, "20260817-153012-aaaa")
 
 	if assert.Error(t, err) {
 		assert.Equal(t, "tag sync state store unavailable", err.Error())

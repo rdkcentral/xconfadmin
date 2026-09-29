@@ -10,10 +10,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
+	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -160,6 +162,42 @@ func loadTagSyncStatus(dao tagSyncDao) (*TagSyncRun, []*TagSyncRun, error) {
 		return nil, nil, tagSyncStoreError("status run list", err)
 	}
 	return active, history, nil
+}
+
+// TagSyncRunStatusHandler returns a single run record, for polling one run
+// without the whole history.
+// GET /taggingService/tags/sync/status/{runId}
+func TagSyncRunStatusHandler(w http.ResponseWriter, r *http.Request) {
+	runId := mux.Vars(r)[common.RunId]
+	if runId == "" {
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.RunId)))
+		return
+	}
+	run, err := loadTagSyncRun(newTagSyncDao(), runId)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+	if run == nil {
+		xhttp.WriteXconfResponse(w, http.StatusNotFound,
+			[]byte(fmt.Sprintf("tag sync run %s not found; only the %d most recent runs are kept", runId, tagSyncRunHistoryKeep)))
+		return
+	}
+
+	respBytes, err := json.Marshal(run)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+	xhttp.WriteXconfResponse(w, http.StatusOK, respBytes)
+}
+
+func loadTagSyncRun(dao tagSyncDao, runId string) (*TagSyncRun, error) {
+	run, err := dao.getRun(runId)
+	if err != nil {
+		return nil, tagSyncStoreError("status run read", err)
+	}
+	return run, nil
 }
 
 // AbortTagSyncHandler cancels the run owned by this instance. Runs on other
