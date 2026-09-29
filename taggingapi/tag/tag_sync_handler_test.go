@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/gorilla/mux"
+	"github.com/rdkcentral/xconfadmin/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,4 +29,15 @@ func TestTagSyncTriggerRejectsUnreadableBody(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Contains(t, rec.Body.String(), "request body read error")
 	assert.NotContains(t, rec.Body.String(), "runId", "no run may have been started")
+}
+
+func TestTagSyncRunStatusRejectsMissingRunId(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/taggingService/tags/sync/status/", nil)
+	req = mux.SetURLVars(req, map[string]string{common.RunId: ""})
+	rec := httptest.NewRecorder()
+
+	TagSyncRunStatusHandler(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), common.RunId)
 }

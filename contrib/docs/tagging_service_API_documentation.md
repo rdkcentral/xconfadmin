@@ -17,6 +17,7 @@
    - [Before the first run: create the state table](#before-the-first-run-create-the-state-table)
    - [Trigger Tag Sync](#trigger-tag-sync)
    - [Tag Sync Status](#tag-sync-status)
+   - [Tag Sync Run Status](#tag-sync-run-status)
    - [Abort Tag Sync](#abort-tag-sync)
    - [Kill Switch](#kill-switch)
    - [Push Failures](#push-failures)
@@ -508,6 +509,32 @@ GET /taggingService/tags/sync/status
 | `abortReason` | Why an aborted run stopped (see [Abort Reasons](#abort-reasons)) |
 | `limited` | Run stopped at `maxMembers`; resumable |
 | `resumes` | How many times this record has been resumed |
+
+---
+
+### Tag Sync Run Status
+
+Returns the record of one run, identified by the `runId` from the trigger response. Use it to poll a
+single run instead of reading the whole history.
+
+**Endpoint:**
+```
+GET /taggingService/tags/sync/status/{runId}
+```
+
+**Example:**
+```bash
+curl --location --request GET 'http://<xconf-admin-url>/taggingService/tags/sync/status/20260817-153012-1a2b3c4d' \
+  --header 'Authorization: Bearer <SAT token>'
+```
+
+**Response Status Codes:**
+- `200 OK`: body is the run record (see [Run record fields](#tag-sync-status))
+- `404 Not Found`: no run with that id. Only the 20 most recent runs are kept
+- `500 Internal Server Error`: the run-state store could not be read (generic `tag sync state store unavailable`)
+
+A run whose instance died stays `running` in its record. If `updatedAt` stops advancing, check
+`active` on [Tag Sync Status](#tag-sync-status).
 
 ---
 
