@@ -124,23 +124,7 @@ func TriggerTagSyncHandler(w http.ResponseWriter, r *http.Request) {
 // recent run history, straight from the TagSyncState table.
 // GET /taggingService/tags/sync/status
 func TagSyncStatusHandler(w http.ResponseWriter, r *http.Request) {
-	dao := newTagSyncDao()
-
-	var active *TagSyncRun
-	lock, err := dao.getLock()
-	if err != nil {
-		xhttp.WriteXconfErrorResponse(w, err)
-		return
-	}
-	if lock != nil && !lock.Released && time.Since(lock.HeartbeatAt) < tagSyncLockStaleAfter {
-		active, err = dao.getRun(lock.RunId)
-		if err != nil {
-			xhttp.WriteXconfErrorResponse(w, err)
-			return
-		}
-	}
-
-	history, err := dao.listRuns(10)
+	active, history, err := loadTagSyncStatus(newTagSyncDao())
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -156,6 +140,26 @@ func TagSyncStatusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	xhttp.WriteXconfResponse(w, http.StatusOK, respBytes)
+}
+
+// loadTagSyncStatus returns store errors sanitized like the trigger's: the
+// driver detail stays in the log and never reaches the client.
+func loadTagSyncStatus(dao tagSyncDao) (*TagSyncRun, []*TagSyncRun, error) {
+	lock, err := dao.getLock()
+	if err != nil {
+		return nil, nil, tagSyncStoreError("status lock read", err)
+	}
+	var active *TagSyncRun
+	if lock != nil && !lock.Released && time.Since(lock.HeartbeatAt) < tagSyncLockStaleAfter {
+		if active, err = dao.getRun(lock.RunId); err != nil {
+			return nil, nil, tagSyncStoreError("status run read", err)
+		}
+	}
+	history, err := dao.listRuns(10)
+	if err != nil {
+		return nil, nil, tagSyncStoreError("status run list", err)
+	}
+	return active, history, nil
 }
 
 // AbortTagSyncHandler cancels the run owned by this instance. Runs on other

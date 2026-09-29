@@ -592,6 +592,19 @@ func TestTagSyncStoreErrorDoesNotLeakDriverDetail(t *testing.T) {
 	}
 }
 
+func TestTagSyncStatusDoesNotLeakDriverDetail(t *testing.T) {
+	dao := newFakeTagSyncDao()
+	dao.getLockErr = errors.New("gocql: no hosts available in the pool: 10.0.0.7:9042 keyspace ApplicationsDiscoveryDataService")
+
+	_, _, err := loadTagSyncStatus(dao)
+
+	if assert.Error(t, err) {
+		assert.Equal(t, "tag sync state store unavailable", err.Error())
+		assert.NotContains(t, err.Error(), "10.0.0.7")
+		assert.Equal(t, http.StatusInternalServerError, xwcommon.GetXconfErrorStatusCode(err))
+	}
+}
+
 func TestTagSyncResumeBehindManyFinishedRuns(t *testing.T) {
 	// The aborted run is older than a full status page of completed runs, but
 	// still inside the retained history, so resume must reach it.
