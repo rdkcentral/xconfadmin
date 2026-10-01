@@ -502,7 +502,10 @@ func (e *tagSyncEngine) finish(err error) {
 	case errors.As(err, &abort):
 		e.finishAborted(abort.reason)
 	default:
-		e.finishAborted("cassandra_error: " + err.Error())
+		// The reason is served by the status endpoints, and driver errors can
+		// name hosts and keyspaces: the detail goes to the log only.
+		e.logf(log.ErrorLevel, "tag sync: cassandra read failed: %v", err)
+		e.finishAborted("cassandra_error")
 	}
 }
 
@@ -606,7 +609,7 @@ func (e *tagSyncEngine) walkTag(ctx context.Context, tagId string, perTag *TagMi
 					e.mu.Lock()
 					e.run.EmptyBuckets++
 					e.mu.Unlock()
-					e.logf(log.WarnLevel, "tag sync: tag %s bucket %d is listed in TagBucketMetadata but has no members; skipped",
+					e.logf(log.WarnLevel, "tag sync: tag %s bucket %d is listed in tag_member_metadata but has no members; skipped",
 						tagId, bucketId)
 				}
 				break
