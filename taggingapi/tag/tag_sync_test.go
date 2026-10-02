@@ -1267,18 +1267,18 @@ func TestTagSyncSkipsEmptyPopulatedBucket(t *testing.T) {
 }
 
 func TestTagSyncBucketReadErrorAborts(t *testing.T) {
-	// A failed read aborts with the driver's error, so it is never mistaken
-	// for an empty bucket and skipped.
+	// A failed read aborts, so it is never mistaken for an empty bucket and
+	// skipped. The driver detail stays out of the reason the status serves.
 	cass := map[string][]string{"tag1": members("M", 20)}
 	env := newTestEnv(cass, newFakeXdas(), newFakeTagSyncDao())
 	env.getMembersFromBucket = func(tagId string, bucketId int, lastMember string, limit int) ([]string, error) {
-		return nil, errors.New("gocql: no response received from cassandra within timeout period")
+		return nil, errors.New("gocql: no hosts available in the pool: 10.0.0.7:9042 keyspace xconf")
 	}
 	run := execute(t, TagSyncOptions{Mode: TagSyncModeDetect}, env)
 
 	assert.Equal(t, TagSyncStateAborted, run.State)
-	assert.Contains(t, run.AbortReason, "cassandra_error: members of tag tag1 bucket")
-	assert.Contains(t, run.AbortReason, "within timeout period")
+	assert.Equal(t, "cassandra_error", run.AbortReason)
+	assert.Equal(t, "tag1", run.Checkpoint.TagId)
 	assert.Equal(t, 0, run.EmptyBuckets)
 }
 

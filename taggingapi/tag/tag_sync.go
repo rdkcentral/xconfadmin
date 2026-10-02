@@ -490,7 +490,10 @@ func (e *tagSyncEngine) finish(err error) {
 	case errors.As(err, &abort):
 		e.finishAborted(abort.reason)
 	default:
-		e.finishAborted("cassandra_error: " + err.Error())
+		// The reason is served by the status endpoints, and driver errors can
+		// name hosts and keyspaces: the detail goes to the log only.
+		e.logf(log.ErrorLevel, "tag sync: cassandra read failed: %v", err)
+		e.finishAborted("cassandra_error")
 	}
 }
 
