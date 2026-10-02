@@ -110,6 +110,7 @@ type TagSyncRun struct {
 	TagsTotal       int               `json:"tagsTotal"`
 	TagsDone        int               `json:"tagsDone"`
 	TagsWithMissing int               `json:"tagsWithMissing"`
+	EmptyBuckets    int               `json:"emptyBuckets,omitempty"`
 	TopMissingTags  []TagMissingStat  `json:"topMissingTags,omitempty"`
 	MissingRate     float64           `json:"missingRate"`
 	AbortReason     string            `json:"abortReason,omitempty"`
@@ -188,7 +189,7 @@ func newTagSyncEnv(tenantId string) (*tagSyncEnv, error) {
 			}
 			return GetGroupServiceSyncConnector().AddMembersToTag(normalizedMember, &xdasMembers)
 		},
-		dao: newTagSyncDao(),
+		dao: newTagSyncDao(tenantId),
 		syncEnabled: func() bool {
 			return tagSyncKillSwitchEnabled(tenantId)
 		},
@@ -429,7 +430,7 @@ func releaseTagSyncLock(dao tagSyncDao, owner string, runId string) {
 
 // Execute never returns an error: every outcome is recorded on the run.
 func (e *tagSyncEngine) Execute(ctx context.Context) *TagSyncRun {
-	tagSyncRunningGauge.Set(1)
+	tagSyncRunningGauge.Inc()
 	start := time.Now()
 	hbStop := make(chan struct{})
 	hbDone := make(chan struct{})
@@ -440,7 +441,7 @@ func (e *tagSyncEngine) Execute(ctx context.Context) *TagSyncRun {
 		close(hbStop)
 		<-hbDone
 		releaseTagSyncLock(e.env.dao, e.run.Owner, e.run.RunId)
-		tagSyncRunningGauge.Set(0)
+		tagSyncRunningGauge.Dec()
 		tagSyncRunDurationSeconds.Set(time.Since(start).Seconds())
 	}()
 
@@ -459,9 +460,8 @@ func (e *tagSyncEngine) walk(ctx context.Context) error {
 		return err
 	}
 	if len(allTags) == 0 {
-		// The shared query helper reports errors as empty rows, and this
-		// system always has tags - so this is a swallowed Cassandra failure,
-		// not a real all-clear with missingRate=0.
+		// This system always has tags: an empty census is a Cassandra
+		// problem, not a real all-clear with missingRate=0.
 		return &tagSyncAbort{reason: "cassandra_suspect_no_tags"}
 	}
 	e.knownTags = make(map[string]bool, len(allTags))
@@ -502,7 +502,10 @@ func (e *tagSyncEngine) finish(err error) {
 	case errors.As(err, &abort):
 		e.finishAborted(abort.reason)
 	default:
-		e.finishAborted("cassandra_error: " + err.Error())
+		// The reason is served by the status endpoints, and driver errors can
+		// name hosts and keyspaces: the detail goes to the log only.
+		e.logf(log.ErrorLevel, "tag sync: cassandra read failed: %v", err)
+		e.finishAborted("cassandra_error")
 	}
 }
 
@@ -601,12 +604,13 @@ func (e *tagSyncEngine) walkTag(ctx context.Context, tagId string, perTag *TagMi
 			}
 			if len(chunk) == 0 {
 				if lastMember == "" {
-					// getPopulatedBuckets just reported members here, so an
-					// empty first page is a swallowed Cassandra failure
-					// reading as end-of-bucket. A concurrent tag deletion
-					// also lands here; a resume recomputes and moves on.
-					e.saveRun()
-					return &tagSyncAbort{reason: "cassandra_suspect_empty_bucket"}
+					// Reads report errors, so the bucket really is empty: its
+					// metadata row outlived its members, or the tag is being deleted.
+					e.mu.Lock()
+					e.run.EmptyBuckets++
+					e.mu.Unlock()
+					e.logf(log.WarnLevel, "tag sync: tag %s bucket %d is listed in tag_member_metadata but has no members; skipped",
+						tagId, bucketId)
 				}
 				break
 			}
@@ -1019,10 +1023,10 @@ func containsTagStat(stats []TagMissingStat, tagId string) bool {
 func (e *tagSyncEngine) finishCompleted(limited bool) {
 	run := e.finalize(TagSyncStateCompleted, "", limited)
 	counts := run.Counts
-	e.logf(log.InfoLevel, "tag sync run completed: limited=%v checked=%d present=%d missingField=%d missingKey=%d pushed=%d pushFailed=%d xdasErrors=%d xdasOnlyFields=%d missingRate=%.4f tagsWithMissing=%d",
+	e.logf(log.InfoLevel, "tag sync run completed: limited=%v checked=%d present=%d missingField=%d missingKey=%d pushed=%d pushFailed=%d xdasErrors=%d xdasOnlyFields=%d missingRate=%.4f tagsWithMissing=%d emptyBuckets=%d",
 		limited, counts.Checked, counts.Present, counts.MissingField, counts.MissingKey,
 		counts.Pushed, counts.PushFailed, counts.XdasErrors, counts.XdasOnlyFieldsSeen,
-		run.MissingRate, run.TagsWithMissing)
+		run.MissingRate, run.TagsWithMissing, run.EmptyBuckets)
 	if counts.PushFailed > 0 {
 		// completed is not proof the drift is closed.
 		e.logf(log.WarnLevel, "tag sync: %d member(s) stayed unpushed after %d attempts each; the run completed but did not close their drift - re-run the same mode over the affected tags to retry them",
