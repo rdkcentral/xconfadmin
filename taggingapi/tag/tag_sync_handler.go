@@ -19,12 +19,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// One tag sync run at most per instance; the Cassandra lock guards across
-// instances, this guards within one (and carries the cancel for abort).
+// One tag sync run at most per tenant on this instance, keyed by tenant id;
+// the Cassandra lock guards across instances, this guards within one (and
+// carries the cancel for abort).
+type activeTagSync struct {
+	cancel context.CancelFunc
+	runId  string
+}
+
 var (
-	activeTagSyncMu     sync.Mutex
-	activeTagSyncCancel context.CancelFunc
-	activeTagSyncRunId  string
+	activeTagSyncMu sync.Mutex
+	activeTagSyncs  = map[string]activeTagSync{}
 )
 
 // TriggerTagSyncHandler starts a run in the background (DeleteTagHandler
@@ -58,10 +63,10 @@ func TriggerTagSyncHandler(w http.ResponseWriter, r *http.Request) {
 
 	activeTagSyncMu.Lock()
 	defer activeTagSyncMu.Unlock()
-	if activeTagSyncCancel != nil {
+	if active, ok := activeTagSyncs[tenantId]; ok {
 		respBytes, _ := json.Marshal(map[string]string{
 			"error": "tag sync already running on this instance",
-			"runId": activeTagSyncRunId,
+			"runId": active.runId,
 		})
 		xhttp.WriteXconfResponse(w, http.StatusConflict, respBytes)
 		return
@@ -96,14 +101,12 @@ func TriggerTagSyncHandler(w http.ResponseWriter, r *http.Request) {
 	dryRun := engine.run.Options.DryRun
 
 	ctx, cancel := context.WithCancel(context.Background())
-	activeTagSyncCancel = cancel
-	activeTagSyncRunId = runId
+	activeTagSyncs[tenantId] = activeTagSync{cancel: cancel, runId: runId}
 
 	go func() {
 		defer func() {
 			activeTagSyncMu.Lock()
-			activeTagSyncCancel = nil
-			activeTagSyncRunId = ""
+			delete(activeTagSyncs, tenantId)
 			activeTagSyncMu.Unlock()
 			cancel()
 		}()
@@ -124,10 +127,11 @@ func TriggerTagSyncHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // TagSyncStatusHandler reports the active run (if any, on any instance) and
-// recent run history, straight from the TagSyncState table.
+// the tenant's recent run history, straight from the tag_sync_state table.
 // GET /taggingService/tags/sync/status
 func TagSyncStatusHandler(w http.ResponseWriter, r *http.Request) {
-	active, history, err := loadTagSyncStatus(newTagSyncDao())
+	tenantId := xhttp.GetTenantId(r)
+	active, history, err := loadTagSyncStatus(newTagSyncDao(tenantId))
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -136,7 +140,7 @@ func TagSyncStatusHandler(w http.ResponseWriter, r *http.Request) {
 	respBytes, err := json.Marshal(map[string]interface{}{
 		"active":  active,
 		"history": history,
-		"enabled": tagSyncKillSwitchEnabled(xhttp.GetTenantId(r)),
+		"enabled": tagSyncKillSwitchEnabled(tenantId),
 	})
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
@@ -174,7 +178,7 @@ func TagSyncRunStatusHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.RunId)))
 		return
 	}
-	run, err := loadTagSyncRun(newTagSyncDao(), runId)
+	run, err := loadTagSyncRun(newTagSyncDao(xhttp.GetTenantId(r)), runId)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -201,20 +205,21 @@ func loadTagSyncRun(dao tagSyncDao, runId string) (*TagSyncRun, error) {
 	return run, nil
 }
 
-// AbortTagSyncHandler cancels the run owned by this instance. Runs on other
-// instances are stopped with the TaggingSyncEnabled kill switch instead.
+// AbortTagSyncHandler cancels the tenant's run owned by this instance. Runs on
+// other instances are stopped with the TaggingSyncEnabled kill switch instead.
 // POST /taggingService/tags/sync/abort
 func AbortTagSyncHandler(w http.ResponseWriter, r *http.Request) {
 	activeTagSyncMu.Lock()
 	defer activeTagSyncMu.Unlock()
-	if activeTagSyncCancel == nil {
+	active, ok := activeTagSyncs[xhttp.GetTenantId(r)]
+	if !ok {
 		xhttp.WriteXconfResponse(w, http.StatusNotFound,
-			[]byte("no active tag sync on this instance; to stop a run elsewhere set the TaggingSyncEnabled app setting to false"))
+			[]byte("no active tag sync for this tenant on this instance; to stop a run elsewhere set the TaggingSyncEnabled app setting to false"))
 		return
 	}
-	activeTagSyncCancel()
+	active.cancel()
 	respBytes, _ := json.Marshal(map[string]string{
-		"runId":  activeTagSyncRunId,
+		"runId":  active.runId,
 		"status": "abort requested",
 	})
 	xhttp.WriteXconfResponse(w, http.StatusAccepted, respBytes)

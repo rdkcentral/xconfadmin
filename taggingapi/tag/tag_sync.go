@@ -189,7 +189,7 @@ func newTagSyncEnv(tenantId string) (*tagSyncEnv, error) {
 			}
 			return GetGroupServiceSyncConnector().AddMembersToTag(normalizedMember, &xdasMembers)
 		},
-		dao: newTagSyncDao(),
+		dao: newTagSyncDao(tenantId),
 		syncEnabled: func() bool {
 			return tagSyncKillSwitchEnabled(tenantId)
 		},
@@ -430,7 +430,7 @@ func releaseTagSyncLock(dao tagSyncDao, owner string, runId string) {
 
 // Execute never returns an error: every outcome is recorded on the run.
 func (e *tagSyncEngine) Execute(ctx context.Context) *TagSyncRun {
-	tagSyncRunningGauge.Set(1)
+	tagSyncRunningGauge.Inc()
 	start := time.Now()
 	hbStop := make(chan struct{})
 	hbDone := make(chan struct{})
@@ -441,7 +441,7 @@ func (e *tagSyncEngine) Execute(ctx context.Context) *TagSyncRun {
 		close(hbStop)
 		<-hbDone
 		releaseTagSyncLock(e.env.dao, e.run.Owner, e.run.RunId)
-		tagSyncRunningGauge.Set(0)
+		tagSyncRunningGauge.Dec()
 		tagSyncRunDurationSeconds.Set(time.Since(start).Seconds())
 	}()
 

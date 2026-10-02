@@ -340,22 +340,28 @@ The job is **additive-only**: it never deletes anything from either store. XDAS 
 transport failures) are never counted as missing — only a clean "not found" is. A circuit breaker
 aborts the run if XDAS looks unhealthy — see [Outage Guards](#outage-guards).
 
-Only **one run** can be active across the whole cluster at a time (a Cassandra lock with heartbeat
-enforces this). Progress is checkpointed continuously, so an aborted or crashed run can be resumed
+Only **one run per tenant** can be active across the whole cluster at a time (a per-tenant Cassandra
+lock with heartbeat enforces this). Runs of different tenants can overlap, each with its own `rate`. Progress is checkpointed continuously, so an aborted or crashed run can be resumed
 without re-walking what was already covered.
 
 #### Before the first run: create the state table
 
 Run state (the run records with their checkpoints, and the single-run lock) lives in its own
-Cassandra table, which the service does **not** create. Create it in the XConf keyspace before
-using the sync endpoints, or trigger/status/abort fail with a CQL error:
+Cassandra table, which the service does **not** create. Create it in the `xconf` keyspace before
+using the sync endpoints, or trigger and status fail with `500 tag sync state store unavailable`:
 
 ```sql
-CREATE TABLE IF NOT EXISTS "TagSyncState"
-    (key text, column1 text, value text, PRIMARY KEY ((key), column1));
+CREATE TABLE IF NOT EXISTS xconf.tag_sync_state (
+    tenant_id text,
+    key text,
+    column1 text,
+    value text,
+    PRIMARY KEY ((tenant_id, key), column1)
+);
 ```
 
-The table stays small: run history is pruned to the newest few runs as each run finishes.
+Run records and the single-run lock are kept per tenant, and each tenant's history is pruned to the
+newest few runs as each run finishes.
 
 #### Using `refresh` to resync regions
 
@@ -444,8 +450,8 @@ curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/syn
 - `202 Accepted`: run started in the background
 - `400 Bad Request`: unreadable or malformed body, an invalid `mode`, or a `resume` naming a different `mode` or `tags` than the recorded run
 - `404 Not Found`: `resume: true` with no resumable run in the retained history — trigger a fresh run instead
-- `409 Conflict`: a run is already active (response includes its `runId` and `owner`), or the kill switch is off
-- `500 Internal Server Error`: the run-state store could not be read or written. The body is a generic `tag sync state store unavailable`; the driver detail is in the instance log. Check that the `TagSyncState` table exists (see [Before the first run](#before-the-first-run-create-the-state-table)) and that Cassandra is reachable
+- `409 Conflict`: a run is already active for this tenant (response includes its `runId` and `owner`), or the kill switch is off
+- `500 Internal Server Error`: the run-state store could not be read or written. The body is a generic `tag sync state store unavailable`; the driver detail is in the instance log. Check that the `tag_sync_state` table exists (see [Before the first run](#before-the-first-run-create-the-state-table)) and that Cassandra is reachable
 - `503 Service Unavailable`: this instance has not finished starting. Carries `Retry-After`; retry or use another instance
 
 **Response Body (202):**
@@ -462,7 +468,7 @@ curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/syn
 
 ### Tag Sync Status
 
-Reports the currently active run (on any instance) and recent run history.
+Reports the currently active run (on any instance) and recent run history of the requesting tenant.
 
 **Endpoint:**
 ```
@@ -481,7 +487,7 @@ GET /taggingService/tags/sync/status
 }
 ```
 
-- `active` — the run currently holding the cluster lock, or `null`
+- `active` — the tenant's run currently holding its lock, or `null`
 - `history` — up to 10 most recent runs, newest first (older records are pruned automatically)
 - `enabled` — current kill switch state
 
@@ -540,7 +546,7 @@ A run whose instance died stays `running` in its record. If `updatedAt` stops ad
 
 ### Abort Tag Sync
 
-Cancels the run owned by **this instance**. The run checkpoints and finishes as `aborted`, so it can
+Cancels the requesting tenant's run owned by **this instance**. The run checkpoints and finishes as `aborted`, so it can
 be resumed later.
 
 **Endpoint:**
