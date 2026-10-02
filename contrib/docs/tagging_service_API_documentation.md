@@ -640,7 +640,7 @@ checkpoint; a Cassandra page is never walked end to end without those checks.
 | `xdas_unhealthy_consecutive_errors` | Too many XDAS errors in a row | Check XDAS health, then resume |
 | `xdas_unhealthy_error_rate` | XDAS error rate over the window threshold | Check XDAS health, then resume |
 | `cassandra_suspect_no_tags` | The tag census came back empty — indistinguishable from a Cassandra failure | Check Cassandra; re-trigger |
-| `cassandra_error` | A Cassandra read failed. The driver error is in the instance log under the run's `audit_id`; the checkpoint shows where it stopped | Check Cassandra, then resume |
+| `cassandra_error` | A Cassandra read failed. The driver error is in the instance log (`tag store read failed`); the checkpoint shows where it stopped | Check Cassandra, then resume |
 
 ---
 
