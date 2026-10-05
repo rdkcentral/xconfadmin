@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
@@ -49,15 +50,35 @@ func TestGetSettingRulesAllExport(t *testing.T) {
 	assert.True(t, w.Status() >= 200 || w.Status() >= 400, "Should return valid status code for filtering")
 }
 
+func TestGetSettingRulesAllExportAuthFailureStops(t *testing.T) {
+	originalSatOn := common.SatOn
+	common.SatOn = true
+	defer func() { common.SatOn = originalSatOn }()
+
+	req := httptest.NewRequest(http.MethodGet, "/setting-rules", nil)
+	recorder := httptest.NewRecorder()
+	w := xwhttp.NewXResponseWriter(recorder)
+
+	GetSettingRulesAllExport(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Status())
+	assert.True(t, json.Valid(recorder.Body.Bytes()), "response should contain only the auth error")
+}
+
 func TestGetSettingRuleOneExport(t *testing.T) {
 	t.Run("AuthenticationFailure", func(t *testing.T) {
+		originalSatOn := common.SatOn
+		common.SatOn = true
+		defer func() { common.SatOn = originalSatOn }()
+
 		req := httptest.NewRequest(http.MethodGet, "/setting-rules/test-id", nil)
 		recorder := httptest.NewRecorder()
 		w := xwhttp.NewXResponseWriter(recorder)
-		// No auth context set to trigger auth.CanRead error
 
 		GetSettingRuleOneExport(w, req)
-		assert.True(t, w.Status() >= 400, "Should return error status for auth failure")
+		assert.Equal(t, http.StatusForbidden, w.Status())
+		assert.True(t, json.Valid(recorder.Body.Bytes()), "response should contain only the auth error")
+		assert.NotContains(t, recorder.Body.String(), "Id is blank")
 	})
 
 	t.Run("BlankID", func(t *testing.T) {
@@ -196,6 +217,22 @@ func TestGetSettingRulesFilteredWithPage(t *testing.T) {
 	w.SetBody("")
 	GetSettingRulesFilteredWithPage(w, req)
 	assert.True(t, w.Status() >= 200, "Should handle empty body gracefully")
+}
+
+func TestGetSettingRulesFilteredWithPageAuthFailureStops(t *testing.T) {
+	originalSatOn := common.SatOn
+	common.SatOn = true
+	defer func() { common.SatOn = originalSatOn }()
+
+	req := httptest.NewRequest(http.MethodPost, "/setting-rules/filtered?pageNumber=invalid", nil)
+	recorder := httptest.NewRecorder()
+	w := xwhttp.NewXResponseWriter(recorder)
+
+	GetSettingRulesFilteredWithPage(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Status())
+	assert.True(t, json.Valid(recorder.Body.Bytes()), "response should contain only the auth error")
+	assert.NotContains(t, recorder.Body.String(), "pageNumber must be a number")
 }
 
 func TestCreateSettingRuleHandler(t *testing.T) {
