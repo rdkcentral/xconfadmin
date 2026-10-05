@@ -48,6 +48,7 @@ func GetSettingRulesAllExport(w http.ResponseWriter, r *http.Request) {
 	applicationType, err := auth.CanRead(r, auth.DCM_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
+		return
 	}
 
 	tenantId := xhttp.GetTenantId(r)
@@ -75,6 +76,7 @@ func GetSettingRuleOneExport(w http.ResponseWriter, r *http.Request) {
 	_, err := auth.CanRead(r, auth.DCM_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
+		return
 	}
 	id, found := mux.Vars(r)[xwcommon.ID]
 	if !found || len(strings.TrimSpace(id)) == 0 {
@@ -134,6 +136,7 @@ func GetSettingRulesFilteredWithPage(w http.ResponseWriter, r *http.Request) {
 	applicationType, err := auth.CanRead(r, auth.DCM_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
+		return
 	}
 
 	var pageNumberStr, pageSizeStr string
