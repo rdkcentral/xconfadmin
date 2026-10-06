@@ -19,18 +19,22 @@ package telemetry
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"gotest.tools/assert"
 
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfwebconfig/db"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/rdkcentral/xconfwebconfig/util"
 )
@@ -501,4 +505,21 @@ func TestTelemetryTestPageHandler_AllErrorCases(t *testing.T) {
 			assert.Equal(t, tt.expectedStatusCode, rr.Code, tt.description)
 		})
 	}
+}
+
+func TestTelemetryTestPageHandler_TenantIDMismatch(t *testing.T) {
+	r := httptest.NewRequest("POST", "/xconfAdminService/telemetry/testpage?applicationType=stb", nil)
+	ctx := context.WithValue(r.Context(), xhttp.CTX_KEY_TENANT_ID, "NON_DEFAULT_TENANT")
+	r = r.WithContext(ctx)
+
+	bodyMap := map[string]string{"partnerId": "some-partner-without-tenant-match"}
+	body, _ := json.Marshal(bodyMap)
+	rr := httptest.NewRecorder()
+	xw := xwhttp.NewXResponseWriter(rr)
+	xw.SetBody(string(body))
+
+	TelemetryTestPageHandler(xw, r)
+
+	assert.Equal(t, http.StatusForbidden, rr.Code)
+	assert.Assert(t, strings.Contains(rr.Body.String(), "Tenant ID mismatch"))
 }

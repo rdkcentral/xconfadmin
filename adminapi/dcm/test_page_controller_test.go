@@ -1,12 +1,14 @@
 package dcm
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -166,7 +168,9 @@ func TestDcmTestPageHandler_SuccessWithMatchingRules(t *testing.T) {
 	// Clean up
 	_ = db.GetCachedSimpleDao().DeleteOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, formula.ID)
 	_ = db.GetCachedSimpleDao().DeleteOne(db.GetDefaultTenantId(), db.TABLE_DEVICE_SETTINGS, deviceSettings.ID)
-} // 6. Test with various MAC address formats to ensure normalization works
+}
+
+// 6. Test with various MAC address formats to ensure normalization works
 func TestDcmTestPageHandler_MacAddressNormalization(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/dcm/testpage?applicationType=stb", nil)
 	// Provide MAC in different format
@@ -195,4 +199,26 @@ func TestDcmTestPageHandler_MacAddressNormalization(t *testing.T) {
 	}
 
 	t.Logf("MAC normalization test passed, response: %s", rr.Body.String())
+}
+
+// 7. partnerId resolves to a different tenant than request context tenant -> forbidden
+func TestDcmTestPageHandler_TenantIDMismatch(t *testing.T) {
+	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/dcm/testpage?applicationType=stb", nil)
+	ctx := context.WithValue(r.Context(), xhttp.CTX_KEY_TENANT_ID, "NON_DEFAULT_TENANT")
+	r = r.WithContext(ctx)
+
+	searchContext := map[string]string{
+		xwcommon.PARTNER_ID: "some-partner-without-tenant-match",
+	}
+	contextJSON, _ := json.Marshal(searchContext)
+	xw, rr := newTestXWriter(string(contextJSON))
+
+	DcmTestPageHandler(xw, r)
+
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for tenant mismatch, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	if !strings.Contains(rr.Body.String(), "Tenant ID mismatch") {
+		t.Fatalf("expected tenant mismatch message, body=%s", rr.Body.String())
+	}
 }

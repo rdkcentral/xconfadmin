@@ -1,12 +1,14 @@
 package firmware
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	core "github.com/rdkcentral/xconfadmin/shared"
 )
 
@@ -372,5 +374,26 @@ func TestWriteErrorResponse_AllErrorTypes(t *testing.T) {
 				t.Errorf("expected error type '%s' in body, got %s", tc.errorType, body)
 			}
 		})
+	}
+}
+
+func TestGetFirmwareTestPageHandler_TenantIDMismatch(t *testing.T) {
+	values := url.Values{}
+	values.Set(core.ESTB_MAC, "AA:BB:CC:DD:EE:11")
+	values.Set("applicationType", "stb")
+	values.Set("partnerId", "some-partner-without-tenant-match")
+
+	r := httptest.NewRequest(http.MethodGet, "/firmware/test?"+values.Encode(), nil)
+	ctx := context.WithValue(r.Context(), xhttp.CTX_KEY_TENANT_ID, "NON_DEFAULT_TENANT")
+	r = r.WithContext(ctx)
+
+	w := httptest.NewRecorder()
+	GetFirmwareTestPageHandler(w, r)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for tenant mismatch, got %d body=%s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "Tenant ID mismatch") {
+		t.Fatalf("expected tenant mismatch message, body=%s", w.Body.String())
 	}
 }

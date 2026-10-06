@@ -48,6 +48,7 @@ func GetSettingRulesAllExport(w http.ResponseWriter, r *http.Request) {
 	applicationType, err := auth.CanRead(r, auth.DCM_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
+		return
 	}
 
 	tenantId := xhttp.GetTenantId(r)
@@ -75,6 +76,7 @@ func GetSettingRuleOneExport(w http.ResponseWriter, r *http.Request) {
 	_, err := auth.CanRead(r, auth.DCM_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
+		return
 	}
 	id, found := mux.Vars(r)[xwcommon.ID]
 	if !found || len(strings.TrimSpace(id)) == 0 {
@@ -134,6 +136,7 @@ func GetSettingRulesFilteredWithPage(w http.ResponseWriter, r *http.Request) {
 	applicationType, err := auth.CanRead(r, auth.DCM_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
+		return
 	}
 
 	var pageNumberStr, pageSizeStr string
@@ -351,6 +354,12 @@ func createNumberOfSettingRulesHttpHeaders(entities []*logupload.SettingRule) ma
 }
 
 func SettingTestPageHandler(w http.ResponseWriter, r *http.Request) {
+	applicationType, err := auth.CanRead(r, auth.DCM_ENTITY)
+	if err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+
 	settingTypes := r.URL.Query()[xwcommon.SETTING_TYPE]
 	if len(settingTypes) == 0 {
 		xhttp.AdminError(w, xwcommon.NewRemoteErrorAS(http.StatusBadRequest, "Define settings type"))
@@ -378,13 +387,17 @@ func SettingTestPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	applicationType, err := auth.CanRead(r, auth.DCM_ENTITY)
-	if err != nil {
-		xhttp.AdminError(w, err)
-		return
+	tenantId := xhttp.GetTenantId(r)
+	if contextMap[xwcommon.PARTNER_ID] != "" {
+		tenantIdFromPartner := xwhttp.ResolveTenantIdFromPartner(contextMap[xwcommon.PARTNER_ID])
+		if !strings.EqualFold(tenantId, tenantIdFromPartner) {
+			log.Errorf("Tenant ID mismatch: expected %s, got %s from partnerId", tenantId, tenantIdFromPartner)
+			xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "Tenant ID mismatch")
+			return
+		}
 	}
+	contextMap[xwcommon.TENANT_ID] = tenantId
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
-	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r)
 
 	result := make(map[string]interface{})
 	result["result"] = GetSettingRulesWithConfig(settingTypes, contextMap)

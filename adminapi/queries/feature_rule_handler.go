@@ -719,6 +719,16 @@ func FeatureRuleTestPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xhttp.GetTenantId(r)
+	if contextMap[xwcommon.PARTNER_ID] != "" {
+		tenantIdFromPartner := xwhttp.ResolveTenantIdFromPartner(contextMap[xwcommon.PARTNER_ID])
+		if !strings.EqualFold(tenantId, tenantIdFromPartner) {
+			log.Errorf("Tenant ID mismatch: expected %s, got %s from partnerId", tenantId, tenantIdFromPartner)
+			xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "Tenant ID mismatch")
+			return
+		}
+	}
+	contextMap[xwcommon.TENANT_ID] = tenantId
 	contextMap[common.APPLICATION_TYPE] = applicationType
 
 	result := ProcessFeatureRules(contextMap, fields)
