@@ -440,14 +440,14 @@ func getJsonWebKey(header map[string]interface{}) *JsonWebKey {
 		return nil
 	}
 
-	// todo remove the code since we don't want to store in cache
-	// if val, ok := idpConfig.KidMap.Load(kid); ok {
-	// 	log.Debugf("kid=%s, fetched=cached", kid)
-	// 	jsonWebKey, ok := val.(JsonWebKey)
-	// 	if ok {
-	// 		return &jsonWebKey
-	// 	}
-	// }
+	//ToDo: Check if we want to still store in cache
+	if val, ok := idpConfig.KidMap.Load(kid); ok {
+		log.Debugf("kid=%s, fetched=cached", kid)
+		jsonWebKey, ok := val.(JsonWebKey)
+		if ok {
+			return &jsonWebKey
+		}
+	}
 
 	jsonWebKeyResponse := WebConfServer.IdpServiceConnector.GetJsonWebKeyResponse(idpConfig.JWKSURL)
 	if jsonWebKeyResponse != nil {
