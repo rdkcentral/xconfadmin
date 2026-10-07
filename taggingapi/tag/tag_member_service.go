@@ -197,7 +197,7 @@ func RemoveMembers(tenantId string, tagId string, members []string) (int, int, e
 }
 
 func getMembersCountOfBucket(tenantId string, tagId string, bucketId int) (int, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryGetMembersCountByBucket, tenantId, tagId, strconv.Itoa(bucketId))
+	rows, err := queryRows(QueryGetMembersCountByBucket, tenantId, tagId, strconv.Itoa(bucketId))
 	if err != nil {
 		return 0, err
 	}
@@ -229,7 +229,7 @@ func removeMembersFromBucket(tenantId string, tagId string, bucketId int, member
 
 func getPopulatedBuckets(tenantId string, tagId string) ([]int, error) {
 	shardId := strconv.Itoa(ds.GetShardId(tagId))
-	rows, err := ds.GetSimpleDao().Query(QueryGetPopulatedBuckets, tenantId, shardId, tagId)
+	rows, err := queryRows(QueryGetPopulatedBuckets, tenantId, shardId, tagId)
 	if err != nil {
 		return nil, err
 	}
@@ -379,7 +379,7 @@ func getMembersFromBucket(tenantId string, tagId string, bucketId int, lastMembe
 		args = []string{tenantId, tagId, strconv.Itoa(bucketId), lastMember, strconv.Itoa(limit)}
 	}
 
-	rows, err := ds.GetSimpleDao().Query(query, args...)
+	rows, err := queryRows(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -747,7 +747,7 @@ func GetAllTagIds(tenantId string) ([]string, error) {
 
 	// Query each shard individually since SimpleDao.Query doesn't support IN clause with slices
 	for _, shardId := range ds.GetShardIds() {
-		rows, err := ds.GetSimpleDao().Query(QueryGetAllTagIdsByShard, tenantId, strconv.Itoa(shardId))
+		rows, err := queryRows(QueryGetAllTagIdsByShard, tenantId, strconv.Itoa(shardId))
 		if err != nil {
 			return nil, fmt.Errorf("failed to query tag IDs for shard %d: %w", shardId, err)
 		}

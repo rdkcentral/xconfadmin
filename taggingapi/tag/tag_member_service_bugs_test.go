@@ -93,6 +93,29 @@ func TestGetMembersPaginated_DbErrorIsNot404(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, xwcommon.GetXconfErrorStatusCode(err))
 }
 
+// A driver error can name hosts and keyspaces; tag APIs write read errors
+// into the response body, so only the generic error may come back.
+func TestTagReadErrorDoesNotLeakDriverDetail(t *testing.T) {
+	setupTestEnvironment()
+	withMockDb(t, func(query string, params ...string) ([]map[string]any, error) {
+		return nil, errors.New("gocql: no hosts available in the pool: 10.0.0.7:9042 keyspace xconf")
+	})
+
+	_, _, err := GetMembersPaginated(db.GetDefaultTenantId(), "some-tag", 10, "")
+	if assert.Error(t, err) {
+		assert.NotContains(t, err.Error(), "10.0.0.7")
+		assert.NotContains(t, err.Error(), "gocql")
+		assert.Equal(t, http.StatusInternalServerError, xwcommon.GetXconfErrorStatusCode(err))
+	}
+
+	_, err = GetAllTagIds(db.GetDefaultTenantId())
+	if assert.Error(t, err) {
+		assert.NotContains(t, err.Error(), "10.0.0.7")
+		assert.ErrorIs(t, err, errTagStoreRead)
+		assert.Equal(t, http.StatusInternalServerError, xwcommon.GetXconfErrorStatusCode(err))
+	}
+}
+
 // Unknown tag (no populated buckets, no DB error) is still a 404.
 func TestGetMembersPaginated_UnknownTagIs404(t *testing.T) {
 	setupTestEnvironment()
