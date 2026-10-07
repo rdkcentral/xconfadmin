@@ -107,6 +107,7 @@ func TestValidateAndGetLoginTokenRejectsUntrustedClaimsAndMethods(t *testing.T) 
 	}{
 		{name: "issuer", claims: jwt.MapClaims{"iss": "wrong", "aud": "trusted-audience"}, method: jwt.SigningMethodRS256},
 		{name: "audience", claims: jwt.MapClaims{"iss": "trusted-issuer", "aud": "wrong"}, method: jwt.SigningMethodRS256},
+		{name: "algorithm", claims: jwt.MapClaims{"iss": "trusted-issuer", "aud": "trusted-audience"}, method: jwt.SigningMethodRS512},
 		{name: "method", claims: jwt.MapClaims{"iss": "trusted-issuer", "aud": "trusted-audience"}, method: jwt.SigningMethodHS256},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {

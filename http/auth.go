@@ -212,7 +212,8 @@ func ValidateAndGetLoginToken(authToken string) (*LoginToken, error) {
 			return nil, errors.New("trusted IdP JWT configuration is missing")
 		}
 
-		token, err := jwt.Parse(authToken, func(token *jwt.Token) (interface{}, error) {
+		parser := jwt.NewParser(jwt.WithValidMethods(idpConfig.AllowedAlgs))
+		token, err := parser.Parse(authToken, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 				return nil, errors.New("JWT signing method is not RSA")
 			}
@@ -225,6 +226,7 @@ func ValidateAndGetLoginToken(authToken string) (*LoginToken, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error parsing auth token with public key: %s", err.Error())
 		}
+
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok || !token.Valid {
 			return nil, errors.New("error getting claims from auth token")
@@ -232,6 +234,7 @@ func ValidateAndGetLoginToken(authToken string) (*LoginToken, error) {
 		if !claims.VerifyIssuer(idpConfig.Issuer, true) || !claims.VerifyAudience(idpConfig.Audience, true) {
 			return nil, errors.New("auth token issuer or audience is not trusted")
 		}
+
 		return NewLoginToken(claims), nil
 	} else {
 		token, err := jwt.Parse(authToken, func(token *jwt.Token) (interface{}, error) {

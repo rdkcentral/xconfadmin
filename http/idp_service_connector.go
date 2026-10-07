@@ -117,6 +117,7 @@ func NewIdpServiceConnector(conf *configuration.Config, externalIdpService IdpSe
 			AllowedAlgs: conf.GetStringList(
 				fmt.Sprintf("xconfwebconfig.%v.allowedAlgs", idpServiceName),
 			),
+			Audience:        conf.GetString(fmt.Sprintf("xconfwebconfig.%v.audience", idpServiceName)),
 			KidMap:          sync.Map{},
 			AuthHeaderValue: authHeader,
 		}
