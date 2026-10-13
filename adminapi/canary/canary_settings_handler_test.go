@@ -52,9 +52,13 @@ func TestPutCanarySettingsHandler(t *testing.T) {
 
 	//Invalid Auth
 	common.SatOn = true
-	w.SetBody(`{"canaryDistributionPercentage": 15}`)
+	recorder = httptest.NewRecorder()
+	w = xwhttp.NewXResponseWriter(recorder)
+	w.SetBody(`{"invalid": json}`)
 	req = httptest.NewRequest(http.MethodPut, testURL, nil)
 	PutCanarySettingsHandler(w, req)
+	assert.Equal(t, http.StatusForbidden, w.Status())
+	assert.NotContains(t, recorder.Body.String(), "invalid character", "handler should stop before decoding the body")
 }
 
 func TestGetCanarySettingsHandler(t *testing.T) {

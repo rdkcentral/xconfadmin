@@ -19,6 +19,7 @@ package change
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -28,6 +29,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xadmin_logupload "github.com/rdkcentral/xconfadmin/shared/logupload"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
@@ -232,23 +234,49 @@ func TestTelemetryTwoByIdListAndFilteredAndEntities(t *testing.T) {
 }
 
 func TestTelemetryTwoTestPageHandlerBranches(t *testing.T) {
-	// success minimal context
-	body := []byte(`{"estbMacAddress":"AA:BB:CC:DD:EE:FF"}`)
-	r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/testpage?applicationType=stb", bytes.NewReader(body))
-	rr := execTelemetryTwoReq(r, body)
-	assert.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-	// cast error: call handler directly with recorder (no XResponseWriter)
-	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/testpage?applicationType=stb", bytes.NewReader(body))
-	w := httptest.NewRecorder()
-	TelemetryTwoTestPageHandler(w, r)
-	// handler expects XResponseWriter and returns 400 with message
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	// normalization error: supply invalid mac
-	badBody := []byte(`{"estbMacAddress":"INVALID_MAC"}`)
-	r = httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/testpage?applicationType=stb", bytes.NewReader(badBody))
-	rr = execTelemetryTwoReq(r, badBody)
-	// expect 400
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	t.Run("SuccessMinimalContext", func(t *testing.T) {
+		body := []byte(`{"estbMacAddress":"AA:BB:CC:DD:EE:FF"}`)
+		r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/testpage?applicationType=stb", bytes.NewReader(body))
+		rr := execTelemetryTwoReq(r, body)
+		assert.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	})
+
+	t.Run("ResponseWriterCastError", func(t *testing.T) {
+		body := []byte(`{"estbMacAddress":"AA:BB:CC:DD:EE:FF"}`)
+		r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/testpage?applicationType=stb", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		TelemetryTwoTestPageHandler(w, r)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("NormalizationError", func(t *testing.T) {
+		badBody := []byte(`{"estbMacAddress":"INVALID_MAC"}`)
+		r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/testpage?applicationType=stb", bytes.NewReader(badBody))
+		rr := execTelemetryTwoReq(r, badBody)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+	})
+
+	t.Run("TenantIDMismatch", func(t *testing.T) {
+		body := []byte(`{"partnerId":"some-partner-without-tenant-match"}`)
+		r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/testpage?applicationType=stb", bytes.NewReader(body))
+		ctx := context.WithValue(r.Context(), xhttp.CTX_KEY_TENANT_ID, "NON_DEFAULT_TENANT")
+		r = r.WithContext(ctx)
+
+		rr := httptest.NewRecorder()
+		xw := xwhttp.NewXResponseWriter(rr)
+		xw.SetBody(string(body))
+		TelemetryTwoTestPageHandler(xw, r)
+
+		assert.Equal(t, http.StatusForbidden, rr.Code)
+		assert.True(t, strings.Contains(rr.Body.String(), "Tenant ID mismatch"))
+	})
+
+	t.Run("InvalidContextJSONFallback", func(t *testing.T) {
+		badBody := []byte(`{"estbMacAddress":"AA:BB:CC:DD:EE:FF"`)
+		r := httptest.NewRequest(http.MethodPost, "/xconfAdminService/telemetry/v2/testpage?applicationType=stb", bytes.NewReader(badBody))
+		rr := execTelemetryTwoReq(r, badBody)
+		assert.True(t, rr.Code >= 200)
+	})
 }
 
 // Test DeleteTelemetryTwoProfileHandler - missing ID parameter

@@ -149,7 +149,7 @@ func TestGetEstbLastlogPath_TenantIDMismatch(t *testing.T) {
 	GetEstbLastlogPath(rr, r)
 
 	assert.Equal(t, http.StatusForbidden, rr.Code)
-	assert.Contains(t, rr.Body.String(), "tenant ID mismatch")
+	assert.Contains(t, rr.Body.String(), "Tenant ID mismatch")
 }
 
 func TestGetEstbChangelogsPath_FiltersTenantLogs(t *testing.T) {
@@ -193,7 +193,7 @@ func TestGetEstbChangelogsPath_TenantIDMismatch(t *testing.T) {
 	GetEstbChangelogsPath(rr, r)
 
 	assert.Equal(t, http.StatusForbidden, rr.Code)
-	assert.Contains(t, rr.Body.String(), "tenant ID mismatch")
+	assert.Contains(t, rr.Body.String(), "Tenant ID mismatch")
 }
 
 func logRequestWithTenant(target, tenantID string) *http.Request {

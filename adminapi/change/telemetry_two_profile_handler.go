@@ -25,28 +25,21 @@ import (
 	"strconv"
 	"strings"
 
-	xutil "github.com/rdkcentral/xconfadmin/util"
-
-	"github.com/rdkcentral/xconfwebconfig/dataapi/dcm/telemetry"
-
+	"github.com/gorilla/mux"
+	"github.com/rdkcentral/xconfadmin/adminapi/auth"
 	xcommon "github.com/rdkcentral/xconfadmin/common"
-
-	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xshared "github.com/rdkcentral/xconfadmin/shared"
 	xlogupload "github.com/rdkcentral/xconfadmin/shared/logupload"
-
+	xutil "github.com/rdkcentral/xconfadmin/util"
 	"github.com/rdkcentral/xconfwebconfig/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/dataapi/dcm/telemetry"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	xwlogupload "github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/rdkcentral/xconfwebconfig/util"
-
-	"github.com/rdkcentral/xconfadmin/adminapi/auth"
-	xhttp "github.com/rdkcentral/xconfadmin/http"
-
-	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
-
-	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 )
 
 func GetTelemetryTwoProfilesHandler(w http.ResponseWriter, r *http.Request) {
@@ -484,8 +477,17 @@ func TelemetryTwoTestPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xhttp.GetTenantId(r)
+	if contextMap[xwcommon.PARTNER_ID] != "" {
+		tenantIdFromPartner := xwhttp.ResolveTenantIdFromPartner(contextMap[xwcommon.PARTNER_ID])
+		if !strings.EqualFold(tenantId, tenantIdFromPartner) {
+			log.Errorf("Tenant ID mismatch: expected %s, got %s from partnerId", tenantId, tenantIdFromPartner)
+			xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "Tenant ID mismatch")
+			return
+		}
+	}
+	contextMap[xwcommon.TENANT_ID] = tenantId
 	contextMap[xwcommon.APPLICATION_TYPE] = applicationType
-	contextMap[xwcommon.TENANT_ID] = xhttp.GetTenantId(r)
 
 	telemetryProfileService := telemetry.NewTelemetryProfileService()
 	telemetryTwoRules := telemetryProfileService.ProcessTelemetryTwoRulesForAS(contextMap)
