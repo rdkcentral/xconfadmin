@@ -45,7 +45,7 @@ func initTagSyncMetrics() {
 		})
 		tagSyncRunningGauge = prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "tagging_sync_running",
-			Help: "1 while a tag sync run is in progress on this instance",
+			Help: "Tag sync runs in progress on this instance",
 		})
 		tagSyncRunDurationSeconds = prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "tagging_sync_run_duration_seconds",

@@ -10,22 +10,24 @@ import (
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 )
 
-// Tag sync job state lives in its own Cassandra table (raw CQL access, same
-// pattern as the tagging tables; no DAO registration needed):
+// Tag sync job state lives in its own Cassandra table in the xconf keyspace
+// (raw CQL access, same pattern as the tagging tables):
 //
-//	CREATE TABLE IF NOT EXISTS "TagSyncState"
-//	    (key text, column1 text, value text, PRIMARY KEY ((key), column1));
+//	CREATE TABLE IF NOT EXISTS tag_sync_state
+//	    (tenant_id text, key text, column1 text, value text,
+//	     PRIMARY KEY ((tenant_id, key), column1));
 //
-// Rows: key='run', column1=<runId> holds one JSON record per run (the run id
-// is time-prefixed so rows cluster chronologically); key='control',
-// column1='lock' holds the single-run lock with its heartbeat.
+// Every row lives in its tenant's partitions: key='run', column1=<runId>
+// holds one JSON record per run (the run id is time-prefixed so rows cluster
+// chronologically); key='control', column1='lock' holds the tenant's
+// single-run lock with its heartbeat.
 const (
-	QueryTagSyncStateUpsert = `INSERT INTO "TagSyncState" (key, column1, value) VALUES (?, ?, ?)`
-	QueryTagSyncStateGet    = `SELECT value FROM "TagSyncState" WHERE key = ? AND column1 = ?`
-	QueryTagSyncStateList   = `SELECT column1, value FROM "TagSyncState" WHERE key = ?`
+	QueryTagSyncStateUpsert = `INSERT INTO tag_sync_state (tenant_id, key, column1, value) VALUES (?, ?, ?, ?)`
+	QueryTagSyncStateGet    = `SELECT value FROM tag_sync_state WHERE tenant_id = ? AND key = ? AND column1 = ?`
+	QueryTagSyncStateList   = `SELECT column1, value FROM tag_sync_state WHERE tenant_id = ? AND key = ?`
 
-	QueryTagSyncStateListNewest = `SELECT column1, value FROM "TagSyncState" WHERE key = ? ORDER BY column1 DESC LIMIT ?`
-	QueryTagSyncStateDelete     = `DELETE FROM "TagSyncState" WHERE key = ? AND column1 = ?`
+	QueryTagSyncStateListNewest = `SELECT column1, value FROM tag_sync_state WHERE tenant_id = ? AND key = ? ORDER BY column1 DESC LIMIT ?`
+	QueryTagSyncStateDelete     = `DELETE FROM tag_sync_state WHERE tenant_id = ? AND key = ? AND column1 = ?`
 
 	tagSyncRunKey     = "run"
 	tagSyncControlKey = "control"
@@ -55,22 +57,25 @@ type tagSyncDao interface {
 	saveLock(lock *TagSyncLock) error
 }
 
-type tagSyncDaoImpl struct{}
-
-func newTagSyncDao() tagSyncDao {
-	return tagSyncDaoImpl{}
+// tagSyncDaoImpl reads and writes the runs and lock of one tenant.
+type tagSyncDaoImpl struct {
+	tenantId string
 }
 
-func (tagSyncDaoImpl) saveRun(run *TagSyncRun) error {
+func newTagSyncDao(tenantId string) tagSyncDao {
+	return tagSyncDaoImpl{tenantId: tenantId}
+}
+
+func (d tagSyncDaoImpl) saveRun(run *TagSyncRun) error {
 	data, err := json.Marshal(run)
 	if err != nil {
 		return fmt.Errorf("tag sync run marshal failed: %w", err)
 	}
-	return ds.GetSimpleDao().Modify(QueryTagSyncStateUpsert, tagSyncRunKey, run.RunId, string(data))
+	return ds.GetSimpleDao().Modify(QueryTagSyncStateUpsert, d.tenantId, tagSyncRunKey, run.RunId, string(data))
 }
 
-func (tagSyncDaoImpl) getRun(runId string) (*TagSyncRun, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryTagSyncStateGet, tagSyncRunKey, runId)
+func (d tagSyncDaoImpl) getRun(runId string) (*TagSyncRun, error) {
+	rows, err := queryRows(QueryTagSyncStateGet, d.tenantId, tagSyncRunKey, runId)
 	if err != nil {
 		return nil, err
 	}
@@ -80,8 +85,8 @@ func (tagSyncDaoImpl) getRun(runId string) (*TagSyncRun, error) {
 	return unmarshalTagSyncRunRow(rows[0])
 }
 
-func (tagSyncDaoImpl) listRuns(limit int) ([]*TagSyncRun, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryTagSyncStateListNewest, tagSyncRunKey, strconv.Itoa(limit))
+func (d tagSyncDaoImpl) listRuns(limit int) ([]*TagSyncRun, error) {
+	rows, err := queryRows(QueryTagSyncStateListNewest, d.tenantId, tagSyncRunKey, strconv.Itoa(limit))
 	if err != nil {
 		return nil, err
 	}
@@ -98,8 +103,8 @@ func (tagSyncDaoImpl) listRuns(limit int) ([]*TagSyncRun, error) {
 
 // pruneRuns works on raw column1 ids (not unmarshalled records) so corrupt
 // rows are pruned too instead of surviving forever.
-func (tagSyncDaoImpl) pruneRuns(keep int) error {
-	rows, err := ds.GetSimpleDao().Query(QueryTagSyncStateList, tagSyncRunKey)
+func (d tagSyncDaoImpl) pruneRuns(keep int) error {
+	rows, err := queryRows(QueryTagSyncStateList, d.tenantId, tagSyncRunKey)
 	if err != nil {
 		return err
 	}
@@ -118,15 +123,15 @@ func (tagSyncDaoImpl) pruneRuns(keep int) error {
 	// Run ids are time-prefixed: ascending lexical order is oldest first.
 	sort.Strings(ids)
 	for _, id := range ids[:len(ids)-keep] {
-		if err := ds.GetSimpleDao().Modify(QueryTagSyncStateDelete, tagSyncRunKey, id); err != nil {
+		if err := ds.GetSimpleDao().Modify(QueryTagSyncStateDelete, d.tenantId, tagSyncRunKey, id); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (tagSyncDaoImpl) getLock() (*TagSyncLock, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryTagSyncStateGet, tagSyncControlKey, tagSyncLockColumn)
+func (d tagSyncDaoImpl) getLock() (*TagSyncLock, error) {
+	rows, err := queryRows(QueryTagSyncStateGet, d.tenantId, tagSyncControlKey, tagSyncLockColumn)
 	if err != nil {
 		return nil, err
 	}
@@ -144,12 +149,12 @@ func (tagSyncDaoImpl) getLock() (*TagSyncLock, error) {
 	return &lock, nil
 }
 
-func (tagSyncDaoImpl) saveLock(lock *TagSyncLock) error {
+func (d tagSyncDaoImpl) saveLock(lock *TagSyncLock) error {
 	data, err := json.Marshal(lock)
 	if err != nil {
 		return fmt.Errorf("tag sync lock marshal failed: %w", err)
 	}
-	return ds.GetSimpleDao().Modify(QueryTagSyncStateUpsert, tagSyncControlKey, tagSyncLockColumn, string(data))
+	return ds.GetSimpleDao().Modify(QueryTagSyncStateUpsert, d.tenantId, tagSyncControlKey, tagSyncLockColumn, string(data))
 }
 
 func unmarshalTagSyncRunRow(row map[string]interface{}) (*TagSyncRun, error) {
@@ -164,7 +169,7 @@ func unmarshalTagSyncRunRow(row map[string]interface{}) (*TagSyncRun, error) {
 	return &run, nil
 }
 
-// rowJsonValue extracts the JSON payload column shared by every TagSyncState
+// rowJsonValue extracts the JSON payload column shared by every tag_sync_state
 // row shape (runs and the lock).
 func rowJsonValue(row map[string]interface{}) (string, bool) {
 	value, ok := row["value"].(string)
