@@ -31,6 +31,7 @@ type fakeTagSyncDao struct {
 	lock       *TagSyncLock
 	lockWrites []time.Time
 	getLockErr error
+	getRunErr  error
 }
 
 func newFakeTagSyncDao() *fakeTagSyncDao {
@@ -57,6 +58,9 @@ func (s *fakeTagSyncDao) saveRun(tenantId string, run *TagSyncRun) error {
 func (s *fakeTagSyncDao) getRun(tenantId string, runId string) (*TagSyncRun, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.getRunErr != nil {
+		return nil, s.getRunErr
+	}
 	if run, ok := s.tenantRuns(tenantId)[runId]; ok {
 		copied := *run
 		return &copied, nil
@@ -607,6 +611,74 @@ func TestTagSyncStoreErrorDoesNotLeakDriverDetail(t *testing.T) {
 		assert.Equal(t, "tag sync state store unavailable", err.Error())
 		assert.NotContains(t, err.Error(), "10.0.0.7")
 		assert.NotContains(t, err.Error(), "gocql")
+		assert.Equal(t, http.StatusInternalServerError, xwcommon.GetXconfErrorStatusCode(err))
+	}
+}
+
+func TestTagSyncStatusDoesNotLeakDriverDetail(t *testing.T) {
+	dao := newFakeTagSyncDao()
+	dao.getLockErr = errors.New("gocql: no hosts available in the pool: 10.0.0.7:9042 keyspace ApplicationsDiscoveryDataService")
+
+	_, _, err := loadTagSyncStatus(dao, testTenantId)
+
+	if assert.Error(t, err) {
+		assert.Equal(t, "tag sync state store unavailable", err.Error())
+		assert.NotContains(t, err.Error(), "10.0.0.7")
+		assert.Equal(t, http.StatusInternalServerError, xwcommon.GetXconfErrorStatusCode(err))
+	}
+}
+
+func TestTagSyncRunStatusByRunId(t *testing.T) {
+	dao := newFakeTagSyncDao()
+	dao.saveRun(testTenantId, &TagSyncRun{TenantId: testTenantId, RunId: "20260817-153012-aaaa", State: TagSyncStateCompleted})
+	dao.saveRun(testTenantId, &TagSyncRun{TenantId: testTenantId, RunId: "20260818-090000-bbbb", State: TagSyncStateAborted})
+
+	run, err := loadTagSyncRun(dao, testTenantId, "20260817-153012-aaaa")
+	assert.NoError(t, err)
+	if assert.NotNil(t, run) {
+		assert.Equal(t, "20260817-153012-aaaa", run.RunId)
+		assert.Equal(t, TagSyncStateCompleted, run.State)
+	}
+
+	run, err = loadTagSyncRun(dao, testTenantId, "20260101-000000-none")
+	assert.NoError(t, err)
+	assert.Nil(t, run)
+
+	run, err = loadTagSyncRun(dao, "other-tenant", "20260817-153012-aaaa")
+	assert.NoError(t, err)
+	assert.Nil(t, run, "another tenant's run id must read as not found")
+}
+
+func TestTagSyncStatusShowsOnlyOwnTenantsActiveRun(t *testing.T) {
+	dao := newFakeTagSyncDao()
+	dao.saveRun("tenant-a", &TagSyncRun{TenantId: "tenant-a", RunId: "20260817-153012-aaaa", State: TagSyncStateRunning})
+	dao.saveRun("tenant-b", &TagSyncRun{TenantId: "tenant-b", RunId: "20260816-090000-bbbb", State: TagSyncStateCompleted})
+	dao.lock = &TagSyncLock{TenantId: "tenant-a", Owner: "podA", RunId: "20260817-153012-aaaa", HeartbeatAt: time.Now().UTC()}
+
+	active, history, err := loadTagSyncStatus(dao, "tenant-a")
+	assert.NoError(t, err)
+	if assert.NotNil(t, active) {
+		assert.Equal(t, "20260817-153012-aaaa", active.RunId)
+	}
+	assert.Len(t, history, 1)
+
+	active, history, err = loadTagSyncStatus(dao, "tenant-b")
+	assert.NoError(t, err)
+	assert.Nil(t, active, "the global lock held by another tenant is not this tenant's active run")
+	if assert.Len(t, history, 1) {
+		assert.Equal(t, "tenant-b", history[0].TenantId)
+	}
+}
+
+func TestTagSyncRunStatusDoesNotLeakDriverDetail(t *testing.T) {
+	dao := newFakeTagSyncDao()
+	dao.getRunErr = errors.New("gocql: no hosts available in the pool: 10.0.0.7:9042 keyspace ApplicationsDiscoveryDataService")
+
+	_, err := loadTagSyncRun(dao, testTenantId, "20260817-153012-aaaa")
+
+	if assert.Error(t, err) {
+		assert.Equal(t, "tag sync state store unavailable", err.Error())
+		assert.NotContains(t, err.Error(), "10.0.0.7")
 		assert.Equal(t, http.StatusInternalServerError, xwcommon.GetXconfErrorStatusCode(err))
 	}
 }
@@ -1234,8 +1306,8 @@ func TestTagSyncRunHistoryPruned(t *testing.T) {
 }
 
 func TestTagSyncNoTagsAborts(t *testing.T) {
-	// An empty tag census is indistinguishable from a swallowed Cassandra
-	// failure: abort loudly instead of recording a missingRate=0 all-clear.
+	// An empty tag census is a Cassandra problem: abort loudly instead of
+	// recording a missingRate=0 all-clear.
 	env := newTestEnv(map[string][]string{}, newFakeXdas(), newFakeTagSyncDao())
 	run := execute(t, TagSyncOptions{Mode: TagSyncModeDetect}, env)
 
@@ -1243,22 +1315,49 @@ func TestTagSyncNoTagsAborts(t *testing.T) {
 	assert.Equal(t, "cassandra_suspect_no_tags", run.AbortReason)
 }
 
-func TestTagSyncEmptyPopulatedBucketAborts(t *testing.T) {
-	// getPopulatedBuckets reported members but the first page comes back
-	// empty: that smells like a swallowed Cassandra error reading as
-	// end-of-bucket, so the run aborts instead of skipping the bucket.
-	cass := map[string][]string{"tag1": {"M0"}}
+func TestTagSyncSkipsEmptyPopulatedBucket(t *testing.T) {
+	// A metadata row that outlived its members must not block the tag: the
+	// bucket is skipped and counted, the rest of the tag is still walked.
+	all := members("M", 20)
+	cass := map[string][]string{"tag1": all}
 	xdas := newFakeXdas()
-	xdas.records["M0"] = map[string]string{"t_tag1": ""}
+	used := make(map[int]bool)
+	for _, m := range all {
+		xdas.records[m] = map[string]string{"t_tag1": ""}
+		used[getBucketId(m)] = true
+	}
+	stale := 0
+	for used[stale] {
+		stale++
+	}
 
 	env := newTestEnv(cass, xdas, newFakeTagSyncDao())
+	listed := env.getPopulatedBuckets
+	env.getPopulatedBuckets = func(tagId string) ([]int, error) {
+		buckets, err := listed(tagId)
+		return append(buckets, stale), err
+	}
+	run := execute(t, TagSyncOptions{Mode: TagSyncModeDetect}, env)
+
+	assert.Equal(t, TagSyncStateCompleted, run.State)
+	assert.Equal(t, 1, run.EmptyBuckets)
+	assert.Equal(t, int64(20), run.Counts.Checked)
+}
+
+func TestTagSyncBucketReadErrorAborts(t *testing.T) {
+	// A failed read aborts, so it is never mistaken for an empty bucket and
+	// skipped. The driver detail stays out of the reason the status serves.
+	cass := map[string][]string{"tag1": members("M", 20)}
+	env := newTestEnv(cass, newFakeXdas(), newFakeTagSyncDao())
 	env.getMembersFromBucket = func(tagId string, bucketId int, lastMember string, limit int) ([]string, error) {
-		return nil, nil
+		return nil, errors.New("gocql: no hosts available in the pool: 10.0.0.7:9042 keyspace xconf")
 	}
 	run := execute(t, TagSyncOptions{Mode: TagSyncModeDetect}, env)
 
 	assert.Equal(t, TagSyncStateAborted, run.State)
-	assert.Equal(t, "cassandra_suspect_empty_bucket", run.AbortReason)
+	assert.Equal(t, "cassandra_error", run.AbortReason)
+	assert.Equal(t, "tag1", run.Checkpoint.TagId)
+	assert.Equal(t, 0, run.EmptyBuckets)
 }
 
 func TestTagSyncHeartbeatIndependentOfChunkPace(t *testing.T) {

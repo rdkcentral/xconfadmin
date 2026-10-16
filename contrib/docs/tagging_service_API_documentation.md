@@ -17,6 +17,7 @@
    - [Before the first run: create the state table](#before-the-first-run-create-the-state-table)
    - [Trigger Tag Sync](#trigger-tag-sync)
    - [Tag Sync Status](#tag-sync-status)
+   - [Tag Sync Run Status](#tag-sync-run-status)
    - [Abort Tag Sync](#abort-tag-sync)
    - [Kill Switch](#kill-switch)
    - [Push Failures](#push-failures)
@@ -347,22 +348,21 @@ run can be resumed without re-walking what was already covered.
 #### Before the first run: create the state table
 
 Run state (the run records with their checkpoints, and the single-run lock) lives in its own
-Cassandra table, which the service does **not** create. Create it in the XConf keyspace before
-using the sync endpoints, or trigger/status/abort fail with a CQL error:
+Cassandra table, which the service does **not** create. Create it in the `xconf` keyspace before
+using the sync endpoints, or trigger and status fail with `500 tag sync state store unavailable`:
 
 ```sql
-CREATE TABLE IF NOT EXISTS tag_sync_state (
-  tenant_id text,
-  key text,
-  column1 text,
-  value text,
-  PRIMARY KEY ((tenant_id, key), column1)
+CREATE TABLE IF NOT EXISTS xconf.tag_sync_state (
+    tenant_id text,
+    key text,
+    column1 text,
+    value text,
+    PRIMARY KEY ((tenant_id, key), column1)
 );
 ```
 
-Each tenant's history partition stays small: run history is pruned to the newest few runs as each
-run finishes. The service stores the global execution lock in the reserved `__global__` tenant
-partition.
+Run records are kept per tenant, and each tenant's history is pruned to the newest few runs as each
+run finishes. The single-run lock is global and lives in the reserved `__global__` tenant partition.
 
 #### Using `refresh` to resync regions
 
@@ -470,7 +470,7 @@ curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/syn
 **Response Body (202):**
 ```json
 {
-  "tenantId": "TENANT-A",
+    "tenantId": "TENANT-A",
     "runId": "20260817-153012-1a2b3c4d",
     "mode": "detect",
     "state": "running",
@@ -498,14 +498,14 @@ Uses the same middleware-resolved tenant as the trigger endpoint and requires re
 **Response Body:**
 ```json
 {
-  "tenantId": "TENANT-A",
+    "tenantId": "TENANT-A",
     "active": { "runId": "20260817-153012-1a2b3c4d", "state": "running", "...": "..." },
     "history": [ { "runId": "...", "state": "completed", "...": "..." } ],
     "enabled": true
 }
 ```
 
-- `active` — the run currently holding the cluster lock, or `null`
+- `active` — this tenant's run currently holding the cluster lock, or `null`
 - `history` — up to 10 most recent runs for this tenant, newest first (older records are pruned automatically)
 - `enabled` — this tenant's current kill switch state
 
@@ -528,6 +528,7 @@ Uses the same middleware-resolved tenant as the trigger endpoint and requires re
 | `counts.xdasErrors` | 5xx/transport errors — never counted as missing |
 | `counts.xdasOnlyFieldsSeen` | Distinct XDAS tag fields with no Cassandra counterpart (reported only, never deleted) |
 | `tagsTotal`, `tagsDone`, `tagsWithMissing` | Walk progress by tag |
+| `emptyBuckets` | Buckets listed in `tag_member_metadata` that had no members when read (a metadata row that outlived its members, or a tag being deleted). They are skipped, and each one is logged with its tag and bucket id |
 | `topMissingTags` | Up to 100 tags with the most missing members, with per-tag checked/missing/pushed counts; refreshed on every checkpoint save |
 | `missingRate` | `(missingField + missingKey) / checked`, refreshed on every checkpoint save so it is live during a run |
 | `abortReason` | Why an aborted run stopped (see [Abort Reasons](#abort-reasons)) |
@@ -536,9 +537,40 @@ Uses the same middleware-resolved tenant as the trigger endpoint and requires re
 
 ---
 
+### Tag Sync Run Status
+
+Returns the record of one run, identified by the `runId` from the trigger response. Use it to poll a
+single run instead of reading the whole history.
+
+**Endpoint:**
+```
+GET /taggingService/tags/sync/status/{runId}
+```
+
+Uses the same middleware-resolved tenant as the trigger endpoint and requires read permission. Only
+the tenant's own runs are visible.
+
+**Example:**
+```bash
+curl --location --request GET 'http://<xconf-admin-url>/taggingService/tags/sync/status/20260817-153012-1a2b3c4d' \
+  --header 'Authorization: Bearer <SAT token>' \
+  --header 'tenantId: <target tenant>'
+```
+
+**Response Status Codes:**
+- `200 OK`: body is the run record (see [Run record fields](#tag-sync-status))
+- `403 Forbidden`: the caller lacks the required tagging capability or the SAT v2 token does not authorize the resolved tenant
+- `404 Not Found`: no run with that id for this tenant. Only the 20 most recent runs per tenant are kept
+- `500 Internal Server Error`: the run-state store could not be read (generic `tag sync state store unavailable`)
+
+A run whose instance died stays `running` in its record. If `updatedAt` stops advancing, check
+`active` on [Tag Sync Status](#tag-sync-status).
+
+---
+
 ### Abort Tag Sync
 
-Cancels the run owned by **this instance**. The run checkpoints and finishes as `aborted`, so it can
+Cancels the requesting tenant's run owned by **this instance**. The run checkpoints and finishes as `aborted`, so it can
 be resumed later.
 
 **Endpoint:**
@@ -636,8 +668,7 @@ checkpoint; a Cassandra page is never walked end to end without those checks.
 | `xdas_unhealthy_consecutive_errors` | Too many XDAS errors in a row | Check XDAS health, then resume |
 | `xdas_unhealthy_error_rate` | XDAS error rate over the window threshold | Check XDAS health, then resume |
 | `cassandra_suspect_no_tags` | The tag census came back empty — indistinguishable from a Cassandra failure | Check Cassandra; re-trigger |
-| `cassandra_suspect_empty_bucket` | A bucket reported as populated returned no members — suspected swallowed Cassandra error (or a concurrent tag deletion) | Resume; it self-heals if the tag was genuinely deleted |
-| `cassandra_error: ...` | Explicit Cassandra error | Check Cassandra, then resume |
+| `cassandra_error` | A Cassandra read failed. The driver error is in the instance log (`tag store read failed`); the checkpoint shows where it stopped | Check Cassandra, then resume |
 
 ---
 

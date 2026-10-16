@@ -8,7 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	admincommon "github.com/rdkcentral/xconfadmin/common"
+	"github.com/gorilla/mux"
+	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 
 	"github.com/stretchr/testify/assert"
@@ -70,9 +71,9 @@ func TestAbortTagSyncCannotCancelAnotherTenant(t *testing.T) {
 }
 
 func TestAbortTagSyncUsesResolvedTenantContext(t *testing.T) {
-	oldSatOn := admincommon.SatOn
-	admincommon.SatOn = false
-	defer func() { admincommon.SatOn = oldSatOn }()
+	oldSatOn := common.SatOn
+	common.SatOn = false
+	defer func() { common.SatOn = oldSatOn }()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	activeTagSyncMu.Lock()
@@ -96,9 +97,9 @@ func TestAbortTagSyncUsesResolvedTenantContext(t *testing.T) {
 }
 
 func TestAbortTagSyncChecksSharedWritePermission(t *testing.T) {
-	oldSatOn := admincommon.SatOn
-	admincommon.SatOn = true
-	defer func() { admincommon.SatOn = oldSatOn }()
+	oldSatOn := common.SatOn
+	common.SatOn = true
+	defer func() { common.SatOn = oldSatOn }()
 
 	req := tagSyncRequest(http.MethodPost, "/taggingService/tags/sync/abort", "TENANT-A", "TENANT-A")
 	req = req.WithContext(context.WithValue(req.Context(), xhttp.CTX_KEY_AUTH_TYPE, xhttp.AUTH_TYPE_SAT_V2))
@@ -111,9 +112,9 @@ func TestAbortTagSyncChecksSharedWritePermission(t *testing.T) {
 }
 
 func TestTriggerTagSyncChecksPermissionBeforeParsingBody(t *testing.T) {
-	oldSatOn := admincommon.SatOn
-	admincommon.SatOn = true
-	defer func() { admincommon.SatOn = oldSatOn }()
+	oldSatOn := common.SatOn
+	common.SatOn = true
+	defer func() { common.SatOn = oldSatOn }()
 
 	req := httptest.NewRequest(http.MethodPost, "/taggingService/tags/sync", strings.NewReader("{"))
 	ctx := context.WithValue(req.Context(), xhttp.CTX_KEY_TENANT_ID, "TENANT-A")
@@ -121,6 +122,33 @@ func TestTriggerTagSyncChecksPermissionBeforeParsingBody(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	TriggerTagSyncHandler(rec, req.WithContext(ctx))
+
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+	assert.Contains(t, rec.Body.String(), "No capabilities found in SAT token")
+}
+
+func TestTagSyncRunStatusRejectsMissingRunId(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/taggingService/tags/sync/status/", nil)
+	req = mux.SetURLVars(req, map[string]string{common.RunId: ""})
+	rec := httptest.NewRecorder()
+
+	TagSyncRunStatusHandler(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), common.RunId)
+}
+
+func TestTagSyncRunStatusChecksSharedReadPermission(t *testing.T) {
+	oldSatOn := common.SatOn
+	common.SatOn = true
+	defer func() { common.SatOn = oldSatOn }()
+
+	req := tagSyncRequest(http.MethodGet, "/taggingService/tags/sync/status/run-a", "TENANT-A", "TENANT-A")
+	req = req.WithContext(context.WithValue(req.Context(), xhttp.CTX_KEY_AUTH_TYPE, xhttp.AUTH_TYPE_SAT_V2))
+	req = mux.SetURLVars(req, map[string]string{common.RunId: "run-a"})
+	rec := httptest.NewRecorder()
+
+	TagSyncRunStatusHandler(rec, req)
 
 	assert.Equal(t, http.StatusForbidden, rec.Code)
 	assert.Contains(t, rec.Body.String(), "No capabilities found in SAT token")

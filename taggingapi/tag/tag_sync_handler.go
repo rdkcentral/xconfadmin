@@ -11,10 +11,12 @@ import (
 	"time"
 
 	"github.com/rdkcentral/xconfadmin/adminapi/auth"
+	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 
+	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -143,23 +145,7 @@ func TagSyncStatusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tenantId := xhttp.GetTenantId(r)
-	dao := newTagSyncDao()
-
-	var active *TagSyncRun
-	lock, err := dao.getLock()
-	if err != nil {
-		xhttp.WriteXconfErrorResponse(w, err)
-		return
-	}
-	if lock != nil && lock.TenantId == tenantId && !lock.Released && time.Since(lock.HeartbeatAt) < tagSyncLockStaleAfter {
-		active, err = dao.getRun(tenantId, lock.RunId)
-		if err != nil {
-			xhttp.WriteXconfErrorResponse(w, err)
-			return
-		}
-	}
-
-	history, err := dao.listRuns(tenantId, 10)
+	active, history, err := loadTagSyncStatus(newTagSyncDao(), tenantId)
 	if err != nil {
 		xhttp.WriteXconfErrorResponse(w, err)
 		return
@@ -178,8 +164,69 @@ func TagSyncStatusHandler(w http.ResponseWriter, r *http.Request) {
 	xhttp.WriteXconfResponse(w, http.StatusOK, respBytes)
 }
 
-// AbortTagSyncHandler cancels the run owned by this instance. Runs on other
-// instances are stopped with the TaggingSyncEnabled kill switch instead.
+// loadTagSyncStatus returns store errors sanitized like the trigger's: the
+// driver detail stays in the log and never reaches the client. The global
+// lock is reported as active only when it belongs to tenantId.
+func loadTagSyncStatus(dao tagSyncDao, tenantId string) (*TagSyncRun, []*TagSyncRun, error) {
+	lock, err := dao.getLock()
+	if err != nil {
+		return nil, nil, tagSyncStoreError("status lock read", err)
+	}
+	var active *TagSyncRun
+	if lock != nil && lock.TenantId == tenantId && !lock.Released && time.Since(lock.HeartbeatAt) < tagSyncLockStaleAfter {
+		if active, err = dao.getRun(tenantId, lock.RunId); err != nil {
+			return nil, nil, tagSyncStoreError("status run read", err)
+		}
+	}
+	history, err := dao.listRuns(tenantId, 10)
+	if err != nil {
+		return nil, nil, tagSyncStoreError("status run list", err)
+	}
+	return active, history, nil
+}
+
+// TagSyncRunStatusHandler returns one of the tenant's run records, for polling
+// one run without the whole history.
+// GET /taggingService/tags/sync/status/{runId}
+func TagSyncRunStatusHandler(w http.ResponseWriter, r *http.Request) {
+	if _, err := auth.CanRead(r, auth.COMMON_ENTITY); err != nil {
+		xhttp.AdminError(w, err)
+		return
+	}
+	runId := mux.Vars(r)[common.RunId]
+	if runId == "" {
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(fmt.Sprintf(NotSpecifiedErrorMsg, common.RunId)))
+		return
+	}
+	run, err := loadTagSyncRun(newTagSyncDao(), xhttp.GetTenantId(r), runId)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+	if run == nil {
+		xhttp.WriteXconfResponse(w, http.StatusNotFound,
+			[]byte(fmt.Sprintf("tag sync run %s not found; only the %d most recent runs are kept", runId, tagSyncRunHistoryKeep)))
+		return
+	}
+
+	respBytes, err := json.Marshal(run)
+	if err != nil {
+		xhttp.WriteXconfErrorResponse(w, err)
+		return
+	}
+	xhttp.WriteXconfResponse(w, http.StatusOK, respBytes)
+}
+
+func loadTagSyncRun(dao tagSyncDao, tenantId string, runId string) (*TagSyncRun, error) {
+	run, err := dao.getRun(tenantId, runId)
+	if err != nil {
+		return nil, tagSyncStoreError("status run read", err)
+	}
+	return run, nil
+}
+
+// AbortTagSyncHandler cancels the tenant's run owned by this instance. Runs on
+// other instances are stopped with the TaggingSyncEnabled kill switch instead.
 // POST /taggingService/tags/sync/abort
 func AbortTagSyncHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err := auth.CanWrite(r, auth.COMMON_ENTITY); err != nil {

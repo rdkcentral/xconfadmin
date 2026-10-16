@@ -10,15 +10,17 @@ import (
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 )
 
-// Tag sync job state lives in its own Cassandra table (raw CQL access, same
-// pattern as the tagging tables; no DAO registration needed):
+// Tag sync job state lives in its own Cassandra table in the xconf keyspace
+// (raw CQL access, same pattern as the tagging tables):
 //
 //	CREATE TABLE IF NOT EXISTS tag_sync_state
 //	    (tenant_id text, key text, column1 text, value text,
 //	     PRIMARY KEY ((tenant_id, key), column1));
 //
-// Run rows are partitioned by tenant. The lock uses a reserved tenant so it
-// remains global: XDAS and the configured call budget are shared by tenants.
+// key='run', column1=<runId> holds one JSON record per run in its tenant's
+// partition (the run id is time-prefixed so rows cluster chronologically).
+// key='control', column1='lock' holds the single-run lock under a reserved
+// tenant so it stays global: XDAS and its call budget are shared by tenants.
 const (
 	QueryTagSyncStateUpsert = `INSERT INTO tag_sync_state (tenant_id, key, column1, value) VALUES (?, ?, ?, ?)`
 	QueryTagSyncStateGet    = `SELECT value FROM tag_sync_state WHERE tenant_id = ? AND key = ? AND column1 = ?`
@@ -72,7 +74,7 @@ func (tagSyncDaoImpl) saveRun(tenantId string, run *TagSyncRun) error {
 }
 
 func (tagSyncDaoImpl) getRun(tenantId string, runId string) (*TagSyncRun, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryTagSyncStateGet, tenantId, tagSyncRunKey, runId)
+	rows, err := queryRows(QueryTagSyncStateGet, tenantId, tagSyncRunKey, runId)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +85,7 @@ func (tagSyncDaoImpl) getRun(tenantId string, runId string) (*TagSyncRun, error)
 }
 
 func (tagSyncDaoImpl) listRuns(tenantId string, limit int) ([]*TagSyncRun, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryTagSyncStateListNewest, tenantId, tagSyncRunKey, strconv.Itoa(limit))
+	rows, err := queryRows(QueryTagSyncStateListNewest, tenantId, tagSyncRunKey, strconv.Itoa(limit))
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +103,7 @@ func (tagSyncDaoImpl) listRuns(tenantId string, limit int) ([]*TagSyncRun, error
 // pruneRuns works on raw column1 ids (not unmarshalled records) so corrupt
 // rows are pruned too instead of surviving forever.
 func (tagSyncDaoImpl) pruneRuns(tenantId string, keep int) error {
-	rows, err := ds.GetSimpleDao().Query(QueryTagSyncStateList, tenantId, tagSyncRunKey)
+	rows, err := queryRows(QueryTagSyncStateList, tenantId, tagSyncRunKey)
 	if err != nil {
 		return err
 	}
@@ -128,7 +130,7 @@ func (tagSyncDaoImpl) pruneRuns(tenantId string, keep int) error {
 }
 
 func (tagSyncDaoImpl) getLock() (*TagSyncLock, error) {
-	rows, err := ds.GetSimpleDao().Query(QueryTagSyncStateGet, tagSyncGlobalTenantId, tagSyncControlKey, tagSyncLockColumn)
+	rows, err := queryRows(QueryTagSyncStateGet, tagSyncGlobalTenantId, tagSyncControlKey, tagSyncLockColumn)
 	if err != nil {
 		return nil, err
 	}
