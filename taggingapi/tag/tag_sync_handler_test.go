@@ -5,11 +5,13 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
 	"github.com/rdkcentral/xconfadmin/common"
 	xhttp "github.com/rdkcentral/xconfadmin/http"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,6 +35,98 @@ func TestTagSyncTriggerRejectsUnreadableBody(t *testing.T) {
 	assert.NotContains(t, rec.Body.String(), "runId", "no run may have been started")
 }
 
+func tagSyncRequest(method string, path string, headerTenantId string, contextTenantId string) *http.Request {
+	req := httptest.NewRequest(method, path, nil)
+	if headerTenantId != "" {
+		req.Header.Set("tenantId", headerTenantId)
+	}
+	if contextTenantId != "" {
+		req = req.WithContext(context.WithValue(req.Context(), xhttp.CTX_KEY_TENANT_ID, contextTenantId))
+	}
+	return req
+}
+
+func TestAbortTagSyncCannotCancelAnotherTenant(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	activeTagSyncMu.Lock()
+	activeTagSyncCancel = cancel
+	activeTagSyncRunId = "run-a"
+	activeTagSyncTenantId = "TENANT-A"
+	activeTagSyncMu.Unlock()
+	defer func() {
+		activeTagSyncMu.Lock()
+		activeTagSyncCancel = nil
+		activeTagSyncRunId = ""
+		activeTagSyncTenantId = ""
+		activeTagSyncMu.Unlock()
+	}()
+
+	rec := httptest.NewRecorder()
+	AbortTagSyncHandler(rec, tagSyncRequest(http.MethodPost, "/taggingService/tags/sync/abort", "TENANT-B", "TENANT-B"))
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+	assert.NoError(t, ctx.Err(), "another tenant must not be able to cancel the active run")
+}
+
+func TestAbortTagSyncUsesResolvedTenantContext(t *testing.T) {
+	oldSatOn := common.SatOn
+	common.SatOn = false
+	defer func() { common.SatOn = oldSatOn }()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	activeTagSyncMu.Lock()
+	activeTagSyncCancel = cancel
+	activeTagSyncRunId = "run-a"
+	activeTagSyncTenantId = "TENANT-A"
+	activeTagSyncMu.Unlock()
+	defer func() {
+		activeTagSyncMu.Lock()
+		activeTagSyncCancel = nil
+		activeTagSyncRunId = ""
+		activeTagSyncTenantId = ""
+		activeTagSyncMu.Unlock()
+	}()
+
+	rec := httptest.NewRecorder()
+	AbortTagSyncHandler(rec, tagSyncRequest(http.MethodPost, "/taggingService/tags/sync/abort", "IGNORED-RAW-HEADER", "TENANT-A"))
+
+	assert.Equal(t, http.StatusAccepted, rec.Code)
+	assert.ErrorIs(t, ctx.Err(), context.Canceled, "the handler must use the tenant resolved into request context")
+}
+
+func TestAbortTagSyncChecksSharedWritePermission(t *testing.T) {
+	oldSatOn := common.SatOn
+	common.SatOn = true
+	defer func() { common.SatOn = oldSatOn }()
+
+	req := tagSyncRequest(http.MethodPost, "/taggingService/tags/sync/abort", "TENANT-A", "TENANT-A")
+	req = req.WithContext(context.WithValue(req.Context(), xhttp.CTX_KEY_AUTH_TYPE, xhttp.AUTH_TYPE_SAT_V2))
+	rec := httptest.NewRecorder()
+
+	AbortTagSyncHandler(rec, req)
+
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+	assert.Contains(t, rec.Body.String(), "No capabilities found in SAT token")
+}
+
+func TestTriggerTagSyncChecksPermissionBeforeParsingBody(t *testing.T) {
+	oldSatOn := common.SatOn
+	common.SatOn = true
+	defer func() { common.SatOn = oldSatOn }()
+
+	req := httptest.NewRequest(http.MethodPost, "/taggingService/tags/sync", strings.NewReader("{"))
+	ctx := context.WithValue(req.Context(), xhttp.CTX_KEY_TENANT_ID, "TENANT-A")
+	ctx = context.WithValue(ctx, xhttp.CTX_KEY_AUTH_TYPE, xhttp.AUTH_TYPE_SAT_V2)
+	rec := httptest.NewRecorder()
+
+	TriggerTagSyncHandler(rec, req.WithContext(ctx))
+
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+	assert.Contains(t, rec.Body.String(), "No capabilities found in SAT token")
+}
+
 func TestTagSyncRunStatusRejectsMissingRunId(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/taggingService/tags/sync/status/", nil)
 	req = mux.SetURLVars(req, map[string]string{common.RunId: ""})
@@ -44,32 +138,18 @@ func TestTagSyncRunStatusRejectsMissingRunId(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), common.RunId)
 }
 
-func TestTagSyncAbortOnlyCancelsOwnTenant(t *testing.T) {
-	ctxA, cancelA := context.WithCancel(context.Background())
-	defer cancelA()
-	activeTagSyncMu.Lock()
-	activeTagSyncs["TENANT_A"] = activeTagSync{cancel: cancelA, runId: "20260101-000000-a"}
-	activeTagSyncMu.Unlock()
-	t.Cleanup(func() {
-		activeTagSyncMu.Lock()
-		delete(activeTagSyncs, "TENANT_A")
-		activeTagSyncMu.Unlock()
-	})
+func TestTagSyncRunStatusChecksSharedReadPermission(t *testing.T) {
+	oldSatOn := common.SatOn
+	common.SatOn = true
+	defer func() { common.SatOn = oldSatOn }()
 
-	abort := func(tenantId string) *httptest.ResponseRecorder {
-		req := httptest.NewRequest(http.MethodPost, "/taggingService/tags/sync/abort", nil)
-		req = req.WithContext(context.WithValue(req.Context(), xhttp.CTX_KEY_TENANT_ID, tenantId))
-		rec := httptest.NewRecorder()
-		AbortTagSyncHandler(rec, req)
-		return rec
-	}
+	req := tagSyncRequest(http.MethodGet, "/taggingService/tags/sync/status/run-a", "TENANT-A", "TENANT-A")
+	req = req.WithContext(context.WithValue(req.Context(), xhttp.CTX_KEY_AUTH_TYPE, xhttp.AUTH_TYPE_SAT_V2))
+	req = mux.SetURLVars(req, map[string]string{common.RunId: "run-a"})
+	rec := httptest.NewRecorder()
 
-	rec := abort("TENANT_B")
-	assert.Equal(t, http.StatusNotFound, rec.Code)
-	assert.NoError(t, ctxA.Err(), "another tenant's run must keep running")
+	TagSyncRunStatusHandler(rec, req)
 
-	rec = abort("TENANT_A")
-	assert.Equal(t, http.StatusAccepted, rec.Code)
-	assert.Contains(t, rec.Body.String(), "20260101-000000-a")
-	assert.Error(t, ctxA.Err())
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+	assert.Contains(t, rec.Body.String(), "No capabilities found in SAT token")
 }

@@ -21,11 +21,13 @@ func init() {
 	tagSyncLockSettle = time.Millisecond
 }
 
+const testTenantId = "TEST"
+
 // ---- fakes ----
 
 type fakeTagSyncDao struct {
 	mu         sync.Mutex
-	runs       map[string]*TagSyncRun
+	runs       map[string]map[string]*TagSyncRun
 	lock       *TagSyncLock
 	lockWrites []time.Time
 	getLockErr error
@@ -33,35 +35,45 @@ type fakeTagSyncDao struct {
 }
 
 func newFakeTagSyncDao() *fakeTagSyncDao {
-	return &fakeTagSyncDao{runs: make(map[string]*TagSyncRun)}
+	return &fakeTagSyncDao{runs: make(map[string]map[string]*TagSyncRun)}
 }
 
-func (s *fakeTagSyncDao) saveRun(run *TagSyncRun) error {
+func (s *fakeTagSyncDao) tenantRuns(tenantId string) map[string]*TagSyncRun {
+	runs := s.runs[tenantId]
+	if runs == nil {
+		runs = make(map[string]*TagSyncRun)
+		s.runs[tenantId] = runs
+	}
+	return runs
+}
+
+func (s *fakeTagSyncDao) saveRun(tenantId string, run *TagSyncRun) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	copied := *run
-	s.runs[run.RunId] = &copied
+	s.tenantRuns(tenantId)[run.RunId] = &copied
 	return nil
 }
 
-func (s *fakeTagSyncDao) getRun(runId string) (*TagSyncRun, error) {
+func (s *fakeTagSyncDao) getRun(tenantId string, runId string) (*TagSyncRun, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.getRunErr != nil {
 		return nil, s.getRunErr
 	}
-	if run, ok := s.runs[runId]; ok {
+	if run, ok := s.tenantRuns(tenantId)[runId]; ok {
 		copied := *run
 		return &copied, nil
 	}
 	return nil, nil
 }
 
-func (s *fakeTagSyncDao) listRuns(limit int) ([]*TagSyncRun, error) {
+func (s *fakeTagSyncDao) listRuns(tenantId string, limit int) ([]*TagSyncRun, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	runs := make([]*TagSyncRun, 0, len(s.runs))
-	for _, run := range s.runs {
+	tenantRuns := s.tenantRuns(tenantId)
+	runs := make([]*TagSyncRun, 0, len(tenantRuns))
+	for _, run := range tenantRuns {
 		copied := *run
 		runs = append(runs, &copied)
 	}
@@ -72,19 +84,20 @@ func (s *fakeTagSyncDao) listRuns(limit int) ([]*TagSyncRun, error) {
 	return runs, nil
 }
 
-func (s *fakeTagSyncDao) pruneRuns(keep int) error {
+func (s *fakeTagSyncDao) pruneRuns(tenantId string, keep int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if len(s.runs) <= keep {
+	runs := s.tenantRuns(tenantId)
+	if len(runs) <= keep {
 		return nil
 	}
-	ids := make([]string, 0, len(s.runs))
-	for id := range s.runs {
+	ids := make([]string, 0, len(runs))
+	for id := range runs {
 		ids = append(ids, id)
 	}
 	sort.Strings(ids)
 	for _, id := range ids[:len(ids)-keep] {
-		delete(s.runs, id)
+		delete(runs, id)
 	}
 	return nil
 }
@@ -191,7 +204,12 @@ func testSyncConfig() *taggingapi_config.TagSyncConfig {
 // newTestEnv wires the engine to an in-memory Cassandra view (tagId ->
 // members) and the fake XDAS. Bucket layout follows the real getBucketId.
 func newTestEnv(cass map[string][]string, xdas *fakeXdas, dao *fakeTagSyncDao) *tagSyncEnv {
+	return newTestEnvForTenant(testTenantId, cass, xdas, dao)
+}
+
+func newTestEnvForTenant(tenantId string, cass map[string][]string, xdas *fakeXdas, dao *fakeTagSyncDao) *tagSyncEnv {
 	return &tagSyncEnv{
+		tenantId: tenantId,
 		getAllTagIds: func() ([]string, error) {
 			tags := make([]string, 0, len(cass))
 			for tagId := range cass {
@@ -550,7 +568,8 @@ func TestTagSyncResumeRestampsTheRecordForTheNewSegment(t *testing.T) {
 	// timestamp, nor options claiming this is not a resume.
 	stale := time.Now().UTC().Add(-48 * time.Hour)
 	dao := newFakeTagSyncDao()
-	dao.runs["20260101-000000-aaaa"] = &TagSyncRun{
+	dao.tenantRuns(testTenantId)["20260101-000000-aaaa"] = &TagSyncRun{
+		TenantId:  testTenantId,
 		RunId:     "20260101-000000-aaaa",
 		Mode:      TagSyncModeDetect,
 		State:     TagSyncStateAborted,
@@ -564,7 +583,7 @@ func TestTagSyncResumeRestampsTheRecordForTheNewSegment(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, engine.opts.Resume)
 
-	saved, err := dao.getRun("20260101-000000-aaaa")
+	saved, err := dao.getRun(testTenantId, "20260101-000000-aaaa")
 	assert.NoError(t, err)
 	assert.True(t, saved.UpdatedAt.After(stale), "the record must be stamped for the segment now running")
 	assert.True(t, saved.Options.Resume, "options must describe the segment actually running")
@@ -600,7 +619,7 @@ func TestTagSyncStatusDoesNotLeakDriverDetail(t *testing.T) {
 	dao := newFakeTagSyncDao()
 	dao.getLockErr = errors.New("gocql: no hosts available in the pool: 10.0.0.7:9042 keyspace ApplicationsDiscoveryDataService")
 
-	_, _, err := loadTagSyncStatus(dao)
+	_, _, err := loadTagSyncStatus(dao, testTenantId)
 
 	if assert.Error(t, err) {
 		assert.Equal(t, "tag sync state store unavailable", err.Error())
@@ -611,26 +630,51 @@ func TestTagSyncStatusDoesNotLeakDriverDetail(t *testing.T) {
 
 func TestTagSyncRunStatusByRunId(t *testing.T) {
 	dao := newFakeTagSyncDao()
-	dao.saveRun(&TagSyncRun{RunId: "20260817-153012-aaaa", State: TagSyncStateCompleted})
-	dao.saveRun(&TagSyncRun{RunId: "20260818-090000-bbbb", State: TagSyncStateAborted})
+	dao.saveRun(testTenantId, &TagSyncRun{TenantId: testTenantId, RunId: "20260817-153012-aaaa", State: TagSyncStateCompleted})
+	dao.saveRun(testTenantId, &TagSyncRun{TenantId: testTenantId, RunId: "20260818-090000-bbbb", State: TagSyncStateAborted})
 
-	run, err := loadTagSyncRun(dao, "20260817-153012-aaaa")
+	run, err := loadTagSyncRun(dao, testTenantId, "20260817-153012-aaaa")
 	assert.NoError(t, err)
 	if assert.NotNil(t, run) {
 		assert.Equal(t, "20260817-153012-aaaa", run.RunId)
 		assert.Equal(t, TagSyncStateCompleted, run.State)
 	}
 
-	run, err = loadTagSyncRun(dao, "20260101-000000-none")
+	run, err = loadTagSyncRun(dao, testTenantId, "20260101-000000-none")
 	assert.NoError(t, err)
 	assert.Nil(t, run)
+
+	run, err = loadTagSyncRun(dao, "other-tenant", "20260817-153012-aaaa")
+	assert.NoError(t, err)
+	assert.Nil(t, run, "another tenant's run id must read as not found")
+}
+
+func TestTagSyncStatusShowsOnlyOwnTenantsActiveRun(t *testing.T) {
+	dao := newFakeTagSyncDao()
+	dao.saveRun("tenant-a", &TagSyncRun{TenantId: "tenant-a", RunId: "20260817-153012-aaaa", State: TagSyncStateRunning})
+	dao.saveRun("tenant-b", &TagSyncRun{TenantId: "tenant-b", RunId: "20260816-090000-bbbb", State: TagSyncStateCompleted})
+	dao.lock = &TagSyncLock{TenantId: "tenant-a", Owner: "podA", RunId: "20260817-153012-aaaa", HeartbeatAt: time.Now().UTC()}
+
+	active, history, err := loadTagSyncStatus(dao, "tenant-a")
+	assert.NoError(t, err)
+	if assert.NotNil(t, active) {
+		assert.Equal(t, "20260817-153012-aaaa", active.RunId)
+	}
+	assert.Len(t, history, 1)
+
+	active, history, err = loadTagSyncStatus(dao, "tenant-b")
+	assert.NoError(t, err)
+	assert.Nil(t, active, "the global lock held by another tenant is not this tenant's active run")
+	if assert.Len(t, history, 1) {
+		assert.Equal(t, "tenant-b", history[0].TenantId)
+	}
 }
 
 func TestTagSyncRunStatusDoesNotLeakDriverDetail(t *testing.T) {
 	dao := newFakeTagSyncDao()
 	dao.getRunErr = errors.New("gocql: no hosts available in the pool: 10.0.0.7:9042 keyspace ApplicationsDiscoveryDataService")
 
-	_, err := loadTagSyncRun(dao, "20260817-153012-aaaa")
+	_, err := loadTagSyncRun(dao, testTenantId, "20260817-153012-aaaa")
 
 	if assert.Error(t, err) {
 		assert.Equal(t, "tag sync state store unavailable", err.Error())
@@ -643,15 +687,38 @@ func TestTagSyncResumeBehindManyFinishedRuns(t *testing.T) {
 	// The aborted run is older than a full status page of completed runs, but
 	// still inside the retained history, so resume must reach it.
 	dao := newFakeTagSyncDao()
-	dao.saveRun(&TagSyncRun{RunId: "20250101-000000", State: TagSyncStateAborted})
+	dao.saveRun(testTenantId, &TagSyncRun{TenantId: testTenantId, RunId: "20250101-000000", State: TagSyncStateAborted})
 	for i := 1; i < tagSyncRunHistoryKeep; i++ {
-		dao.saveRun(&TagSyncRun{RunId: fmt.Sprintf("20250101-%06d", i), State: TagSyncStateCompleted})
+		dao.saveRun(testTenantId, &TagSyncRun{TenantId: testTenantId, RunId: fmt.Sprintf("20250101-%06d", i), State: TagSyncStateCompleted})
 	}
 
-	resumed, err := findResumableRun(dao)
+	resumed, err := findResumableRun(dao, testTenantId)
 	assert.NoError(t, err)
 	if assert.NotNil(t, resumed) {
 		assert.Equal(t, "20250101-000000", resumed.RunId)
+	}
+}
+
+func TestTagSyncRunHistoryAndResumeAreTenantScoped(t *testing.T) {
+	dao := newFakeTagSyncDao()
+	assert.NoError(t, dao.saveRun("tenant-a", &TagSyncRun{
+		TenantId: "tenant-a", RunId: "20250101-000001", State: TagSyncStateAborted,
+	}))
+	assert.NoError(t, dao.saveRun("tenant-b", &TagSyncRun{
+		TenantId: "tenant-b", RunId: "20250101-000002", State: TagSyncStateAborted,
+	}))
+
+	runsA, err := dao.listRuns("tenant-a", 10)
+	assert.NoError(t, err)
+	if assert.Len(t, runsA, 1) {
+		assert.Equal(t, "tenant-a", runsA[0].TenantId)
+	}
+
+	resumed, err := findResumableRun(dao, "tenant-b")
+	assert.NoError(t, err)
+	if assert.NotNil(t, resumed) {
+		assert.Equal(t, "tenant-b", resumed.TenantId)
+		assert.Equal(t, "20250101-000002", resumed.RunId)
 	}
 }
 
@@ -696,13 +763,14 @@ func TestTagSyncNormalizesRawMemberOnce(t *testing.T) {
 
 func TestTagSyncLockBusy(t *testing.T) {
 	dao := newFakeTagSyncDao()
-	dao.lock = &TagSyncLock{Owner: "other-pod", RunId: "run-1", HeartbeatAt: time.Now().UTC()}
+	dao.lock = &TagSyncLock{TenantId: "tenant-a", Owner: "other-pod", RunId: "run-1", HeartbeatAt: time.Now().UTC()}
 
-	env := newTestEnv(map[string][]string{}, newFakeXdas(), dao)
+	env := newTestEnvForTenant("tenant-b", map[string][]string{}, newFakeXdas(), dao)
 	_, err := prepareTagSync(TagSyncOptions{Mode: TagSyncModeDetect}, env)
 
 	var busy *tagSyncBusyError
 	if assert.ErrorAs(t, err, &busy) {
+		assert.Equal(t, "tenant-a", busy.TenantId, "the global XDAS lease remains busy across tenants")
 		assert.Equal(t, "run-1", busy.RunId)
 		assert.Equal(t, "other-pod", busy.Owner)
 	}
@@ -730,7 +798,7 @@ func TestTagSyncRunPersistedWithFinalState(t *testing.T) {
 	env := newTestEnv(cass, xdas, dao)
 	run := execute(t, TagSyncOptions{Mode: TagSyncModeDetect}, env)
 
-	saved, err := dao.getRun(run.RunId)
+	saved, err := dao.getRun(testTenantId, run.RunId)
 	assert.NoError(t, err)
 	if assert.NotNil(t, saved) {
 		assert.Equal(t, TagSyncStateCompleted, saved.State)
@@ -753,7 +821,7 @@ func TestTagSyncStatusShowsLiveMissingRate(t *testing.T) {
 	engine.run.Counts.MissingKey = 1
 	engine.saveRun()
 
-	saved, err := dao.getRun(engine.run.RunId)
+	saved, err := dao.getRun(testTenantId, engine.run.RunId)
 	assert.NoError(t, err)
 	assert.Nil(t, saved.CompletedAt, "the run is still going")
 	assert.InDelta(t, 0.75, saved.MissingRate, 0.0001)
@@ -769,6 +837,14 @@ func TestTagSyncInvalidMode(t *testing.T) {
 	assert.Error(t, validateTagSyncOptions(&opts), "a resume still rejects a value that is not a mode")
 }
 
+func TestPrepareTagSyncRequiresTenant(t *testing.T) {
+	_, err := PrepareTagSync(TagSyncOptions{Mode: TagSyncModeDetect}, " ")
+	if assert.Error(t, err) {
+		assert.Equal(t, http.StatusBadRequest, xwcommon.GetXconfErrorStatusCode(err))
+		assert.Equal(t, "tenantId is required", err.Error())
+	}
+}
+
 func TestTagSyncValidateDefaultsModeOnlyForFreshRuns(t *testing.T) {
 	opts := TagSyncOptions{}
 	assert.NoError(t, validateTagSyncOptions(&opts))
@@ -782,11 +858,12 @@ func TestTagSyncValidateDefaultsModeOnlyForFreshRuns(t *testing.T) {
 func TestTagSyncResumeRejectsAModeChange(t *testing.T) {
 	aborted := func() *fakeTagSyncDao {
 		dao := newFakeTagSyncDao()
-		dao.runs["20260101-000000-aaaa"] = &TagSyncRun{
-			RunId:   "20260101-000000-aaaa",
-			Mode:    TagSyncModeDetect,
-			State:   TagSyncStateAborted,
-			Options: TagSyncOptions{Mode: TagSyncModeDetect},
+		dao.tenantRuns(testTenantId)["20260101-000000-aaaa"] = &TagSyncRun{
+			TenantId: testTenantId,
+			RunId:    "20260101-000000-aaaa",
+			Mode:     TagSyncModeDetect,
+			State:    TagSyncStateAborted,
+			Options:  TagSyncOptions{Mode: TagSyncModeDetect},
 		}
 		return dao
 	}
@@ -812,11 +889,12 @@ func TestTagSyncResumeRejectsAModeChange(t *testing.T) {
 func TestTagSyncResumeRejectsATagsFilterChange(t *testing.T) {
 	aborted := func(tags []string) *fakeTagSyncDao {
 		dao := newFakeTagSyncDao()
-		dao.runs["20260101-000000-aaaa"] = &TagSyncRun{
-			RunId:   "20260101-000000-aaaa",
-			Mode:    TagSyncModeDetect,
-			State:   TagSyncStateAborted,
-			Options: TagSyncOptions{Mode: TagSyncModeDetect, Tags: tags},
+		dao.tenantRuns(testTenantId)["20260101-000000-aaaa"] = &TagSyncRun{
+			TenantId: testTenantId,
+			RunId:    "20260101-000000-aaaa",
+			Mode:     TagSyncModeDetect,
+			State:    TagSyncStateAborted,
+			Options:  TagSyncOptions{Mode: TagSyncModeDetect, Tags: tags},
 		}
 		return dao
 	}
@@ -1041,9 +1119,9 @@ func TestTagSyncReleaseLeavesAnotherRunsLockAlone(t *testing.T) {
 	assert.NoError(t, dao.saveLock(&TagSyncLock{
 		Owner: "podA", RunId: "runA", HeartbeatAt: time.Now().UTC().Add(-10 * tagSyncLockStaleAfter),
 	}))
-	assert.NoError(t, acquireTagSyncLock(dao, "podB", "runB"))
+	assert.NoError(t, acquireTagSyncLock(dao, "tenant-b", "podB", "runB"))
 
-	releaseTagSyncLock(dao, "podA", "runA")
+	releaseTagSyncLock(dao, "tenant-a", "podA", "runA")
 
 	lock, err := dao.getLock()
 	assert.NoError(t, err)
@@ -1051,11 +1129,11 @@ func TestTagSyncReleaseLeavesAnotherRunsLockAlone(t *testing.T) {
 		assert.Equal(t, "runB", lock.RunId, "B still owns the lock")
 		assert.False(t, lock.Released, "B is still walking, so its lock must not read as released")
 	}
-	assert.Error(t, acquireTagSyncLock(dao, "podC", "runC"), "a third run must still be refused")
+	assert.Error(t, acquireTagSyncLock(dao, "tenant-c", "podC", "runC"), "a third run must still be refused")
 
 	// B's own release works normally.
-	releaseTagSyncLock(dao, "podB", "runB")
-	assert.NoError(t, acquireTagSyncLock(dao, "podC", "runC"))
+	releaseTagSyncLock(dao, "tenant-b", "podB", "runB")
+	assert.NoError(t, acquireTagSyncLock(dao, "tenant-c", "podC", "runC"))
 }
 
 func TestTagSyncStaleHeartbeatStopsTheWalk(t *testing.T) {
@@ -1211,7 +1289,7 @@ func TestTagSyncLimitedRunIsResumable(t *testing.T) {
 func TestTagSyncRunHistoryPruned(t *testing.T) {
 	dao := newFakeTagSyncDao()
 	for i := 0; i < 30; i++ {
-		dao.saveRun(&TagSyncRun{RunId: fmt.Sprintf("20250101-%06d", i), State: TagSyncStateCompleted})
+		dao.saveRun(testTenantId, &TagSyncRun{TenantId: testTenantId, RunId: fmt.Sprintf("20250101-%06d", i), State: TagSyncStateCompleted})
 	}
 	cass := map[string][]string{"tag1": {"M0"}}
 	xdas := newFakeXdas()
@@ -1220,10 +1298,10 @@ func TestTagSyncRunHistoryPruned(t *testing.T) {
 	run := execute(t, TagSyncOptions{Mode: TagSyncModeDetect}, newTestEnv(cass, xdas, dao))
 	assert.Equal(t, TagSyncStateCompleted, run.State)
 
-	runs, err := dao.listRuns(2 * tagSyncRunHistoryKeep)
+	runs, err := dao.listRuns(testTenantId, 2*tagSyncRunHistoryKeep)
 	assert.NoError(t, err)
 	assert.LessOrEqual(t, len(runs), tagSyncRunHistoryKeep, "old runs are pruned at finalize")
-	saved, _ := dao.getRun(run.RunId)
+	saved, _ := dao.getRun(testTenantId, run.RunId)
 	assert.NotNil(t, saved, "the just-finished run survives pruning")
 }
 

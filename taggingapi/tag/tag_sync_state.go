@@ -17,10 +17,10 @@ import (
 //	    (tenant_id text, key text, column1 text, value text,
 //	     PRIMARY KEY ((tenant_id, key), column1));
 //
-// Every row lives in its tenant's partitions: key='run', column1=<runId>
-// holds one JSON record per run (the run id is time-prefixed so rows cluster
-// chronologically); key='control', column1='lock' holds the tenant's
-// single-run lock with its heartbeat.
+// key='run', column1=<runId> holds one JSON record per run in its tenant's
+// partition (the run id is time-prefixed so rows cluster chronologically).
+// key='control', column1='lock' holds the single-run lock under a reserved
+// tenant so it stays global: XDAS and its call budget are shared by tenants.
 const (
 	QueryTagSyncStateUpsert = `INSERT INTO tag_sync_state (tenant_id, key, column1, value) VALUES (?, ?, ?, ?)`
 	QueryTagSyncStateGet    = `SELECT value FROM tag_sync_state WHERE tenant_id = ? AND key = ? AND column1 = ?`
@@ -29,15 +29,17 @@ const (
 	QueryTagSyncStateListNewest = `SELECT column1, value FROM tag_sync_state WHERE tenant_id = ? AND key = ? ORDER BY column1 DESC LIMIT ?`
 	QueryTagSyncStateDelete     = `DELETE FROM tag_sync_state WHERE tenant_id = ? AND key = ? AND column1 = ?`
 
-	tagSyncRunKey     = "run"
-	tagSyncControlKey = "control"
-	tagSyncLockColumn = "lock"
+	tagSyncGlobalTenantId = "__global__"
+	tagSyncRunKey         = "run"
+	tagSyncControlKey     = "control"
+	tagSyncLockColumn     = "lock"
 )
 
 // TagSyncLock is the cross-instance single-run guard. A lock is live while
 // Released is false and the heartbeat is fresher than tagSyncLockStaleAfter;
 // a crashed pod's lock goes stale on its own and can be taken over.
 type TagSyncLock struct {
+	TenantId    string    `json:"tenantId"`
 	Owner       string    `json:"owner"`
 	RunId       string    `json:"runId"`
 	HeartbeatAt time.Time `json:"heartbeatAt"`
@@ -45,37 +47,34 @@ type TagSyncLock struct {
 }
 
 type tagSyncDao interface {
-	saveRun(run *TagSyncRun) error
-	getRun(runId string) (*TagSyncRun, error)
+	saveRun(tenantId string, run *TagSyncRun) error
+	getRun(tenantId string, runId string) (*TagSyncRun, error)
 	// listRuns returns the newest limit runs, newest first.
-	listRuns(limit int) ([]*TagSyncRun, error)
+	listRuns(tenantId string, limit int) ([]*TagSyncRun, error)
 	// pruneRuns deletes run rows beyond the newest keep, so the history
 	// partition the status endpoint scans stays bounded.
-	pruneRuns(keep int) error
+	pruneRuns(tenantId string, keep int) error
 	// getLock returns nil when no lock row exists yet.
 	getLock() (*TagSyncLock, error)
 	saveLock(lock *TagSyncLock) error
 }
 
-// tagSyncDaoImpl reads and writes the runs and lock of one tenant.
-type tagSyncDaoImpl struct {
-	tenantId string
+type tagSyncDaoImpl struct{}
+
+func newTagSyncDao() tagSyncDao {
+	return tagSyncDaoImpl{}
 }
 
-func newTagSyncDao(tenantId string) tagSyncDao {
-	return tagSyncDaoImpl{tenantId: tenantId}
-}
-
-func (d tagSyncDaoImpl) saveRun(run *TagSyncRun) error {
+func (tagSyncDaoImpl) saveRun(tenantId string, run *TagSyncRun) error {
 	data, err := json.Marshal(run)
 	if err != nil {
 		return fmt.Errorf("tag sync run marshal failed: %w", err)
 	}
-	return ds.GetSimpleDao().Modify(QueryTagSyncStateUpsert, d.tenantId, tagSyncRunKey, run.RunId, string(data))
+	return ds.GetSimpleDao().Modify(QueryTagSyncStateUpsert, tenantId, tagSyncRunKey, run.RunId, string(data))
 }
 
-func (d tagSyncDaoImpl) getRun(runId string) (*TagSyncRun, error) {
-	rows, err := queryRows(QueryTagSyncStateGet, d.tenantId, tagSyncRunKey, runId)
+func (tagSyncDaoImpl) getRun(tenantId string, runId string) (*TagSyncRun, error) {
+	rows, err := queryRows(QueryTagSyncStateGet, tenantId, tagSyncRunKey, runId)
 	if err != nil {
 		return nil, err
 	}
@@ -85,8 +84,8 @@ func (d tagSyncDaoImpl) getRun(runId string) (*TagSyncRun, error) {
 	return unmarshalTagSyncRunRow(rows[0])
 }
 
-func (d tagSyncDaoImpl) listRuns(limit int) ([]*TagSyncRun, error) {
-	rows, err := queryRows(QueryTagSyncStateListNewest, d.tenantId, tagSyncRunKey, strconv.Itoa(limit))
+func (tagSyncDaoImpl) listRuns(tenantId string, limit int) ([]*TagSyncRun, error) {
+	rows, err := queryRows(QueryTagSyncStateListNewest, tenantId, tagSyncRunKey, strconv.Itoa(limit))
 	if err != nil {
 		return nil, err
 	}
@@ -103,8 +102,8 @@ func (d tagSyncDaoImpl) listRuns(limit int) ([]*TagSyncRun, error) {
 
 // pruneRuns works on raw column1 ids (not unmarshalled records) so corrupt
 // rows are pruned too instead of surviving forever.
-func (d tagSyncDaoImpl) pruneRuns(keep int) error {
-	rows, err := queryRows(QueryTagSyncStateList, d.tenantId, tagSyncRunKey)
+func (tagSyncDaoImpl) pruneRuns(tenantId string, keep int) error {
+	rows, err := queryRows(QueryTagSyncStateList, tenantId, tagSyncRunKey)
 	if err != nil {
 		return err
 	}
@@ -123,15 +122,15 @@ func (d tagSyncDaoImpl) pruneRuns(keep int) error {
 	// Run ids are time-prefixed: ascending lexical order is oldest first.
 	sort.Strings(ids)
 	for _, id := range ids[:len(ids)-keep] {
-		if err := ds.GetSimpleDao().Modify(QueryTagSyncStateDelete, d.tenantId, tagSyncRunKey, id); err != nil {
+		if err := ds.GetSimpleDao().Modify(QueryTagSyncStateDelete, tenantId, tagSyncRunKey, id); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (d tagSyncDaoImpl) getLock() (*TagSyncLock, error) {
-	rows, err := queryRows(QueryTagSyncStateGet, d.tenantId, tagSyncControlKey, tagSyncLockColumn)
+func (tagSyncDaoImpl) getLock() (*TagSyncLock, error) {
+	rows, err := queryRows(QueryTagSyncStateGet, tagSyncGlobalTenantId, tagSyncControlKey, tagSyncLockColumn)
 	if err != nil {
 		return nil, err
 	}
@@ -149,12 +148,12 @@ func (d tagSyncDaoImpl) getLock() (*TagSyncLock, error) {
 	return &lock, nil
 }
 
-func (d tagSyncDaoImpl) saveLock(lock *TagSyncLock) error {
+func (tagSyncDaoImpl) saveLock(lock *TagSyncLock) error {
 	data, err := json.Marshal(lock)
 	if err != nil {
 		return fmt.Errorf("tag sync lock marshal failed: %w", err)
 	}
-	return ds.GetSimpleDao().Modify(QueryTagSyncStateUpsert, d.tenantId, tagSyncControlKey, tagSyncLockColumn, string(data))
+	return ds.GetSimpleDao().Modify(QueryTagSyncStateUpsert, tagSyncGlobalTenantId, tagSyncControlKey, tagSyncLockColumn, string(data))
 }
 
 func unmarshalTagSyncRunRow(row map[string]interface{}) (*TagSyncRun, error) {

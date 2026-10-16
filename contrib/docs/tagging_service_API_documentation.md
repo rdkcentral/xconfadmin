@@ -340,9 +340,10 @@ The job is **additive-only**: it never deletes anything from either store. XDAS 
 transport failures) are never counted as missing — only a clean "not found" is. A circuit breaker
 aborts the run if XDAS looks unhealthy — see [Outage Guards](#outage-guards).
 
-Only **one run per tenant** can be active across the whole cluster at a time (a per-tenant Cassandra
-lock with heartbeat enforces this). Runs of different tenants can overlap, each with its own `rate`. Progress is checkpointed continuously, so an aborted or crashed run can be resumed
-without re-walking what was already covered.
+Only **one run** can be active across the whole cluster at a time (a Cassandra lock with heartbeat
+enforces this) because all tenants share XDAS and its call budget. Run history, checkpoints and
+resume selection are tenant-scoped. Progress is checkpointed continuously, so an aborted or crashed
+run can be resumed without re-walking what was already covered.
 
 #### Before the first run: create the state table
 
@@ -360,8 +361,8 @@ CREATE TABLE IF NOT EXISTS xconf.tag_sync_state (
 );
 ```
 
-Run records and the single-run lock are kept per tenant, and each tenant's history is pruned to the
-newest few runs as each run finishes.
+Run records are kept per tenant, and each tenant's history is pruned to the newest few runs as each
+run finishes. The single-run lock is global and lives in the reserved `__global__` tenant partition.
 
 #### Using `refresh` to resync regions
 
@@ -399,7 +400,14 @@ POST /taggingService/tags/sync
 Accept = application/json
 Content-Type = application/json
 Authorization = Bearer {SAT token}
+tenantId = {target tenant}
 ```
+
+Tenant selection follows the same authentication-middleware contract as the firmware and other
+tagging APIs. For SAT v2, the `tenantId` header selects the target and the token's `allowedPartners`
+claim plus tagging capability authorizes it. Legacy SAT uses the configured default tenant. Login
+tokens also use the default tenant unless `enable_tenant_header_for_login_token` is enabled. The
+handler reads only the resolved context tenant; `tenantId` is not accepted in the JSON body.
 
 **Request Body (JSON — an empty body runs `detect` with defaults. Every field is optional):**
 
@@ -418,6 +426,7 @@ Authorization = Bearer {SAT token}
 ```bash
 curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/sync' \
   --header 'Authorization: Bearer <SAT token>' \
+  --header 'tenantId: <target tenant>' \
   --header 'Content-Type: application/json' \
   --data '{"mode": "detect"}'
 ```
@@ -426,6 +435,7 @@ curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/syn
 ```bash
 curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/sync' \
   --header 'Authorization: Bearer <SAT token>' \
+  --header 'tenantId: <target tenant>' \
   --header 'Content-Type: application/json' \
   --data '{"mode": "repair", "tags": ["tag-a", "tag-b"], "dryRun": true, "maxMembers": 100000, "rate": 300}'
 ```
@@ -434,6 +444,7 @@ curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/syn
 ```bash
 curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/sync' \
   --header 'Authorization: Bearer <SAT token>' \
+  --header 'tenantId: <target tenant>' \
   --header 'Content-Type: application/json' \
   --data '{"mode": "refresh", "tags": ["tag-a"], "dryRun": true, "maxMembers": 100000}'
 ```
@@ -442,6 +453,7 @@ curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/syn
 ```bash
 curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/sync' \
   --header 'Authorization: Bearer <SAT token>' \
+  --header 'tenantId: <target tenant>' \
   --header 'Content-Type: application/json' \
   --data '{"resume": true}'
 ```
@@ -449,14 +461,16 @@ curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/syn
 **Response Status Codes:**
 - `202 Accepted`: run started in the background
 - `400 Bad Request`: unreadable or malformed body, an invalid `mode`, or a `resume` naming a different `mode` or `tags` than the recorded run
+- `403 Forbidden`: the caller lacks the required tagging capability or the SAT v2 token does not authorize the resolved tenant
 - `404 Not Found`: `resume: true` with no resumable run in the retained history — trigger a fresh run instead
-- `409 Conflict`: a run is already active for this tenant (response includes its `runId` and `owner`), or the kill switch is off
+- `409 Conflict`: a run is already active, or this tenant's kill switch is off. The active `runId` and `owner` are returned only when the active run belongs to the requesting tenant
 - `500 Internal Server Error`: the run-state store could not be read or written. The body is a generic `tag sync state store unavailable`; the driver detail is in the instance log. Check that the `tag_sync_state` table exists (see [Before the first run](#before-the-first-run-create-the-state-table)) and that Cassandra is reachable
 - `503 Service Unavailable`: this instance has not finished starting. Carries `Retry-After`; retry or use another instance
 
 **Response Body (202):**
 ```json
 {
+    "tenantId": "TENANT-A",
     "runId": "20260817-153012-1a2b3c4d",
     "mode": "detect",
     "state": "running",
@@ -468,12 +482,15 @@ curl --location --request POST 'http://<xconf-admin-url>/taggingService/tags/syn
 
 ### Tag Sync Status
 
-Reports the currently active run (on any instance) and recent run history of the requesting tenant.
+Reports this tenant's active run (on any instance) and recent run history. A run owned by another
+tenant is not exposed, although its global lease still prevents a new trigger until it finishes.
 
 **Endpoint:**
 ```
 GET /taggingService/tags/sync/status
 ```
+
+Uses the same middleware-resolved tenant as the trigger endpoint and requires read permission.
 
 **Response Status Codes:**
 - `200 OK`: body as below
@@ -481,20 +498,22 @@ GET /taggingService/tags/sync/status
 **Response Body:**
 ```json
 {
+    "tenantId": "TENANT-A",
     "active": { "runId": "20260817-153012-1a2b3c4d", "state": "running", "...": "..." },
     "history": [ { "runId": "...", "state": "completed", "...": "..." } ],
     "enabled": true
 }
 ```
 
-- `active` — the tenant's run currently holding its lock, or `null`
-- `history` — up to 10 most recent runs, newest first (older records are pruned automatically)
-- `enabled` — current kill switch state
+- `active` — this tenant's run currently holding the cluster lock, or `null`
+- `history` — up to 10 most recent runs for this tenant, newest first (older records are pruned automatically)
+- `enabled` — this tenant's current kill switch state
 
 **Run record fields:**
 
 | Field | Description |
 |-------|-------------|
+| `tenantId` | Tenant whose Cassandra tags are walked by this run |
 | `runId` | Time-prefixed unique id; also the `audit_id` on every log line of the run |
 | `mode`, `options`, `owner` | What is in effect for the segment now running, and which instance is running it — a resume overwrites the pacing fields and sets `options.resume` |
 | `state` | `running`, `completed` or `aborted` |
@@ -528,15 +547,20 @@ single run instead of reading the whole history.
 GET /taggingService/tags/sync/status/{runId}
 ```
 
+Uses the same middleware-resolved tenant as the trigger endpoint and requires read permission. Only
+the tenant's own runs are visible.
+
 **Example:**
 ```bash
 curl --location --request GET 'http://<xconf-admin-url>/taggingService/tags/sync/status/20260817-153012-1a2b3c4d' \
-  --header 'Authorization: Bearer <SAT token>'
+  --header 'Authorization: Bearer <SAT token>' \
+  --header 'tenantId: <target tenant>'
 ```
 
 **Response Status Codes:**
 - `200 OK`: body is the run record (see [Run record fields](#tag-sync-status))
-- `404 Not Found`: no run with that id. Only the 20 most recent runs are kept
+- `403 Forbidden`: the caller lacks the required tagging capability or the SAT v2 token does not authorize the resolved tenant
+- `404 Not Found`: no run with that id for this tenant. Only the 20 most recent runs per tenant are kept
 - `500 Internal Server Error`: the run-state store could not be read (generic `tag sync state store unavailable`)
 
 A run whose instance died stays `running` in its record. If `updatedAt` stops advancing, check
@@ -554,20 +578,24 @@ be resumed later.
 POST /taggingService/tags/sync/abort
 ```
 
+Uses the same middleware-resolved tenant as the trigger endpoint and requires write permission. It
+cannot cancel a run owned by another tenant.
+
 **Response Status Codes:**
 - `202 Accepted`: abort requested; body contains the `runId`
-- `404 Not Found`: no active run on the instance that received the request — to stop a run on
+- `404 Not Found`: no active run for this tenant on the instance that received the request — to stop a run on
   another instance, use the [kill switch](#kill-switch)
 
 ---
 
 ### Kill Switch
 
-The `TaggingSyncEnabled` app setting gates the whole job cluster-wide:
+The `TaggingSyncEnabled` app setting gates the job for the selected tenant:
 
 ```bash
 curl --location --request PUT 'http://<xconf-admin-url>/xconfAdminService/appsettings' \
   --header 'Authorization: Bearer <SAT token>' \
+  --header 'tenantId: <target tenant>' \
   --header 'Content-Type: application/json' \
   --data '{"TaggingSyncEnabled": false}'
 ```
