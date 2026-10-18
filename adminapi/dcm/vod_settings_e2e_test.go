@@ -210,3 +210,79 @@ func TestAllVodSettingsApis(t *testing.T) {
 	assert.Equal(t, res.StatusCode, http.StatusNotFound)
 
 }
+
+func TestUpdateVodSettings_ApplicationTypeGuards(t *testing.T) {
+	xshared.DeleteAllEntities(t) // Integration test
+	xshared.DeleteAllEntities(t)
+
+	stbEntity := &logupload.VodSettings{
+		ID:              "vod-stb-guard-id",
+		Name:            "vod-stb-guard",
+		LocationsURL:    "http://test-stb.com",
+		IPNames:         []string{},
+		IPList:          []string{},
+		SrmIPList:       map[string]string{},
+		ApplicationType: "stb",
+	}
+	xhomeEntity := &logupload.VodSettings{
+		ID:              "vod-xhome-guard-id",
+		Name:            "vod-xhome-guard",
+		LocationsURL:    "http://test-xhome.com",
+		IPNames:         []string{},
+		IPList:          []string{},
+		SrmIPList:       map[string]string{},
+		ApplicationType: "xhome",
+	}
+
+	assert.NilError(t, xshared.SetOneInDao(db.TABLE_VOD_SETTINGS, stbEntity.ID, stbEntity))
+	assert.NilError(t, xshared.SetOneInDao(db.TABLE_VOD_SETTINGS, xhomeEntity.ID, xhomeEntity))
+
+	url := "/xconfAdminService/dcm/vodsettings?applicationType=stb"
+	putVod := func(t *testing.T, entity logupload.VodSettings) *http.Response {
+		t.Helper()
+		payload, err := json.Marshal(entity)
+		assert.NilError(t, err)
+
+		req, err := http.NewRequest("PUT", url, bytes.NewBuffer(payload))
+		assert.NilError(t, err)
+		req.Header.Set("Content-Type", "application/json: charset=UTF-8")
+		req.Header.Set("Accept", "application/json")
+
+		return xshared.ExecuteRequest(req, router).Result()
+	}
+
+	t.Run("RejectsBodyApplicationTypeMismatch", func(t *testing.T) {
+		res := putVod(t, logupload.VodSettings{
+			ID:              "vod-xhome-guard-id",
+			Name:            "vod-xhome-guard",
+			LocationsURL:    "http://test-xhome.com",
+			IPNames:         []string{},
+			IPList:          []string{},
+			SrmIPList:       map[string]string{},
+			ApplicationType: "xhome",
+		})
+		defer res.Body.Close()
+		assert.Equal(t, res.StatusCode, http.StatusConflict)
+	})
+
+	t.Run("DefaultsEmptyApplicationTypeToAuthorizedNamespace", func(t *testing.T) {
+		res := putVod(t, logupload.VodSettings{
+			ID:              "vod-stb-guard-id",
+			Name:            "vod-stb-guard-updated",
+			LocationsURL:    "http://test-stb.com",
+			IPNames:         []string{},
+			IPList:          []string{},
+			SrmIPList:       map[string]string{},
+			ApplicationType: "",
+		})
+		defer res.Body.Close()
+		assert.Equal(t, res.StatusCode, http.StatusOK)
+
+		body, err := ioutil.ReadAll(res.Body)
+		assert.NilError(t, err)
+		var updated logupload.VodSettings
+		err = json.Unmarshal(body, &updated)
+		assert.NilError(t, err)
+		assert.Equal(t, updated.ApplicationType, "stb")
+	})
+}

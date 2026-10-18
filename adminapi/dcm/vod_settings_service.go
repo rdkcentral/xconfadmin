@@ -190,9 +190,17 @@ func UpdateVodSettings(tenantId string, vs *logupload.VodSettings, app string) *
 	if xwutil.IsBlank(vs.ID) {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("ID is empty"), nil)
 	}
+	if vs.ApplicationType == "" {
+		vs.ApplicationType = app
+	} else if vs.ApplicationType != app {
+		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(fmt.Sprintf("Entity with id %s ApplicationType mismatch", vs.ID)), nil)
+	}
 	existingSettings := logupload.GetOneVodSettings(tenantId, vs.ID)
 	if existingSettings == nil {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(fmt.Sprintf("Entity with id %s does not exists", vs.ID)), nil)
+	}
+	if existingSettings.ApplicationType != app {
+		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(fmt.Sprintf("Entity with id %s ApplicationType mismatch", vs.ID)), nil)
 	}
 	if existingSettings.ApplicationType != vs.ApplicationType {
 		return xwhttp.NewResponseEntity(http.StatusConflict, errors.New(fmt.Sprintf("ApplicationType can not be changed")), nil)

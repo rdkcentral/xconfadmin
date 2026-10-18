@@ -127,7 +127,7 @@ func createNumberOfItemsHttpHeaders(entities []*xwlogupload.TelemetryTwoRule) ma
 }
 
 func DeleteOneTelemetryTwoRuleHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
+	applicationType, err := auth.CanWrite(r, auth.TELEMETRY_ENTITY)
 	if err != nil {
 		xhttp.AdminError(w, err)
 		return
@@ -139,6 +139,16 @@ func DeleteOneTelemetryTwoRuleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tenantId := xhttp.GetTenantId(r)
+	entity, err := GetOne(tenantId, id)
+	if err != nil {
+		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
+		return
+	}
+	if entity.ApplicationType != applicationType {
+		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, "Entity with id: "+id+" does not exist")
+		return
+	}
+
 	_, err = Delete(tenantId, id)
 	if err != nil {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))

@@ -191,6 +191,25 @@ func TestDeleteOneTelemetryTwoRuleHandler_SuccessAndNotFound(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
+func TestDeleteOneTelemetryTwoRuleHandler_CrossApplicationTypeDenied(t *testing.T) {
+	xshared.DeleteTelemetryEntities(t)
+	prof := createTelemetryTwoProfile()
+	prof.ApplicationType = "xhome"
+	xshared.SetOneInDao(db.TABLE_TELEMETRY_TWO_PROFILES, prof.ID, prof)
+
+	rule := createTelemetryTwoRule(false, []string{prof.ID})
+	rule.ApplicationType = "xhome"
+	xshared.SetOneInDao(db.TABLE_TELEMETRY_TWO_RULES, rule.ID, rule)
+
+	url := fmt.Sprintf("/xconfAdminService/telemetry/v2/rule/%s?applicationType=stb", rule.ID)
+	r := httptest.NewRequest(http.MethodDelete, url, nil)
+	rr := xshared.ExecuteRequest(r, router)
+	assert.Equal(t, http.StatusNotFound, rr.Code)
+
+	persisted, _ := xshared.GetOneFromDao(db.TABLE_TELEMETRY_TWO_RULES, rule.ID)
+	assert.NotNil(t, persisted)
+}
+
 func TestCreateTelemetryTwoRulesPackageHandler_Mixed(t *testing.T) {
 	xshared.DeleteTelemetryEntities(t)
 	prof := createTelemetryTwoProfile()
