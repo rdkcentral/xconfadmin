@@ -144,7 +144,7 @@ func DeleteOneTelemetryTwoRuleHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponse(w, http.StatusBadRequest, []byte(err.Error()))
 		return
 	}
-	if entity.ApplicationType != applicationType {
+	if !core.ApplicationTypeEquals(entity.ApplicationType, applicationType) {
 		xhttp.WriteAdminErrorResponse(w, http.StatusNotFound, "Entity with id: "+id+" does not exist")
 		return
 	}
