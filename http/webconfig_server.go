@@ -3,12 +3,10 @@ package http
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -95,46 +93,6 @@ func NewExternalConnectors() *ExternalConnectors {
 	return &ExternalConnectors{}
 }
 
-func NewTlsConfig(conf *configuration.Config) (*tls.Config, error) {
-	certFile := conf.GetString("xconfwebconfig.http_client.ca_comodo_cert_file")
-	if len(certFile) == 0 {
-		log.Warn("http_client.ca_comodo_cert_file not specified")
-		return nil, nil
-	}
-	caCertPEM, err := os.ReadFile(certFile)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read comodo cert file %s with error: %+v", certFile, err)
-	}
-
-	roots := x509.NewCertPool()
-	ok := roots.AppendCertsFromPEM(caCertPEM)
-	if !ok {
-		return nil, fmt.Errorf("failed to append cert from pem: %+v", err)
-	}
-
-	certFile = conf.GetString("xconfwebconfig.http_client.cert_file")
-	if len(certFile) == 0 {
-		log.Warn("http_client.cert_file not specified")
-		return nil, nil
-	}
-	privateKeyFile := conf.GetString("xconfwebconfig.http_client.private_key_file")
-	if len(privateKeyFile) == 0 {
-		log.Warn("http_client.private_key_file not specified")
-		return nil, nil
-	}
-
-	cert, err := tls.LoadX509KeyPair(certFile, privateKeyFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load a public/private key pair: %+v", err)
-	}
-
-	return &tls.Config{
-		RootCAs:            roots,
-		InsecureSkipVerify: true,
-		Certificates:       []tls.Certificate{cert},
-	}, nil
-}
-
 func NewDistributedLockConfig(conf *configuration.Config) *DistributedLockConfig {
 	return &DistributedLockConfig{
 		Enabled:  conf.GetBoolean("xconfwebconfig.xconf.distributed_lock_enabled", false),
@@ -175,7 +133,7 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 	verifyStageHost := conf.GetBoolean("xconfwebconfig.sat_consumer.verify_stage_host", false)
 
 	// tlsConfig for http clients
-	tlsConfig, err := NewTlsConfig(conf)
+	tlsConfig, err := xhttp.NewTlsConfig(conf)
 	if err != nil && !testOnly {
 		panic(err)
 	}
