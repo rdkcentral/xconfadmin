@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rdkcentral/xconfadmin/common"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -173,11 +175,7 @@ func (s *AppMetrics) UpdateAPIMetrics(r *http.Request, status int, startTime tim
 		path = "path extraction error"
 	}
 	queryParams := r.URL.Query()
-	qp := queryParams["applicationType"]
-	appType := ""
-	if len(qp) != 0 {
-		appType = qp[0]
-	}
+	appType := normalizeApplicationType(queryParams.Get("applicationType"))
 	vals := prometheus.Labels{"app": WebConfServer.AppName, "code": statusCode, "method": r.Method, "path": path, "app_type": appType}
 	metrics.counter.With(vals).Inc()
 
@@ -191,6 +189,19 @@ func (s *AppMetrics) UpdateAPIMetrics(r *http.Request, status int, startTime tim
 	origin := r.Header.Get("Origin")
 	vals = prometheus.Labels{"app": WebConfServer.AppName, "origin": origin, "code": statusCode}
 	metrics.reqsByOriginCounter.With(vals).Inc()
+}
+
+func normalizeApplicationType(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "unknown"
+	}
+	for _, applicationType := range common.ApplicationTypes {
+		if value == strings.TrimSpace(applicationType) {
+			return value
+		}
+	}
+	return "unknown"
 }
 
 // updateExternalAPIMetrics updates duration and counts for external API calls to account, sat etc.
