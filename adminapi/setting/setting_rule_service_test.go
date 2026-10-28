@@ -610,6 +610,35 @@ func TestBeforeSavingSettingRule(t *testing.T) {
 	})
 }
 
+func TestBeforeSavingSettingRule_ApplicationTypeEnforcement(t *testing.T) {
+	t.Run("RejectsMismatchedApplicationType", func(t *testing.T) {
+		entity := &logupload.SettingRule{
+			Name:            "Mismatch Rule",
+			ApplicationType: "RDKV",
+			BoundSettingID:  "setting-id",
+			Rule:            *rulesengine.NewEmptyRule(),
+		}
+
+		err := beforeSavingSettingRule(db.GetDefaultTenantId(), "STB", entity)
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "ApplicationType Conflict")
+	})
+
+	t.Run("DefaultsEmptyApplicationType", func(t *testing.T) {
+		entity := &logupload.SettingRule{
+			Name:            "Default AppType Rule",
+			ApplicationType: "",
+			BoundSettingID:  "setting-id",
+			Rule:            *rulesengine.NewEmptyRule(),
+		}
+
+		err := beforeSavingSettingRule(db.GetDefaultTenantId(), "STB", entity)
+		assert.Equal(t, "STB", entity.ApplicationType)
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "Rule is empty")
+	})
+}
+
 func TestCreateSettingRule(t *testing.T) {
 	t.Run("ErrorCases", func(t *testing.T) {
 		defer func() {

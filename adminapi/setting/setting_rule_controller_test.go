@@ -274,6 +274,27 @@ func TestCreateSettingRuleHandler(t *testing.T) {
 	assert.True(t, w.Status() == http.StatusCreated || w.Status() >= 400)
 }
 
+func TestCreateSettingRuleHandler_ApplicationTypeMismatch(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/setting-rules", nil)
+	recorder := httptest.NewRecorder()
+	w := xwhttp.NewXResponseWriter(recorder)
+	ctx := context.WithValue(req.Context(), applicationTypeKey, "STB")
+	req = req.WithContext(ctx)
+
+	body := map[string]interface{}{
+		"name":            "Mismatch Rule",
+		"applicationType": "RDKV",
+		"boundSettingID":  "setting-123",
+	}
+	jsonBody, _ := json.Marshal(body)
+	w.SetBody(string(jsonBody))
+
+	CreateSettingRuleHandler(w, req)
+
+	assert.Equal(t, http.StatusConflict, w.Status())
+	assert.Contains(t, recorder.Body.String(), "ApplicationType Conflict")
+}
+
 func TestCreateSettingRulesPackageHandler(t *testing.T) {
 
 	recorder := httptest.NewRecorder()
