@@ -3,6 +3,7 @@ package http
 import (
 	"crypto/tls"
 	"fmt"
+	"net/url"
 
 	proto2 "github.com/rdkcentral/xconfadmin/taggingapi/proto/generated"
 	"github.com/rdkcentral/xconfadmin/util"
@@ -84,7 +85,7 @@ func (c *GroupServiceSyncConnector) DoRequest(method string, url string, headers
 }
 
 func (c *GroupServiceSyncConnector) AddMembersToTag(groupId string, members *proto2.XdasHashes) error {
-	url := fmt.Sprintf(c.addGroupMemberTemplate, c.GetGroupServiceSyncHost(), groupId)
+	url := fmt.Sprintf(c.addGroupMemberTemplate, c.GetGroupServiceSyncHost(), url.PathEscape(groupId))
 	data, err := proto.Marshal(members)
 	if err != nil {
 		return err
@@ -105,7 +106,7 @@ func (c *GroupServiceSyncConnector) AddMembersToTag(groupId string, members *pro
 }
 
 func (c *GroupServiceSyncConnector) RemoveGroupMembers(groupId string, member string) error {
-	url := fmt.Sprintf(c.removeGroupMemberTemplate, c.GetGroupServiceSyncHost(), groupId, member)
+	url := fmt.Sprintf(c.removeGroupMemberTemplate, c.GetGroupServiceSyncHost(), url.PathEscape(groupId), url.QueryEscape(member))
 	rbytes, err := c.DoRequest("DELETE", url, protobufHeaders(), nil)
 	if err != nil {
 		return err
