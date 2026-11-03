@@ -3,6 +3,7 @@ package queries
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -75,6 +76,31 @@ func TestNamespacedListService_CreateRejectsDuplicateMacWithDifferentCase(t *tes
 	duplicate := makeGenericList("ML-LOWER-"+uuid.NewString(), shared.MAC_LIST, []string{"aa:bb:cc:" + uniqueSuffix[:2] + ":" + uniqueSuffix[2:4] + ":" + uniqueSuffix[4:6]})
 	if resp := CreateNamespacedList(tenantId, duplicate, false); resp.Status != http.StatusBadRequest {
 		t.Fatalf("expected duplicate mac to be rejected, got %d: %v", resp.Status, resp.Error)
+	}
+}
+
+func TestNamespacedListService_UpdateRejectsDuplicateMacWithDifferentCase(t *testing.T) {
+	tenantId := db.GetDefaultTenantId()
+	suffix := strings.ToUpper(uuid.NewString()[:6])
+	firstMac := fmt.Sprintf("AA:BB:CC:%s:%s:%s", suffix[:2], suffix[2:4], suffix[4:6])
+	secondMac := fmt.Sprintf("DD:EE:FF:%s:%s:%s", suffix[:2], suffix[2:4], suffix[4:6])
+	first := makeGenericList("ML-UPDATE-FIRST-"+suffix, shared.MAC_LIST, []string{firstMac})
+	if resp := CreateNamespacedList(tenantId, first, false); resp.Status != http.StatusCreated {
+		t.Fatalf("create first mac list failed: %d %v", resp.Status, resp.Error)
+	}
+	second := makeGenericList("ML-UPDATE-SECOND-"+suffix, shared.MAC_LIST, []string{secondMac})
+	if resp := CreateNamespacedList(tenantId, second, false); resp.Status != http.StatusCreated {
+		t.Fatalf("create second mac list failed: %d %v", resp.Status, resp.Error)
+	}
+
+	update := makeGenericList(second.ID, shared.MAC_LIST, []string{strings.ToLower(firstMac)})
+	if resp := UpdateNamespacedList(tenantId, update, ""); resp.Status != http.StatusBadRequest {
+		t.Fatalf("expected duplicate mac update to be rejected, got %d: %v", resp.Status, resp.Error)
+	}
+
+	updated := GetNamespacedListById(tenantId, second.ID)
+	if updated == nil || len(updated.Data) != 1 || updated.Data[0] != secondMac {
+		t.Fatalf("expected second list to remain unchanged, got %+v", updated)
 	}
 }
 
