@@ -342,11 +342,6 @@ func RemoveNamespacedListData(tenantId string, listType string, listId string, s
 }
 
 func CreateNamespacedList(tenantId string, namespacedList *shared.GenericNamespacedList, updateIfExists bool) *xwhttp.ResponseEntity {
-	err := namespacedList.ValidateForAdminService(tenantId)
-	if err != nil {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
-	}
-
 	if namespacedList.TypeName == shared.MAC_LIST {
 		for i, mac := range namespacedList.Data {
 			if macAddress, err := util.ValidateAndNormalizeMacAddress(mac); err != nil {
@@ -355,6 +350,11 @@ func CreateNamespacedList(tenantId string, namespacedList *shared.GenericNamespa
 				namespacedList.Data[i] = macAddress
 			}
 		}
+	}
+
+	err := namespacedList.ValidateForAdminService(tenantId)
+	if err != nil {
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
 	// No need to check for existing record if update is allowed
@@ -374,11 +374,6 @@ func CreateNamespacedList(tenantId string, namespacedList *shared.GenericNamespa
 }
 
 func UpdateNamespacedList(tenantId string, namespacedList *shared.GenericNamespacedList, newId string) *xwhttp.ResponseEntity {
-	err := namespacedList.ValidateForAdminService(tenantId)
-	if err != nil {
-		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
-	}
-
 	if namespacedList.TypeName == shared.MAC_LIST {
 		for i, mac := range namespacedList.Data {
 			if macAddress, err := util.ValidateAndNormalizeMacAddress(mac); err != nil {
@@ -387,6 +382,11 @@ func UpdateNamespacedList(tenantId string, namespacedList *shared.GenericNamespa
 				namespacedList.Data[i] = macAddress
 			}
 		}
+	}
+
+	err := namespacedList.ValidateForAdminService(tenantId)
+	if err != nil {
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
 
 	// When new ID is provided, performs rename operation otherwise update
