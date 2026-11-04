@@ -138,7 +138,7 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 
 	var idpSvc IdpServiceConnector
 	if idpAuthProvider != "acl" {
-		idpSvc = NewIdpServiceConnector(conf, ec.IdpServiceConnector)
+		idpSvc = NewIdpServiceConnector(conf, tlsConfig, ec.IdpServiceConnector)
 	} else {
 		idpSvc = nil
 	}
