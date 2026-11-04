@@ -120,6 +120,35 @@ func TestXcrpConnector_PostRecook_WithModelsAndPartners(t *testing.T) {
 	}
 }
 
+func TestXcrpConnector_PostRecook_EscapesQueryValues(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("partners"); got != "partner&one,partner=two" {
+			t.Errorf("unexpected partners value: %q", got)
+		}
+		if got := r.URL.Query().Get("models"); got != "model&one,model=two" {
+			t.Errorf("unexpected models value: %q", got)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	connector := &XcrpConnector{
+		HttpClient:         newTestHttpClientXcrp(server),
+		hosts:              []string{server.URL},
+		recookPathTemplate: "%s/path?partners=%s&models=%s",
+	}
+
+	err := connector.PostRecook(
+		[]string{"model&one", "model=two"},
+		[]string{"partner&one", "partner=two"},
+		[]byte(`{"test":"data"}`),
+		log.Fields{},
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestXcrpConnector_PostRecook_WithModelsOnly(t *testing.T) {
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
