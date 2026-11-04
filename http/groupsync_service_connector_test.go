@@ -103,6 +103,29 @@ func TestGroupServiceSyncConnector_AddMembersToTag(t *testing.T) {
 	}
 }
 
+func TestGroupServiceSyncConnector_EscapesPathAndQueryValues(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.EscapedPath() != "/ft/group%2Fid" {
+			t.Errorf("unexpected path: %s", r.URL.EscapedPath())
+		}
+		if got := r.URL.Query().Get("field"); got != "member&value" {
+			t.Errorf("unexpected field value: %q", got)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	connector := &GroupServiceSyncConnector{
+		BaseURL:                   server.URL,
+		Client:                    newTestHttpClientSync(server),
+		removeGroupMemberTemplate: "%s/ft/%s?field=%s",
+	}
+
+	if err := connector.RemoveGroupMembers("group/id", "member&value"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestGroupServiceSyncConnector_AddMembersToTag_Error(t *testing.T) {
 	// Create a test server that returns an error
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
