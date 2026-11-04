@@ -16,6 +16,7 @@
 package http
 
 import (
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -30,10 +31,6 @@ import (
 )
 
 var idpServiceName string
-
-const (
-	odpServiceName = "odp"
-)
 
 type IdpServiceConfig struct {
 	ClientId        string
@@ -74,7 +71,7 @@ type DefaultIdpService struct {
 	fullLogoutUrl string
 }
 
-func NewIdpServiceConnector(conf *configuration.Config, externalIdpService IdpServiceConnector) IdpServiceConnector {
+func NewIdpServiceConnector(conf *configuration.Config, tlsConfig *tls.Config, externalIdpService IdpServiceConnector) IdpServiceConnector {
 	if externalIdpService != nil {
 		return externalIdpService
 	} else {
@@ -134,7 +131,7 @@ func NewIdpServiceConnector(conf *configuration.Config, externalIdpService IdpSe
 
 		return &DefaultIdpService{
 			host:             host,
-			HttpClient:       NewHttpClient(conf, odpServiceName, nil),
+			HttpClient:       NewHttpClient(conf, idpServiceName, tlsConfig),
 			IdpServiceConfig: idpServiceConfig,
 			getTokenUrl:      getTokenUrl,
 			fullLoginUrl:     fullLoginUrl,
