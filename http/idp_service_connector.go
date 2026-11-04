@@ -32,9 +32,7 @@ import (
 var idpServiceName string
 
 const (
-	defaultClientId     = "clientId"
-	defaultClientSecret = "clientSecret"
-	odpServiceName      = "odp"
+	odpServiceName = "odp"
 )
 
 type IdpServiceConfig struct {

@@ -1,6 +1,8 @@
 package http
 
 import (
+	"encoding/base64"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -8,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-akka/configuration"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xhttp "github.com/rdkcentral/xconfwebconfig/http"
@@ -72,6 +75,47 @@ func TestNewWebconfigServer_Defaults(t *testing.T) {
 	}
 	if ws.EnableTenantHeaderForLoginToken {
 		t.Fatalf("login-token tenant header support should be disabled by default")
+	}
+}
+
+func TestSatTokenValidation_UsesSatConnectorHttpClient(t *testing.T) {
+	saved := WebConfServer
+	defer func() { WebConfServer = saved }()
+
+	sc := loadSampleServerConfig(t)
+	sampleConf, err := os.ReadFile(filepath.Join("..", "config", "sample_xconfadmin.conf"))
+	if err != nil {
+		t.Fatalf("failed to read sample config: %v", err)
+	}
+	sc.Config = configuration.ParseString(string(sampleConf) + "\nxconfwebconfig.sat_service.tls_server_name = \"sat.internal.example.com\"\n")
+	ws := NewWebconfigServer(sc, true, nil, nil)
+
+	satClient := ws.XW_XconfServer.SatServiceConnector.GetHttpClient()
+	if satClient == nil {
+		t.Fatalf("expected SAT connector http client")
+	}
+	transport, ok := satClient.Transport.(*http.Transport)
+	if !ok || transport.TLSClientConfig == nil {
+		t.Fatalf("expected SAT connector transport with TLS config")
+	}
+	if transport.TLSClientConfig.ServerName != "sat.internal.example.com" {
+		t.Fatalf("expected SAT TLS server name override, got %q", transport.TLSClientConfig.ServerName)
+	}
+
+	// the SAT-host validation path must fetch keys with the connector's client, not http.DefaultClient
+	var called bool
+	satClient.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		called = true
+		return nil, errors.New("stop")
+	})
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","typ":"JWT","kid":"k1"}`))
+	payload := base64.RawURLEncoding.EncodeToString([]byte(`{}`))
+	_, _, _, err = getSubjectAndCapabilitiesFromSatToken("Bearer "+header+"."+payload+".c2ln", false)
+	if err == nil {
+		t.Fatalf("expected validation error")
+	}
+	if !called {
+		t.Fatalf("expected SAT keys client to be used for signing key fetch")
 	}
 }
 
