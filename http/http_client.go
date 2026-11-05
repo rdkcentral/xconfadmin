@@ -5,18 +5,17 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	neturl "net/url"
 	"strings"
 	"time"
 
-	"github.com/rdkcentral/xconfadmin/common"
-
-	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
-
 	"github.com/go-akka/configuration"
+	"github.com/rdkcentral/xconfadmin/common"
+	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
+	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -60,6 +59,8 @@ func NewHttpClient(conf *configuration.Config, serviceName string, tlsConfig *tl
 
 	confKey = fmt.Sprintf("xconfwebconfig.%v.retry_in_msecs", serviceName)
 	retryInMsecs := int(conf.GetInt32(confKey, defaultRetriesInMsecs))
+
+	tlsConfig = xwhttp.ApplyServiceTlsOverrides(conf, serviceName, tlsConfig)
 
 	return &HttpClient{
 		Client: &http.Client{
@@ -208,7 +209,7 @@ func (c *HttpClient) Do(method string, url string, headers map[string]string, bb
 	statusCode = res.StatusCode
 
 	tfields[fmt.Sprintf("%v_status", loggerName)] = res.StatusCode
-	rbytes, err := ioutil.ReadAll(res.Body)
+	rbytes, err := io.ReadAll(res.Body)
 	if err != nil {
 		tfields[errorKey] = err.Error()
 		log.WithFields(tfields).Info(endMessage)
