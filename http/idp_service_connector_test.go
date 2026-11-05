@@ -358,7 +358,7 @@ func TestNewIdpServiceConnector_KidMapInitialization(t *testing.T) {
 	idpConfig := defaultService.GetIdpServiceConfig()
 
 	// Verify KidMap is initialized (sync.Map doesn't have a direct way to check if empty)
-	assert.NotNil(t, idpConfig.KidMap)
+	assert.NotNil(t, &idpConfig.KidMap)
 
 	// Test that we can store and retrieve from KidMap
 	testKey := JsonWebKey{Kid: "test-kid"}
