@@ -129,12 +129,16 @@ func TestNewWebconfigServer_NewIdpServiceConnectorFuncIgnoredForAclProvider(t *t
 	sc := loadSampleServerConfig(t)
 	ec := NewExternalConnectors()
 	ec.NewIdpServiceConnectorFunc = func(conf *configuration.Config, tlsConfig *tls.Config) IdpServiceConnector {
-		return &MockIdpServiceConnector{host: "factory-host"}
+		t.Fatalf("factory should not be called for acl provider")
+		return nil
 	}
 
 	ws := NewWebconfigServer(sc, true, nil, ec)
 	if ws.IdpServiceConnector != nil {
 		t.Fatalf("expected nil idp service connector for acl provider")
+	}
+	if ec.IdpServiceConnector != nil {
+		t.Fatalf("expected external idp service connector to remain nil for acl provider")
 	}
 }
 
