@@ -62,6 +62,7 @@ type IdpServiceConnector interface {
 	Logout(url string) error
 	GetIdpServiceConfig() *IdpServiceConfig
 }
+
 type DefaultIdpService struct {
 	host string
 	*HttpClient

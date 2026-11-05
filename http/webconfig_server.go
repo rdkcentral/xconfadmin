@@ -80,6 +80,8 @@ type DistributedLockConfig struct {
 type ExternalConnectors struct {
 	xw_ect *xhttp.ExternalConnectors
 	IdpServiceConnector
+	// Used when IdpServiceConnector is nil; receives the server's shared TLS config
+	NewIdpServiceConnectorFunc func(conf *configuration.Config, tlsConfig *tls.Config) IdpServiceConnector
 }
 
 type ProcessHook interface {
@@ -134,6 +136,10 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 	tlsConfig, err := xhttp.NewTlsConfig(conf)
 	if err != nil && !testOnly {
 		panic(err)
+	}
+
+	if ec.IdpServiceConnector == nil && ec.NewIdpServiceConnectorFunc != nil {
+		ec.IdpServiceConnector = ec.NewIdpServiceConnectorFunc(conf, tlsConfig)
 	}
 
 	var idpSvc IdpServiceConnector
