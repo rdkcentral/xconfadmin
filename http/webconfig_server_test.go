@@ -1,6 +1,7 @@
 package http
 
 import (
+	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"net/http"
@@ -53,6 +54,87 @@ func TestNewWebconfigServer_Defaults(t *testing.T) {
 	}
 	if !ws.metricsEnabled {
 		t.Fatalf("metrics should be enabled by default")
+	}
+}
+
+func loadServerConfigWithAuthProvider(t *testing.T, provider string) *xwcommon.ServerConfig {
+	t.Helper()
+	sc := loadSampleServerConfig(t)
+	sampleConf, err := os.ReadFile(filepath.Join("..", "config", "sample_xconfadmin.conf"))
+	if err != nil {
+		t.Fatalf("failed to read sample config: %v", err)
+	}
+	sc.Config = configuration.ParseString(string(sampleConf) + "\nxconfwebconfig.xconf.authprovider = \"" + provider + "\"\n")
+	return sc
+}
+
+func TestNewWebconfigServer_NewIdpServiceConnectorFuncUsedWhenConnectorNil(t *testing.T) {
+	saved := WebConfServer
+	defer func() { WebConfServer = saved }()
+
+	sc := loadServerConfigWithAuthProvider(t, "idp")
+	mock := &MockIdpServiceConnector{host: "factory-host"}
+	var calls int
+	var gotConf *configuration.Config
+	var gotTls *tls.Config
+	ec := NewExternalConnectors()
+	ec.NewIdpServiceConnectorFunc = func(conf *configuration.Config, tlsConfig *tls.Config) IdpServiceConnector {
+		calls++
+		gotConf = conf
+		gotTls = tlsConfig
+		return mock
+	}
+
+	ws := NewWebconfigServer(sc, true, nil, ec)
+	if calls != 1 {
+		t.Fatalf("expected factory to be called once, got %d", calls)
+	}
+	if gotConf != sc.Config {
+		t.Fatalf("expected factory to receive server config")
+	}
+	if gotTls != ws.tlsConfig {
+		t.Fatalf("expected factory to receive the server's shared TLS config")
+	}
+	if ws.IdpServiceConnector != mock {
+		t.Fatalf("expected server to use connector built by factory")
+	}
+	if ec.IdpServiceConnector != mock {
+		t.Fatalf("expected factory result to be stored on external connectors")
+	}
+}
+
+func TestNewWebconfigServer_NewIdpServiceConnectorFuncSkippedWhenConnectorSet(t *testing.T) {
+	saved := WebConfServer
+	defer func() { WebConfServer = saved }()
+
+	sc := loadServerConfigWithAuthProvider(t, "idp")
+	existing := &MockIdpServiceConnector{host: "existing-host"}
+	ec := NewExternalConnectors()
+	ec.IdpServiceConnector = existing
+	ec.NewIdpServiceConnectorFunc = func(conf *configuration.Config, tlsConfig *tls.Config) IdpServiceConnector {
+		t.Fatalf("factory should not be called when IdpServiceConnector is already set")
+		return nil
+	}
+
+	ws := NewWebconfigServer(sc, true, nil, ec)
+	if ws.IdpServiceConnector != existing {
+		t.Fatalf("expected server to use pre-set connector")
+	}
+}
+
+func TestNewWebconfigServer_NewIdpServiceConnectorFuncIgnoredForAclProvider(t *testing.T) {
+	saved := WebConfServer
+	defer func() { WebConfServer = saved }()
+
+	sc := loadSampleServerConfig(t)
+	ec := NewExternalConnectors()
+	ec.NewIdpServiceConnectorFunc = func(conf *configuration.Config, tlsConfig *tls.Config) IdpServiceConnector {
+		return &MockIdpServiceConnector{host: "factory-host"}
+	}
+
+	ws := NewWebconfigServer(sc, true, nil, ec)
+	if ws.IdpServiceConnector != nil {
+		t.Fatalf("expected nil idp service connector for acl provider")
 	}
 }
 
