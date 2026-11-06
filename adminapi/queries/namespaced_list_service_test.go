@@ -104,6 +104,55 @@ func TestNamespacedListService_UpdateRejectsDuplicateMacWithDifferentCase(t *tes
 	}
 }
 
+func TestNamespacedListService_UpdateRejectsMissingListBeforeMacValidation(t *testing.T) {
+	tenantId := db.GetDefaultTenantId()
+	suffix := strings.ToUpper(uuid.NewString()[:6])
+	mac := fmt.Sprintf("AA:BB:CC:%s:%s:%s", suffix[:2], suffix[2:4], suffix[4:6])
+	existing := makeGenericList("ML-EXISTING-"+uuid.NewString(), shared.MAC_LIST, []string{mac})
+	if resp := CreateNamespacedList(tenantId, existing, false); resp.Status != http.StatusCreated {
+		t.Fatalf("create existing MAC list failed: %d %v", resp.Status, resp.Error)
+	}
+
+	update := makeGenericList("ML-MISSING-"+uuid.NewString(), shared.MAC_LIST, []string{strings.ToLower(mac)})
+
+	resp := UpdateNamespacedList(tenantId, update, "")
+	if resp.Status != http.StatusConflict {
+		t.Fatalf("expected missing list conflict, got %d: %v", resp.Status, resp.Error)
+	}
+}
+
+func TestNamespacedListService_UpdateRejectsEmptyId(t *testing.T) {
+	update := makeGenericList("", shared.MAC_LIST, []string{"Aa:aa:aa:aA:Aa:Ac"})
+
+	resp := UpdateNamespacedList(db.GetDefaultTenantId(), update, "")
+	if resp.Status != http.StatusBadRequest {
+		t.Fatalf("expected empty ID bad request, got %d: %v", resp.Status, resp.Error)
+	}
+}
+
+func TestNamespacedListService_CreateRejectsNilList(t *testing.T) {
+	resp := CreateNamespacedList(db.GetDefaultTenantId(), nil, false)
+	if resp.Status != http.StatusBadRequest {
+		t.Fatalf("expected nil create list bad request, got %d: %v", resp.Status, resp.Error)
+	}
+}
+
+func TestNamespacedListService_UpdateRejectsNilList(t *testing.T) {
+	resp := UpdateNamespacedList(db.GetDefaultTenantId(), nil, "")
+	if resp.Status != http.StatusBadRequest {
+		t.Fatalf("expected nil update list bad request, got %d: %v", resp.Status, resp.Error)
+	}
+}
+
+func TestNamespacedListService_UpdateRejectsMissingIpList(t *testing.T) {
+	update := makeGenericList("IP-MISSING-"+uuid.NewString(), shared.IP_LIST, []string{"192.0.2.1"})
+
+	resp := UpdateNamespacedList(db.GetDefaultTenantId(), update, "")
+	if resp.Status != http.StatusConflict {
+		t.Fatalf("expected missing IP list conflict, got %d: %v", resp.Status, resp.Error)
+	}
+}
+
 func TestNamespacedListService_DeleteNotFound(t *testing.T) {
 	if resp := DeleteNamespacedList(db.GetDefaultTenantId(), shared.IP_LIST, "DOES_NOT_EXIST"); resp.Status != http.StatusNotFound {
 		t.Fatalf("expected 404 got %d", resp.Status)
