@@ -105,9 +105,17 @@ func TestNamespacedListService_UpdateRejectsDuplicateMacWithDifferentCase(t *tes
 }
 
 func TestNamespacedListService_UpdateRejectsMissingListBeforeMacValidation(t *testing.T) {
-	update := makeGenericList("ML-MISSING-"+uuid.NewString(), shared.MAC_LIST, []string{"Aa:aa:aa:aA:Aa:Ac"})
+	tenantId := db.GetDefaultTenantId()
+	suffix := strings.ToUpper(uuid.NewString()[:6])
+	mac := fmt.Sprintf("AA:BB:CC:%s:%s:%s", suffix[:2], suffix[2:4], suffix[4:6])
+	existing := makeGenericList("ML-EXISTING-"+uuid.NewString(), shared.MAC_LIST, []string{mac})
+	if resp := CreateNamespacedList(tenantId, existing, false); resp.Status != http.StatusCreated {
+		t.Fatalf("create existing MAC list failed: %d %v", resp.Status, resp.Error)
+	}
 
-	resp := UpdateNamespacedList(db.GetDefaultTenantId(), update, "")
+	update := makeGenericList("ML-MISSING-"+uuid.NewString(), shared.MAC_LIST, []string{strings.ToLower(mac)})
+
+	resp := UpdateNamespacedList(tenantId, update, "")
 	if resp.Status != http.StatusConflict {
 		t.Fatalf("expected missing list conflict, got %d: %v", resp.Status, resp.Error)
 	}
