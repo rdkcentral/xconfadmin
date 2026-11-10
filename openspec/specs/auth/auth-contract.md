@@ -67,7 +67,7 @@ Normative behavior:
 		system SHALL authorize using SAT RBAC v2 semantics.
 	- If SAT does not contain any capability with prefix `xconf:`, the
 		system SHALL authorize using legacy SAT behavior unchanged.
-- Else, if a IDP login token is present (header `token` or cookie `token`),
+- Else, if an IDP login token is present (header `token` or cookie `token`),
 	the system SHALL authorize using IDP permissions.
 - Else, the system SHALL return `401 Unauthorized`.
 
