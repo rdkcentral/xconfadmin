@@ -9,13 +9,12 @@ This specification describes:
 - credential validation
 - identity resolution
 - authentication success and failure outcomes
-- routing-based authorization selection across SAT v2, legacy SAT, and IDP
-- SAT v2 request classification requirements
+- routing-based authorization selection across SAT and IDP
 - fail-fast termination after authentication or authorization failure
 
 This specification does not describe:
 - business-specific policy enforcement
-- tenant or partner enforcement policy
+- application type or partner enforcement policy
 - downstream extensions or constraints
 
 ## Guarantees
@@ -42,10 +41,6 @@ Normative behavior:
 
 - If the `Authorization` header is present, the request SHALL be treated
 	as SAT-authenticated and SAT processing SHALL be selected.
-	- If SAT contains at least one capability with prefix `xconf:`, the
-		system SHALL authorize using SAT RBAC v2 semantics.
-	- If SAT does not contain any capability with prefix `xconf:`, the
-		system SHALL authorize using legacy SAT behavior unchanged.
 - Else, if an IDP login token is present (header `token` or cookie `token`),
 	the system SHALL authorize using IDP permissions.
 - Else, the system SHALL return `401 Unauthorized`.
@@ -54,163 +49,12 @@ When both SAT and IDP credentials are present, `Authorization`-header
 routing MUST win; SAT selection SHALL be used and IDP SHALL NOT be
 evaluated for that request.
 
-### SAT RBAC v2 Detection
-
-SAT RBAC v2 SHALL be detected by the presence of at least one SAT
-capability string with prefix `xconf:`.
-
-SAT tokens without any `xconf:` capability SHALL be treated as legacy SAT.
-
-### SAT RBAC v2 Domain Classification
-
-For SAT RBAC v2 authorization, request classification SHALL be based on
-API route/path (admin functionality), not entity type.
-
-SAT RBAC v2 domains are `core`, `tagging`, `system`, and `metrics`.
-
-Domain classification requirements:
-
-- The system SHALL classify requests using an ordered ruleset.
-- The first matching rule MUST determine the domain.
-- Rules SHALL match on stable route substrings and/or route templates
-	(when available), for example: `/queries/firmware`, `/firmware`,
-	`/dcm`, `/telemetry`, `/tagging`, `/roundrobinfilter`, `/metrics`.
-
-### SAT RBAC v2 Access Classification
-
-For SAT RBAC v2 authorization, access level SHALL be determined with this
-precedence:
-
-1. Route override
-2. HTTP method
-
-Normative behavior:
-
-- If the path contains the segment `/filtered`, access SHALL be
-	`readonly`.
-- Otherwise, access SHALL be method-based:
-	- `GET`, `HEAD` => `readonly`
-	- `POST`, `PUT`, `PATCH`, `DELETE` => `readwrite`
-- Endpoints that use `POST` for read behavior (such as filtered searches)
-	MUST be explicitly treated as `readonly` via the route override.
-
-<<<<<<< HEAD
-=======
-### SAT RBAC v2 Tenant Scope Enforcement
-
-For SAT RBAC v2 authorization, tenant scope enforcement SHALL be applied
-after SAT capability authorization succeeds.
-
-Tenant scope sources:
-
-- Request tenant: header `tenantId`.
-- SAT partner scope: claim `allowedResources.allowedPartners`.
-
-Normative behavior for SAT RBAC v2 requests requiring tenant scope:
-
-- The system SHALL read tenant from request header `tenantId`.
-- The system SHALL read allowed partner scope from
-	`allowedResources.allowedPartners`.
-- The request SHALL be authorized only when `allowedPartners` contains
-	the request `tenantId` value.
-- If `tenantId` is missing, authorization SHALL be denied with
-	`403 Forbidden`.
-- If `allowedPartners` does not contain `tenantId`, authorization SHALL
-	be denied with `403 Forbidden`.
-
-SAT RBAC v2 tenant scope enforcement SHALL rely only on request metadata and SAT claims and SHALL NOT modify capability strings.
-
-### Tenant Resolution By Auth Path
-
-Tenant resolution SHALL be path-specific in this phase:
-
-- SAT RBAC v2 path:
-	- The request tenant SHALL be read from header `tenantId`.
-	- Authorization SHALL enforce membership against SAT claim
-		`allowedResources.allowedPartners`.
-- Legacy SAT path:
-	- Legacy SAT authorization semantics remain unchanged, including any validation requirements for token claims such as allowedPartners.
-	- Request processing SHALL continue to support multi-tenancy.
-	- In this phase, request processing SHALL resolve `tenantId`
-		to the default tenant.
-- Login-token/IDP path:
-	- Login-token/IDP authorization semantics remain unchanged.
-	- Token validation SHALL NOT enforce tenant or partner claims.
-	- Request processing SHALL continue to support multi-tenancy.
-	- By default, request processing SHALL resolve `tenantId` to the
-		default tenant.
-	- Request processing MAY resolve `tenantId` from the request header
-		only when `xconfwebconfig.xconf.enable_tenant_header_for_login_token`
-		is enabled.
-	- If the feature flag is enabled but the header is missing or blank,
-		request processing SHALL resolve `tenantId` to the default tenant.
-	- The feature flag SHALL default to disabled when absent from config
-		and SHALL be disabled in production deployments.
-
-After auth-path-specific resolution, the resolved `tenantId` SHALL be
-stored in request context. Downstream authorization and handlers SHALL
-use the context value rather than independently resolving the tenant
-from the request header.
-
-In this phase, multi-tenant authorization guarantees apply only to
-SAT RBAC v2 requests.
-
-### Tenant Auto-Creation
-
-The system SHALL verify that the resolved tenant exists before invoking
-downstream authorization or handlers.
-
-Tenant auto-creation SHALL follow these rules:
-
-- SAT RBAC v2 requests MAY auto-create a missing tenant only when the
-	SAT capabilities include `xconf:system:readwrite`.
-- Before a SAT RBAC v2 request onboards a missing tenant, the system SHALL
-	verify that `allowedResources.allowedPartners` contains the resolved
-	`tenantId`.
-- Legacy SAT requests SHALL NOT auto-create tenants.
-- Login-token/IDP requests SHALL NOT auto-create tenants, regardless
-	of the login-token tenant-header feature flag.
-- The login-token tenant-header feature flag SHALL control tenant
-	resolution only; it SHALL NOT grant tenant-provisioning permission.
-- `testOnly` SHALL NOT grant tenant auto-creation permission. Tests that
-	require tenants MAY create them directly through the database or DAO
-	layer.
-
-If tenant validation or the onboarding authorization check fails, the
-system SHALL return immediately. No downstream authorization, handler
-logic, or post-failure side effect SHALL execute.
-
-For an authenticated request whose tenant cannot be used:
-
-- The system SHALL return `403 Forbidden` when onboarding is not
-	permitted or the required SAT capability is absent.
-- The response body SHOULD identify whether the tenant was not found or
-	whether tenant onboarding was not authorized.
-- When the resolved tenant is not in `allowedResources.allowedPartners`,
-	the system SHALL return `403 Forbidden` and SHALL NOT invoke tenant
-	onboarding.
-
->>>>>>> d7c28c5 (rename IDP stuff)
-### SAT RBAC v2 Deny-By-Default
-
-If a SAT RBAC v2 request cannot be classified into `(domain, access)`
-requirements, authorization SHALL be denied with `403 Forbidden`.
-
-### Metrics Domain Constraint
-
-The metrics domain SHALL be read-only.
-
-- `xconf:metrics:readonly` is the only supported metrics capability.
-- No readwrite functionality exists for the metrics domain (no
-	`xconf:metrics:readwrite`).
-
 ### HTTP Status Semantics
 
 The system SHALL use:
 
 - `401 Unauthorized` only for missing or invalid authentication.
-- `403 Forbidden` for authenticated-but-not-authorized requests,
-	including SAT RBAC v2 classification or capability denials.
+- `403 Forbidden` for authenticated-but-not-authorized requests.
 
 
 ### Fail-Fast Termination
