@@ -49,7 +49,7 @@ func GetAdminUIUrlFromCookies(r *http.Request) string {
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	if Ws == nil || Ws.IdpServiceConnector == nil {
-		xhttp.WriteXconfResponse(w, http.StatusServiceUnavailable, []byte("IDP/Xerxes connector is not configured"))
+		xhttp.WriteXconfResponse(w, http.StatusServiceUnavailable, []byte("IDP connector is not configured"))
 		return
 	}
 
@@ -89,7 +89,7 @@ func AclLogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 func CodeHandler(w http.ResponseWriter, r *http.Request) {
 	if Ws == nil || Ws.IdpServiceConnector == nil {
-		xhttp.WriteXconfResponse(w, http.StatusServiceUnavailable, []byte("IDP/Xerxes connector is not configured"))
+		xhttp.WriteXconfResponse(w, http.StatusServiceUnavailable, []byte("IDP connector is not configured"))
 		return
 	}
 
@@ -122,7 +122,7 @@ func CodeHandler(w http.ResponseWriter, r *http.Request) {
 
 func LoginUrlHandler(w http.ResponseWriter, r *http.Request) {
 	if Ws == nil || Ws.IdpServiceConnector == nil {
-		xhttp.WriteXconfResponse(w, http.StatusServiceUnavailable, []byte("IDP/Xerxes connector is not configured"))
+		xhttp.WriteXconfResponse(w, http.StatusServiceUnavailable, []byte("IDP connector is not configured"))
 		return
 	}
 
