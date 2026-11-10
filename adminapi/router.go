@@ -112,23 +112,23 @@ func RouteXconfAdminserviceApis(s *xhttp.WebconfigServer, r *mux.Router) {
 	}
 
 	loginPath := r.Path("/xconfAdminService" + s.IdpLoginPath).Subrouter()
-	loginPath.HandleFunc("", auth.LoginUrlHandler).Methods("GET").Name("Auth-Xerxes")
+	loginPath.HandleFunc("", auth.LoginUrlHandler).Methods("GET").Name("Auth-IDP")
 	authPaths = append(authPaths, loginPath)
 
 	logoutPath := r.Path("/xconfAdminService" + s.IdpLogoutPath).Subrouter()
-	logoutPath.HandleFunc("", auth.LogoutHandler).Methods("GET").Name("Auth-Xerxes")
+	logoutPath.HandleFunc("", auth.LogoutHandler).Methods("GET").Name("Auth-IDP")
 	authPaths = append(authPaths, logoutPath)
 
 	logoutAfterPath := r.Path("/xconfAdminService" + s.IdpLogoutAfterPath).Subrouter()
-	logoutAfterPath.HandleFunc("", auth.LogoutAfterHandler).Methods("GET").Name("Auth-Xerxes")
+	logoutAfterPath.HandleFunc("", auth.LogoutAfterHandler).Methods("GET").Name("Auth-IDP")
 	authPaths = append(authPaths, logoutAfterPath)
 
 	codePath := r.Path("/xconfAdminService" + s.IdpCodePath).Subrouter()
-	codePath.HandleFunc("", auth.CodeHandler).Methods("GET").Name("Auth-Xerxes")
+	codePath.HandleFunc("", auth.CodeHandler).Methods("GET").Name("Auth-IDP")
 	authPaths = append(authPaths, codePath)
 
 	urlPath := r.Path("/xconfAdminService" + s.IdpUrlPath).Subrouter()
-	urlPath.HandleFunc("", auth.LoginUrlHandler).Methods("GET").Name("Auth-Xerxes")
+	urlPath.HandleFunc("", auth.LoginUrlHandler).Methods("GET").Name("Auth-IDP")
 	authPaths = append(authPaths, urlPath)
 
 	// DataService bypass APIs

@@ -32,7 +32,7 @@ This change introduces tenant-aware SAT authorization as a separate phase after 
 
 - No changes to SAT RBAC v2 capability names or capability detection.
 - No changes to legacy SAT authorization behavior.
-- No changes to Xerxes/login-token/IDP service behavior.
+- No changes to login-token/IDP service behavior.
 - No endpoint contract changes beyond documented `403` authorization outcomes for tenant-scope denials.
 
 ## Capabilities

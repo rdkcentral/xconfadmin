@@ -18,12 +18,12 @@ Capability authorization remains the first gate. Tenant enforcement is a second 
 
 1. Choose auth path
 - If `Authorization` header is present, select SAT path.
-- Else, if login token (`token` header/cookie) is present, select login/Xerxes path.
+- Else, if login token (`token` header/cookie) is present, select login/IDP path.
 - Else, return `401 Unauthorized`.
 
 2. Validate credentials
 - SAT path: validate SAT token.
-- Login/Xerxes path: validate login token as currently implemented.
+- Login/IDP path: validate login token as currently implemented.
 
 3. Detect SAT mode on SAT path
 - If SAT includes at least one capability with prefix `xconf:`, classify request as SAT RBAC v2.
