@@ -342,6 +342,10 @@ func RemoveNamespacedListData(tenantId string, listType string, listId string, s
 }
 
 func CreateNamespacedList(tenantId string, namespacedList *shared.GenericNamespacedList, updateIfExists bool) *xwhttp.ResponseEntity {
+	if namespacedList == nil {
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("Namespaced list is empty"), nil)
+	}
+
 	if namespacedList.TypeName == shared.MAC_LIST {
 		for i, mac := range namespacedList.Data {
 			if macAddress, err := util.ValidateAndNormalizeMacAddress(mac); err != nil {
@@ -374,6 +378,24 @@ func CreateNamespacedList(tenantId string, namespacedList *shared.GenericNamespa
 }
 
 func UpdateNamespacedList(tenantId string, namespacedList *shared.GenericNamespacedList, newId string) *xwhttp.ResponseEntity {
+	if namespacedList == nil {
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("Namespaced list is empty"), nil)
+	}
+	if xutil.IsBlank(namespacedList.ID) {
+		return xwhttp.NewResponseEntity(http.StatusBadRequest, errors.New("Id is empty"), nil)
+	}
+
+	existingList, err := shared.GetGenericNamedListOneByTypeNonCached(tenantId, namespacedList.ID, namespacedList.TypeName)
+	if err != nil {
+		if db.GetDatabaseClient().IsDbNotFound(err) {
+			return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("List with id %s doesn't exist", namespacedList.ID), nil)
+		}
+		return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
+	}
+	if existingList == nil {
+		return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("List with id %s doesn't exist", namespacedList.ID), nil)
+	}
+
 	if namespacedList.TypeName == shared.MAC_LIST {
 		for i, mac := range namespacedList.Data {
 			if macAddress, err := util.ValidateAndNormalizeMacAddress(mac); err != nil {
@@ -384,7 +406,7 @@ func UpdateNamespacedList(tenantId string, namespacedList *shared.GenericNamespa
 		}
 	}
 
-	err := namespacedList.ValidateForAdminService(tenantId)
+	err = namespacedList.ValidateForAdminService(tenantId)
 	if err != nil {
 		return xwhttp.NewResponseEntity(http.StatusBadRequest, err, nil)
 	}
@@ -404,14 +426,6 @@ func UpdateNamespacedList(tenantId string, namespacedList *shared.GenericNamespa
 			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
 		}
 		namespacedList.ID = newId
-	} else {
-		existingList, err := shared.GetGenericNamedListOneByTypeNonCached(tenantId, namespacedList.ID, namespacedList.TypeName)
-		if err != nil {
-			return xwhttp.NewResponseEntity(http.StatusInternalServerError, err, nil)
-		}
-		if existingList == nil {
-			return xwhttp.NewResponseEntity(http.StatusConflict, fmt.Errorf("\"List with id %s doesn't exist\"", namespacedList.ID), nil)
-		}
 	}
 
 	err = shared.CreateGenericNamedListOneDB(tenantId, namespacedList)
