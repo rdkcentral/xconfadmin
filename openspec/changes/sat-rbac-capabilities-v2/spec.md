@@ -6,7 +6,7 @@ This change updates `openspec/specs/auth/auth-contract.md` with the
 following normative clauses:
 
 - `Authorization Routing Selection`: if `Authorization` header is present,
-  SAT processing is selected; otherwise Xerxes is selected only when SAT
+  SAT processing is selected; otherwise IDP token is selected only when SAT
   header is absent.
 - `SAT RBAC v2 Detection`: SAT v2 SHALL be detected by presence of at
   least one capability with prefix `xconf:`.
@@ -63,7 +63,7 @@ A SAT token without any xconf-prefixed capabilities is treated as a legacy SAT t
 ### Input
 - HTTP method (GET, POST, HEAD, PUT, PATCH, DELETE)
 - HTTP request path (e.g., `/queries/firmware`, `/dcm/devices`)
-- Xerxes token (if present)
+- IDP token (if present)
 - SAT token (if present)
 
 ### Output
@@ -96,20 +96,20 @@ A SAT token without any xconf-prefixed capabilities is treated as a legacy SAT t
      - DENY request
      - Return 401 Unauthorized
 
-2. **Xerxes Path (Authorization Header Absent)**
-   - If `Authorization` header is absent and Xerxes token is present (header `token` or cookie `token`):
-     - If Xerxes validation fails:
+2. **Identity-Provider (IDP) Token Path (Authorization Header Absent)**
+   - If `Authorization` header is absent and IDP token is present (header `token` or cookie `token`):
+     - If IDP token validation fails:
        - DENY request
        - Return 401 Unauthorized
-     - Authorize based on Xerxes permissions
-     - If Xerxes permissions allow the operation:
+     - Authorize based on IDP permissions
+     - If IDP permissions allow the operation:
        - ALLOW request
-     - If Xerxes permissions do not allow the operation:
+     - If IDP permissions do not allow the operation:
        - DENY request
        - Return 403 Forbidden
 
 3. **No Applicable Credentials**
-   - If neither SAT path nor Xerxes path applies:
+   - If neither SAT path nor IDP path applies:
      - DENY request
      - Return 401 Unauthorized
 
@@ -209,8 +209,8 @@ During the transition, no action is required by operators for existing tokens to
 
 ### 401 Unauthorized
 Returned when:
-- No credentials (Xerxes or SAT) are provided
-- Xerxes token validation fails
+- No credentials (IDP or SAT) are provided
+- IDP token validation fails
 - SAT token signature validation fails
 - SAT token is expired
 - SAT token is missing required claims (such as allowedResources.allowedPartners, as enforced by the validator)
@@ -219,7 +219,7 @@ Response body SHALL include an error code and message suitable for debugging.
 
 ### 403 Forbidden
 Returned when:
-- Xerxes token is valid but does not grant permission for the requested operation
+- IDP token is valid but does not grant permission for the requested operation
 - SAT RBAC v2 token does not contain a matching capability for the request (domain, access)
 - SAT RBAC v2 request cannot be classified into a valid (domain, access) pair
 - Legacy SAT authorization denies the request
@@ -233,4 +233,4 @@ Response body SHALL include an error code and message suitable for debugging.
 - Capability matching MUST be case-sensitive (xconf:core:readwrite is not equivalent to xconf:CORE:READWRITE).
 - When multiple domains could match a path (e.g., a path containing both `/telemetry` and `/tagging`), the first rule in the ruleset that matches SHALL determine the domain.
 - SAT v2 authorization SHALL NOT alter or inspect the request entity; classification is based solely on HTTP method and route/path.
-- The SAT v2 domains are independent of Xerxes entity types; a request to access a "firmware" entity via SAT v2 is classified by route (core domain) regardless of entity semantics.
+- The SAT v2 domains are independent of IDP entity types; a request to access a "firmware" entity via SAT v2 is classified by route (core domain) regardless of entity semantics.

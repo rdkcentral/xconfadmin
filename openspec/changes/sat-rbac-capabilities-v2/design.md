@@ -6,7 +6,7 @@ This document describes the architectural approach to implementing SAT RBAC v2 c
 
 ## Design Principles
 
-1. **Routing-Based Selection**: If the `Authorization` header is present, select the SAT path; otherwise, if Xerxes token is present (header `token` or cookie `token`), select the Xerxes path.
+1. **Routing-Based Selection**: If the `Authorization` header is present, select the SAT path; otherwise, if an identity-provider (IDP) token is present (header `token` or cookie `token`), select the IDP path.
 2. **SAT Mode Detection**: On the SAT path, if SAT contains xconf-prefixed capabilities, authorize via SAT v2; otherwise, use legacy SAT unchanged.
 3. **Deny-by-Default for SAT v2**: Any request that cannot be classified into (domain, access) requirements is denied.
 4. **Route-Based Classification**: Domain and access level are determined from HTTP method and API route/path, not from request entity type.
@@ -17,35 +17,30 @@ This document describes the architectural approach to implementing SAT RBAC v2 c
 The authorization system follows routing-based selection (Option C):
 
 ```
-┌─────────────────────────────────┐
-│ Request arrives with credentials │
-└─────────────────┬───────────────┘
-                  │
-    ┌──────────────────────────────┐
-    │ Authorization header present?│
-    └──────────────┬───────────────┘
-       │
-         ┌─────────┴─────────┐
-        YES                  NO
-         │                    │
-   ┌───────────▼──────────────┐   ┌────────────────────────────┐
-   │ Route to SAT auth path   │   │ Xerxes token present       │
-   │ (deterministic selection)│   │ (header/cookie `token`)?   │
-   └───────────┬──────────────┘   └──────────────┬─────────────┘
-         │                                 │
-     ┌─────────▼──────────┐           ┌──────────┴──────────┐
-     │ Has xconf: prefix? │          NO                    YES
-     └─────────┬──────────┘           │                     │
-         │                      │            ┌─────────▼─────────┐
-      ┌────────┴───────┐              │            │ Authorize via     │
-      │                │              │            │ Xerxes permissions │
-     NO               YES             │            └───────────────────┘
-      │                │              │
- ┌────▼──────────┐  ┌──▼────────────────────────┐  ┌──────────────────────┐
- │ Authorize via │  │ Authorize via SAT RBAC v2 │  │ Return 401           │
- │ legacy SAT    │  │ (domain + access check)   │  │ Unauthorized          │
- │ (unchanged)   │  └───────────────────────────┘  └──────────────────────┘
- └───────────────┘
+┌───────────────────────────────────────────┐
+│ Request arrives with credentials          │
+└─────────────────────┬─────────────────────┘
+                      │
+┌─────────────────────▼─────────────────────┐
+│ Authorization header present?             │
+└─────────────────────┬─────────────────────┘
+                      │
+             ┌────────┴────────┐
+            Yes               No
+             │                 │
+┌────────────▼────────────┐  ┌─▼────────────────────────┐
+│ SAT has xconf:          │  │ IDP token present in     │
+│ capabilities?           │  │ header or cookie?        │
+└────────────┬────────────┘  └────────────┬─────────────┘
+        ┌────┴─────┐                  ┌───┴───────────┐
+       No        Yes                Yes              No
+        │          │                  │               │
+┌───────▼──────┐ ┌─▼───────────────┐ ┌▼────────────┐ ┌▼─────────────┐
+│ Legacy SAT   │ │ Authorize via   │ │ IDP auth    │ │ Return 401   │
+│ unchanged    │ │ SAT RBAC v2     │ │             │ │ Unauthorized │
+│              │ │ domain + access │ │             │ │              │
+│              │ │ check           │ │             │ │              │
+└──────────────┘ └─────────────────┘ └─────────────┘ └──────────────┘
 ```
 
 ## Request Classification
@@ -86,14 +81,14 @@ The authorization logic is invoked after credential validation, with determinist
 Request
   │
   ├─> Credential Extraction & Validation
-  │     (Xerxes token, SAT token, etc.)
+  │     (IDP token, SAT token, etc.)
   │
   ├─> If Authorization header exists -> SAT path
   │     ├─> SAT v2 detection (xconf: prefix)
   │     ├─> SAT RBAC v2 OR legacy SAT authorization
   │     └─> Allow/Deny Decision
   │
-  ├─> Else if Xerxes token exists -> Xerxes authorization
+  ├─> Else if IDP token exists -> IDP authorization
   │
   ├─> Else -> 401 Unauthorized
   │
