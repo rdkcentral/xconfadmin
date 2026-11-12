@@ -109,12 +109,20 @@ func TestAuthMiddleware_InvalidLoginToken(t *testing.T) {
 	xcommon.SatOn = false
 	defer func() { xcommon.SatOn = oldSatOn }()
 
+	downstreamCalled := false
+	downstream := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		downstreamCalled = true
+		w.WriteHeader(http.StatusOK)
+	})
 	r := httptest.NewRequest(http.MethodGet, "/test", nil)
 	r.Header.Set(AUTH_TOKEN, "not-a-valid-jwt")
-	rr := serveWithMiddleware(testServer, okHandler, r)
+	rr := serveWithMiddleware(testServer, downstream, r)
 
 	if rr.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401 for invalid login token, got %d", rr.Code)
+	}
+	if downstreamCalled {
+		t.Fatal("expected downstream handler not to execute after invalid login token")
 	}
 }
 
