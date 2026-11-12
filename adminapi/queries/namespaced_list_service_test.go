@@ -3,8 +3,10 @@ package queries
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 )
 
@@ -61,6 +63,58 @@ func TestNamespacedListService_AddRemoveDataAndValidationErrors(t *testing.T) {
 	}
 }
 
+func TestNamespacedListService_CreateRejectsDuplicateMacWithDifferentCase(t *testing.T) {
+	suffix := uuid.NewString()[:6]
+	mac := fmt.Sprintf("AA:BB:CC:%s:%s:%s", suffix[:2], suffix[2:4], suffix[4:6])
+	first := makeGenericList("ML-UPPER-"+uuid.NewString(), shared.MAC_LIST, []string{mac})
+	if resp := CreateNamespacedList(first, false); resp.Status != http.StatusCreated {
+		t.Fatalf("create initial mac list failed: %d %v", resp.Status, resp.Error)
+	}
+
+	duplicate := makeGenericList("ML-LOWER-"+uuid.NewString(), shared.MAC_LIST, []string{strings.ToLower(mac)})
+	if resp := CreateNamespacedList(duplicate, false); resp.Status != http.StatusBadRequest {
+		t.Fatalf("expected duplicate mac to be rejected, got %d: %v", resp.Status, resp.Error)
+	}
+}
+
+func TestNamespacedListService_UpdateRejectsDuplicateMacWithDifferentCase(t *testing.T) {
+	suffix := strings.ToUpper(uuid.NewString()[:6])
+	firstMac := fmt.Sprintf("AA:BB:CC:%s:%s:%s", suffix[:2], suffix[2:4], suffix[4:6])
+	secondMac := fmt.Sprintf("DD:EE:FF:%s:%s:%s", suffix[:2], suffix[2:4], suffix[4:6])
+	first := makeGenericList("ML-UPDATE-FIRST-"+suffix, shared.MAC_LIST, []string{firstMac})
+	if resp := CreateNamespacedList(first, false); resp.Status != http.StatusCreated {
+		t.Fatalf("create first mac list failed: %d %v", resp.Status, resp.Error)
+	}
+	second := makeGenericList("ML-UPDATE-SECOND-"+suffix, shared.MAC_LIST, []string{secondMac})
+	if resp := CreateNamespacedList(second, false); resp.Status != http.StatusCreated {
+		t.Fatalf("create second mac list failed: %d %v", resp.Status, resp.Error)
+	}
+
+	update := makeGenericList(second.ID, shared.MAC_LIST, []string{strings.ToLower(firstMac)})
+	if resp := UpdateNamespacedList(update, ""); resp.Status != http.StatusBadRequest {
+		t.Fatalf("expected duplicate mac update to be rejected, got %d: %v", resp.Status, resp.Error)
+	}
+
+	updated := GetNamespacedListById(second.ID)
+	if updated == nil || len(updated.Data) != 1 || updated.Data[0] != secondMac {
+		t.Fatalf("expected second list to remain unchanged, got %+v", updated)
+	}
+}
+
+func TestNamespacedListService_UpdateRejectsMissingListBeforeMacValidation(t *testing.T) {
+	suffix := strings.ToUpper(uuid.NewString()[:6])
+	mac := fmt.Sprintf("AA:BB:CC:%s:%s:%s", suffix[:2], suffix[2:4], suffix[4:6])
+	existing := makeGenericList("ML-EXISTING-"+uuid.NewString(), shared.MAC_LIST, []string{mac})
+	if resp := CreateNamespacedList(existing, false); resp.Status != http.StatusCreated {
+		t.Fatalf("create existing MAC list failed: %d %v", resp.Status, resp.Error)
+	}
+
+	update := makeGenericList("ML-MISSING-"+uuid.NewString(), shared.MAC_LIST, []string{strings.ToLower(mac)})
+	if resp := UpdateNamespacedList(update, ""); resp.Status != http.StatusConflict {
+		t.Fatalf("expected missing list conflict, got %d: %v", resp.Status, resp.Error)
+	}
+}
+
 func TestNamespacedListService_DeleteNotFound(t *testing.T) {
 	if resp := DeleteNamespacedList(shared.IP_LIST, "DOES_NOT_EXIST"); resp.Status != http.StatusNotFound {
 		t.Fatalf("expected 404 got %d", resp.Status)
@@ -98,6 +152,34 @@ func TestNamespacedListService_ValidateListData(t *testing.T) {
 	}
 	if err := ValidateListDataForAdmin("BAD", []string{"a"}); err == nil {
 		t.Fatalf("expected error invalid type")
+	}
+}
+
+func TestNamespacedListService_CreateRejectsNilList(t *testing.T) {
+	resp := CreateNamespacedList(nil, false)
+	if resp.Status != http.StatusBadRequest {
+		t.Fatalf("expected nil create list bad request, got %d", resp.Status)
+	}
+}
+
+func TestNamespacedListService_UpdateRejectsNilList(t *testing.T) {
+	resp := UpdateNamespacedList(nil, "")
+	if resp.Status != http.StatusBadRequest {
+		t.Fatalf("expected nil update list bad request, got %d", resp.Status)
+	}
+}
+
+func TestNamespacedListService_UpdateRejectsEmptyId(t *testing.T) {
+	resp := UpdateNamespacedList(makeGenericList("", shared.IP_LIST, []string{"192.0.2.1"}), "")
+	if resp.Status != http.StatusBadRequest {
+		t.Fatalf("expected empty ID bad request, got %d", resp.Status)
+	}
+}
+
+func TestNamespacedListService_UpdateRejectsMissingIpList(t *testing.T) {
+	resp := UpdateNamespacedList(makeGenericList("IP-MISSING", shared.IP_LIST, []string{"192.0.2.1"}), "")
+	if resp.Status != http.StatusConflict {
+		t.Fatalf("expected missing IP list conflict, got %d", resp.Status)
 	}
 }
 
