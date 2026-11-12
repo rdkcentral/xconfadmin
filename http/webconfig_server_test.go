@@ -174,7 +174,7 @@ func TestSatTokenValidation_UsesSatConnectorHttpClient(t *testing.T) {
 	})
 	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","typ":"JWT","kid":"k1"}`))
 	payload := base64.RawURLEncoding.EncodeToString([]byte(`{}`))
-	_, _, _, err = getSubjectAndCapabilitiesFromSatToken("Bearer "+header+"."+payload+".c2ln", false)
+	_, _, err = getSubjectAndCapabilitiesFromSatToken("Bearer "+header+"."+payload+".c2ln", false)
 	if err == nil {
 		t.Fatalf("expected validation error")
 	}
