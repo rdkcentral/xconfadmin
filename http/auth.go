@@ -340,9 +340,15 @@ func getSubjectAndCapabilitiesFromSatToken(token string, verifyStageHost bool) (
 		}
 	} else {
 		// Validate with sat service host if flag is disabled.
-		satServiceKeysUrl := fmt.Sprintf("%s%s", WebConfServer.XW_XconfServer.SatServiceConnector.SatServiceHost(), KeysURL)
+		satConnector := WebConfServer.XW_XconfServer.SatServiceConnector
+		satServiceKeysUrl := fmt.Sprintf("%s%s", satConnector.SatServiceHost(), KeysURL)
+		// Reuse the SAT connector's client so key fetches honor the SAT TLS settings (e.g. tls_server_name)
+		satHttpClient := satConnector.GetHttpClient()
+		if satHttpClient == nil {
+			satHttpClient = http.DefaultClient
+		}
 		webValidator = &WebValidator{
-			Client:  http.DefaultClient,
+			Client:  satHttpClient,
 			KeysURL: satServiceKeysUrl,
 			Keys:    make(map[string]interface{}),
 		}

@@ -1,6 +1,9 @@
 package http
 
 import (
+	"crypto/tls"
+	"encoding/base64"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -8,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-akka/configuration"
 	xwcommon "github.com/rdkcentral/xconfwebconfig/common"
 	xhttp "github.com/rdkcentral/xconfwebconfig/http"
 )
@@ -50,6 +54,132 @@ func TestNewWebconfigServer_Defaults(t *testing.T) {
 	}
 	if !ws.metricsEnabled {
 		t.Fatalf("metrics should be enabled by default")
+	}
+}
+
+func loadServerConfigWithAuthProvider(t *testing.T, provider string) *xwcommon.ServerConfig {
+	t.Helper()
+	sc := loadSampleServerConfig(t)
+	sampleConf, err := os.ReadFile(filepath.Join("..", "config", "sample_xconfadmin.conf"))
+	if err != nil {
+		t.Fatalf("failed to read sample config: %v", err)
+	}
+	sc.Config = configuration.ParseString(string(sampleConf) + "\nxconfwebconfig.xconf.authprovider = \"" + provider + "\"\n")
+	return sc
+}
+
+func TestNewWebconfigServer_NewIdpServiceConnectorFuncUsedWhenConnectorNil(t *testing.T) {
+	saved := WebConfServer
+	defer func() { WebConfServer = saved }()
+
+	sc := loadServerConfigWithAuthProvider(t, "idp")
+	mock := &MockIdpServiceConnector{host: "factory-host"}
+	var calls int
+	var gotConf *configuration.Config
+	var gotTls *tls.Config
+	ec := NewExternalConnectors()
+	ec.NewIdpServiceConnectorFunc = func(conf *configuration.Config, tlsConfig *tls.Config) IdpServiceConnector {
+		calls++
+		gotConf = conf
+		gotTls = tlsConfig
+		return mock
+	}
+
+	ws := NewWebconfigServer(sc, true, nil, ec)
+	if calls != 1 {
+		t.Fatalf("expected factory to be called once, got %d", calls)
+	}
+	if gotConf != sc.Config {
+		t.Fatalf("expected factory to receive server config")
+	}
+	if gotTls != ws.tlsConfig {
+		t.Fatalf("expected factory to receive the server's shared TLS config")
+	}
+	if ws.IdpServiceConnector != mock {
+		t.Fatalf("expected server to use connector built by factory")
+	}
+	if ec.IdpServiceConnector != mock {
+		t.Fatalf("expected factory result to be stored on external connectors")
+	}
+}
+
+func TestNewWebconfigServer_NewIdpServiceConnectorFuncSkippedWhenConnectorSet(t *testing.T) {
+	saved := WebConfServer
+	defer func() { WebConfServer = saved }()
+
+	sc := loadServerConfigWithAuthProvider(t, "idp")
+	existing := &MockIdpServiceConnector{host: "existing-host"}
+	ec := NewExternalConnectors()
+	ec.IdpServiceConnector = existing
+	ec.NewIdpServiceConnectorFunc = func(conf *configuration.Config, tlsConfig *tls.Config) IdpServiceConnector {
+		t.Fatalf("factory should not be called when IdpServiceConnector is already set")
+		return nil
+	}
+
+	ws := NewWebconfigServer(sc, true, nil, ec)
+	if ws.IdpServiceConnector != existing {
+		t.Fatalf("expected server to use pre-set connector")
+	}
+}
+
+func TestNewWebconfigServer_NewIdpServiceConnectorFuncIgnoredForAclProvider(t *testing.T) {
+	saved := WebConfServer
+	defer func() { WebConfServer = saved }()
+
+	sc := loadSampleServerConfig(t)
+	ec := NewExternalConnectors()
+	ec.NewIdpServiceConnectorFunc = func(conf *configuration.Config, tlsConfig *tls.Config) IdpServiceConnector {
+		t.Fatalf("factory should not be called for acl provider")
+		return nil
+	}
+
+	ws := NewWebconfigServer(sc, true, nil, ec)
+	if ws.IdpServiceConnector != nil {
+		t.Fatalf("expected nil idp service connector for acl provider")
+	}
+	if ec.IdpServiceConnector != nil {
+		t.Fatalf("expected external idp service connector to remain nil for acl provider")
+	}
+}
+
+func TestSatTokenValidation_UsesSatConnectorHttpClient(t *testing.T) {
+	saved := WebConfServer
+	defer func() { WebConfServer = saved }()
+
+	sc := loadSampleServerConfig(t)
+	sampleConf, err := os.ReadFile(filepath.Join("..", "config", "sample_xconfadmin.conf"))
+	if err != nil {
+		t.Fatalf("failed to read sample config: %v", err)
+	}
+	sc.Config = configuration.ParseString(string(sampleConf) + "\nxconfwebconfig.sat_service.tls_server_name = \"sat.internal.example.com\"\n")
+	ws := NewWebconfigServer(sc, true, nil, nil)
+
+	satClient := ws.XW_XconfServer.SatServiceConnector.GetHttpClient()
+	if satClient == nil {
+		t.Fatalf("expected SAT connector http client")
+	}
+	transport, ok := satClient.Transport.(*http.Transport)
+	if !ok || transport.TLSClientConfig == nil {
+		t.Fatalf("expected SAT connector transport with TLS config")
+	}
+	if transport.TLSClientConfig.ServerName != "sat.internal.example.com" {
+		t.Fatalf("expected SAT TLS server name override, got %q", transport.TLSClientConfig.ServerName)
+	}
+
+	// the SAT-host validation path must fetch keys with the connector's client, not http.DefaultClient
+	var called bool
+	satClient.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		called = true
+		return nil, errors.New("stop")
+	})
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","typ":"JWT","kid":"k1"}`))
+	payload := base64.RawURLEncoding.EncodeToString([]byte(`{}`))
+	_, _, err = getSubjectAndCapabilitiesFromSatToken("Bearer "+header+"."+payload+".c2ln", false)
+	if err == nil {
+		t.Fatalf("expected validation error")
+	}
+	if !called {
+		t.Fatalf("expected SAT keys client to be used for signing key fetch")
 	}
 }
 

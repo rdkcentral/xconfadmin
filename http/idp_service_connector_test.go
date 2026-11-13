@@ -1,10 +1,13 @@
 package http
 
 import (
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/go-akka/configuration"
 	"github.com/stretchr/testify/assert"
@@ -29,7 +32,7 @@ func TestNewIdpServiceConnector_WithExternalService(t *testing.T) {
 	mockService := &MockIdpServiceConnector{host: "mock-host"}
 	config := configuration.ParseString("")
 
-	result := NewIdpServiceConnector(config, mockService)
+	result := NewIdpServiceConnector(config, nil, mockService)
 
 	assert.NotNil(t, result)
 	assert.Equal(t, mockService, result)
@@ -64,7 +67,7 @@ func TestNewIdpServiceConnector_WithConfigurationSuccess(t *testing.T) {
 	`
 	config := configuration.ParseString(configData)
 
-	result := NewIdpServiceConnector(config, nil)
+	result := NewIdpServiceConnector(config, nil, nil)
 
 	assert.NotNil(t, result)
 
@@ -83,6 +86,74 @@ func TestNewIdpServiceConnector_WithConfigurationSuccess(t *testing.T) {
 	expectedAuth := fmt.Sprintf("test-client-id:test-client-secret")
 	expectedAuthHeader := fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(expectedAuth)))
 	assert.Equal(t, expectedAuthHeader, idpConfig.AuthHeaderValue)
+}
+
+func TestNewIdpServiceConnector_UsesTlsConfig(t *testing.T) {
+	originalClientId := os.Getenv("IDP_CLIENT_ID")
+	originalClientSecret := os.Getenv("IDP_CLIENT_SECRET")
+	defer func() {
+		os.Setenv("IDP_CLIENT_ID", originalClientId)
+		os.Setenv("IDP_CLIENT_SECRET", originalClientSecret)
+	}()
+	os.Setenv("IDP_CLIENT_ID", "test-client-id")
+	os.Setenv("IDP_CLIENT_SECRET", "test-client-secret")
+
+	config := configuration.ParseString(`
+		xconfwebconfig {
+			xconf {
+				idp_service_name = "test-service"
+			}
+			test-service {
+				host = "https://test-host.com"
+			}
+		}
+	`)
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
+
+	result := NewIdpServiceConnector(config, tlsConfig, nil)
+
+	defaultService, ok := result.(*DefaultIdpService)
+	assert.True(t, ok)
+	transport, ok := defaultService.HttpClient.Client.Transport.(*http.Transport)
+	assert.True(t, ok)
+	assert.Same(t, tlsConfig, transport.TLSClientConfig)
+}
+
+func TestNewIdpServiceConnector_AppliesIdpServiceClientConfig(t *testing.T) {
+	originalClientId := os.Getenv("IDP_CLIENT_ID")
+	originalClientSecret := os.Getenv("IDP_CLIENT_SECRET")
+	defer func() {
+		os.Setenv("IDP_CLIENT_ID", originalClientId)
+		os.Setenv("IDP_CLIENT_SECRET", originalClientSecret)
+	}()
+	os.Setenv("IDP_CLIENT_ID", "test-client-id")
+	os.Setenv("IDP_CLIENT_SECRET", "test-client-secret")
+
+	config := configuration.ParseString(`
+		xconfwebconfig {
+			xconf {
+				idp_service_name = "test-service"
+			}
+			test-service {
+				host = "https://test-host.com"
+				tls_server_name = "idp.internal.example.com"
+				read_timeout_in_secs = 7
+			}
+		}
+	`)
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
+
+	result := NewIdpServiceConnector(config, tlsConfig, nil)
+
+	defaultService, ok := result.(*DefaultIdpService)
+	assert.True(t, ok)
+	assert.Equal(t, 7*time.Second, defaultService.HttpClient.Client.Timeout)
+	transport, ok := defaultService.HttpClient.Client.Transport.(*http.Transport)
+	assert.True(t, ok)
+	assert.Equal(t, "idp.internal.example.com", transport.TLSClientConfig.ServerName)
+	assert.Equal(t, uint16(tls.VersionTLS12), transport.TLSClientConfig.MinVersion)
+	// shared TLS config must not be mutated by the per-service override
+	assert.Equal(t, "", tlsConfig.ServerName)
 }
 
 func TestNewIdpServiceConnector_WithConfigurationFromConfig(t *testing.T) {
@@ -113,7 +184,7 @@ func TestNewIdpServiceConnector_WithConfigurationFromConfig(t *testing.T) {
 	`
 	config := configuration.ParseString(configData)
 
-	result := NewIdpServiceConnector(config, nil)
+	result := NewIdpServiceConnector(config, nil, nil)
 
 	assert.NotNil(t, result)
 
@@ -146,7 +217,7 @@ func TestNewIdpServiceConnector_PanicOnMissingHost(t *testing.T) {
 
 	// This should panic because host is missing
 	assert.Panics(t, func() {
-		NewIdpServiceConnector(config, nil)
+		NewIdpServiceConnector(config, nil, nil)
 	})
 }
 
@@ -179,7 +250,7 @@ func TestNewIdpServiceConnector_PanicOnMissingClientId(t *testing.T) {
 
 	// This should panic because client_id is missing
 	assert.Panics(t, func() {
-		NewIdpServiceConnector(config, nil)
+		NewIdpServiceConnector(config, nil, nil)
 	})
 }
 
@@ -212,7 +283,7 @@ func TestNewIdpServiceConnector_PanicOnMissingClientSecret(t *testing.T) {
 
 	// This should panic because client_secret is missing
 	assert.Panics(t, func() {
-		NewIdpServiceConnector(config, nil)
+		NewIdpServiceConnector(config, nil, nil)
 	})
 }
 
@@ -246,7 +317,7 @@ func TestNewIdpServiceConnector_EnvironmentVariablesPrecedence(t *testing.T) {
 	`
 	config := configuration.ParseString(configData)
 
-	result := NewIdpServiceConnector(config, nil)
+	result := NewIdpServiceConnector(config, nil, nil)
 
 	assert.NotNil(t, result)
 
@@ -281,13 +352,13 @@ func TestNewIdpServiceConnector_KidMapInitialization(t *testing.T) {
 	`
 	config := configuration.ParseString(configData)
 
-	result := NewIdpServiceConnector(config, nil)
+	result := NewIdpServiceConnector(config, nil, nil)
 
 	defaultService := result.(*DefaultIdpService)
 	idpConfig := defaultService.GetIdpServiceConfig()
 
 	// Verify KidMap is initialized (sync.Map doesn't have a direct way to check if empty)
-	assert.NotNil(t, idpConfig.KidMap)
+	assert.NotNil(t, &idpConfig.KidMap)
 
 	// Test that we can store and retrieve from KidMap
 	testKey := JsonWebKey{Kid: "test-kid"}
@@ -323,7 +394,7 @@ func TestDefaultIdpService_Methods(t *testing.T) {
 	`
 	config := configuration.ParseString(configData)
 
-	result := NewIdpServiceConnector(config, nil)
+	result := NewIdpServiceConnector(config, nil, nil)
 	defaultService := result.(*DefaultIdpService)
 
 	// Test SetIdpServiceHost and IdpServiceHost
