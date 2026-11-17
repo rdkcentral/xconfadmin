@@ -42,7 +42,7 @@ var (
 	}
 
 	alnumRe    = regexp.MustCompile("[^a-zA-Z0-9]+")
-	validMacRe = regexp.MustCompile(`^([0-9a-fA-F]{12}$)|([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9A-Fa-f]{4}[.]){2}([0-9A-Fa-f]{4})$`)
+	validMacRe = regexp.MustCompile(`^(([0-9a-fA-F]{12})|(([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2})|(([0-9a-fA-F]{4}\.){2}[0-9a-fA-F]{4}))$`)
 )
 
 func ToAlphaNumericString(str string) string {

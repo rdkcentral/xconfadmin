@@ -126,6 +126,18 @@ func TestMACAddressValidator(t *testing.T) {
 
 	validMac, err = MACAddressValidator("00112233445Z")
 	assert.Equal(t, validMac, false)
+
+	validMac, err = MACAddressValidator("AA:BB:CC:00:00:AAA")
+	assert.Equal(t, validMac, false)
+	assert.Error(t, err, "Invalid MAC address")
+
+	validMac, err = MACAddressValidator("AA-BB-CC-00-00-AAA")
+	assert.Equal(t, validMac, false)
+	assert.Error(t, err, "Invalid MAC address")
+
+	validMac, err = MACAddressValidator("AABB.CC00.00AAA")
+	assert.Equal(t, validMac, false)
+	assert.Error(t, err, "Invalid MAC address")
 }
 
 func TestIsValidMacAddress(t *testing.T) {
