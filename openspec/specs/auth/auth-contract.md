@@ -9,7 +9,7 @@ This specification describes:
 - credential validation
 - identity resolution
 - authentication success and failure outcomes
-- routing-based authorization selection across SAT v2, legacy SAT, and Xerxes
+- routing-based authorization selection across SAT v2, legacy SAT, and IDP
 - SAT v2 request classification requirements
 - fail-fast termination after authentication or authorization failure
 
@@ -57,7 +57,7 @@ defined below.
 ### Authorization Routing Selection
 
 Authorization selection SHALL be deterministic and route credentials by
-credential type, not by evaluating Xerxes and SAT in precedence order.
+credential type, not by evaluating IDP and SAT in precedence order.
 
 Normative behavior:
 
@@ -67,12 +67,12 @@ Normative behavior:
 		system SHALL authorize using SAT RBAC v2 semantics.
 	- If SAT does not contain any capability with prefix `xconf:`, the
 		system SHALL authorize using legacy SAT behavior unchanged.
-- Else, if a Xerxes token is present (header `token` or cookie `token`),
-	the system SHALL authorize using Xerxes permissions.
+- Else, if an IDP login token is present (header `token` or cookie `token`),
+	the system SHALL authorize using IDP permissions.
 - Else, the system SHALL return `401 Unauthorized`.
 
-When both SAT and Xerxes credentials are present, `Authorization`-header
-routing MUST win; SAT selection SHALL be used and Xerxes SHALL NOT be
+When both SAT and IDP credentials are present, `Authorization`-header
+routing MUST win; SAT selection SHALL be used and IDP SHALL NOT be
 evaluated for that request.
 
 ### SAT RBAC v2 Detection
@@ -152,8 +152,8 @@ Tenant resolution SHALL be path-specific in this phase:
 	- Request processing SHALL continue to support multi-tenancy.
 	- In this phase, request processing SHALL resolve `tenantId`
 		to the default tenant.
-- Login-token/Xerxes path:
-	- Login-token/Xerxes authorization semantics remain unchanged.
+- Login-token/IDP path:
+	- Login-token/IDP authorization semantics remain unchanged.
 	- Token validation SHALL NOT enforce tenant or partner claims.
 	- Request processing SHALL continue to support multi-tenancy.
 	- By default, request processing SHALL resolve `tenantId` to the
@@ -187,7 +187,7 @@ Tenant auto-creation SHALL follow these rules:
 	verify that `allowedResources.allowedPartners` contains the resolved
 	`tenantId`.
 - Legacy SAT requests SHALL NOT auto-create tenants.
-- Login-token/Xerxes requests SHALL NOT auto-create tenants, regardless
+- Login-token/IDP requests SHALL NOT auto-create tenants, regardless
 	of the login-token tenant-header feature flag.
 - The login-token tenant-header feature flag SHALL control tenant
 	resolution only; it SHALL NOT grant tenant-provisioning permission.

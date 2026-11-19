@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -82,6 +80,8 @@ type DistributedLockConfig struct {
 type ExternalConnectors struct {
 	xw_ect *xhttp.ExternalConnectors
 	IdpServiceConnector
+	// Used when IdpServiceConnector is nil and authprovider is not "acl"; receives the server's shared TLS config
+	NewIdpServiceConnectorFunc func(conf *configuration.Config, tlsConfig *tls.Config) IdpServiceConnector
 }
 
 type ProcessHook interface {
@@ -90,46 +90,6 @@ type ProcessHook interface {
 
 func NewExternalConnectors() *ExternalConnectors {
 	return &ExternalConnectors{}
-}
-
-func NewTlsConfig(conf *configuration.Config) (*tls.Config, error) {
-	certFile := conf.GetString("xconfwebconfig.http_client.ca_comodo_cert_file")
-	if len(certFile) == 0 {
-		log.Warn("http_client.ca_comodo_cert_file not specified")
-		return nil, nil
-	}
-	caCertPEM, err := os.ReadFile(certFile)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read comodo cert file %s with error: %+v", certFile, err)
-	}
-
-	roots := x509.NewCertPool()
-	ok := roots.AppendCertsFromPEM(caCertPEM)
-	if !ok {
-		return nil, fmt.Errorf("failed to append cert from pem: %+v", err)
-	}
-
-	certFile = conf.GetString("xconfwebconfig.http_client.cert_file")
-	if len(certFile) == 0 {
-		log.Warn("http_client.cert_file not specified")
-		return nil, nil
-	}
-	privateKeyFile := conf.GetString("xconfwebconfig.http_client.private_key_file")
-	if len(privateKeyFile) == 0 {
-		log.Warn("http_client.private_key_file not specified")
-		return nil, nil
-	}
-
-	cert, err := tls.LoadX509KeyPair(certFile, privateKeyFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load a public/private key pair: %+v", err)
-	}
-
-	return &tls.Config{
-		RootCAs:            roots,
-		InsecureSkipVerify: true,
-		Certificates:       []tls.Certificate{cert},
-	}, nil
 }
 
 func NewDistributedLockConfig(conf *configuration.Config) *DistributedLockConfig {
@@ -173,17 +133,21 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 	enableTenantHeaderForLoginToken := conf.GetBoolean("xconfwebconfig.xconf.enable_tenant_header_for_login_token", false)
 
 	// tlsConfig for http clients
-	tlsConfig, err := NewTlsConfig(conf)
+	tlsConfig, err := xhttp.NewTlsConfig(conf)
 	if err != nil && !testOnly {
 		panic(err)
 	}
 
 	var idpSvc IdpServiceConnector
 	if idpAuthProvider != "acl" {
-		idpSvc = NewIdpServiceConnector(conf, ec.IdpServiceConnector)
+		if ec.IdpServiceConnector == nil && ec.NewIdpServiceConnectorFunc != nil {
+			ec.IdpServiceConnector = ec.NewIdpServiceConnectorFunc(conf, tlsConfig)
+		}
+		idpSvc = NewIdpServiceConnector(conf, tlsConfig, ec.IdpServiceConnector)
 	} else {
 		idpSvc = nil
 	}
+
 	xpcTracer := tracing.NewXpcTracer(sc.Config)
 
 	WebConfServer = &WebconfigServer{
@@ -198,7 +162,7 @@ func NewWebconfigServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseCl
 		GroupServiceConnector:           NewGroupServiceConnector(conf, tlsConfig),
 		GroupServiceSyncConnector:       NewGroupServiceSyncConnector(conf, tlsConfig),
 		TaggingApiConfig:                taggingapi_config.NewTaggingApiConfig(conf),
-    TagSyncConfig:                   taggingapi_config.NewTagSyncConfig(conf),
+		TagSyncConfig:                   taggingapi_config.NewTagSyncConfig(conf),
 		DistributedLockConfig:           NewDistributedLockConfig(conf),
 		XconfConnector:                  NewXconfConnector(conf, "xconf", tlsConfig),
 		XW_XconfServer:                  xhttp.NewXconfServer(sc, testOnly, ec.xw_ect),

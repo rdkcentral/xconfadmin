@@ -1,6 +1,6 @@
 ## 1. Spec And Contract Updates
 - [x] 1.1 Update `openspec/specs/auth/auth-contract.md` with normative SAT RBAC v2 requirements.
-- [x] 1.2 Add routing-based selection requirements: Authorization header -> SAT path; else Xerxes path.
+- [x] 1.2 Add routing-based selection requirements: Authorization header -> SAT path; else IDP path.
 - [x] 1.3 Add SAT v2 detection requirement via `xconf:` capability prefix.
 - [x] 1.4 Add route-based domain classification requirements with ordered rules.
 - [x] 1.5 Add access classification requirements with `/filtered` override then HTTP method mapping.
@@ -21,7 +21,7 @@
 
 
 ## 3. Authorization Flow Integration
-- [x] 3.1 Integrate routing-based selection in auth middleware: Authorization header selects SAT path; otherwise Xerxes path.
+- [x] 3.1 Integrate routing-based selection in auth middleware: Authorization header selects SAT path; otherwise IDP path.
 - [x] 3.2 Add SAT v2 detection logic based on any capability prefixed with `xconf:`.
 - [x] 3.3 Ensure SAT v2 deny-by-default on unclassifiable `(domain, access)` requests.
 - [x] 3.4 Enforce metrics as readonly-only during SAT v2 capability checks.
@@ -34,7 +34,7 @@
 - [x] 4.4 Verify fail-fast termination remains enforced after `401`/`403` responses.
 
 ## 5. Validation
-- [ ] 5.1 Add tests for routing behavior (Authorization header selects SAT path; SAT v2 vs legacy SAT selection on SAT path; Xerxes path only when Authorization is absent).
+- [ ] 5.1 Add tests for routing behavior (Authorization header selects SAT path; SAT v2 vs legacy SAT selection on SAT path; IDP path only when Authorization is absent).
   - Deferred: requires SAT/login-token middleware test harness with local JWT/key validation or test seams.
 - [x] 5.2 Add tests for SAT v2 detection by `xconf:` prefix presence.
 - [x] 5.3 Add tests for ordered route classification and first-match behavior.

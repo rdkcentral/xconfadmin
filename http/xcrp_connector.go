@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/rdkcentral/xconfadmin/common"
@@ -84,16 +85,18 @@ func (c *XcrpConnector) SetXcrpHosts(hosts []string) {
 func (c *XcrpConnector) PostRecook(m, p []string, bbytes []byte, fields log.Fields) error {
 	models := strings.Join(m, ",")
 	partners := strings.Join(p, ",")
+	encodedModels := url.QueryEscape(models)
+	encodedPartners := url.QueryEscape(partners)
 	var url string
 	for _, host := range c.XcrpHosts() {
 		if len(models) == 0 && len(partners) == 0 {
 			url = fmt.Sprintf(c.precookPathTemplate, host)
 		} else if len(models) != 0 && len(partners) != 0 {
-			url = fmt.Sprintf(c.recookPathTemplate, host, partners, models)
+			url = fmt.Sprintf(c.recookPathTemplate, host, encodedPartners, encodedModels)
 		} else if len(models) != 0 { // input empty string to xcrp will have issues. corner cases handled here for now
-			url = fmt.Sprintf(c.precookModelPathTemplate, host, models)
+			url = fmt.Sprintf(c.precookModelPathTemplate, host, encodedModels)
 		} else if len(partners) != 0 {
-			url = fmt.Sprintf(c.precookPartnerPathTemplate, host, partners)
+			url = fmt.Sprintf(c.precookPartnerPathTemplate, host, encodedPartners)
 		}
 		headers := map[string]string{
 			common.HeaderUserAgent: common.HeaderXconfAdminService,

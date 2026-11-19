@@ -250,6 +250,8 @@ func beforeUpdatingSettingRule(tenantId string, writeApplication string, entity 
 func beforeSavingSettingRule(tenantId string, writeApplication string, entity *logupload.SettingRule) error {
 	if entity != nil && entity.ApplicationType == "" {
 		entity.ApplicationType = writeApplication
+	} else if entity != nil && !shared.ApplicationTypeEquals(entity.ApplicationType, writeApplication) {
+		return xwcommon.NewRemoteErrorAS(http.StatusConflict, "ApplicationType Conflict")
 	}
 	if entity != nil && !entity.Rule.Equals(re.NewEmptyRule()) {
 		re.NormalizeConditions(&entity.Rule)
