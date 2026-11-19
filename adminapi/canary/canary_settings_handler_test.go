@@ -52,9 +52,13 @@ func TestPutCanarySettingsHandler(t *testing.T) {
 
 	//Invalid Auth
 	common.SatOn = true
-	w.SetBody(`{"canaryDistributionPercentage": 15}`)
+	recorder = httptest.NewRecorder()
+	w = xwhttp.NewXResponseWriter(recorder)
+	w.SetBody(`{"invalid": json}`)
 	req = httptest.NewRequest(http.MethodPut, testURL, nil)
 	PutCanarySettingsHandler(w, req)
+	assert.Equal(t, http.StatusForbidden, w.Status())
+	assert.NotContains(t, recorder.Body.String(), "invalid character", "handler should stop before decoding the body")
 }
 
 func TestGetCanarySettingsHandler(t *testing.T) {
@@ -73,4 +77,37 @@ func TestGetCanarySettingsHandler(t *testing.T) {
 	req = httptest.NewRequest(http.MethodGet, testURL, nil)
 	GetCanarySettingsHandler(w, req)
 	assert.Equal(t, http.StatusUnauthorized, w.Status())
+}
+
+// TestAuthFailureTerminatesExecution verifies the fail-fast termination guarantee:
+// When an auth/authz error response is written, the handler MUST return immediately
+// with no subsequent logic execution (Fail-Fast Termination per auth-contract.md).
+func TestAuthFailureTerminatesExecution(t *testing.T) {
+	originalSatOn := common.SatOn
+	defer func() { common.SatOn = originalSatOn }()
+
+	// Enable SAT to trigger permission check
+	common.SatOn = true
+
+	// Create a request without authentication credentials (will fail permission check)
+	req := httptest.NewRequest(http.MethodPut, testURL, nil)
+
+	// Provide invalid JSON that would normally cause http.StatusBadRequest
+	// if the handler continued executing past the auth failure.
+	// However, with fail-fast termination, the handler should return
+	// http.StatusForbidden from the permission check and never reach JSON parsing.
+	recorder := httptest.NewRecorder()
+	w := xwhttp.NewXResponseWriter(recorder)
+	w.SetBody(`{"invalid": json}`)  // Malformed JSON
+
+	// Call the handler
+	PutCanarySettingsHandler(w, req)
+
+	// CRITICAL ASSERTION: Verify fail-fast termination
+	// Status should be http.StatusForbidden (from auth failure),
+	// NOT http.StatusBadRequest (which would occur if JSON parsing ran).
+	assert.Equal(t, http.StatusForbidden, w.Status(),
+		"Auth failure must return Forbidden and terminate immediately. "+
+			"If JSON parsing error (BadRequest) occurs instead, "+
+			"handler continued executing after auth failure, violating fail-fast guarantee.")
 }
