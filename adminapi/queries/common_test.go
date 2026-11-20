@@ -19,12 +19,14 @@ package queries
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"testing"
 	"time"
 
+	xhttp "github.com/rdkcentral/xconfadmin/http"
 	xshared "github.com/rdkcentral/xconfadmin/shared"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/stretchr/testify/assert"
@@ -52,6 +54,7 @@ func createTestTenant(t *testing.T, id, name string) *http.Response {
 	body, _ := json.Marshal(db.Tenant{ID: id, Name: name})
 	req, _ := http.NewRequest(http.MethodPost, tenantsUrl, bytes.NewReader(body))
 	req.Header.Set("Accept", "application/json")
+	req = requestWithTenantID(req, id)
 	return xshared.ExecuteRequest(req, router).Result()
 }
 
@@ -59,7 +62,13 @@ func createTestTenant(t *testing.T, id, name string) *http.Response {
 func deleteTestTenant(t *testing.T, id string) *http.Response {
 	t.Helper()
 	req, _ := http.NewRequest(http.MethodDelete, tenantsUrl+"/"+id, nil)
+	req = requestWithTenantID(req, id)
 	return xshared.ExecuteRequest(req, router).Result()
+}
+
+func requestWithTenantID(req *http.Request, tenantID string) *http.Request {
+	ctx := context.WithValue(req.Context(), xhttp.CTX_KEY_TENANT_ID, tenantID)
+	return req.WithContext(ctx)
 }
 
 // TestCreateTenantHandler covers successful creation, idempotent re-creation and invalid input
@@ -107,15 +116,23 @@ func TestCreateTenantHandler(t *testing.T) {
 // TestGetTenantsHandler covers listing tenants and verifies a created tenant appears
 func TestGetTenantsHandler(t *testing.T) {
 	id := "TESTTENANTLIST"
+	otherID := "TESTTENANTLISTOTHER"
 	defer deleteTestTenant(t, id)
+	defer deleteTestTenant(t, otherID)
 
 	res := createTestTenant(t, id, "List Tenant")
 	if res.StatusCode != http.StatusCreated {
 		body, _ := ioutil.ReadAll(res.Body)
 		t.Fatalf("expected 201 got %d body=%s", res.StatusCode, string(body))
 	}
+	res = createTestTenant(t, otherID, "Other List Tenant")
+	if res.StatusCode != http.StatusCreated {
+		body, _ := ioutil.ReadAll(res.Body)
+		t.Fatalf("expected 201 got %d body=%s", res.StatusCode, string(body))
+	}
 
 	req, _ := http.NewRequest(http.MethodGet, tenantsUrl, nil)
+	req = requestWithTenantID(req, id)
 	res = xshared.ExecuteRequest(req, router).Result()
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 got %d", res.StatusCode)
@@ -126,15 +143,50 @@ func TestGetTenantsHandler(t *testing.T) {
 	if err := json.Unmarshal(body, &tenants); err != nil {
 		t.Fatalf("failed to unmarshal list response: %v body=%s", err, string(body))
 	}
-	found := false
-	for _, tn := range tenants {
-		if tn.ID == id {
-			found = true
-			break
+	found := make(map[string]bool, len(tenants))
+	for _, tenant := range tenants {
+		found[tenant.ID] = true
+	}
+	for _, expectedID := range []string{id, otherID} {
+		if !found[expectedID] {
+			t.Fatalf("expected tenant %s in list, got %+v", expectedID, tenants)
 		}
 	}
-	if !found {
-		t.Fatalf("expected tenant %s to be present in list, got %+v", id, tenants)
+}
+
+func TestTenantHandlersRejectMismatchedTenantID(t *testing.T) {
+	ensureTenantRoutes()
+	requestTenantID := "TESTTENANTREQUEST"
+	targetTenantID := "TESTTENANTTARGET"
+	defer deleteTestTenant(t, targetTenantID)
+
+	body, _ := json.Marshal(db.Tenant{ID: targetTenantID, Name: "Target Tenant"})
+	req, _ := http.NewRequest(http.MethodPost, tenantsUrl, bytes.NewReader(body))
+	req = requestWithTenantID(req, requestTenantID)
+	res := xshared.ExecuteRequest(req, router).Result()
+	if res.StatusCode != http.StatusForbidden {
+		responseBody, _ := ioutil.ReadAll(res.Body)
+		t.Fatalf("expected 403 for mismatched create tenant, got %d body=%s", res.StatusCode, string(responseBody))
+	}
+
+	res = createTestTenant(t, targetTenantID, "Target Tenant")
+	if res.StatusCode != http.StatusCreated {
+		responseBody, _ := ioutil.ReadAll(res.Body)
+		t.Fatalf("expected target tenant creation to succeed, got %d body=%s", res.StatusCode, string(responseBody))
+	}
+
+	req, _ = http.NewRequest(http.MethodDelete, tenantsUrl+"/"+targetTenantID, nil)
+	req = requestWithTenantID(req, requestTenantID)
+	res = xshared.ExecuteRequest(req, router).Result()
+	if res.StatusCode != http.StatusForbidden {
+		responseBody, _ := ioutil.ReadAll(res.Body)
+		t.Fatalf("expected 403 for mismatched delete tenant, got %d body=%s", res.StatusCode, string(responseBody))
+	}
+
+	res = deleteTestTenant(t, targetTenantID)
+	if res.StatusCode != http.StatusNoContent {
+		responseBody, _ := ioutil.ReadAll(res.Body)
+		t.Fatalf("expected tenant to remain after rejected delete, got %d body=%s", res.StatusCode, string(responseBody))
 	}
 }
 
