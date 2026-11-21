@@ -35,6 +35,10 @@ var idpServiceName string
 type IdpServiceConfig struct {
 	ClientId        string
 	ClientSecret    string
+	JWKSURL         string
+	Issuer          string
+	Audience        string
+	AllowedAlgs     []string
 	KidMap          sync.Map // map[string]JsonWebKey
 	AuthHeaderValue string
 }
@@ -102,8 +106,14 @@ func NewIdpServiceConnector(conf *configuration.Config, tlsConfig *tls.Config, e
 		authHeader := fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(auth)))
 
 		idpServiceConfig := &IdpServiceConfig{
-			ClientId:        clientId,
-			ClientSecret:    clientSecret,
+			ClientId:     clientId,
+			ClientSecret: clientSecret,
+			JWKSURL:      conf.GetString(fmt.Sprintf("xconfwebconfig.%v.jwksUrl", idpServiceName)),
+			Issuer:       conf.GetString(fmt.Sprintf("xconfwebconfig.%v.issuer", idpServiceName)),
+			AllowedAlgs: conf.GetStringList(
+				fmt.Sprintf("xconfwebconfig.%v.allowedAlgs", idpServiceName),
+			),
+			Audience:        conf.GetString(fmt.Sprintf("xconfwebconfig.%v.audience", idpServiceName)),
 			KidMap:          sync.Map{},
 			AuthHeaderValue: authHeader,
 		}
