@@ -60,6 +60,7 @@ var SATV2RouteMappings = []SATV2RouteDomainMapping{
 	{Prefix: "/telemetry", Domain: SATV2DomainCore},
 	{Prefix: "/change", Domain: SATV2DomainCore},
 	{Prefix: "/penetrationdata", Domain: SATV2DomainCore},
+	{Prefix: "/tenants", Domain: SATV2DomainSystem},
 }
 
 func BuildSATV2Capability(domain string, access string) string {

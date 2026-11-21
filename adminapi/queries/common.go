@@ -478,6 +478,13 @@ func CreateTenantHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId := xhttp.GetTenantId(r)
+	if !strings.EqualFold(newTenant.ID, tenantId) {
+		xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "Tenant ID mismatch")
+		return
+	}
+	newTenant.ID = tenantId
+
 	tenant, err := xshared.OnboardTenant(newTenant.ID, newTenant.Name)
 	if err != nil {
 		xhttp.AdminError(w, err)
@@ -505,7 +512,13 @@ func DeleteTenantHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := xcommon.DeleteTenant(id); err != nil {
+	tenantId := xhttp.GetTenantId(r)
+	if !strings.EqualFold(id, tenantId) {
+		xhttp.WriteAdminErrorResponse(w, http.StatusForbidden, "Tenant ID mismatch")
+		return
+	}
+
+	if err := xcommon.DeleteTenant(tenantId); err != nil {
 		xhttp.WriteAdminErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
