@@ -137,6 +137,7 @@ func TestNewIdpServiceConnector_AppliesIdpServiceClientConfig(t *testing.T) {
 			test-service {
 				host = "https://test-host.com"
 				tls_server_name = "idp.internal.example.com"
+				tls_insecure_skip_verify = true
 				read_timeout_in_secs = 7
 			}
 		}
@@ -151,9 +152,11 @@ func TestNewIdpServiceConnector_AppliesIdpServiceClientConfig(t *testing.T) {
 	transport, ok := defaultService.HttpClient.Client.Transport.(*http.Transport)
 	assert.True(t, ok)
 	assert.Equal(t, "idp.internal.example.com", transport.TLSClientConfig.ServerName)
+	assert.True(t, transport.TLSClientConfig.InsecureSkipVerify)
 	assert.Equal(t, uint16(tls.VersionTLS12), transport.TLSClientConfig.MinVersion)
 	// shared TLS config must not be mutated by the per-service override
 	assert.Equal(t, "", tlsConfig.ServerName)
+	assert.False(t, tlsConfig.InsecureSkipVerify)
 }
 
 func TestNewIdpServiceConnector_WithConfigurationFromConfig(t *testing.T) {
