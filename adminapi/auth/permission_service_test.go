@@ -706,8 +706,8 @@ func TestGetPermissionsDevProfileIncludesToolPermissions(t *testing.T) {
 
 	for _, required := range []string{VIEW_TOOLS, WRITE_TOOLS} {
 		found := false
-		for _, p := range permissions {
-			if p == required {
+		for _, permission := range permissions {
+			if permission == required {
 				found = true
 				break
 			}
