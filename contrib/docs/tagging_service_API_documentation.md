@@ -7,12 +7,16 @@
    - [Delete Members API](#delete-members-api)
 2. [API Endpoints](#api-endpoints)
    - [SAT Token Requirements](#sat-token-requirements)
+   - [Member Normalization](#member-normalization)
+   - [Get All Tags](#get-all-tags)
    - [Get Tag by ID](#get-tag-by-id)
    - [Delete Tag by ID (Asynchronous)](#delete-tag-by-id-asynchronous)
    - [Add Members to Tag](#add-members-to-tag)
    - [Remove Members from Tag](#remove-members-from-tag)
    - [Remove Member from Tag](#remove-member-from-tag)
    - [Get Tag Members](#get-tag-members)
+   - [Get Tags by Member](#get-tags-by-member)
+   - [Get Tags with Values by Member](#get-tags-with-values-by-member)
 3. [Tag Sync Job](#tag-sync-job)
    - [Before the first run: create the state table](#before-the-first-run-create-the-state-table)
    - [Trigger Tag Sync](#trigger-tag-sync)
@@ -32,11 +36,11 @@
 
 ### Add Members API
 
-The Add Members API processes member additions in batches, with each batch supporting up to 2,000 members.
+The Add Members API accepts up to 5,000 members per request. Larger or empty lists are rejected with `400 Bad Request`.
 
 ### Delete Members API
 
-The Delete Members API also operates in batches of up to 2,000 members per batch.
+The Delete Members API has the same limit: up to 5,000 members per request.
 
 ---
 
@@ -55,9 +59,45 @@ Client should have following SAT capabilities:
 
 ---
 
+### Member Normalization
+
+A member is normalized only for the XDAS record: whitespace is trimmed, the value is upper-cased, and a MAC address is converted to its ECM MAC without separators.
+
+XConf stores and returns the member exactly as it was sent. Remove a member in the same form it was added, otherwise its XConf record is not matched.
+
+---
+
+### Get All Tags
+
+Returns the ids of all tags.
+
+**Endpoint:**
+```
+GET /taggingService/tags
+```
+
+**Headers:**
+```
+Accept = application/json
+Content-Type = application/json
+Authorization = Bearer {SAT token}
+```
+
+**Response Status Code:** `200 OK`
+
+**Response Body:**
+```json
+[
+    "tag-id-1",
+    "tag-id-2"
+]
+```
+
+---
+
 ### Get Tag by ID
 
-Returns representation of XConf tag by provided tag id
+Returns the tag id and its members. At most 100,000 members are returned; use [Get Tag Members](#get-tag-members) in paginated mode for larger tags.
 
 **Endpoint:**
 ```
@@ -73,17 +113,16 @@ Authorization = Bearer {SAT token}
 
 **Response Status Codes:**
 - `200 OK`
+- `206 Partial Content`: the tag has 100,000 or more members; only the first 100,000 are returned
 - `404 NOT FOUND`
 
 **Response Body:**
 ```json
 {
     "id": "test:tag:demotag",
-    "description": "",
     "members": [
         "A2:A2:A2:A2:B2:B2"
-    ],
-    "updated": 1711651165855
+    ]
 }
 ```
 
@@ -119,10 +158,14 @@ The tag deletion request has been accepted and queued for processing.
 }
 ```
 
+**Other Status Codes:**
+- `404 NOT FOUND`: tag does not exist
+
 #### Behavior
 
 - **Immediate Response:** API returns 202 Accepted immediately after validating that the tag exists
 - **Background Processing:** Tag deletion (including all members and buckets) happens asynchronously
+- **Repeated Requests:** While a deletion of the same tag is running, another request returns 202 Accepted with the message `Tag 'my-tag' deletion is already in progress` and does not start a second deletion
 - **No Status Tracking:** Currently no endpoint to check deletion progress (work is pending)
 - **Error Handling:** Any errors during background deletion are logged server-side
 
@@ -136,12 +179,18 @@ The tag deletion request has been accepted and queued for processing.
 
 ### Add Members to Tag
 
-Adds new members to the tag. If tag does not exist – new tag is created in XConf. By default XConf does tag member normalization: whitespaces are trimmed, string data is set to upper case.
+Adds new members to the tag. If tag does not exist – new tag is created in XConf. Each member is written to XDAS first and, on success, to XConf. See [Member Normalization](#member-normalization).
 
 **Endpoint:**
 ```
 PUT /taggingService/tags/{tag}/members
 ```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `value` | string | No | Value stored in XDAS with the tag for every member in the request. Empty by default |
 
 **Headers:**
 ```
@@ -150,31 +199,34 @@ Content-Type = application/json
 Authorization = Bearer {SAT token}
 ```
 
-**Request Body - list of members:**
+**Request Body - list of members (1 to 5,000):**
 ```json
 ["A1:A1:A1:A1:B1:B1", "A2:A2:A2:A2:B2:B2"]
 ```
 
-**Response Status Code:** `202 Accepted`
+**Response Status Codes:**
+- `202 Accepted`
+- `400 Bad Request`: invalid body, empty list, or more than 5,000 members
+- `500 Internal Server Error`: members were written to XDAS but not to XConf
 
-**Response Body - XConf tag entity with added members:**
+**Response Body:**
 ```json
 {
-    "id": "test:tag:demotag",
-    "description": "",
-    "members": [
-        "A1:A1:A1:A1:B1:B1",
-        "A2:A2:A2:A2:B2:B2"
-    ],
-    "updated": 1711651165855
+    "requested": 2,
+    "stored": 2
 }
 ```
+
+- `requested`: number of members in the request
+- `stored`: number of members written to both XDAS and XConf
+
+Members that fail in XDAS are skipped and the request still returns 202 Accepted. If `stored` is lower than `requested`, retry the request.
 
 ---
 
 ### Remove Members from Tag
 
-Removes members from the tag. If all members are removed, the tag is automatically deleted.
+Removes members from the tag. Each member is removed from XDAS first and, on success, from XConf. If all members are removed, the tag is automatically deleted. See [Member Normalization](#member-normalization).
 
 **Endpoint:**
 ```
@@ -188,20 +240,34 @@ Content-Type = application/json
 Authorization = Bearer {SAT token}
 ```
 
-**Request Body - list of members:**
+**Request Body - list of members (1 to 5,000):**
 ```json
 ["A1:A1:A1:A1:B1:B1", "A2:A2:A2:A2:B2:B2"]
 ```
 
 **Response Status Codes:**
-- `404 NOT FOUND`
-- `204 NO CONTENT`
+- `202 Accepted`
+- `400 Bad Request`: invalid body, empty list, or more than 5,000 members
+- `500 Internal Server Error`: members were removed from XDAS but not from XConf
+
+**Response Body:**
+```json
+{
+    "requested": 2,
+    "removed": 2
+}
+```
+
+- `requested`: number of members in the request
+- `removed`: number of members removed from both XDAS and XConf
+
+Members that fail in XDAS are skipped and the request still returns 202 Accepted. If `removed` is lower than `requested`, retry the request.
 
 ---
 
 ### Remove Member from Tag
 
-Removes member record from XDAS first, in case of success removes tag member from XConf. Remove API takes non-normalized data, normalization is done by XConf.
+Removes member record from XDAS first, in case of success removes tag member from XConf. See [Member Normalization](#member-normalization).
 
 **Endpoint:**
 ```
@@ -239,7 +305,7 @@ Authorization = Bearer {SAT token}
 
 | Parameter | Type | Required | Default | Maximum | Description |
 |-----------|------|----------|---------|---------|-------------|
-| `limit` | integer | No | 500 | 5000 | Number of members to return per page. Must be a positive integer. If exceeds maximum, returns 400 Bad Request |
+| `limit` | integer | No | 500 | 200000 | Number of members to return per page. Must be a positive integer. If exceeds maximum, returns 400 Bad Request |
 | `cursor` | string | No | - | - | Pagination cursor for retrieving the next page of results. Obtained from nextCursor field in the previous response |
 
 **Note:** If either limit or cursor is provided, the endpoint returns a paginated response. Otherwise, it returns a non-paginated response.
@@ -247,7 +313,7 @@ Authorization = Bearer {SAT token}
 #### Response Status Codes
 
 - `200 OK`: Successfully retrieved members
-- `206 Partial Content`: Response contains only first 100,000 members (tag has more than 100k members)
+- `206 Partial Content`: Response contains only first 100,000 members (tag has 100k members or more)
 - `400 Bad Request`: Invalid tag or query parameters
 - `404 Not Found`: Tag does not exist
 
@@ -259,7 +325,7 @@ Authorization = Bearer {SAT token}
 ]
 ```
 
-**Important:** In non-paginated mode, if a tag has more than 100,000 members, the response will be truncated to the first 100,000 members and the status code will be 206 Partial Content. To retrieve all members of large tags, use paginated mode.
+**Important:** In non-paginated mode, if a tag has 100,000 members or more, the response will be truncated to the first 100,000 members and the status code will be 206 Partial Content. To retrieve all members of large tags, use paginated mode.
 
 #### Paginated Mode
 
@@ -267,7 +333,7 @@ Used when limit and/or cursor query parameters are provided.
 
 **Response Status Codes:**
 - `200 OK`: Successfully retrieved page of members
-- `400 Bad Request`: Invalid query parameters or tag parameter
+- `400 Bad Request`: Invalid `limit` or `cursor`
 - `404 Not Found`: Tag does not exist
 
 **Response Body:**
@@ -278,7 +344,7 @@ Used when limit and/or cursor query parameters are provided.
         "C3:C3:C3:C3:D3:D3",
         "E4:E4:E4:E4:F4:F4"
     ],
-    "nextCursor": "eyJidWNrZXQiOjEyLCJsYXN0S2V5IjoiQTI6QTI6QTI6QTI6QjI6QjIifQ==",
+    "nextCursor": "eyJidWNrZXRJZCI6MTIsImxhc3RNZW1iZXIiOiJBMjpBMjpBMjpBMjpCMjpCMiJ9",
     "hasMore": true
 }
 ```
@@ -304,7 +370,7 @@ GET /taggingService/tags/my-tag-123/members?limit=1000
 
 **Paginated (subsequent page):**
 ```
-GET /taggingService/tags/my-tag-123/members?limit=1000&cursor=eyJidWNrZXQiOjEyLCJsYXN0S2V5IjoiQTI6QTI6QTI6QTI6QjI6QjIifQ==
+GET /taggingService/tags/my-tag-123/members?limit=1000&cursor=eyJidWNrZXRJZCI6MTIsImxhc3RNZW1iZXIiOiJBMjpBMjpBMjpBMjpCMjpCMiJ9
 ```
 
 ##### Pagination Workflow
@@ -315,6 +381,66 @@ GET /taggingService/tags/my-tag-123/members?limit=1000&cursor=eyJidWNrZXQiOjEyLC
    - If `true`: Use the nextCursor value as the cursor parameter in the next request
    - If `false`: All members have been retrieved
 4. Repeat until hasMore is false
+
+---
+
+### Get Tags by Member
+
+Returns the ids of all tags which contain the specified member. The lookup is done in XDAS, so the member is normalized (see [Member Normalization](#member-normalization)). Only tags of the caller's tenant are returned.
+
+**Endpoint:**
+```
+GET /taggingService/tags/members/{member}
+```
+
+**Headers:**
+```
+Accept = application/json
+Content-Type = application/json
+Authorization = Bearer {SAT token}
+```
+
+**Response Status Codes:**
+- `200 OK`
+- An XDAS error is returned with the XDAS status code
+
+**Response Body:**
+```json
+[
+    "tag-id-1",
+    "tag-id-2"
+]
+```
+
+---
+
+### Get Tags with Values by Member
+
+Same lookup as [Get Tags by Member](#get-tags-by-member), but returns each tag with the value stored for the member.
+
+**Endpoint:**
+```
+GET /taggingService/tags/members/{member}/values
+```
+
+**Headers:**
+```
+Accept = application/json
+Content-Type = application/json
+Authorization = Bearer {SAT token}
+```
+
+**Response Status Codes:**
+- `200 OK`
+- An XDAS error is returned with the XDAS status code
+
+**Response Body:**
+```json
+{
+    "tag-id-1": "value-1",
+    "tag-id-2": ""
+}
+```
 
 ---
 
@@ -732,5 +858,5 @@ curl --location 'http://<xconf-url>/xconf/swu/stb?model=TESTMODEL&eStbMac=BB%3AB
 
 ---
 
-*Document Version: 1.1*
-*Last Updated: August 2026*
+*Document Version: 1.2*
+*Last Updated: November 2026*
