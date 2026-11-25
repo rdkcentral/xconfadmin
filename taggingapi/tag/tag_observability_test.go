@@ -77,8 +77,8 @@ func TestGetTagMembersHandler_PaginatedAuditFields(t *testing.T) {
 	assert.Equal(t, 2, fields["buckets"])
 	assert.Equal(t, 1, fields["num_results"])
 	assert.Equal(t, true, fields["has_more"])
-	// 1 metadata query + 1 per bucket
-	assert.Equal(t, 3, fields["queries"])
+	// 1 metadata query + the one bucket the page needs
+	assert.Equal(t, 2, fields["queries"])
 }
 
 // Audit fields must be present on error responses too — a failed request

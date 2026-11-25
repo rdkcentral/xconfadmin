@@ -275,8 +275,6 @@ func GetMembersPaginated(tenantId string, tagId string, limit int, cursor string
 	}
 	stats.Buckets = len(populatedBuckets)
 
-	var allMembers []string
-
 	// Find the first populated bucket at or after the cursor position. If none
 	// exists (buckets were emptied since the previous page), the enumeration is
 	// complete — do not wrap around to the beginning.
@@ -294,77 +292,77 @@ func GetMembersPaginated(tenantId string, tagId string, limit int, cursor string
 		}, stats, nil
 	}
 
-	// Build work items for remaining buckets (apply cursor's lastMember to first bucket only)
-	workers := getReadWorkerCount()
+	// The cursor's lastMember applies only to the bucket it was taken from.
 	remainingBuckets := populatedBuckets[startIndex:]
-
-	workItems := make([]bucketWorkItem, len(remainingBuckets))
-	for idx, bucketId := range remainingBuckets {
-		lm := ""
-		if idx == 0 && bucketId == state.BucketId {
-			lm = state.LastMember
-		}
-		workItems[idx] = bucketWorkItem{
-			bucketId:   bucketId,
-			lastMember: lm,
-			limit:      limit + 1,
-		}
+	startAfter := ""
+	if remainingBuckets[0] == state.BucketId {
+		startAfter = state.LastMember
 	}
 
-	orderedResults := fetchBucketsConcurrent(tenantId, tagId, workItems, workers, queries)
-	stats.Queries = int(queries.Load())
-
-	// Merge in bucket order, building cursor at the truncation point.
 	// A failed bucket fails the whole page: returning partial data would let the
 	// cursor advance past the failed bucket and silently omit its members from
 	// the enumeration. The caller retries with the same cursor instead.
-	lastProcessedBucketIndex := startIndex - 1
-	for idx, result := range orderedResults {
-		if result.err != nil {
-			return nil, stats, fmt.Errorf("failed to fetch members from bucket %d: %w", remainingBuckets[idx], result.err)
-		}
-		if len(result.members) == 0 {
-			lastProcessedBucketIndex = startIndex + idx
-			continue
-		}
-
-		currentBucketId := remainingBuckets[idx]
-		needed := limit - len(allMembers)
-
-		if len(result.members) > needed {
-			allMembers = append(allMembers, result.members[:needed]...)
-			nextCursor := generateBucketedCursor(currentBucketId, result.members[needed-1])
-			log.Debugf("Returning %d members for tag %s with more data in bucket %d",
-				len(allMembers), tagId, currentBucketId)
-			return &PaginatedMembersResponse{
-				Data:       allMembers,
-				NextCursor: nextCursor,
-				HasMore:    true,
-			}, stats, nil
-		}
-
-		allMembers = append(allMembers, result.members...)
-		lastProcessedBucketIndex = startIndex + idx
-
-		if len(allMembers) >= limit {
-			break
-		}
+	members, next, lastMember, err := readBucketsInOrder(
+		tenantId, tagId, remainingBuckets, startAfter, limit, getReadWorkerCount(), queries)
+	stats.Queries = int(queries.Load())
+	if err != nil {
+		return nil, stats, err
 	}
 
-	// Check if we have more populated buckets to process
-	hasMore := lastProcessedBucketIndex+1 < len(populatedBuckets)
-	var nextCursor string
-	if hasMore {
-		nextBucketId := populatedBuckets[lastProcessedBucketIndex+1]
-		nextCursor = generateBucketedCursor(nextBucketId, "")
+	response := &PaginatedMembersResponse{
+		Data:    members,
+		HasMore: next < len(remainingBuckets),
+	}
+	if response.HasMore {
+		response.NextCursor = generateBucketedCursor(remainingBuckets[next], lastMember)
 	}
 
-	log.Debugf("Returning %d members for tag %s, hasMore: %v", len(allMembers), tagId, hasMore)
-	return &PaginatedMembersResponse{
-		Data:       allMembers,
-		NextCursor: nextCursor,
-		HasMore:    hasMore,
-	}, stats, nil
+	log.Debugf("Returning %d members for tag %s, hasMore: %v", len(members), tagId, response.HasMore)
+	return response, stats, nil
+}
+
+// readBucketsInOrder collects up to limit members from the buckets in order and
+// stops reading once the limit is reached. It returns the index of the first
+// bucket not fully consumed and, when the read stopped inside that bucket, the
+// last member taken from it.
+func readBucketsInOrder(tenantId string, tagId string, bucketIds []int, startAfter string, limit int, workers int, queries *atomic.Int64) ([]string, int, string, error) {
+	var members []string
+	next := 0
+	batchSize := 1
+
+	for next < len(bucketIds) && len(members) < limit {
+		batch := bucketIds[next:min(next+batchSize, len(bucketIds))]
+		workItems := make([]bucketWorkItem, len(batch))
+		for i, bucketId := range batch {
+			workItems[i] = bucketWorkItem{bucketId: bucketId, limit: limit - len(members) + 1}
+		}
+		if next == 0 {
+			workItems[0].lastMember = startAfter
+		}
+
+		for i, result := range fetchBucketsConcurrent(tenantId, tagId, workItems, workers, queries) {
+			if result.err != nil {
+				return nil, 0, "", fmt.Errorf("failed to fetch members from bucket %d: %w", batch[i], result.err)
+			}
+			needed := limit - len(members)
+			if len(result.members) > needed {
+				members = append(members, result.members[:needed]...)
+				return members, next + i, result.members[needed-1], nil
+			}
+			members = append(members, result.members...)
+			if len(members) == limit {
+				return members, next + i + 1, "", nil
+			}
+		}
+		next += len(batch)
+
+		// Size the next batch from the members-per-bucket seen so far, so the
+		// read stops close to the limit instead of overshooting it.
+		perBucket := max(len(members)/next, 1)
+		batchSize = max(min((limit-len(members)+perBucket-1)/perBucket, workers), 1)
+	}
+
+	return members, next, "", nil
 }
 
 func getMembersFromBucket(tenantId string, tagId string, bucketId int, lastMember string, limit int) ([]string, error) {
@@ -531,50 +529,24 @@ func fetchBucketsConcurrent(tenantId string, tagId string, workItems []bucketWor
 	return orderedResults
 }
 
-// fetchMembersFromBucketsConcurrent fetches members from multiple buckets concurrently
-// and returns a merged, truncated result
+// fetchMembersFromBucketsConcurrent returns up to totalLimit members in bucket
+// order and whether the limit was reached.
+// A failed bucket fails the whole read — a partial result would silently
+// under-report the tag's membership.
 func fetchMembersFromBucketsConcurrent(tenantId string, tagId string, bucketIds []int, totalLimit int, workers int, queries *atomic.Int64) ([]string, bool, error) {
 	if len(bucketIds) == 0 {
 		return nil, false, nil
 	}
 
-	// Build work items (all with empty lastMember for fresh fetch)
-	workItems := make([]bucketWorkItem, len(bucketIds))
-	for idx, bucketId := range bucketIds {
-		workItems[idx] = bucketWorkItem{
-			bucketId:   bucketId,
-			lastMember: "",
-			limit:      totalLimit,
-		}
+	members, _, _, err := readBucketsInOrder(tenantId, tagId, bucketIds, "", totalLimit, workers, queries)
+	if err != nil {
+		return nil, false, err
+	}
+	if members == nil {
+		members = []string{}
 	}
 
-	orderedResults := fetchBucketsConcurrent(tenantId, tagId, workItems, workers, queries)
-
-	// Merge in bucket order, stop at totalLimit.
-	// A failed bucket fails the whole read — a partial result would silently
-	// under-report the tag's membership.
-	collected := make([]string, 0)
-	for idx, result := range orderedResults {
-		space := totalLimit - len(collected)
-		if space <= 0 {
-			// Response already full — errors in later buckets are irrelevant
-			return collected, true, nil
-		}
-		if result.err != nil {
-			return nil, false, fmt.Errorf("failed to fetch members from bucket %d: %w", bucketIds[idx], result.err)
-		}
-		if len(result.members) == 0 {
-			continue
-		}
-		if len(result.members) > space {
-			collected = append(collected, result.members[:space]...)
-			return collected, true, nil
-		}
-		collected = append(collected, result.members...)
-	}
-
-	wasTruncated := len(collected) >= totalLimit
-	return collected, wasTruncated, nil
+	return members, len(members) >= totalLimit, nil
 }
 
 // AddMembersWithXdas adds members to both XDAS and Cassandra (XDAS-first
